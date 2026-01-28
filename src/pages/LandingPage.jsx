@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
-// ...existing code...
+import viteLogo from '/vite.svg';
 
 function LandingPage() {
     const navigate = useNavigate();
@@ -38,7 +37,7 @@ function LandingPage() {
             <header className="w-full py-6 px-8">
                 <div className="max-w-7xl mx-auto flex justify-end">
                     <img
-                        src={logo}
+                        src={viteLogo}
                         alt="Maritime Link Logo"
                         className="h-16 w-auto object-contain"
                     />
