@@ -138,7 +138,7 @@ function TrainingProviderDashboard() {
                         </div>
                         <img
                             className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
-                            src="/src/assets/login-image.png"
+                            src="/images/login-image.png"
                             alt="User avatar"
                         />
                     </div>

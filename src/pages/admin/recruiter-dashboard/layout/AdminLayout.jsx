@@ -47,7 +47,7 @@ function AdminLayout() {
                     {/* Logo */}
                     <div className="p-6">
                         <img
-                            src="/src/assets/logo.png"
+                            src="/images/logo.png"
                             alt="MaritimeLink"
                             className="h-20 w-auto"
                         />
@@ -140,7 +140,7 @@ function AdminLayout() {
                                 <div className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors">
                                     <img
                                         className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src="/src/assets/login-image.png"
+                                        src="/images/login-image.png"
                                         alt="User avatar"
                                     />
                                     <div className="flex items-center">

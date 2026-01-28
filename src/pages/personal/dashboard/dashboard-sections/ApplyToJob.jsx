@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
-import logo from '../../../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = ({ job, onBack }) => {
     const [selectedResume, setSelectedResume] = useState(null);
@@ -28,7 +28,7 @@ const ApplyToJob = ({ job, onBack }) => {
         <div className="w-full h-full flex items-center justify-center bg-gray-50 p-4 sm:p-8">
             {/* Logo in top-left corner */}
             <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-                <img src={logo} alt="Maritime Link Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
+                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
             </div>
 
             {/* Main Form Container - matching officer dashboard sizing */}

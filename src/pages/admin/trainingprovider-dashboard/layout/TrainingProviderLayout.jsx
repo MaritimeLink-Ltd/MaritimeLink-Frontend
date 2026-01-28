@@ -47,11 +47,11 @@ function TrainingProviderLayout() {
                 <div className="h-full flex flex-col">
                     {/* Logo */}
                     <div className="p-6 flex justify-center">
-                        <img
-                            src="/src/assets/logo.png"
-                            alt="MaritimeLink"
-                            className="h-20 w-auto"
-                        />
+                                    <img
+                                        src="/images/logo.png"
+                                        alt="MaritimeLink"
+                                        className="h-20 w-auto"
+                                    />
                     </div>
 
                     {/* Main Menu */}
@@ -123,7 +123,7 @@ function TrainingProviderLayout() {
                                 <div className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors">
                                     <img
                                         className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src="/src/assets/login-image.png"
+                                        src="/images/login-image.png"
                                         alt="User avatar"
                                     />
                                     <div className="flex items-center">
