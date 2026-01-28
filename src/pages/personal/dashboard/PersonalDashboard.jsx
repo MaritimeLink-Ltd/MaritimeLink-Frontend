@@ -11,7 +11,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import logo from '../../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 import Dashboard from './dashboard-sections/Dashboard';
 import DocumentsWallet from './dashboard-sections/DocumentsWallet';
 import Chats from './dashboard-sections/Chats';

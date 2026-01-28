@@ -406,7 +406,7 @@ const OfficerDashboard = () => {
         {/* Logo and Menu */}
         <div className="p-3 flex items-center justify-between">
           <img 
-            src="/src/assets/logo.png" 
+            src="/images/logo.png" 
             alt="MaritimeLink Logo" 
             className="w-20 h-auto"
           />

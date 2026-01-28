@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react';
-import logo from '../../../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ChangePassword = ({ onBack }) => {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);

@@ -30,7 +30,7 @@ const OfficerCategory = () => {
           {/* Logo */}
           <div className="mb-4 sm:mb-6 -ml-2">
             <img
-              src="/src/assets/logo.png"
+              src="/images/logo.png"
               alt="MaritimeLink Logo"
               className="w-24 sm:w-28 h-auto"
             />
@@ -100,7 +100,7 @@ const OfficerCategory = () => {
       {/* Right Section - Image */}
       <div className="hidden lg:block lg:w-1/2 relative py-8 lg:py-12 xl:py-16 pr-8 lg:pr-12 xl:pr-16 pl-4 lg:pl-6 xl:pl-8">
         <img
-          src="/src/assets/category-image.png"
+          src="/images/category-image.png"
           alt="Maritime Officers"
           className="w-full h-full object-cover rounded-2xl"
         />

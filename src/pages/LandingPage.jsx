@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 // ...existing code...
 
 function LandingPage() {

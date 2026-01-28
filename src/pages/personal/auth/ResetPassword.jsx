@@ -74,7 +74,7 @@ function ResetPassword() {
                     {/* Logo */}
                     <div className="mb-6 sm:mb-8 -ml-2">
                         <img
-                            src="/src/assets/logo.png"
+                            src="/images/logo.png"
                             alt="MaritimeLink Logo"
                             className="w-24 sm:w-28 h-auto"
                         />
@@ -237,7 +237,7 @@ function ResetPassword() {
             {/* Right Side - Image */}
             <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
                 <img
-                    src="/src/assets/login-image.png"
+                    src="/images/login-image.png"
                     alt="Maritime Professional"
                     className="w-full h-full object-cover rounded-2xl"
                 />

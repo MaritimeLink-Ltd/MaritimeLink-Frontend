@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, MapPin, Building2, Banknote, Bookmark } from 'lucide-react';
-import logo from '../../../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const MyJobs = ({ onBack, appliedJobs = [], savedJobs = [] }) => {
     const [activeTab, setActiveTab] = useState('applied');

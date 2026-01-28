@@ -40,7 +40,7 @@ function AdminLayout() {
                     <div className="flex items-center justify-between p-6 border-b border-gray-100">
                         <div className="flex items-center gap-3">
                             <img
-                                src="/src/assets/logo.png"
+                                src="/images/logo.png"
                                 alt="MaritimeLink"
                                 className="h-16 w-auto"
                             />

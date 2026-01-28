@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Crown } from 'lucide-react';
-import logo from '../../../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ManageSubscription = ({ onBack }) => {
     const handleUpdatePlan = () => {

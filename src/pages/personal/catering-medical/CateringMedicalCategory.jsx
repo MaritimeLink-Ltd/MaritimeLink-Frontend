@@ -30,7 +30,7 @@ const CateringMedicalCategory = () => {
           {/* Logo */}
           <div className="mb-4 -ml-2">
             <img 
-              src="/src/assets/logo.png" 
+              src="/images/logo.png" 
               alt="MaritimeLink Logo" 
               className="w-28 h-auto"
             />
@@ -102,7 +102,7 @@ const CateringMedicalCategory = () => {
       {/* Right Section - Image */}
       <div className="hidden lg:block lg:w-1/2 relative py-8 lg:py-12 xl:py-16 pr-8 lg:pr-12 xl:pr-16 pl-4 lg:pl-6 xl:pl-8">
         <img
-          src="/src/assets/medical-catering.png"
+          src="/images/medical-catering.png"
           alt="Maritime Catering and Medical"
           className="w-full h-full object-cover rounded-2xl"
         />

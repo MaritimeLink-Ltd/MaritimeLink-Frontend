@@ -180,7 +180,7 @@ const OfficerDashboard = () => {
       >
         <div className="p-4 flex items-center justify-between border-b">
           <img
-            src="/src/assets/logo.png"
+            src="/images/logo.png"
             alt="MaritimeLink Logo"
             className="w-20 h-auto"
           />
@@ -269,7 +269,7 @@ const OfficerDashboard = () => {
         {/* Logo outside cards */}
         <div className="w-full mb-6">
           <img
-            src="/src/assets/logo.png"
+            src="/images/logo.png"
             alt="MaritimeLink Logo"
             className="w-24 h-auto -ml-2"
           />

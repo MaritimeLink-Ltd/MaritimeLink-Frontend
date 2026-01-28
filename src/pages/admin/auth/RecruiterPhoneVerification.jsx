@@ -117,7 +117,7 @@ function RecruiterPhoneVerification() {
                     {/* Logo */}
                     <div className="mb-4 sm:mb-6 -ml-2">
                         <img
-                            src="/src/assets/logo.png"
+                            src="/images/logo.png"
                             alt="MaritimeLink Logo"
                             className="w-24 sm:w-28 h-auto"
                         />
@@ -216,7 +216,7 @@ function RecruiterPhoneVerification() {
             {/* Right Side - Image */}
             <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
                 <img
-                    src="/src/assets/recruiter-otp.png"
+                    src="/images/recruiter-otp.png"
                     alt="Phone Verification"
                     className="w-full h-full object-cover rounded-2xl"
                 />

@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
-import logo from '../../assets/logo.png';
+// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const CVResume = () => {
     const [userData, setUserData] = useState({
@@ -318,7 +318,7 @@ const CVResume = () => {
                             </button>
                             <div className="w-10 h-10 sm:w-12 sm:h-12">
                                 <img
-                                    src={logo}
+                                    src="/images/logo.png"
                                     alt="Matrim Logo"
                                     className="w-full h-full object-contain"
                                 />
