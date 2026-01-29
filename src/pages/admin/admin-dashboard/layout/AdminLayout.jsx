@@ -127,20 +127,18 @@ function AdminLayout() {
                             <Menu className="h-6 w-6" />
                         </button>
 
-                        {/* Search Bar */}
-                        <div className="flex-1 max-w-md">
-                            <div className="relative">
+                        {/* Right Actions */}
+                        <div className="flex items-center gap-4 ml-auto">
+                            {/* Search Bar */}
+                            <div className="relative hidden sm:block">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Search..."
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                    className="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                                 />
                             </div>
-                        </div>
 
-                        {/* Right Actions */}
-                        <div className="flex items-center gap-4">
                             {/* Notification */}
                             <button
                                 onClick={() => navigate('/admin/notifications')}
@@ -153,7 +151,7 @@ function AdminLayout() {
                             {/* User Profile */}
                             <button className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50">
                                 <img
-                                    src="https://via.placeholder.com/40"
+                                    src="/images/login-image.png"
                                     alt="Musharof"
                                     className="w-8 h-8 rounded-full object-cover"
                                 />

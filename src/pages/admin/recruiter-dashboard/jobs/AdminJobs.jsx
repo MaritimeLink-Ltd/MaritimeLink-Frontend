@@ -18,6 +18,11 @@ function AdminJobs() {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [filters, setFilters] = useState({
+        status: 'Status',
+        jobType: 'Job Type',
+        vessel: 'Vessel'
+    });
 
     const stats = [
         {
@@ -27,7 +32,8 @@ function AdminJobs() {
             subtitle: 'Currently open',
             color: 'bg-blue-50',
             iconColor: 'text-blue-600',
-            textColor: 'text-blue-600'
+            textColor: 'text-blue-600',
+            filterStatus: 'Active'
         },
         {
             icon: FileText,
@@ -36,7 +42,8 @@ function AdminJobs() {
             subtitle: 'Draft Jobs',
             color: 'bg-orange-50',
             iconColor: 'text-orange-600',
-            textColor: 'text-orange-600'
+            textColor: 'text-orange-600',
+            filterStatus: 'Draft'
         },
         {
             icon: CheckCircle,
@@ -45,7 +52,8 @@ function AdminJobs() {
             subtitle: 'Closed Jobs',
             color: 'bg-red-50',
             iconColor: 'text-red-600',
-            textColor: 'text-red-600'
+            textColor: 'text-red-600',
+            filterStatus: 'Closed'
         },
         {
             icon: Users,
@@ -54,7 +62,8 @@ function AdminJobs() {
             subtitle: 'Total applications',
             color: 'bg-green-50',
             iconColor: 'text-green-600',
-            textColor: 'text-green-600'
+            textColor: 'text-green-600',
+            filterStatus: 'Status'
         }
     ];
 
@@ -67,7 +76,8 @@ function AdminJobs() {
             location: 'Global',
             badge: 'Pro',
             posted: '2 hours ago',
-            status: 'Active'
+            status: 'Active',
+            type: 'Permanent'
         },
         {
             id: '000002',
@@ -77,7 +87,8 @@ function AdminJobs() {
             location: 'Singapore',
             badge: 'Free',
             posted: '5 hours ago',
-            status: 'Active'
+            status: 'Active',
+            type: 'Permanent'
         },
         {
             id: '000003',
@@ -87,7 +98,8 @@ function AdminJobs() {
             location: 'Italy',
             badge: 'Pro',
             posted: '1 day ago',
-            status: 'Active'
+            status: 'Active',
+            type: 'Contract'
         },
         {
             id: '000004',
@@ -97,7 +109,8 @@ function AdminJobs() {
             location: 'India',
             badge: 'Free',
             posted: '2 days ago',
-            status: 'Draft'
+            status: 'Draft',
+            type: 'Permanent'
         },
         {
             id: '000005',
@@ -107,7 +120,8 @@ function AdminJobs() {
             location: 'USA',
             badge: 'Pro',
             posted: '3 days ago',
-            status: 'Ends Soon'
+            status: 'Ends Soon',
+            type: 'Contract'
         },
         {
             id: '000006',
@@ -117,7 +131,8 @@ function AdminJobs() {
             location: 'USA',
             badge: 'Pro',
             posted: '3 days ago',
-            status: 'Draft'
+            status: 'Draft',
+            type: 'Permanent'
         },
         {
             id: '000007',
@@ -127,9 +142,34 @@ function AdminJobs() {
             location: 'UK',
             badge: 'Pro',
             posted: '4 days ago',
-            status: 'Active'
+            status: 'Active',
+            type: 'Permanent'
         }
     ];
+
+    const filteredJobs = jobs.filter(job => {
+        // Search Filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            if (!job.title.toLowerCase().includes(query) &&
+                !job.vessel.toLowerCase().includes(query) &&
+                !job.id.includes(query)) {
+                return false;
+            }
+        }
+
+        // Dropdown Filters
+        if (filters.status !== 'Status' && job.status !== filters.status) return false;
+        // Note: Mock data needs 'type' property added to support job type filtering properly, or we assume defaults.
+        // I added 'type' property to the mock data above.
+        if (filters.jobType !== 'Job Type' && job.type !== filters.jobType) return false;
+
+        // Vessel Filter - Partial match or exact?
+        // Using includes for vessel because 'vessel' field might be 'LNG Tanker' and filter might be 'LNG Tanker'
+        if (filters.vessel !== 'Vessel' && !job.vessel.includes(filters.vessel)) return false;
+
+        return true;
+    });
 
     return (
         <div className="space-y-5">
@@ -148,7 +188,11 @@ function AdminJobs() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {stats.map((stat, idx) => (
-                    <div key={idx} className={`${stat.color} rounded-2xl p-5 border border-gray-100`}>
+                    <div
+                        key={idx}
+                        onClick={() => setFilters({ ...filters, status: stat.filterStatus })}
+                        className={`${stat.color} rounded-2xl p-5 border border-gray-100 transition-all cursor-pointer hover:shadow-md`}
+                    >
                         <div className="flex items-center gap-3 mb-3">
                             <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                             <span className={`text-sm font-bold ${stat.textColor}`}>{stat.label}</span>
@@ -176,17 +220,26 @@ function AdminJobs() {
                 {/* Filters */}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="relative">
-                        <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                        <select
+                            value={filters.status}
+                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                        >
                             <option>Status</option>
                             <option>Active</option>
                             <option>Draft</option>
                             <option>Closed</option>
+                            <option>Ends Soon</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
 
                     <div className="relative">
-                        <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                        <select
+                            value={filters.jobType}
+                            onChange={(e) => setFilters({ ...filters, jobType: e.target.value })}
+                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                        >
                             <option>Job Type</option>
                             <option>Permanent</option>
                             <option>Contract</option>
@@ -195,10 +248,16 @@ function AdminJobs() {
                     </div>
 
                     <div className="relative">
-                        <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                        <select
+                            value={filters.vessel}
+                            onChange={(e) => setFilters({ ...filters, vessel: e.target.value })}
+                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                        >
                             <option>Vessel</option>
                             <option>LNG Tanker</option>
                             <option>Container Ship</option>
+                            <option>Bulk Carrier</option>
+                            <option>Offshore Supply</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
@@ -230,7 +289,7 @@ function AdminJobs() {
                             </tr>
                         </thead>
                         <tbody>
-                            {jobs.map((job, idx) => (
+                            {filteredJobs.map((job, idx) => (
                                 <tr key={job.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-gray-900">{job.title}</div>

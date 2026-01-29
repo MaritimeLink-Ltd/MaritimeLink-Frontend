@@ -117,25 +117,23 @@ const Jobs = ({ onApplyClick, onMyJobsClick }) => {
                             <Briefcase size={18} />
                             My Jobs
                         </button>
-                        {isFilterActive && (
-                            <button
-                                onClick={() => {
+                        <button
+                            onClick={() => {
+                                if (isFilterActive) {
                                     setFilters({ category: null, datePosted: null, jobType: null });
                                     setTempFilters({ category: null, datePosted: null, jobType: null });
                                     setIsFilterActive(false);
-                                }}
-                                className="flex items-center gap-2 bg-gray-800 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-700 transition-colors"
-                            >
-                                <X size={18} />
-                                Remove Filter
-                            </button>
-                        )}
-                        <button
-                            onClick={() => setShowFilter(true)}
-                            className="flex items-center justify-center gap-2 bg-blue-900 text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-blue-800 transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                                } else {
+                                    setShowFilter(true);
+                                }
+                            }}
+                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${isFilterActive
+                                ? 'bg-gray-800 text-white hover:bg-gray-700'
+                                : 'bg-blue-900 text-white hover:bg-blue-800'
+                                }`}
                         >
-                            <SlidersHorizontal size={18} />
-                            Filter
+                            {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
+                            {isFilterActive ? 'Remove Filter' : 'Filter'}
                         </button>
                     </div>
                 </div>

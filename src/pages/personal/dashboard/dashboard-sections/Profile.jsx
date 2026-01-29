@@ -1,7 +1,17 @@
 import React from 'react';
 import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown } from 'lucide-react';
 
+
+import { useNavigate } from 'react-router-dom';
+
 const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
+        navigate('/signin');
+    };
+
     return (
         <div className="w-full h-full bg-gray-50 overflow-y-auto">
             {/* Main Content - Two Column Layout with spacing */}
@@ -112,7 +122,7 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                         <div>
                             <p className="text-xs text-gray-400 mb-3">Account</p>
                             <div className="space-y-2">
-                                <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                                <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors" onClick={handleLogout}>
                                     <div className="flex items-center gap-3">
                                         <LogOut size={16} className="text-blue-900" />
                                         <span className="text-gray-800 text-sm">Log out</span>

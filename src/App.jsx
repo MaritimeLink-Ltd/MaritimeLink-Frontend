@@ -54,6 +54,7 @@ import TrainingProviderCreateCourse from './pages/admin/trainingprovider-dashboa
 import Bookings from './pages/admin/trainingprovider-dashboard/bookings/Bookings';
 import BookingDetail from './pages/admin/trainingprovider-dashboard/bookings/BookingDetail';
 import TrainingProviderNotifications from './pages/admin/trainingprovider-dashboard/TrainingProviderNotifications';
+import TrainingProviderProfile from './pages/admin/trainingprovider-dashboard/TrainingProviderProfile';
 
 import SuperAdminLayout from './pages/admin/admin-dashboard/layout/AdminLayout';
 import AdminDashboard from './pages/admin/admin-dashboard/AdminDashboard';
@@ -141,6 +142,7 @@ function App() {
           <Route path="/trainingprovider/bookings" element={<Bookings />} />
           <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
           <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
+          <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
         </Route>
 
         {/* Super Admin Protected Routes (With Layout) */}

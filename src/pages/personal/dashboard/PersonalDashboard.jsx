@@ -61,7 +61,7 @@ const PersonalDashboard = () => {
       {/* Mobile Header with Hamburger - Only show when sidebar should be visible */}
       {!showMyJobs && !applyingToJob && !bookingCourse && !showChangePassword && !showManageSubscription && (
         <div className="lg:hidden fixed top-0 left-0 right-0 bg-white z-40 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <img src={logo} alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
+          <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -95,7 +95,7 @@ const PersonalDashboard = () => {
             {/* Logo */}
             <div className="p-6">
               <div className="flex items-center justify-between">
-                <img src={logo} alt="Maritime Link Logo" className="w-20 h-20 object-contain" />
+                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-20 h-20 object-contain" />
                 {/* Close button for mobile */}
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}

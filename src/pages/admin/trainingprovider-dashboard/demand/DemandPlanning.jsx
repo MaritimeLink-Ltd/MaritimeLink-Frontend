@@ -12,7 +12,10 @@ import {
     Search
 } from 'lucide-react';
 
+import { useNavigate } from 'react-router-dom';
+
 function DemandPlanning() {
+    const navigate = useNavigate();
     const [selectedRegion, setSelectedRegion] = useState('My Region');
     const [selectedCity, setSelectedCity] = useState('My City');
     const [selectedNearbyCities, setSelectedNearbyCities] = useState('Nearby Cities');
@@ -128,6 +131,18 @@ function DemandPlanning() {
         }
     ];
 
+    const handleCreateCourse = () => {
+        navigate('/trainingprovider/courses/create');
+    };
+
+    const handleCheckSchedule = () => {
+        navigate('/trainingprovider/courses');
+    };
+
+    const handleViewExpiries = () => {
+        navigate('/trainingprovider/courses');
+    };
+
     return (
         <div className="min-h-screen">
             {/* Header Section */}
@@ -241,7 +256,10 @@ function DemandPlanning() {
                 <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-5">
                         <h2 className="text-lg font-bold text-gray-900">Upcoming Renewal Insight</h2>
-                        <button className="text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors">
+                        <button
+                            onClick={handleViewExpiries}
+                            className="text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors"
+                        >
                             View All Expiries
                         </button>
                     </div>
@@ -290,7 +308,10 @@ function DemandPlanning() {
                                         <p className="text-xs text-gray-500">{item.subtitle}</p>
                                     </div>
                                 </div>
-                                <button className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${item.buttonStyle}`}>
+                                <button
+                                    onClick={item.buttonText === 'Create Course' ? handleCreateCourse : handleCheckSchedule}
+                                    className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${item.buttonStyle}`}
+                                >
                                     {item.buttonText}
                                 </button>
                             </div>

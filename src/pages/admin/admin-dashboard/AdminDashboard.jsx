@@ -26,7 +26,10 @@ import {
     BookOpen
 } from 'lucide-react';
 
+import { useNavigate } from 'react-router-dom';
+
 function AdminDashboard() {
+    const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
 
     // Top Stats Cards
@@ -35,9 +38,11 @@ function AdminDashboard() {
             id: 1,
             icon: Users,
             value: '12',
+            value: '12',
             label: 'Pending Approvals',
             badge: '+4 today',
-            gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]'
+            gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]',
+            path: '/admin/compliance'
         },
         {
             id: 2,
@@ -45,7 +50,8 @@ function AdminDashboard() {
             value: '5',
             label: 'Flagged Issues',
             badge: 'Needs Attention',
-            gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]'
+            gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]',
+            path: '/admin/flagged-accounts'
         },
         {
             id: 3,
@@ -53,7 +59,8 @@ function AdminDashboard() {
             value: '8',
             label: 'Expiring Compliance',
             badge: 'In next 48h',
-            gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]'
+            gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]',
+            path: '/admin/compliance'
         }
     ];
 
@@ -232,7 +239,8 @@ function AdminDashboard() {
                 {topStats.map((stat) => (
                     <div
                         key={stat.id}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden`}
+                        onClick={() => navigate(stat.path)}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
                     >
                         <div className="relative z-10">
                             {/* Icon and Badge */}
@@ -349,7 +357,11 @@ function AdminDashboard() {
 
                             <div className="space-y-3">
                                 {reviewQueue.map((item) => (
-                                    <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                                    <div
+                                        key={item.id}
+                                        onClick={() => navigate('/admin/compliance')}
+                                        className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+                                    >
                                         <div className={`p-2 rounded-lg ${item.iconBg} flex-shrink-0`}>
                                             <item.icon className={`h-4 w-4 ${item.iconColor}`} />
                                         </div>
@@ -362,7 +374,10 @@ function AdminDashboard() {
                                 ))}
                             </div>
 
-                            <button className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2">
+                            <button
+                                onClick={() => navigate('/admin/compliance')}
+                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2"
+                            >
                                 View All Reviews
                             </button>
                         </div>
@@ -378,7 +393,11 @@ function AdminDashboard() {
 
                             <div className="space-y-3">
                                 {systemAlerts.map((alert) => (
-                                    <div key={alert.id} className="flex items-start gap-3">
+                                    <div
+                                        key={alert.id}
+                                        onClick={() => navigate('/admin/notifications')}
+                                        className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors -mx-2"
+                                    >
                                         <div className={`w-8 h-8 rounded-full ${alert.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                                             {alert.id}
                                         </div>
@@ -390,7 +409,10 @@ function AdminDashboard() {
                                 ))}
                             </div>
 
-                            <button className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2">
+                            <button
+                                onClick={() => navigate('/admin/notifications')}
+                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2"
+                            >
                                 View All Alerts
                             </button>
                         </div>
@@ -398,7 +420,10 @@ function AdminDashboard() {
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button className="bg-gradient-to-br from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8] text-white rounded-2xl p-6 text-left hover:shadow-lg transition-shadow">
+                        <button
+                            onClick={() => navigate('/admin/compliance')}
+                            className="bg-gradient-to-br from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8] text-white rounded-2xl p-6 text-left hover:shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                        >
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">
                                     <CheckCircle className="h-5 w-5 text-white" />

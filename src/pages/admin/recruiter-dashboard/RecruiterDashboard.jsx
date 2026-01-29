@@ -10,7 +10,10 @@ import {
 } from 'lucide-react';
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
 
+import { useNavigate } from 'react-router-dom';
+
 function RecruiterDashboard() {
+    const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [showVerifyModal, setShowVerifyModal] = useState(false);
 
@@ -24,6 +27,7 @@ function RecruiterDashboard() {
             icon: Briefcase,
             gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
+            path: '/admin/jobs'
         },
         {
             id: 2,
@@ -33,6 +37,7 @@ function RecruiterDashboard() {
             icon: CheckCircle,
             gradient: 'from-[#059669] via-[#10b981] to-[#34d399]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
+            path: '/admin/jobs'
         },
         {
             id: 3,
@@ -42,6 +47,7 @@ function RecruiterDashboard() {
             icon: Award,
             gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
+            path: '/admin/search'
         },
         {
             id: 4,
@@ -51,7 +57,8 @@ function RecruiterDashboard() {
             icon: AlertTriangle,
             gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
-            topIcon: Calendar
+            topIcon: Calendar,
+            path: '/admin/jobs'
         },
     ];
 
@@ -65,7 +72,8 @@ function RecruiterDashboard() {
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             actionText: 'View Applicants',
-            actionLink: '#'
+            actionLink: '/admin/jobs',
+            path: '/admin/jobs'
         },
         {
             id: 2,
@@ -75,7 +83,8 @@ function RecruiterDashboard() {
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             actionText: 'View Matches',
-            actionLink: '#'
+            actionLink: '/admin/search',
+            path: '/admin/search'
         },
         {
             id: 3,
@@ -85,8 +94,9 @@ function RecruiterDashboard() {
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-50',
             actionText: 'Edit Job',
-            actionLink: '#',
-            secondaryAction: true
+            actionLink: '/admin/jobs',
+            secondaryAction: true,
+            path: '/admin/jobs'
         },
         {
             id: 4,
@@ -96,7 +106,8 @@ function RecruiterDashboard() {
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             actionText: 'View Job',
-            actionLink: '#'
+            actionLink: '/admin/jobs',
+            path: '/admin/jobs'
         }
     ];
 
@@ -108,7 +119,8 @@ function RecruiterDashboard() {
             type: 'Permanent / LNG Tanker',
             status: 'Active',
             matches: 18,
-            image: 'https://via.placeholder.com/150'
+            image: '/images/login-image.png',
+            path: '/admin/jobs'
         },
         {
             id: 2,
@@ -116,7 +128,8 @@ function RecruiterDashboard() {
             type: 'Permanent / DP Vessel',
             status: 'Ending Soon',
             matches: 6,
-            image: 'https://via.placeholder.com/150'
+            image: '/images/login-image.png',
+            path: '/admin/jobs'
         },
         {
             id: 3,
@@ -124,7 +137,8 @@ function RecruiterDashboard() {
             type: 'Temporary / Container Ship',
             status: 'Draft',
             matches: 8,
-            image: 'https://via.placeholder.com/150'
+            image: '/images/login-image.png',
+            path: '/admin/jobs'
         }
     ];
 
@@ -168,7 +182,8 @@ function RecruiterDashboard() {
                 {stats.map((stat) => (
                     <div
                         key={stat.id}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden`}
+                        onClick={() => navigate(stat.path)}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
                     >
                         <div className="relative z-10 flex flex-col h-full">
                             {/* Top Row: Icon + Optional Calendar */}
@@ -206,10 +221,12 @@ function RecruiterDashboard() {
                                     </div>
                                     <span className="text-gray-900 font-medium text-sm">{item.text}</span>
                                 </div>
-                                <button className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
-                                    ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
-                                    : 'bg-[#003971] text-white hover:bg-[#002855]'
-                                    } flex items-center gap-2`}>
+                                <button
+                                    onClick={() => navigate(item.path)}
+                                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
+                                        ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                                        : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                        } flex items-center gap-2`}>
                                     {item.actionText}
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -249,7 +266,10 @@ function RecruiterDashboard() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
-                    <button className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1">
+                    <button
+                        onClick={() => navigate('/admin/jobs')}
+                        className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1"
+                    >
                         View All Jobs &gt;
                     </button>
                 </div>
@@ -285,7 +305,10 @@ function RecruiterDashboard() {
                                 </span>
                             </div>
                             <div className="col-span-3 flex justify-end">
-                                <button className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate('/admin/search')}
+                                    className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                >
                                     {job.matches} <ChevronRight className="h-3.5 w-3.5" />
                                 </button>
                             </div>
@@ -294,7 +317,10 @@ function RecruiterDashboard() {
                 </div>
 
                 <div className="px-8 py-5 border-t border-gray-100 text-center">
-                    <button className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full">
+                    <button
+                        onClick={() => navigate('/admin/jobs')}
+                        className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"
+                    >
                         View All Jobs <ChevronRight className="h-4 w-4" />
                     </button>
                 </div>

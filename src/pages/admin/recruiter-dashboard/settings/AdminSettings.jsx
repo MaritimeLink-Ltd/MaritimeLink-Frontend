@@ -108,7 +108,7 @@ function AdminSettings() {
                                     <div className="flex items-start gap-6">
                                         <div className="relative">
                                             <img
-                                                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop"
+                                                src="/images/login-image.png"
                                                 alt="Profile"
                                                 className="w-24 h-24 rounded-full object-cover"
                                             />

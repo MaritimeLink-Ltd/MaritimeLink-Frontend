@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import viteLogo from '/vite.svg';
+
 
 function LandingPage() {
     const navigate = useNavigate();
@@ -37,7 +37,7 @@ function LandingPage() {
             <header className="w-full py-6 px-8">
                 <div className="max-w-7xl mx-auto flex justify-end">
                     <img
-                        src={viteLogo}
+                        src="/images/logo.png"
                         alt="Maritime Link Logo"
                         className="h-16 w-auto object-contain"
                     />

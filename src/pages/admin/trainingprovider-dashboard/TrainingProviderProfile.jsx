@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
     User,
     Shield,
@@ -7,9 +7,7 @@ import {
     Camera,
     Save,
     MapPin,
-    Briefcase,
     Building,
-    Lock,
     Smartphone,
     Laptop,
     Monitor,
@@ -19,20 +17,20 @@ import {
     Trash2
 } from 'lucide-react';
 
-const AdminProfile = () => {
+const TrainingProviderProfile = () => {
     const [activeTab, setActiveTab] = useState('general');
 
     const [formData, setFormData] = useState({
-        firstName: 'Musharof',
-        lastName: 'Chowdhury',
-        email: 'musharof@example.com',
-        phone: '+1 (555) 123-4567',
-        jobTitle: 'Senior Administrator',
+        firstName: 'Kingsley',
+        lastName: 'Osifo',
+        email: 'kingsley@maritimelink.com',
+        phone: '+44 7700 900077',
+        jobTitle: 'Training Manager',
         department: 'Operations',
-        companyName: 'MaritimeLink Global',
-        orgId: 'ORG-882910',
-        role: 'Super Admin',
-        region: 'North America (East)'
+        companyName: 'MaritimeLink Training',
+        orgId: 'TP-778291',
+        role: 'Training Provider Admin',
+        region: 'United Kingdom'
     });
 
     const [passwords, setPasswords] = useState({
@@ -43,16 +41,15 @@ const AdminProfile = () => {
 
     const [notifications, setNotifications] = useState({
         securityAlerts: true,
-        complianceRequests: true,
-        accountUpdates: true,
+        bookingRequests: true,
+        courseUpdates: true,
         marketing: false,
-        desktopSounds: false,
+        desktopSounds: true,
         slaBreaches: true
     });
 
     const [apiKeys, setApiKeys] = useState([
-        { id: 1, name: 'Production Backend', hint: 'pk_live...92x', created: 'Oct 24, 2024', lastUsed: '2 mins ago' },
-        { id: 2, name: 'Staging Environment', hint: 'pk_test...88a', created: 'Sep 12, 2024', lastUsed: '1 day ago' }
+        { id: 1, name: 'LMS Integration', hint: 'pk_live...92x', created: 'Oct 24, 2024', lastUsed: '2 mins ago' }
     ]);
 
     const menuItems = [
@@ -65,7 +62,7 @@ const AdminProfile = () => {
     const Toggle = ({ checked, onChange }) => (
         <button
             onClick={() => onChange(!checked)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${checked ? 'bg-[#0f385c]' : 'bg-gray-200'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${checked ? 'bg-[#003971]' : 'bg-gray-200'
                 }`}
         >
             <span
@@ -93,7 +90,7 @@ const AdminProfile = () => {
                                     key={item.id}
                                     onClick={() => setActiveTab(item.id)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-colors ${activeTab === item.id
-                                        ? 'bg-[#0f385c] text-white'
+                                        ? 'bg-[#003971] text-white'
                                         : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
@@ -136,7 +133,7 @@ const AdminProfile = () => {
                                                 type="text"
                                                 value={formData.firstName}
                                                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -145,7 +142,7 @@ const AdminProfile = () => {
                                                 type="text"
                                                 value={formData.lastName}
                                                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
 
@@ -155,7 +152,7 @@ const AdminProfile = () => {
                                                 type="email"
                                                 value={formData.email}
                                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -164,7 +161,7 @@ const AdminProfile = () => {
                                                 type="text"
                                                 value={formData.phone}
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
 
@@ -174,7 +171,7 @@ const AdminProfile = () => {
                                                 type="text"
                                                 value={formData.jobTitle}
                                                 onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -183,14 +180,14 @@ const AdminProfile = () => {
                                                 type="text"
                                                 value={formData.department}
                                                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex justify-end mt-8 border-t border-gray-100 pt-6">
-                                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
                                         <Save className="h-4 w-4" />
                                         Save Changes
                                     </button>
@@ -270,7 +267,7 @@ const AdminProfile = () => {
                                             placeholder="Enter Current Password"
                                             value={passwords.current}
                                             onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -280,7 +277,7 @@ const AdminProfile = () => {
                                             placeholder="Enter New Password"
                                             value={passwords.new}
                                             onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -290,12 +287,12 @@ const AdminProfile = () => {
                                             placeholder="Confirm Current Password"
                                             value={passwords.confirm}
                                             onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                         />
                                     </div>
 
                                     <div className="flex justify-end pt-2">
-                                        <button className="px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                        <button className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
                                             Update Password
                                         </button>
                                     </div>
@@ -365,22 +362,6 @@ const AdminProfile = () => {
                                         </div>
                                         <span className="text-xs font-bold text-green-600">Active 2h ago</span>
                                     </div>
-
-                                    <div className="h-px bg-gray-50" />
-
-                                    {/* Session 3 */}
-                                    <div className="flex items-center justify-between py-2">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2.5 bg-gray-50 rounded-lg">
-                                                <Monitor className="h-5 w-5 text-gray-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Windows PC</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Manchester, UK • 10.0.0.12</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs font-bold text-green-600">Active 1d ago</span>
-                                    </div>
                                 </div>
                             </div>
                         </>
@@ -408,24 +389,24 @@ const AdminProfile = () => {
 
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="text-sm font-bold text-gray-900">New Compliance Requests</h3>
-                                            <p className="text-xs text-gray-500 mt-0.5">When a new document is submitted for review</p>
+                                            <h3 className="text-sm font-bold text-gray-900">New Booking Requests</h3>
+                                            <p className="text-xs text-gray-500 mt-0.5">When a new student books a course</p>
                                         </div>
                                         <Toggle
-                                            checked={notifications.complianceRequests}
-                                            onChange={(v) => setNotifications({ ...notifications, complianceRequests: v })}
+                                            checked={notifications.bookingRequests}
+                                            onChange={(v) => setNotifications({ ...notifications, bookingRequests: v })}
                                         />
                                     </div>
                                     <div className="h-px bg-gray-50" />
 
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="text-sm font-bold text-gray-900">Account Updates</h3>
-                                            <p className="text-xs text-gray-500 mt-0.5">Changes to your account status or tier</p>
+                                            <h3 className="text-sm font-bold text-gray-900">Course Updates</h3>
+                                            <p className="text-xs text-gray-500 mt-0.5">Changes to your course status or approvals</p>
                                         </div>
                                         <Toggle
-                                            checked={notifications.accountUpdates}
-                                            onChange={(v) => setNotifications({ ...notifications, accountUpdates: v })}
+                                            checked={notifications.courseUpdates}
+                                            onChange={(v) => setNotifications({ ...notifications, courseUpdates: v })}
                                         />
                                     </div>
                                     <div className="h-px bg-gray-50" />
@@ -484,7 +465,7 @@ const AdminProfile = () => {
                                     <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
                                     <p className="text-sm text-gray-500 mt-1">Manage API keys for external integrations.</p>
                                 </div>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                <button className="flex items-center gap-2 px-4 py-2 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
                                     <Plus className="h-4 w-4" />
                                     Create New Key
                                 </button>
@@ -539,4 +520,4 @@ const AdminProfile = () => {
     );
 };
 
-export default AdminProfile;
+export default TrainingProviderProfile;

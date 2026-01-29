@@ -11,7 +11,10 @@ import {
     BookMarked
 } from 'lucide-react';
 
+import { useNavigate } from 'react-router-dom';
+
 function TrainingProviderDashboard() {
+    const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
 
     const statsCards = [
@@ -22,7 +25,8 @@ function TrainingProviderDashboard() {
             subtitle: 'Active Courses',
             icon: BookOpen,
             bgGradient: 'from-[#1E4976] to-[#2E6BA8]',
-            iconBg: 'bg-white/20'
+            iconBg: 'bg-white/20',
+            path: '/trainingprovider/courses'
         },
         {
             id: 2,
@@ -31,7 +35,8 @@ function TrainingProviderDashboard() {
             subtitle: 'New Bookings',
             icon: Calendar,
             bgGradient: 'from-[#0FA968] to-[#1BC47D]',
-            iconBg: 'bg-white/20'
+            iconBg: 'bg-white/20',
+            path: '/trainingprovider/bookings'
         },
         {
             id: 3,
@@ -40,7 +45,8 @@ function TrainingProviderDashboard() {
             subtitle: 'Demand Signals',
             icon: TrendingUp,
             bgGradient: 'from-[#E86C5F] to-[#F28B7D]',
-            iconBg: 'bg-white/20'
+            iconBg: 'bg-white/20',
+            path: '/trainingprovider/demand'
         }
     ];
 
@@ -52,7 +58,8 @@ function TrainingProviderDashboard() {
             iconBg: 'bg-blue-50',
             title: '12 learners waiting for Advanced Engineering Courses',
             subtitle: 'Next session: 10-12 June, Aberdeen',
-            hasButton: false
+            hasButton: false,
+            path: null
         },
         {
             id: 2,
@@ -63,7 +70,8 @@ function TrainingProviderDashboard() {
             subtitle: 'Next session: 24-26 May, Aberdeen',
             hasButton: true,
             buttonText: 'View Bookings',
-            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]'
+            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
+            path: '/trainingprovider/bookings'
         },
         {
             id: 3,
@@ -74,7 +82,8 @@ function TrainingProviderDashboard() {
             subtitle: 'Marine Electricals • Offshore Safety > Energy Audits',
             hasButton: true,
             buttonText: 'Add Session',
-            buttonStyle: 'bg-white text-orange-600 border-2 border-orange-200 hover:bg-orange-50'
+            buttonStyle: 'bg-white text-orange-600 border-2 border-orange-200 hover:bg-orange-50',
+            path: '/trainingprovider/courses'
         },
         {
             id: 4,
@@ -85,7 +94,8 @@ function TrainingProviderDashboard() {
             subtitle: '67 professionals need renewal in 30 days',
             hasButton: true,
             buttonText: 'View Bookings',
-            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]'
+            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
+            path: '/trainingprovider/bookings'
         }
     ];
 
@@ -150,7 +160,8 @@ function TrainingProviderDashboard() {
                 {statsCards.map((card) => (
                     <div
                         key={card.id}
-                        className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md`}
+                        onClick={() => navigate(card.path)}
+                        className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
                     >
                         <div className="flex items-start justify-between mb-3">
                             <div className={`${card.iconBg} p-3 rounded-xl`}>
@@ -190,7 +201,13 @@ function TrainingProviderDashboard() {
                                         </div>
                                     </div>
                                     {item.hasButton && (
-                                        <button className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition-all flex-shrink-0 ${item.buttonStyle}`}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(item.path);
+                                            }}
+                                            className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition-all flex-shrink-0 ${item.buttonStyle}`}
+                                        >
                                             <span>{item.buttonText}</span>
                                             <ChevronRight className="h-3.5 w-3.5" />
                                         </button>
@@ -226,7 +243,8 @@ function TrainingProviderDashboard() {
                             {courses.map((course, index) => (
                                 <div
                                     key={course.id}
-                                    className={`flex items-center justify-between py-3 ${index !== courses.length - 1 ? 'border-b border-gray-100' : ''
+                                    onClick={() => navigate(`/trainingprovider/courses/${course.id}`)}
+                                    className={`flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg px-2 -mx-2 ${index !== courses.length - 1 ? 'border-b border-gray-100' : ''
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -251,7 +269,10 @@ function TrainingProviderDashboard() {
 
                         {/* View All Courses Link */}
                         <div className="mt-5 pt-4 border-t border-gray-200">
-                            <button className="w-full text-center text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors">
+                            <button
+                                onClick={() => navigate('/trainingprovider/courses')}
+                                className="w-full text-center text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors"
+                            >
                                 View All Courses
                             </button>
                         </div>

@@ -34,7 +34,7 @@ const ManageSubscription = ({ onBack }) => {
         <div className="w-full h-full flex items-center justify-center bg-gray-50 p-8">
             {/* Logo in top-left corner */}
             <div className="absolute top-6 left-6">
-                <img src={logo} alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
+                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
             </div>
 
             {/* Main Form Container - no fixed height, all content visible */}

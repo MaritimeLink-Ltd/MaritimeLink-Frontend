@@ -20,6 +20,8 @@ const DocumentsWallet = () => {
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
 
+    const [searchQuery, setSearchQuery] = useState('');
+
     const filters = [
         'All',
         'Compliance Ready',
@@ -104,6 +106,33 @@ const DocumentsWallet = () => {
         }
     ];
 
+    const filteredCategories = categories.filter(category => {
+        // Search Filter
+        const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // Category/Status Filter
+        let matchesFilter = true;
+        if (activeFilter !== 'All') {
+            if (!category.status) {
+                matchesFilter = false;
+            } else {
+                // Check if the status label contains the active filter text
+                // Adjusting logic to match typical string containment
+                const statusText = category.status.label.toLowerCase();
+                const filterText = activeFilter.toLowerCase();
+
+                // Specific mapping or looser check
+                if (activeFilter === 'Expiring Soon' && statusText.includes('expiring soon')) matchesFilter = true;
+                else if (activeFilter === 'Compliance Ready' && statusText.includes('compliance ready')) matchesFilter = true;
+                else if (activeFilter === 'Pending Approval' && statusText.includes('pending approval')) matchesFilter = true;
+                else if (activeFilter === 'Expired' && statusText.includes('expired') && !statusText.includes('soon')) matchesFilter = true; // Avoid 'expiring soon' matching 'expired' if simple includes
+                else matchesFilter = false;
+            }
+        }
+
+        return matchesSearch && matchesFilter;
+    });
+
     const handleUploadComplete = (newDoc) => {
         setSelectedDoc(newDoc);
         setView('detail');
@@ -143,6 +172,8 @@ const DocumentsWallet = () => {
                             type="text"
                             placeholder="Search docs..."
                             className="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:border-blue-500 text-sm bg-white"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
@@ -202,37 +233,44 @@ const DocumentsWallet = () => {
 
             {/* Categories Grid - Single column on mobile, 2 on tablet+ */}
             <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-                {categories.map((cat) => (
-                    <div
-                        key={cat.id}
-                        onClick={() => handleCategoryClick(cat)}
-                        className="bg-white rounded-2xl p-4 flex items-start gap-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                    >
-                        {/* Icon Box */}
-                        <div className={`w-12 h-12 rounded-xl ${cat.iconBg} flex items-center justify-center shrink-0`}>
-                            <cat.icon size={22} className={cat.iconColor} />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-base font-bold text-gray-800 leading-tight">{cat.title}</h3>
-                                    <p className="text-gray-400 text-sm mt-0.5 font-medium">{cat.count} Documents</p>
-                                </div>
+                {filteredCategories.length > 0 ? (
+                    filteredCategories.map((cat) => (
+                        <div
+                            key={cat.id}
+                            onClick={() => handleCategoryClick(cat)}
+                            className="bg-white rounded-2xl p-4 flex items-start gap-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                        >
+                            {/* Icon Box */}
+                            <div className={`w-12 h-12 rounded-xl ${cat.iconBg} flex items-center justify-center shrink-0`}>
+                                <cat.icon size={22} className={cat.iconColor} />
                             </div>
 
-                            {/* Status Badge */}
-                            {cat.status && (
-                                <div className="mt-2">
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${cat.status.color}`}>
-                                        {cat.status.label}
-                                    </span>
+                            {/* Content */}
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-800 leading-tight">{cat.title}</h3>
+                                        <p className="text-gray-400 text-sm mt-0.5 font-medium">{cat.count} Documents</p>
+                                    </div>
                                 </div>
-                            )}
+
+                                {/* Status Badge */}
+                                {cat.status && (
+                                    <div className="mt-2">
+                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${cat.status.color}`}>
+                                            {cat.status.label}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
+                    ))
+                ) : (
+                    <div className="col-span-full py-12 text-center text-gray-500">
+                        <Folder className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                        <p>No documents found matching your filters.</p>
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );

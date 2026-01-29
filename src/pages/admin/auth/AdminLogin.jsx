@@ -173,6 +173,16 @@ function AdminLogin() {
                                 'Login'
                             )}
                         </button>
+
+                        {/* Sign Up Link */}
+                        <div className="mt-6 text-center">
+                            <p className="text-sm text-gray-600">
+                                Don't have an account?{' '}
+                                <Link to="/admin/signup" className="font-medium text-[#003971] hover:text-[#002855] hover:underline">
+                                    Sign up
+                                </Link>
+                            </p>
+                        </div>
                     </form>
                 </div>
             </div>

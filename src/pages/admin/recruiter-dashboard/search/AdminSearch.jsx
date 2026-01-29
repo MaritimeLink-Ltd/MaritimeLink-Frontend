@@ -74,7 +74,50 @@ function AdminSearch() {
         }
     ];
 
-    const totalCandidates = 127;
+    const filteredCandidates = candidates.filter(candidate => {
+        // Search Filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            if (!candidate.name.toLowerCase().includes(query) &&
+                !candidate.rank.toLowerCase().includes(query)) {
+                return false;
+            }
+        }
+
+        // Rank Filter
+        if (filters.rankPosition.length > 0 && !filters.rankPosition.includes(candidate.rank)) {
+            return false;
+        }
+
+        // Experience Filter (Simplified matching for demo - ideally parse range)
+        if (filters.experienceLevel.length > 0) {
+            // This is a basic text match for the demo as the data matches the options.
+            // In a real app, you'd parse "15 years" to a number and check range.
+            // For now, let's assume direct match or partial match if needed, but data "15 years" doesn't match "10+ years" directly.
+            // Let's implement a simple parser for better UX or just strict match if data aligns.
+            // Given the mock data: "15 years" vs "10+ years".
+            // Let's just check if any selected filter loosely matches or if we need custom logic.
+            // Custom logic:
+            const years = parseInt(candidate.experience);
+            const matchesAny = filters.experienceLevel.some(level => {
+                if (level === '0-2 years') return years >= 0 && years <= 2;
+                if (level === '3-5 years') return years >= 3 && years <= 5;
+                if (level === '6-10 years') return years >= 6 && years <= 10;
+                if (level === '10+ years') return years > 10;
+                return false;
+            });
+            if (!matchesAny) return false;
+        }
+
+        // Vessel Type Filter (Mock data doesn't have vessel type explicitly, adding a mock check or skipping)
+        // Since mock data only has: name, rank, experience, location.
+        // I will assume for now we skip vessel filter or add it to mock data.
+        // Let's add 'vesselType' to mock data in a previous step? Or just ignore it for now to avoid errors?
+        // Let's ignore it for now as it's not in the data object.
+        return true;
+    });
+
+    const totalCandidates = filteredCandidates.length;
 
     return (
         <div className="space-y-5">
@@ -145,7 +188,7 @@ function AdminSearch() {
                     {/* Candidate Cards - List View */}
                     {viewMode === 'list' && (
                         <div className="space-y-3">
-                            {candidates.map((candidate) => (
+                            {filteredCandidates.map((candidate) => (
                                 <div key={candidate.id} className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-shadow">
                                     <div className="flex items-center justify-between gap-6">
                                         {/* Left: Avatar & Info */}
@@ -211,7 +254,7 @@ function AdminSearch() {
                     {/* Candidate Cards - Grid View */}
                     {viewMode === 'grid' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {candidates.map((candidate) => (
+                            {filteredCandidates.map((candidate) => (
                                 <div key={candidate.id} className="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-shadow">
                                     <div className="flex flex-col items-center text-center">
                                         {/* Avatar */}
@@ -309,7 +352,12 @@ function AdminSearch() {
                                 <Filter className="h-4 w-4" />
                                 <h3 className="font-bold text-sm">Filters</h3>
                             </div>
-                            <button className="text-sm font-bold text-red-500 hover:text-red-600">Clear All</button>
+                            <button
+                                onClick={() => setFilters({ rankPosition: [], experienceLevel: [], vesselType: [] })}
+                                className="text-sm font-bold text-red-500 hover:text-red-600"
+                            >
+                                Clear All
+                            </button>
                         </div>
 
                         {/* Rank/Position Filter */}
@@ -324,6 +372,13 @@ function AdminSearch() {
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971]"
+                                            checked={filters.rankPosition.includes(rank)}
+                                            onChange={(e) => {
+                                                const newRanks = e.target.checked
+                                                    ? [...filters.rankPosition, rank]
+                                                    : filters.rankPosition.filter(r => r !== rank);
+                                                setFilters({ ...filters, rankPosition: newRanks });
+                                            }}
                                         />
                                         <span className="text-sm text-gray-600 group-hover:text-gray-900">{rank}</span>
                                     </label>
@@ -343,6 +398,13 @@ function AdminSearch() {
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971]"
+                                            checked={filters.experienceLevel.includes(level)}
+                                            onChange={(e) => {
+                                                const newLevels = e.target.checked
+                                                    ? [...filters.experienceLevel, level]
+                                                    : filters.experienceLevel.filter(l => l !== level);
+                                                setFilters({ ...filters, experienceLevel: newLevels });
+                                            }}
                                         />
                                         <span className="text-sm text-gray-600 group-hover:text-gray-900">{level}</span>
                                     </label>
@@ -362,6 +424,13 @@ function AdminSearch() {
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971]"
+                                            checked={filters.vesselType.includes(vessel)}
+                                            onChange={(e) => {
+                                                const newVessels = e.target.checked
+                                                    ? [...filters.vesselType, vessel]
+                                                    : filters.vesselType.filter(v => v !== vessel);
+                                                setFilters({ ...filters, vesselType: newVessels });
+                                            }}
                                         />
                                         <span className="text-sm text-gray-600 group-hover:text-gray-900">{vessel}</span>
                                     </label>
