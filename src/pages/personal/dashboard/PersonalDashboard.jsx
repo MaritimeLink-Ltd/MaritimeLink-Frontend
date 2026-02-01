@@ -21,6 +21,7 @@ import MyJobs from './dashboard-sections/MyJobs';
 import Training from './dashboard-sections/Training';
 import BookCourse from './dashboard-sections/BookCourse';
 import Profile from './dashboard-sections/Profile';
+import Resume from './dashboard-sections/Resume';
 import ChangePassword from './dashboard-sections/ChangePassword';
 import ManageSubscription from './dashboard-sections/ManageSubscription';
 
@@ -163,6 +164,7 @@ const PersonalDashboard = () => {
         )}
 
         {activeTab === 'documents' && <DocumentsWallet />}
+        {activeTab === 'resume' && <Resume />}
         {activeTab === 'chats' && <Chats />}
         {activeTab === 'training' && !bookingCourse && <Training onBookClick={(course) => setBookingCourse(course)} />}
         {activeTab === 'profile' && !showChangePassword && !showManageSubscription && (
