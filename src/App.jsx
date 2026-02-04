@@ -36,8 +36,16 @@ import RecruiterCompliance from './pages/admin/auth/RecruiterCompliance';
 import RecruiterUnderReview from './pages/admin/auth/RecruiterUnderReview';
 
 import RecruiterDashboardMain from './pages/admin/recruiter-dashboard/RecruiterDashboardMain';
+import RecruiterDashboard from './pages/admin/recruiter-dashboard/RecruiterDashboard';
 import RecruiterNotifications from './pages/admin/recruiter-dashboard/RecruiterNotifications';
+import AdminSearch from './pages/admin/recruiter-dashboard/search/AdminSearch';
+import AdminJobs from './pages/admin/recruiter-dashboard/jobs/AdminJobs';
+import JobDetail from './pages/admin/recruiter-dashboard/jobs/JobDetail';
+import CandidateSummary from './pages/admin/recruiter-dashboard/candidate/CandidateSummary';
+import AdminChats from './pages/admin/recruiter-dashboard/chats/AdminChats';
+import AdminSettings from './pages/admin/recruiter-dashboard/settings/AdminSettings';
 
+import RecruiterLayout from './pages/admin/recruiter-dashboard/layout/AdminLayout';
 import TrainingProviderLayout from './pages/admin/trainingprovider-dashboard/layout/TrainingProviderLayout';
 import TrainingProviderDashboard from './pages/admin/trainingprovider-dashboard/TrainingProviderDashboard';
 import DemandPlanning from './pages/admin/trainingprovider-dashboard/demand/DemandPlanning';
@@ -58,6 +66,7 @@ import PlatformActivityReport from './pages/admin/admin-dashboard/PlatformActivi
 import TransactionHistory from './pages/admin/admin-dashboard/TransactionHistory';
 import FlaggedAccounts from './pages/admin/admin-dashboard/FlaggedAccounts';
 import UploadJob from './pages/admin/admin-dashboard/UploadJob';
+import JobCreatedSuccess from './pages/admin/admin-dashboard/JobCreatedSuccess';
 import CreateCourse from './pages/admin/admin-dashboard/CreateCourse';
 import Accounts from './pages/admin/admin-dashboard/Accounts';
 import AccountProfile from './pages/admin/admin-dashboard/AccountProfile';
@@ -115,9 +124,20 @@ function App() {
         <Route path="/agent/compliance-declaration" element={<RecruiterCompliance />} />
         <Route path="/agent/under-review" element={<RecruiterUnderReview />} />
 
-        {/* Admin/Recruiter Protected Routes */}
-        <Route path="/recruiter-dashboard" element={<RecruiterDashboardMain />} />
-        <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
+        {/* Recruiter Protected Routes (With Layout) */}
+        <Route element={<RecruiterLayout />}>
+          <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
+          <Route path="/admin/search" element={<AdminSearch />} />
+          <Route path="/admin/jobs" element={<AdminJobs />} />
+          <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
+          <Route path="/admin/chats" element={<AdminChats />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
+          <Route path="/admin/cv-resume" element={<CVResume isReadOnly={true} />} />
+          <Route path="/admin/upload-job" element={<UploadJob />} />
+          <Route path="/admin/job-created-success" element={<JobCreatedSuccess />} />
+          <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
+        </Route>
 
         {/* Training Provider Protected Routes (With Layout) */}
         <Route element={<TrainingProviderLayout />}>
@@ -141,7 +161,6 @@ function App() {
           <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
           <Route path="/admin/transaction-history" element={<TransactionHistory />} />
           <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
-          <Route path="/admin/upload-job" element={<UploadJob />} />
           <Route path="/admin/create-course" element={<CreateCourse />} />
           <Route path="/admin/accounts" element={<Accounts />} />
           <Route path="/admin/accounts/:id" element={<AccountProfile />} />

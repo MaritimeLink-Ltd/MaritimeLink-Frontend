@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu } from 'react-icons/fi';
+import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const CVResume = () => {
+const CVResume = ({ isReadOnly = false }) => {
+    const navigate = useNavigate();
     const [userData, setUserData] = useState({
         name: 'Ali Shahzaib',
         category: 'Deck Officer',
@@ -284,6 +286,7 @@ const CVResume = () => {
     return (
         <div className="min-h-screen bg-[#F5F7FA]">
             {/* Dev Toolbar */}
+            {!isReadOnly && (
             <div className="bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
                 <span className="opacity-70 flex items-center">Preview Mode:</span>
                 <button
@@ -305,10 +308,12 @@ const CVResume = () => {
                     Medical
                 </button>
             </div>
+            )}
 
 
             <div ref={cvRef}>
                 {/* Navbar */}
+                {!isReadOnly && (
                 <nav className="bg-white px-4 sm:px-8 py-4">
                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                         {/* Logo with Menu */}
@@ -356,6 +361,20 @@ const CVResume = () => {
                         </div>
                     </div>
                 </nav>
+                )}
+
+                {/* Back Button for Read-Only Mode */}
+                {isReadOnly && (
+                    <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+                        >
+                            <FiArrowLeft size={16} />
+                            Back
+                        </button>
+                    </div>
+                )}
 
                 {/* Main Content */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10">

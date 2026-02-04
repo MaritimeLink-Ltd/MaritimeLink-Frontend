@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { jsPDF } from 'jspdf';
 import {
     User,
     Building2,
@@ -21,6 +22,58 @@ import {
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
     const [profileImage, setProfileImage] = useState('/images/login-image.png');
+
+    // Handle invoice download
+    const handleDownloadInvoice = () => {
+        const doc = new jsPDF();
+        
+        // Add content to PDF
+        doc.setFontSize(20);
+        doc.text('INVOICE', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.text('MaritimeLink', 20, 40);
+        doc.text('Invoice #: INV-2026-001', 20, 50);
+        doc.text('Date: February 4, 2026', 20, 60);
+        doc.text('Due Date: March 4, 2026', 20, 70);
+        
+        doc.setFontSize(14);
+        doc.text('Bill To:', 20, 90);
+        doc.setFontSize(11);
+        doc.text('Company Name: Musharof Recruiting Agency', 20, 100);
+        doc.text('Email: recruiter@example.com', 20, 110);
+        
+        doc.setFontSize(14);
+        doc.text('Invoice Details:', 20, 130);
+        
+        // Table header
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('Description', 20, 145);
+        doc.text('Amount', 160, 145);
+        
+        // Table content
+        doc.setFont(undefined, 'normal');
+        doc.text('Professional Plan - Monthly', 20, 155);
+        doc.text('$99.00', 160, 155);
+        
+        doc.text('Priority Support', 20, 165);
+        doc.text('$29.00', 160, 165);
+        
+        // Total
+        doc.line(20, 175, 190, 175);
+        doc.setFont(undefined, 'bold');
+        doc.text('Total:', 20, 185);
+        doc.text('$128.00', 160, 185);
+        
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text('Thank you for your business!', 105, 250, { align: 'center' });
+        doc.text('For questions, contact support@maritimelink.com', 105, 260, { align: 'center' });
+        
+        // Save PDF
+        doc.save(`invoice_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
 
     // Notification states
     const [notifications, setNotifications] = useState({
@@ -427,7 +480,10 @@ function AdminSettings() {
                                         <button className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors">
                                             Upgrade Plan
                                         </button>
-                                        <button className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                        <button 
+                                            onClick={handleDownloadInvoice}
+                                            className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                        >
                                             <Download className="h-4 w-4" />
                                             Download Invoice
                                         </button>

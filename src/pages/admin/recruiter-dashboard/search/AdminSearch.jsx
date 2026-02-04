@@ -20,6 +20,7 @@ function AdminSearch({ onViewCandidate }) {
     const [sortBy, setSortBy] = useState('Best Matches');
     const [currentPage, setCurrentPage] = useState(1);
     const [showFilters, setShowFilters] = useState(true);
+    const itemsPerPage = 10;
 
     const [filters, setFilters] = useState({
         rankPosition: [],
@@ -40,7 +41,8 @@ function AdminSearch({ onViewCandidate }) {
             location: "UK",
             matchPercentage: 92,
             verified: true,
-            image: "https://i.pravatar.cc/150?img=12"
+            image: "https://i.pravatar.cc/150?img=12",
+            vesselTypes: ["Tanker", "Bulk Carrier"]
         },
         {
             id: 2,
@@ -50,7 +52,8 @@ function AdminSearch({ onViewCandidate }) {
             location: "Singapore",
             matchPercentage: 88,
             verified: true,
-            image: "https://i.pravatar.cc/150?img=45"
+            image: "https://i.pravatar.cc/150?img=45",
+            vesselTypes: ["Container", "Cruise Ship"]
         },
         {
             id: 3,
@@ -60,7 +63,8 @@ function AdminSearch({ onViewCandidate }) {
             location: "USA",
             matchPercentage: 85,
             verified: true,
-            image: "https://i.pravatar.cc/150?img=33"
+            image: "https://i.pravatar.cc/150?img=33",
+            vesselTypes: ["Tanker", "Offshore"]
         },
         {
             id: 4,
@@ -70,7 +74,30 @@ function AdminSearch({ onViewCandidate }) {
             location: "Philippines",
             matchPercentage: 78,
             verified: false,
-            image: "https://i.pravatar.cc/150?img=68"
+            image: "https://i.pravatar.cc/150?img=68",
+            vesselTypes: ["Offshore", "Container"]
+        },
+        {
+            id: 5,
+            name: "Emma Wilson",
+            rank: "3rd Officer",
+            experience: "5 years",
+            location: "Australia",
+            matchPercentage: 82,
+            verified: true,
+            image: "https://i.pravatar.cc/150?img=47",
+            vesselTypes: ["Bulk Carrier", "Container"]
+        },
+        {
+            id: 6,
+            name: "David Martinez",
+            rank: "Chief Officer",
+            experience: "12 years",
+            location: "Spain",
+            matchPercentage: 90,
+            verified: true,
+            image: "https://i.pravatar.cc/150?img=15",
+            vesselTypes: ["Cruise Ship", "Tanker"]
         }
     ];
 
@@ -109,11 +136,15 @@ function AdminSearch({ onViewCandidate }) {
             if (!matchesAny) return false;
         }
 
-        // Vessel Type Filter (Mock data doesn't have vessel type explicitly, adding a mock check or skipping)
-        // Since mock data only has: name, rank, experience, location.
-        // I will assume for now we skip vessel filter or add it to mock data.
-        // Let's add 'vesselType' to mock data in a previous step? Or just ignore it for now to avoid errors?
-        // Let's ignore it for now as it's not in the data object.
+        // Vessel Type Filter
+        if (filters.vesselType.length > 0) {
+            // Check if candidate has any of the selected vessel types
+            const hasMatchingVessel = filters.vesselType.some(selectedVessel =>
+                candidate.vesselTypes && candidate.vesselTypes.includes(selectedVessel)
+            );
+            if (!hasMatchingVessel) return false;
+        }
+
         return true;
     });
 
@@ -134,11 +165,43 @@ function AdminSearch({ onViewCandidate }) {
     });
 
     const totalCandidates = sortedCandidates.length;
+    const totalPages = Math.ceil(totalCandidates / itemsPerPage);
+    
+    // Calculate pagination
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentCandidates = sortedCandidates.slice(indexOfFirstItem, indexOfLastItem);
+    
+    // Handle page change
+    const handlePageChange = (pageNumber) => {
+        if (pageNumber >= 1 && pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+        }
+    };
+    
+    // Generate page numbers for pagination
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                pages.push(1, 2, 3, '...', totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages);
+            } else {
+                pages.push(1, '...', currentPage, '...', totalPages);
+            }
+        }
+        return pages;
+    };
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden bg-gray-50">
             {/* Fixed Header */}
-            <div className="flex-shrink-0 px-8 pt-4 pb-3 bg-[#FAFBFC]">
+            <div className="flex-shrink-0 px-8 pt-4 pb-3 bg-gray-50">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Search Candidates</h1>
@@ -207,16 +270,16 @@ function AdminSearch({ onViewCandidate }) {
                         {/* Candidate Cards - List View */}
                         {viewMode === 'list' && (
                             <div className="space-y-2 flex-1 overflow-y-auto">
-                                {sortedCandidates.map((candidate) => (
-                                    <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center justify-between gap-6">
+                                {currentCandidates.map((candidate) => (
+                                    <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-shadow">
+                                        <div className="flex items-center justify-between gap-4">
                                         {/* Left: Avatar & Info */}
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
                                             <div className="relative flex-shrink-0">
                                                 <img
                                                     src={candidate.image}
                                                     alt={candidate.name}
-                                                    className="h-14 w-14 rounded-full object-cover border-2 border-gray-100"
+                                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
                                                 />
                                                 {candidate.verified && (
                                                     <div className="absolute -bottom-1 -right-1 bg-[#003971] rounded-full p-1">
@@ -236,8 +299,8 @@ function AdminSearch({ onViewCandidate }) {
                                                             </svg>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-600 font-semibold mb-1.5">{candidate.rank}</p>
-                                                    <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
+                                                    <p className="text-sm text-gray-600 font-semibold mb-1">{candidate.rank}</p>
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
                                                         <div className="flex items-center gap-1.5">
                                                             <Clock className="h-3.5 w-3.5" />
                                                             <span>{candidate.experience}</span>
@@ -273,7 +336,7 @@ function AdminSearch({ onViewCandidate }) {
                         {/* Candidate Cards - Grid View */}
                         {viewMode === 'grid' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 flex-1 overflow-y-auto">
-                            {sortedCandidates.map((candidate) => (
+                            {currentCandidates.map((candidate) => (
                                 <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow">
                                     <div className="flex flex-col items-center text-center">
                                         {/* Avatar */}
@@ -337,15 +400,22 @@ function AdminSearch({ onViewCandidate }) {
 
                         {/* Pagination */}
                         <div className="flex items-center justify-between pt-2 flex-shrink-0">
-                            <p className="text-sm text-gray-600 font-medium">Showing 1-4 of {totalCandidates} results</p>
+                            <p className="text-sm text-gray-600 font-medium">
+                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalCandidates)} of {totalCandidates} results
+                            </p>
                             <div className="flex items-center gap-2">
-                                <button className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors" disabled>
+                                <button 
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors" 
+                                    disabled={currentPage === 1}
+                                >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
-                                {[1, 2, 3, '...', 12].map((page, idx) => (
+                                {getPageNumbers().map((page, idx) => (
                                     <button
                                         key={idx}
-                                        className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${page === 1
+                                        onClick={() => page !== '...' && handlePageChange(page)}
+                                        className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${page === currentPage
                                             ? 'bg-[#003971] text-white'
                                             : page === '...'
                                                 ? 'text-gray-400 cursor-default'
@@ -356,7 +426,11 @@ function AdminSearch({ onViewCandidate }) {
                                         {page}
                                     </button>
                                 ))}
-                                <button className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                                <button 
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                    disabled={currentPage === totalPages}
+                                >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
                             </div>
@@ -364,20 +438,25 @@ function AdminSearch({ onViewCandidate }) {
                     </div>
 
                     {/* Filters Sidebar */}
-                    <div className="lg:w-72 flex-shrink-0">
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4">
-                            <div className="flex items-center justify-between">
+                    <div className="lg:w-72 flex-shrink-0 h-full">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm h-full flex flex-col">
+                            <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
                                 <div className="flex items-center gap-2 text-gray-900">
                                     <Filter className="h-5 w-5" />
                                     <h3 className="font-bold text-base">Filters</h3>
                                 </div>
-                                <button
-                                    onClick={() => setFilters({ rankPosition: [], experienceLevel: [], vesselType: [] })}
-                                    className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
-                                >
-                                    Clear All
-                                </button>
+                                {(filters.rankPosition.length > 0 || filters.experienceLevel.length > 0 || filters.vesselType.length > 0) && (
+                                    <button
+                                        onClick={() => setFilters({ rankPosition: [], experienceLevel: [], vesselType: [] })}
+                                        className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Scrollable Filters Content */}
+                            <div className="overflow-y-auto flex-1 p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
                             {/* Rank/Position Filter */}
                             <div className="space-y-2">
@@ -456,11 +535,14 @@ function AdminSearch({ onViewCandidate }) {
                                     ))}
                                 </div>
                             </div>
+                            </div>
 
-                            {/* Show Results Button */}
-                            <button className="w-full bg-[#003971] text-white py-2.5 rounded-lg font-bold hover:bg-[#002855] transition-colors mt-4">
-                                Show {totalCandidates} Candidates
-                            </button>
+                            {/* Show Results Button - Fixed at bottom */}
+                            <div className="p-4 border-t border-gray-100 flex-shrink-0">
+                                <button className="w-full bg-[#003971] text-white py-2.5 rounded-lg font-bold hover:bg-[#002855] transition-colors">
+                                    Show {totalCandidates} Candidates
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

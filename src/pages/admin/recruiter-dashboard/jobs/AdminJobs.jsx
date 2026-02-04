@@ -24,6 +24,43 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         vessel: 'Vessel'
     });
 
+    const handleExportCSV = () => {
+        // Prepare CSV data
+        const headers = ['Job ID', 'Title', 'Vessel/Type', 'Location', 'Badge', 'Posted', 'Status', 'Type'];
+        const csvRows = [headers.join(',')];
+
+        // Add job data
+        jobs.forEach(job => {
+            const row = [
+                job.id,
+                `"${job.title}"`,
+                `"${job.vessel}"`,
+                `"${job.location}"`,
+                job.badge,
+                `"${job.posted}"`,
+                job.status,
+                job.type
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        // Create CSV content
+        const csvContent = csvRows.join('\\n');
+        
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `jobs_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const stats = [
         {
             icon: Briefcase,
@@ -274,7 +311,10 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                 <RefreshCw className="h-4 w-4 text-gray-600" />
                             </button>
 
-                            <button className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                            <button 
+                                onClick={handleExportCSV}
+                                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                            >
                                 <Download className="h-4 w-4" />
                                 Export CSV
                             </button>
@@ -330,12 +370,29 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => onViewApplicants ? onViewApplicants(job.id) : navigate(`/admin/jobs/${job.id}/applicants`)}
-                                            className="text-[#003971] font-bold hover:underline text-sm"
-                                        >
-                                            View Applicants
-                                        </button>
+                                        {job.status !== 'Draft' ? (
+                                            <button
+                                                onClick={() => {
+                                                    if (onViewApplicants) {
+                                                        // Use internal callback for embedded dashboard
+                                                        onViewApplicants(job.id);
+                                                    } else {
+                                                        // Use navigation for standalone route
+                                                        navigate(`/admin/jobs/${job.id}`, { state: { jobData: job } });
+                                                    }
+                                                }}
+                                                className="text-[#003971] font-bold hover:underline text-sm"
+                                            >
+                                                View Applicants
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true } })}
+                                                className="text-gray-600 font-bold hover:underline text-sm"
+                                            >
+                                                Edit Draft
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

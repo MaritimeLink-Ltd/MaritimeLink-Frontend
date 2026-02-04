@@ -8,12 +8,15 @@ import {
     UserCircle,
     Menu,
     X,
-    Bell
+    Bell,
+    ChevronDown,
+    LogOut
 } from 'lucide-react';
 
 import RecruiterDashboard from './RecruiterDashboard';
 import AdminSearch from './search/AdminSearch';
 import AdminJobs from './jobs/AdminJobs';
+import JobDetail from './jobs/JobDetail';
 import JobApplicants from './jobs/JobApplicants';
 import CandidateSummary from './candidate/CandidateSummary';
 import UploadJob from '../admin-dashboard/UploadJob';
@@ -25,11 +28,21 @@ const RecruiterDashboardMain = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [viewingJobApplicants, setViewingJobApplicants] = useState(null);
     const [viewingCandidate, setViewingCandidate] = useState(null); // { id, fromJobApplicants }
     const [creatingJob, setCreatingJob] = useState(false);
     const [viewingResume, setViewingResume] = useState(null);
     const [messagingCandidate, setMessagingCandidate] = useState(null); // { id, name }
+
+    const handleLogout = () => {
+        // Clear any stored user data
+        localStorage.removeItem('userType');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('adminUserType');
+        // Navigate to landing page
+        navigate('/');
+    };
 
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -88,10 +101,9 @@ const RecruiterDashboardMain = () => {
         }
         
         if (viewingJobApplicants) {
-            return <JobApplicants 
+            return <JobDetail 
                 jobId={viewingJobApplicants} 
                 onBack={() => setViewingJobApplicants(null)} 
-                onViewCandidate={(candidateId) => setViewingCandidate({ id: candidateId, fromJobApplicants: true })}
             />;
         }
 
@@ -221,14 +233,39 @@ const RecruiterDashboardMain = () => {
                                 <span className="absolute top-2.5 right-2.5 block h-2 w-2 rounded-full bg-[#003971] ring-2 ring-white" />
                             </button>
 
-                            {/* Profile */}
-                            <div className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors">
-                                <img
-                                    className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                    src="/images/login-image.png"
-                                    alt="User avatar"
-                                />
-                                <span className="text-sm font-bold text-gray-700">Musharof</span>
+                            {/* Profile Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors"
+                                >
+                                    <img
+                                        className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
+                                        src="/images/login-image.png"
+                                        alt="User avatar"
+                                    />
+                                    <span className="text-sm font-bold text-gray-700 mr-2">Musharof</span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {dropdownOpen && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setDropdownOpen(false)}
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-3" />
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </header>

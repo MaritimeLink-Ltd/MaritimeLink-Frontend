@@ -1,10 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, CheckCircle, X } from 'lucide-react';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
+    const location = useLocation();
+    const editData = location.state?.jobData;
+    const isEditMode = location.state?.isEdit || false;
+    
     const [step, setStep] = useState(1);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [formData, setFormData] = useState({
         jobTitle: '',
         location: '',
@@ -13,6 +18,19 @@ function UploadJob({ onBack: onBackProp }) {
         salary: '',
         description: ''
     });
+
+    useEffect(() => {
+        if (isEditMode && editData) {
+            setFormData({
+                jobTitle: editData.jobTitle || editData.title || '',
+                location: editData.location || '',
+                category: editData.category || 'Officer',
+                contractType: editData.contractType || editData.type || 'Temporary',
+                salary: editData.salary || '',
+                description: editData.description || ''
+            });
+        }
+    }, [isEditMode, editData]);
 
     const categories = ['Officer', 'Ratings & Crew', 'Catering & Medical'];
     const contractTypes = ['Temporary', 'Contract', 'Permanent'];
@@ -26,7 +44,7 @@ function UploadJob({ onBack: onBackProp }) {
             if (onBackProp) {
                 onBackProp();
             } else {
-                navigate('/admin-dashboard');
+                navigate('/recruiter-dashboard');
             }
         } else {
             setStep(1);
@@ -35,38 +53,42 @@ function UploadJob({ onBack: onBackProp }) {
 
     const handlePublish = () => {
         console.log('Publishing job:', formData);
-        // Handle job publication
-        if (onBackProp) {
-            onBackProp();
-        } else {
-            navigate('/admin-dashboard');
-        }
+        // Show success modal
+        setShowSuccessModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowSuccessModal(false);
+        // Navigate to success page with job data
+        navigate('/admin/jobs', { 
+            state: { jobData: formData } 
+        });
     };
 
     return (
-        <div className="max-w-7xl py-6">
+        <div className="max-w-7xl py-3 px-6">
             {/* Header */}
             <button
                 onClick={handleBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm font-medium"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 text-sm font-medium"
             >
                 <ArrowLeft className="h-4 w-4" />
                 Back
             </button>
 
-            <div className="mb-6">
-                <h1 className="text-[28px] font-bold text-gray-900 mb-1">Create a Job</h1>
-                <p className="text-gray-500 text-sm">Post a new job listing to the marketplace</p>
+            <div className="mb-4">
+                <h1 className="text-[24px] font-bold text-gray-900 mb-1">{isEditMode ? 'Edit Job' : 'Create a Job'}</h1>
+                <p className="text-gray-500 text-sm">{isEditMode ? 'Update your job listing details' : 'Post a new job listing to the marketplace'}</p>
             </div>
 
             {/* Form Card */}
             <div className={`${step === 1 ? "max-w-xl" : "max-w-2xl"} mx-auto`}>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                     {step === 1 ? (
-                        <div className="space-y-5">
+                        <div className="space-y-3">
                             {/* Job Title */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Job Title
                                 </label>
                                 <input
@@ -74,13 +96,13 @@ function UploadJob({ onBack: onBackProp }) {
                                     placeholder="Enter your job title"
                                     value={formData.jobTitle}
                                     onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                                 />
                             </div>
 
                             {/* Location */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Location
                                 </label>
                                 <input
@@ -88,13 +110,13 @@ function UploadJob({ onBack: onBackProp }) {
                                     placeholder="Enter your location"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                                 />
                             </div>
 
                             {/* Category */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Category
                                 </label>
                                 <div className="flex flex-wrap gap-2">
@@ -115,7 +137,7 @@ function UploadJob({ onBack: onBackProp }) {
 
                             {/* Contract Type */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Contract Type
                                 </label>
                                 <div className="flex flex-wrap gap-2">
@@ -136,7 +158,7 @@ function UploadJob({ onBack: onBackProp }) {
 
                             {/* Salary */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Salary
                                 </label>
                                 <input
@@ -144,30 +166,30 @@ function UploadJob({ onBack: onBackProp }) {
                                     placeholder="Enter salary"
                                     value={formData.salary}
                                     onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                                 />
                             </div>
 
                             {/* Next Button */}
                             <button
                                 onClick={handleNext}
-                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm mt-3"
+                                className="w-full bg-[#1e5a8f] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm mt-2"
                             >
                                 Next
                             </button>
                         </div>
                     ) : (
-                        <div className="space-y-5">
+                        <div className="space-y-3">
                             {/* Job Description */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Enter job description
                                 </label>
                                 <textarea
                                     placeholder="Enter your job title"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    rows={12}
+                                    rows={10}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] resize-none"
                                 />
                             </div>
@@ -175,14 +197,46 @@ function UploadJob({ onBack: onBackProp }) {
                             {/* Publish Button */}
                             <button
                                 onClick={handlePublish}
-                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm"
+                                className="w-full bg-[#1e5a8f] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm"
                             >
-                                Publish Job
+                                {isEditMode ? 'Update Job' : 'Publish Job'}
                             </button>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 relative animate-[scale-in_0.2s_ease-out]">
+                        {/* Success Icon */}
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                                <CheckCircle className="h-12 w-12 text-green-600" />
+                            </div>
+
+                            {/* Title */}
+                            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                                {isEditMode ? 'Job Updated Successfully!' : 'Job Created Successfully!'}
+                            </h2>
+
+                            {/* Message */}
+                            <p className="text-gray-600 mb-8">
+                                {isEditMode ? 'Your job listing has been updated.' : 'Your job listing has been published to the marketplace.'}
+                            </p>
+
+                            {/* Action Button */}
+                            <button
+                                onClick={handleCloseModal}
+                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors"
+                            >
+                                Go to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

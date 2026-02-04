@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Briefcase,
     CheckCircle,
@@ -11,8 +12,26 @@ import {
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
 
 function RecruiterDashboard({ onNavigate }) {
+    const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [showVerifyModal, setShowVerifyModal] = useState(false);
+
+    const handleNavigate = (section) => {
+        if (onNavigate) {
+            onNavigate(section);
+        } else {
+            // Map sections to routes
+            const routeMap = {
+                'jobs': '/admin/jobs',
+                'search': '/admin/search',
+                'chats': '/admin/chats',
+                'settings': '/admin/settings'
+            };
+            if (routeMap[section]) {
+                navigate(routeMap[section]);
+            }
+        }
+    };
 
     // Stats Data
     const stats = [
@@ -172,7 +191,7 @@ function RecruiterDashboard({ onNavigate }) {
                 {stats.map((stat) => (
                     <div
                         key={stat.id}
-                        onClick={() => onNavigate && onNavigate(stat.section)}
+                        onClick={() => handleNavigate(stat.section)}
                         className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
                     >
                         <div className="relative z-10 flex flex-col h-full">
@@ -212,7 +231,7 @@ function RecruiterDashboard({ onNavigate }) {
                                     <span className="text-gray-900 font-medium text-sm">{item.text}</span>
                                 </div>
                                 <button
-                                    onClick={() => onNavigate && onNavigate(item.section)}
+                                    onClick={() => handleNavigate(item.section)}
                                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
                                         ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                                         : 'bg-[#003971] text-white hover:bg-[#002855]'
@@ -257,7 +276,7 @@ function RecruiterDashboard({ onNavigate }) {
                 <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
                     <button
-                        onClick={() => onNavigate && onNavigate('jobs')}
+                        onClick={() => handleNavigate('jobs')}
                         className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1"
                     >
                         View All Jobs &gt;
@@ -295,12 +314,21 @@ function RecruiterDashboard({ onNavigate }) {
                                 </span>
                             </div>
                             <div className="col-span-3 flex justify-end">
-                                <button
-                                    onClick={() => onNavigate && onNavigate('search')}
-                                    className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                >
-                                    {job.matches} <ChevronRight className="h-3.5 w-3.5" />
-                                </button>
+                                {job.status === 'Draft' ? (
+                                    <button
+                                        onClick={() => handleNavigate('jobs')}
+                                        className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
+                                    >
+                                        Edit Draft
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleNavigate('search')}
+                                        className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                    >
+                                        {job.matches} <ChevronRight className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -308,7 +336,7 @@ function RecruiterDashboard({ onNavigate }) {
 
                 <div className="px-8 py-5 border-t border-gray-100 text-center">
                     <button
-                        onClick={() => onNavigate && onNavigate('jobs')}
+                        onClick={() => handleNavigate('jobs')}
                         className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"
                     >
                         View All Jobs <ChevronRight className="h-4 w-4" />

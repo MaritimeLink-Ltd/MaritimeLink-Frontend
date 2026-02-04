@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Search,
     Building2,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 
 function AdminChats({ candidateId, candidateName, onViewProfile }) {
+    const navigate = useNavigate();
     const [selectedChat, setSelectedChat] = useState(candidateId || 1);
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -259,7 +261,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                     Report
                                 </button>
                                 <button 
-                                    onClick={() => onViewProfile && onViewProfile(selectedChat)}
+                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(`/admin/candidate/${selectedChat}`)}
                                     className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
                                 >
                                     <FileText className="h-4 w-4" />

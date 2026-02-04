@@ -11,12 +11,24 @@ import {
     Bell,
     Search,
     Menu,
-    X
+    X,
+    ChevronDown,
+    LogOut
 } from 'lucide-react';
 
 function AdminLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    const handleLogout = () => {
+        // Clear any stored user data
+        localStorage.removeItem('userType');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('adminUserType');
+        // Navigate to landing page
+        navigate('/');
+    };
 
     const mainMenuItems = [
         { name: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
@@ -148,15 +160,40 @@ function AdminLayout() {
                                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                             </button>
 
-                            {/* User Profile */}
-                            <button className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50">
-                                <img
-                                    src="/images/login-image.png"
-                                    alt="Musharof"
-                                    className="w-8 h-8 rounded-full object-cover"
-                                />
-                                <span className="text-sm font-semibold text-gray-900">Musharof</span>
-                            </button>
+                            {/* User Profile Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50"
+                                >
+                                    <img
+                                        src="/images/login-image.png"
+                                        alt="Musharof"
+                                        className="w-8 h-8 rounded-full object-cover"
+                                    />
+                                    <span className="text-sm font-semibold text-gray-900">Musharof</span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {dropdownOpen && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setDropdownOpen(false)}
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-3" />
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </header>

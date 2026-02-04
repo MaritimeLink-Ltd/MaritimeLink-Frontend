@@ -12,12 +12,37 @@ import {
     Star,
     X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
-function CandidateSummary({ candidateId, onBack, showApplicationStatus = false, onViewResume, onMessage }) {
+function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicationStatus = false, onViewResume, onMessage }) {
     const navigate = useNavigate();
-    const [applicationStage, setApplicationStage] = useState('offer-sent');
+    const location = useLocation();
+    const { candidateId: urlCandidateId } = useParams();
+    const candidateId = propCandidateId || urlCandidateId;
+    
+    // Map applicant status to application stage
+    const getInitialStage = () => {
+        const status = location.state?.applicantStatus;
+        if (!status) return 'offer-sent';
+        
+        // Map status to stage
+        const stageMap = {
+            'new': 'shortlisted',
+            'matches': 'shortlisted',
+            'shortlisted': 'interviewing',
+            'interviewing': 'offer-sent',
+            'offered': 'offer-sent',
+            'hired': 'hired'
+        };
+        
+        return stageMap[status] || 'offer-sent';
+    };
+    
+    const [applicationStage, setApplicationStage] = useState(getInitialStage());
     const [showRejectModal, setShowRejectModal] = useState(false);
+    
+    // Show application status if coming from job detail or explicitly passed as prop
+    const shouldShowApplicationStatus = showApplicationStatus || location.state?.fromJobDetail;
 
     const handleBack = () => {
         if (onBack) {
@@ -63,13 +88,12 @@ function CandidateSummary({ candidateId, onBack, showApplicationStatus = false, 
 
     return (
         <div className="space-y-6">
-            {/* Back Button */}
+            {/* Back Icon */}
             <button
                 onClick={handleBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
+                className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
                 <ChevronLeft className="h-5 w-5" />
-                Back to Search
             </button>
 
             {/* Header Section */}
@@ -115,7 +139,7 @@ function CandidateSummary({ candidateId, onBack, showApplicationStatus = false, 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-3">
                     <button 
-                        onClick={() => onViewResume ? onViewResume(candidateId) : navigate('/cv-resume')}
+                        onClick={() => onViewResume ? onViewResume(candidateId) : navigate('/admin/cv-resume')}
                         className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                     >
                         <FileText className="h-5 w-5" />
@@ -126,7 +150,7 @@ function CandidateSummary({ candidateId, onBack, showApplicationStatus = false, 
                         View Document Wallet
                     </button>
                     <button 
-                        onClick={() => onMessage && onMessage(candidateId, candidate.name)}
+                        onClick={() => onMessage ? onMessage(candidateId, candidate.name) : navigate('/admin/chats')}
                         className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
                     >
                         <MessageSquare className="h-5 w-5" />
@@ -180,7 +204,7 @@ function CandidateSummary({ candidateId, onBack, showApplicationStatus = false, 
             </div>
 
             {/* Application Status */}
-            {showApplicationStatus && (
+            {shouldShowApplicationStatus && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-bold text-[#003971]">Application Status</h2>
