@@ -1,15 +1,25 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 function RecruiterSignup() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isTrainingProvider = location.pathname.includes('training-provider');
+    
     const [formData, setFormData] = useState({
         email: '',
         password: '',
         confirmPassword: '',
-        userType: 'recruiter', // 'recruiter' or 'training-provider'
+        userType: isTrainingProvider ? 'training-provider' : 'recruiter',
         agreeToTerms: false
     });
+    
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            userType: isTrainingProvider ? 'training-provider' : 'recruiter'
+        }));
+    }, [isTrainingProvider]);
 
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -84,7 +94,9 @@ function RecruiterSignup() {
                     <p className="text-sm text-[#003971] mb-1">Welcome to MaritimeLink</p>
 
                     {/* Sign Up Heading */}
-                    <h1 className="text-3xl font-bold text-gray-900 mb-6">Agent Sign Up</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-6">
+                        {isTrainingProvider ? 'Training Provider Sign Up' : 'Agent Sign Up'}
+                    </h1>
 
                     {/* Error Message */}
                     {error && (
@@ -98,34 +110,36 @@ function RecruiterSignup() {
                         </div>
                     )}
 
-                    {/* User Type Selection */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Register as
-                        </label>
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, userType: 'recruiter' })}
-                                className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'recruiter'
-                                    ? 'bg-[#003971] text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                Recruiter
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, userType: 'training-provider' })}
-                                className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'training-provider'
-                                    ? 'bg-[#003971] text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                Training Provider
-                            </button>
+                    {/* User Type Selection - Only show for recruiter route */}
+                    {!isTrainingProvider && (
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Register as
+                            </label>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, userType: 'recruiter' })}
+                                    className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'recruiter'
+                                        ? 'bg-[#003971] text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    Recruiter
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, userType: 'training-provider' })}
+                                    className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'training-provider'
+                                        ? 'bg-[#003971] text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    Training Provider
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
