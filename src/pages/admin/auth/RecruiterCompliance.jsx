@@ -19,7 +19,7 @@ function RecruiterCompliance() {
         }
     }, []);
 
-    const hearOptions = ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+    const hearOptions = ['Referral', 'Search Engine', 'Social / Online Platform', 'Company / Partner'];
 
     const handleCheckboxChange = (e) => {
         const { name, checked } = e.target;
@@ -63,12 +63,8 @@ function RecruiterCompliance() {
             // TODO: Implement compliance submission API call
             console.log('Compliance submitted:', formData);
 
-            // Navigate to appropriate dashboard based on user type
-            if (userType === 'training-provider') {
-                navigate('/trainingprovider-dashboard');
-            } else {
-                navigate('/recruiter-dashboard');
-            }
+            // Navigate to under review page
+            navigate('/agent/under-review');
         } catch (err) {
             console.error('Compliance submission error:', err);
             setError(err.message || 'Failed to submit compliance. Please try again.');

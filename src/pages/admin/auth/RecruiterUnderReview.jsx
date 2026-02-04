@@ -4,8 +4,14 @@ function RecruiterUnderReview() {
     const navigate = useNavigate();
 
     const handleDone = () => {
-        // Navigate to login page
-        navigate('/admin/login');
+        // Get user type from localStorage and navigate to appropriate dashboard
+        const userType = localStorage.getItem('adminUserType');
+        
+        if (userType === 'training-provider') {
+            navigate('/trainingprovider-dashboard');
+        } else {
+            navigate('/recruiter-dashboard');
+        }
     };
 
     return (

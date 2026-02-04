@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
-function VerifyDetailsModal({ isOpen, onClose, onSubmit }) {
+function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
     const [formData, setFormData] = useState({
         firstName: 'Sarah',
         lastName: 'Jenkins',
@@ -16,7 +16,11 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSubmit(formData);
+        if (onConfirm) {
+            onConfirm(formData);
+        } else if (onSubmit) {
+            onSubmit(formData);
+        }
     };
 
     return (

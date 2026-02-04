@@ -25,7 +25,7 @@ const CateringMedicalCategory = () => {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Left Section */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
+      <div className="w-full lg:w-2/5 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
           <div className="mb-4 -ml-2">
@@ -100,7 +100,7 @@ const CateringMedicalCategory = () => {
       </div>
 
       {/* Right Section - Image */}
-      <div className="hidden lg:block lg:w-1/2 relative py-8 lg:py-12 xl:py-16 pr-8 lg:pr-12 xl:pr-16 pl-4 lg:pl-6 xl:pl-8">
+      <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
         <img
           src="/images/medical-catering.png"
           alt="Maritime Catering and Medical"

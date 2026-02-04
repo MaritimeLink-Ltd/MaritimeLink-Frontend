@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 
 const Resume = () => {
+    const navigate = useNavigate();
     const [userData, setUserData] = useState({
         name: 'Ali Shahzaib',
         category: 'Deck Officer',
@@ -188,7 +190,7 @@ const Resume = () => {
     const cvRef = useRef(null);
 
     const handleEditResume = () => {
-        console.log('Edit Resume clicked');
+        navigate('/officer-dashboard');
     };
 
     const handleDownloadPDF = async () => {
@@ -255,7 +257,7 @@ const Resume = () => {
         return [...Array(5)].map((_, index) => (
             <FaStar
                 key={index}
-                className={index < rating ? 'text-blue-600' : 'text-gray-300'}
+                className={index < rating ? 'text-[#003971]' : 'text-gray-300'}
                 size={18}
             />
         ));

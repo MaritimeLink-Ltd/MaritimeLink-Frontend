@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
-function UploadJob() {
+function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -23,7 +23,11 @@ function UploadJob() {
 
     const handleBack = () => {
         if (step === 1) {
-            navigate('/admin-dashboard');
+            if (onBackProp) {
+                onBackProp();
+            } else {
+                navigate('/admin-dashboard');
+            }
         } else {
             setStep(1);
         }
@@ -32,7 +36,11 @@ function UploadJob() {
     const handlePublish = () => {
         console.log('Publishing job:', formData);
         // Handle job publication
-        navigate('/admin-dashboard');
+        if (onBackProp) {
+            onBackProp();
+        } else {
+            navigate('/admin-dashboard');
+        }
     };
 
     return (

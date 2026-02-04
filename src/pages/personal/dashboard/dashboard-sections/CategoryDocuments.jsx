@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download } from 'lucide-react';
 import DocumentDetail from './DocumentDetail';
 
-const CategoryDocuments = ({ category, onBack }) => {
+const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
     const [view, setView] = useState('list'); // 'list', 'detail'
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -83,6 +83,36 @@ const CategoryDocuments = ({ category, onBack }) => {
         setSelectedDoc(null);
     };
 
+    const handleUploadClick = () => {
+        if (onUploadClick) {
+            onUploadClick();
+        }
+    };
+
+    // Filter documents based on active filter
+    const getFilteredDocuments = () => {
+        if (activeFilter === 'All') {
+            return documents;
+        }
+        
+        return documents.filter(doc => {
+            switch (activeFilter) {
+                case 'Compliance Ready':
+                    return doc.status.label === 'VALID';
+                case 'Pending Approval':
+                    return doc.status.label === 'PENDING';
+                case 'Expiring Soon':
+                    return doc.status.label === 'EXPIRING';
+                case 'Expired':
+                    return doc.status.label === 'EXPIRED';
+                default:
+                    return true;
+            }
+        });
+    };
+
+    const filteredDocuments = getFilteredDocuments();
+
     // If viewing document detail, show DocumentDetail component
     if (view === 'detail') {
         return <DocumentDetail document={selectedDoc} onBack={handleBackFromDetail} />;
@@ -103,10 +133,13 @@ const CategoryDocuments = ({ category, onBack }) => {
                         </button>
                         <div>
                             <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">{category?.title || 'Category Documents'}</h1>
-                            <p className="text-gray-500 text-xs sm:text-sm">{documents.length} documents found</p>
+                            <p className="text-gray-500 text-xs sm:text-sm">{filteredDocuments.length} documents found</p>
                         </div>
                     </div>
-                    <button className="flex items-center justify-center gap-2 bg-blue-50 text-[#003366] px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-100 transition-colors min-h-[44px] w-full sm:w-auto">
+                    <button 
+                        onClick={handleUploadClick}
+                        className="flex items-center justify-center gap-2 bg-[#003971]/10 text-[#003971] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#003971]/20 transition-colors min-h-[44px] w-full sm:w-auto"
+                    >
                         <Upload size={16} />
                         Upload Document
                     </button>
@@ -114,21 +147,12 @@ const CategoryDocuments = ({ category, onBack }) => {
 
                 {/* Filters - Horizontal scroll on mobile */}
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                    <button
-                        onClick={() => setActiveFilter('All')}
-                        className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${activeFilter === 'All'
-                            ? 'bg-[#003366] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                    >
-                        All
-                    </button>
-                    {filters.slice(1).map((filter) => (
+                    {filters.map((filter) => (
                         <button
                             key={filter}
                             onClick={() => setActiveFilter(filter)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeFilter === filter
-                                ? 'bg-[#003366] text-white'
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === filter
+                                ? 'bg-[#003971] text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
@@ -140,7 +164,7 @@ const CategoryDocuments = ({ category, onBack }) => {
 
             {/* Documents Grid - Single column on mobile */}
             <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto bg-white" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                {documents.map((doc) => (
+                {filteredDocuments.map((doc) => (
                     <div
                         key={doc.id}
                         onClick={() => handleDocumentClick(doc)}

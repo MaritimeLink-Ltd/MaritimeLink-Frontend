@@ -17,15 +17,23 @@ function LandingPage() {
             id: 'recruiter',
             name: 'Recruiter',
             description: 'Hiring Companies & Agencies',
-            path: '/admin/login',
+            path: '/recruiter/login',
             gradient: 'from-teal-500 to-teal-700',
             hoverGradient: 'hover:from-teal-600 hover:to-teal-800'
+        },
+        {
+            id: 'training-provider',
+            name: 'Training Provider',
+            description: 'Training Centers & Institutes',
+            path: '/training-provider/login',
+            gradient: 'from-purple-500 to-purple-700',
+            hoverGradient: 'hover:from-purple-600 hover:to-purple-800'
         },
         {
             id: 'admin',
             name: 'Admin',
             description: 'Platform Administration',
-            path: '/admin-dashboard',
+            path: '/admin/login',
             gradient: 'from-slate-600 to-slate-800',
             hoverGradient: 'hover:from-slate-700 hover:to-slate-900'
         }
@@ -57,13 +65,13 @@ function LandingPage() {
                 </div>
 
                 {/* User Type Selection Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full max-w-3xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                     {userTypes.map((type) => (
                         <button
                             key={type.id}
                             onClick={() => navigate(type.path)}
                             className={`
-                                group relative w-full sm:w-64 py-6 px-8
+                                group relative w-full py-6 px-6
                                 bg-gradient-to-r ${type.gradient} ${type.hoverGradient}
                                 text-white rounded-2xl shadow-lg
                                 transform transition-all duration-300

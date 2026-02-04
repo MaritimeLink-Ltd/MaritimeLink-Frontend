@@ -1,28 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-function RecruiterSignup() {
+function TrainingProviderLogin() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
-        confirmPassword: '',
-        userType: 'recruiter', // 'recruiter' or 'training-provider'
-        agreeToTerms: false
     });
-
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [name]: type === 'checkbox' ? checked : value
+            [name]: value
         });
-        // Clear error when user starts typing
         if (error) setError('');
     };
 
@@ -30,37 +24,26 @@ function RecruiterSignup() {
         e.preventDefault();
         setError('');
 
-        // Validate passwords match
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match!');
-            return;
-        }
-
-        // Validate password strength
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters long');
-            return;
-        }
-
-        // Validate terms
-        if (!formData.agreeToTerms) {
-            setError('You must agree to the Terms & Conditions');
+        if (!formData.email || !formData.password) {
+            setError('Please enter both email and password');
             return;
         }
 
         setLoading(true);
 
         try {
-            // Save user type for next steps
-            localStorage.setItem('adminUserType', formData.userType);
+            // TODO: Implement login API call
+            console.log('Training Provider Login submitted:', formData);
 
-            // TODO: Implement signup API call
-            console.log('Form submitted:', formData);
-            // Navigate to OTP verification
-            navigate('/agent/otp-verification', { state: { email: formData.email } });
+            // Store user type in localStorage
+            localStorage.setItem('userType', 'training-provider');
+            localStorage.setItem('userEmail', formData.email);
+
+            // Navigate to training provider dashboard
+            navigate('/trainingprovider-dashboard');
         } catch (err) {
-            console.error('Registration error:', err);
-            setError(err.message || 'Registration failed. Please try again.');
+            console.error('Login error:', err);
+            setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
@@ -83,8 +66,8 @@ function RecruiterSignup() {
                     {/* Welcome Text */}
                     <p className="text-sm text-[#003971] mb-1">Welcome to MaritimeLink</p>
 
-                    {/* Sign Up Heading */}
-                    <h1 className="text-3xl font-bold text-gray-900 mb-6">Agent Sign Up</h1>
+                    {/* Heading */}
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Training Provider Login</h1>
 
                     {/* Error Message */}
                     {error && (
@@ -98,41 +81,12 @@ function RecruiterSignup() {
                         </div>
                     )}
 
-                    {/* User Type Selection */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Register as
-                        </label>
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, userType: 'recruiter' })}
-                                className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'recruiter'
-                                    ? 'bg-[#003971] text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                Recruiter
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, userType: 'training-provider' })}
-                                className={`flex-1 py-3 px-6 rounded-full font-medium transition-all duration-200 min-h-[44px] ${formData.userType === 'training-provider'
-                                    ? 'bg-[#003971] text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                Training Provider
-                            </button>
-                        </div>
-                    </div>
-
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Email Field */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                Work Email
+                                Email
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -146,7 +100,7 @@ function RecruiterSignup() {
                                     type="email"
                                     required
                                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
-                                    placeholder="Enter your email"
+                                    placeholder="abc@email.com"
                                     value={formData.email}
                                     onChange={handleChange}
                                 />
@@ -190,59 +144,14 @@ function RecruiterSignup() {
                             </div>
                         </div>
 
-                        {/* Confirm Password Field */}
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                                Confirm Password
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                </div>
-                                <input
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    type={showConfirmPassword ? 'text' : 'password'}
-                                    required
-                                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
-                                    placeholder="Confirm your password"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                >
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        {showConfirmPassword ? (
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        ) : (
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                        )}
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Terms & Conditions */}
-                        <div className="flex items-start">
-                            <input
-                                id="terms"
-                                name="agreeToTerms"
-                                type="checkbox"
-                                checked={formData.agreeToTerms}
-                                onChange={handleChange}
-                                className="h-4 w-4 mt-1 text-[#003971] focus:ring-[#003971] border-gray-300 rounded"
-                            />
-                            <label htmlFor="terms" className="ml-2 block text-sm text-gray-600">
-                                You agree to our{' '}
-                                <Link to="/terms" className="text-[#003971] hover:underline">
-                                    Terms & Conditions
-                                </Link>
-                            </label>
+                        {/* Forgot Password Link */}
+                        <div className="flex justify-end">
+                            <Link
+                                to="/training-provider/forgot-password"
+                                className="text-sm text-[#003971] hover:underline"
+                            >
+                                Forgot Password?
+                            </Link>
                         </div>
 
                         {/* Submit Button */}
@@ -257,12 +166,22 @@ function RecruiterSignup() {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Registering...
+                                    Logging in...
                                 </>
                             ) : (
-                                'Next'
+                                'Login'
                             )}
                         </button>
+
+                        {/* Sign Up Link */}
+                        <div className="mt-6 text-center">
+                            <p className="text-sm text-gray-600">
+                                Don't have an account?{' '}
+                                <Link to="/training-provider/signup" className="font-medium text-[#003971] hover:text-[#002855] hover:underline">
+                                    Sign up
+                                </Link>
+                            </p>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -270,7 +189,7 @@ function RecruiterSignup() {
             {/* Right Side - Image */}
             <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
                 <img
-                    src="/images/signup-image.png"
+                    src="/images/login-image.png"
                     alt="Maritime Professional"
                     className="w-full h-full object-cover rounded-2xl"
                 />
@@ -279,4 +198,4 @@ function RecruiterSignup() {
     );
 }
 
-export default RecruiterSignup;
+export default TrainingProviderLogin;

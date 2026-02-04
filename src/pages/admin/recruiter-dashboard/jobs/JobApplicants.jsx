@@ -15,11 +15,24 @@ import {
     ChevronRight
 } from 'lucide-react';
 
-function JobApplicants() {
+function JobApplicants({ jobId, onBack, onViewCandidate }) {
     const navigate = useNavigate();
-    const { jobId } = useParams();
     const [activeTab, setActiveTab] = useState('new');
     const [currentPage, setCurrentPage] = useState(1);
+    const [filters, setFilters] = useState({
+        rank: '',
+        compliance: 'Compliance',
+        seaService: 'Sea Service',
+        availability: 'Availability'
+    });
+
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate('/recruiter-dashboard');
+        }
+    };
 
     const jobDetails = {
         title: 'Chief Engineer',
@@ -67,12 +80,12 @@ function JobApplicants() {
     ];
 
     const tabs = [
-        { id: 'new', label: 'New', count: 12 },
-        { id: 'matches', label: 'Matches', count: 4 },
-        { id: 'shortlisted', label: 'Shortlisted', count: 6 },
-        { id: 'interviewing', label: 'Interviewing', count: 0 },
-        { id: 'offered', label: 'Offered', count: 0 },
-        { id: 'hired', label: 'Hired', count: 0 }
+        { id: 'new', label: 'New', count: 2 },
+        { id: 'matches', label: 'Matches', count: 2 },
+        { id: 'shortlisted', label: 'Shortlisted', count: 2 },
+        { id: 'interviewing', label: 'Interviewing', count: 1 },
+        { id: 'offered', label: 'Offered', count: 1 },
+        { id: 'hired', label: 'Hired', count: 1 }
     ];
 
     const applicants = [
@@ -87,7 +100,8 @@ function JobApplicants() {
             compliance: 'Ready',
             complianceColor: 'text-green-600',
             applicationDate: '20 Apr 2024',
-            matchPercentage: 80
+            matchPercentage: 80,
+            stage: 'new'
         },
         {
             id: 2,
@@ -101,7 +115,8 @@ function JobApplicants() {
             complianceSubtext: 'Ends in 2 days',
             complianceColor: 'text-orange-600',
             applicationDate: '20 Apr 2024',
-            matchPercentage: 80
+            matchPercentage: 80,
+            stage: 'new'
         },
         {
             id: 3,
@@ -114,7 +129,8 @@ function JobApplicants() {
             compliance: 'Ready',
             complianceColor: 'text-green-600',
             applicationDate: '20 Apr 2024',
-            matchPercentage: 80
+            matchPercentage: 80,
+            stage: 'matches'
         },
         {
             id: 4,
@@ -127,7 +143,8 @@ function JobApplicants() {
             compliance: 'Missing',
             complianceColor: 'text-red-600',
             applicationDate: '20 Apr 2024',
-            matchPercentage: 80
+            matchPercentage: 80,
+            stage: 'shortlisted'
         },
         {
             id: 5,
@@ -141,96 +158,303 @@ function JobApplicants() {
             complianceSubtext: 'Ends in 3 days',
             complianceColor: 'text-orange-600',
             applicationDate: '20 Apr 2024',
-            matchPercentage: 80
+            matchPercentage: 80,
+            stage: 'matches'
+        },
+        {
+            id: 6,
+            name: 'David Chen',
+            age: 38,
+            image: 'https://i.pravatar.cc/150?img=15',
+            rank: 'Chief Engineer',
+            availability: 'Pacific Explorer',
+            availabilitySubtext: 'LNG Tanker',
+            compliance: 'Ready',
+            complianceColor: 'text-green-600',
+            applicationDate: '19 Apr 2024',
+            matchPercentage: 85,
+            stage: 'shortlisted'
+        },
+        {
+            id: 7,
+            name: 'Emma Rodriguez',
+            age: 32,
+            image: 'https://i.pravatar.cc/150?img=47',
+            rank: 'Chief Engineer',
+            availability: 'Atlantic Star',
+            availabilitySubtext: 'Container Ship',
+            compliance: 'Ready',
+            complianceColor: 'text-green-600',
+            applicationDate: '18 Apr 2024',
+            matchPercentage: 90,
+            stage: 'interviewing'
+        },
+        {
+            id: 8,
+            name: 'John Smith',
+            age: 42,
+            image: 'https://i.pravatar.cc/150?img=13',
+            rank: 'Chief Engineer',
+            availability: 'Nordic Voyager',
+            availabilitySubtext: 'LNG Tanker',
+            compliance: 'Ready',
+            complianceColor: 'text-green-600',
+            applicationDate: '17 Apr 2024',
+            matchPercentage: 88,
+            stage: 'offered'
+        },
+        {
+            id: 9,
+            name: 'Maria Santos',
+            age: 35,
+            image: 'https://i.pravatar.cc/150?img=44',
+            rank: 'Chief Engineer',
+            availability: 'Ocean Princess',
+            availabilitySubtext: 'Cruise Ship',
+            compliance: 'Ready',
+            complianceColor: 'text-green-600',
+            applicationDate: '16 Apr 2024',
+            matchPercentage: 92,
+            stage: 'hired'
         }
     ];
 
-    return (
-        <div className="space-y-5">
-            {/* Back Button */}
-            <button
-                onClick={() => navigate('/admin/jobs')}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
-            >
-                <ChevronLeft className="h-5 w-5" />
-                Back to Jobs
-            </button>
+    // State to track applicant stages (in real app, this would be in backend)
+    const [applicantStages, setApplicantStages] = useState(
+        applicants.reduce((acc, app) => ({ ...acc, [app.id]: app.stage }), {})
+    );
 
-            {/* Header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{jobDetails.title}</h1>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                        <span>{jobDetails.vessel}</span>
-                        <span>•</span>
-                        <span>{jobDetails.posted}</span>
+    // Function to move applicant to different stage
+    const handleMoveToStage = (applicantId, newStage) => {
+        setApplicantStages(prev => ({ ...prev, [applicantId]: newStage }));
+    };
+
+    // Filter applicants based on filters only (not by stage)
+    const filteredApplicants = applicants.filter(applicant => {
+        // Filter by rank (search text)
+        if (filters.rank && !applicant.rank.toLowerCase().includes(filters.rank.toLowerCase())) {
+            return false;
+        }
+
+        // Filter by compliance
+        if (filters.compliance !== 'Compliance') {
+            if (filters.compliance === 'Ready' && applicant.compliance !== 'Ready') return false;
+            if (filters.compliance === 'Expiring Soon' && applicant.compliance !== 'Expiring Soon') return false;
+            if (filters.compliance === 'Missing' && applicant.compliance !== 'Missing') return false;
+        }
+
+        return true;
+    });
+
+    // Function to get action button based on stage
+    const getActionButton = (applicant) => {
+        const currentStage = applicantStages[applicant.id];
+        
+        switch (currentStage) {
+            case 'new':
+                return (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                            className="text-blue-600 font-bold hover:underline text-sm"
+                        >
+                            View Profile
+                        </button>
+                        <button 
+                            onClick={() => handleMoveToStage(applicant.id, 'shortlisted')}
+                            className="bg-[#003971] text-white px-3 py-1.5 rounded-lg font-medium text-xs hover:bg-[#002855] transition-colors"
+                        >
+                            Shortlist
+                        </button>
                     </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 border border-gray-200 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <Edit className="h-4 w-4" />
-                        Edit Job
-                    </button>
-                    <button className="px-4 py-2 border border-gray-200 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <Pause className="h-4 w-4" />
-                        Pause
-                    </button>
-                    <button className="px-4 py-2 border border-gray-200 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        Publish
-                    </button>
-                    <button className="px-4 py-2 border border-red-200 rounded-xl font-bold text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
-                        <XCircle className="h-4 w-4" />
-                        Close Job
-                    </button>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat, idx) => (
-                    <div key={idx} className={`${stat.color} rounded-2xl p-5 border border-gray-100`}>
-                        <div className="flex items-center gap-3 mb-3">
-                            <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                            <span className={`text-sm font-bold ${stat.textColor}`}>{stat.label}</span>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                        <div className="text-sm text-gray-600">{stat.subtitle}</div>
+                );
+            case 'matches':
+                return (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                            className="text-blue-600 font-bold hover:underline text-sm"
+                        >
+                            View Profile
+                        </button>
+                        <button 
+                            onClick={() => handleMoveToStage(applicant.id, 'shortlisted')}
+                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium text-xs hover:bg-green-700 transition-colors"
+                        >
+                            Move to Shortlist
+                        </button>
                     </div>
-                ))}
-            </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
-                            ? 'bg-[#003971] text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                );
+            case 'shortlisted':
+                return (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                            className="text-blue-600 font-bold hover:underline text-sm"
+                        >
+                            View Profile
+                        </button>
+                        <button 
+                            onClick={() => handleMoveToStage(applicant.id, 'interviewing')}
+                            className="bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium text-xs hover:bg-purple-700 transition-colors"
+                        >
+                            Schedule Interview
+                        </button>
+                    </div>
+                );
+            case 'interviewing':
+                return (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                            className="text-blue-600 font-bold hover:underline text-sm"
+                        >
+                            View Profile
+                        </button>
+                        <button 
+                            onClick={() => handleMoveToStage(applicant.id, 'offered')}
+                            className="bg-orange-600 text-white px-3 py-1.5 rounded-lg font-medium text-xs hover:bg-orange-700 transition-colors"
+                        >
+                            Send Offer
+                        </button>
+                    </div>
+                );
+            case 'offered':
+                return (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                            className="text-blue-600 font-bold hover:underline text-sm"
+                        >
+                            View Profile
+                        </button>
+                        <button 
+                            onClick={() => handleMoveToStage(applicant.id, 'hired')}
+                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium text-xs hover:bg-green-700 transition-colors"
+                        >
+                            Mark as Hired
+                        </button>
+                    </div>
+                );
+            case 'hired':
+                return (
+                    <button 
+                        onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                        className="text-blue-600 font-bold hover:underline text-sm"
                     >
-                        {tab.label} {tab.count > 0 && `(${tab.count})`}
+                        View Profile
                     </button>
-                ))}
+                );
+            default:
+                return (
+                    <button 
+                        onClick={() => onViewCandidate && onViewCandidate(applicant.id)}
+                        className="text-blue-600 font-bold hover:underline text-sm"
+                    >
+                        View Profile
+                    </button>
+                );
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-gray-50">
+            <div className="flex-shrink-0 bg-white px-8 py-6">
+                {/* Back Button */}
+                <button
+                    onClick={handleBack}
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium mb-6 transition-colors"
+                >
+                    <ChevronLeft className="h-5 w-5" />
+                    Back to Jobs
+                </button>
+
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-2">{jobDetails.title}</h1>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>{jobDetails.vessel}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                {jobDetails.posted}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3">
+                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                            <Edit className="h-4 w-4" />
+                            Edit Job
+                        </button>
+                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                            <Pause className="h-4 w-4" />
+                            Pause
+                        </button>
+                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            Publish
+                        </button>
+                        <button className="px-5 py-2.5 border border-red-200 text-red-600 rounded-xl font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2">
+                            <XCircle className="h-4 w-4" />
+                            Close Job
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {stats.map((stat, idx) => (
+                        <div key={idx} className={`${stat.color} rounded-2xl p-6`}>
+                            <div className="flex items-center gap-2 mb-4">
+                                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                                <span className={`text-sm font-semibold ${stat.textColor}`}>{stat.label}</span>
+                            </div>
+                            <div className="text-4xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                            <div className="text-sm text-gray-500">{stat.subtitle}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto mb-6">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors ${activeTab === tab.id
+                                ? 'bg-[#003971] text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                        >
+                            {tab.label} {tab.count > 0 && `(${tab.count})`}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Filters */}
+                <div className="flex items-center gap-3 flex-wrap mb-5">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="Filter by rank"
+                        value={filters.rank}
+                        onChange={(e) => setFilters({...filters, rank: e.target.value})}
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                     />
                 </div>
 
                 <div className="relative">
-                    <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                    <select 
+                        value={filters.compliance}
+                        onChange={(e) => setFilters({...filters, compliance: e.target.value})}
+                        className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                    >
                         <option>Compliance</option>
                         <option>Ready</option>
                         <option>Expiring Soon</option>
@@ -240,7 +464,11 @@ function JobApplicants() {
                 </div>
 
                 <div className="relative">
-                    <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                    <select 
+                        value={filters.seaService}
+                        onChange={(e) => setFilters({...filters, seaService: e.target.value})}
+                        className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                    >
                         <option>Sea Service</option>
                         <option>0-5 years</option>
                         <option>5-10 years</option>
@@ -250,7 +478,11 @@ function JobApplicants() {
                 </div>
 
                 <div className="relative">
-                    <select className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer">
+                    <select 
+                        value={filters.availability}
+                        onChange={(e) => setFilters({...filters, availability: e.target.value})}
+                        className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                    >
                         <option>Availability</option>
                         <option>Immediate</option>
                         <option>Within 30 days</option>
@@ -260,23 +492,23 @@ function JobApplicants() {
                 </div>
             </div>
 
-            {/* Applicants Table */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/50">
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Applicants</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Rank</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Availability</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Compliance</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Match</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Action</th>
+                {/* Applicants Table */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 bg-gray-50">
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Applicants</th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Rank</th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Availability</th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Compliance</th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Application Date</th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-gray-600 uppercase">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {applicants.map((applicant, idx) => (
-                                <tr key={applicant.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                            {filteredApplicants.map((applicant, idx) => (
+                                <tr key={applicant.id} className="border-b border-gray-100 hover:bg-[#EBF3FF]/30 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <img
@@ -308,12 +540,10 @@ function JobApplicants() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-gray-900 font-bold">{applicant.matchPercentage}%</span>
+                                        <span className="text-gray-900 font-medium">{applicant.applicationDate}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button className="text-blue-600 font-bold hover:underline text-sm">
-                                            Invite To Apply
-                                        </button>
+                                        {getActionButton(applicant)}
                                     </td>
                                 </tr>
                             ))}
@@ -321,36 +551,37 @@ function JobApplicants() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-600">
-                        Showing <span className="font-bold">5</span> of <span className="font-bold">45</span> entries
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        {[1, 2, 3, '...', 8].map((page, idx) => (
-                            <button
-                                key={idx}
-                                className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${page === 1
-                                    ? 'bg-[#003971] text-white'
-                                    : page === '...'
-                                        ? 'text-gray-400 cursor-default'
-                                        : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                                    }`}
-                                disabled={page === '...'}
-                            >
-                                {page}
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
+                        <p className="text-sm text-gray-600">
+                            Showing <span className="font-bold">5</span> of <span className="font-bold">45</span> entries
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-[#003971] hover:border-[#003971] hover:bg-[#EBF3FF] disabled:opacity-50 transition-colors" disabled>
+                                <ChevronLeft className="h-4 w-4" />
                             </button>
-                        ))}
-                        <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50">
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+                            {[1, 2, 3, '...', 8].map((page, idx) => (
+                                <button
+                                    key={idx}
+                                    className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${page === 1
+                                        ? 'bg-[#003971] text-white'
+                                        : page === '...'
+                                            ? 'text-gray-400 cursor-default'
+                                            : 'border border-gray-200 text-gray-600 hover:bg-[#EBF3FF] hover:border-[#003971] hover:text-[#003971]'
+                                        }`}
+                                    disabled={page === '...'}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                            <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-[#003971] hover:border-[#003971] hover:bg-[#EBF3FF] transition-colors">
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>    
     );
 }
 

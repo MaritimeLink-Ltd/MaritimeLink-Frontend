@@ -14,7 +14,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 
-function AdminJobs() {
+function AdminJobs({ onViewApplicants, onCreateJob }) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -172,122 +172,130 @@ function AdminJobs() {
     });
 
     return (
-        <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-                    <p className="text-gray-500 mt-1 text-sm">Manage your job listings and applications</p>
-                </div>
-                <button className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors">
-                    <Plus className="h-4 w-4" />
-                    Create Job
-                </button>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat, idx) => (
-                    <div
-                        key={idx}
-                        onClick={() => setFilters({ ...filters, status: stat.filterStatus })}
-                        className={`${stat.color} rounded-2xl p-5 border border-gray-100 transition-all cursor-pointer hover:shadow-md`}
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Fixed Header */}
+            <div className="flex-shrink-0 px-8 pt-4 pb-3 bg-[#FAFBFC]">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
+                        <p className="text-gray-600 mt-1 text-sm font-medium">Manage your job listings and applications</p>
+                    </div>
+                    <button 
+                        onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job')}
+                        className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                     >
-                        <div className="flex items-center gap-3 mb-3">
-                            <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                            <span className={`text-sm font-bold ${stat.textColor}`}>{stat.label}</span>
+                        <Plus className="h-4 w-4" />
+                        Create Job
+                    </button>
+                </div>
+            </div>
+
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto px-8 pb-4">
+                <div className="space-y-4">
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {stats.map((stat, idx) => (
+                            <div
+                                key={idx}
+                                onClick={() => setFilters({ ...filters, status: stat.filterStatus })}
+                                className={`${stat.color} rounded-xl p-4 border border-gray-100 transition-all cursor-pointer hover:shadow-md`}
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                                    <span className={`text-sm font-bold ${stat.textColor}`}>{stat.label}</span>
+                                </div>
+                                <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                                <div className="text-sm text-gray-600 font-medium">{stat.subtitle}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Search and Filters */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        {/* Search */}
+                        <div className="relative w-full sm:w-80">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search jobs..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                            />
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                        <div className="text-sm text-gray-600">{stat.subtitle}</div>
-                    </div>
-                ))}
-            </div>
 
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                {/* Search */}
-                <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search jobs..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
-                    />
-                </div>
+                        {/* Filters */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <div className="relative">
+                                <select
+                                    value={filters.status}
+                                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                                    className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                                >
+                                    <option>Status</option>
+                                    <option>Active</option>
+                                    <option>Draft</option>
+                                    <option>Closed</option>
+                                    <option>Ends Soon</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                            </div>
 
-                {/* Filters */}
-                <div className="flex items-center gap-3 flex-wrap">
-                    <div className="relative">
-                        <select
-                            value={filters.status}
-                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
-                        >
-                            <option>Status</option>
-                            <option>Active</option>
-                            <option>Draft</option>
-                            <option>Closed</option>
-                            <option>Ends Soon</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
+                            <div className="relative">
+                                <select
+                                    value={filters.jobType}
+                                    onChange={(e) => setFilters({ ...filters, jobType: e.target.value })}
+                                    className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                                >
+                                    <option>Job Type</option>
+                                    <option>Permanent</option>
+                                    <option>Contract</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                            </div>
 
-                    <div className="relative">
-                        <select
-                            value={filters.jobType}
-                            onChange={(e) => setFilters({ ...filters, jobType: e.target.value })}
-                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
-                        >
-                            <option>Job Type</option>
-                            <option>Permanent</option>
-                            <option>Contract</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
+                            <div className="relative">
+                                <select
+                                    value={filters.vessel}
+                                    onChange={(e) => setFilters({ ...filters, vessel: e.target.value })}
+                                    className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
+                                >
+                                    <option>Vessel</option>
+                                    <option>LNG Tanker</option>
+                                    <option>Container Ship</option>
+                                    <option>Bulk Carrier</option>
+                                    <option>Offshore Supply</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                            </div>
 
-                    <div className="relative">
-                        <select
-                            value={filters.vessel}
-                            onChange={(e) => setFilters({ ...filters, vessel: e.target.value })}
-                            className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] cursor-pointer"
-                        >
-                            <option>Vessel</option>
-                            <option>LNG Tanker</option>
-                            <option>Container Ship</option>
-                            <option>Bulk Carrier</option>
-                            <option>Offshore Supply</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                            <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                <RefreshCw className="h-4 w-4 text-gray-600" />
+                            </button>
+
+                            <button className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                <Download className="h-4 w-4" />
+                                Export CSV
+                            </button>
+                        </div>
                     </div>
 
-                    <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                        <RefreshCw className="h-4 w-4 text-gray-600" />
-                    </button>
-
-                    <button className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <Download className="h-4 w-4" />
-                        Export CSV
-                    </button>
-                </div>
-            </div>
-
-            {/* Jobs Table */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/50">
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Job Title</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Vessel / Type</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Location</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Badge</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Posted</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Status</th>
-                                <th className="text-left px-6 py-4 text-xs font-bold text-gray-700">Action</th>
-                            </tr>
-                        </thead>
+                    {/* Jobs Table */}
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Job Title</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Vessel / Type</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Location</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Badge</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Posted</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Status</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Action</th>
+                                    </tr>
+                                </thead>
                         <tbody>
                             {filteredJobs.map((job, idx) => (
                                 <tr key={job.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
@@ -323,8 +331,8 @@ function AdminJobs() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <button
-                                            onClick={() => navigate(`/admin/jobs/${job.id}/applicants`)}
-                                            className="text-blue-600 font-bold hover:underline text-sm"
+                                            onClick={() => onViewApplicants ? onViewApplicants(job.id) : navigate(`/admin/jobs/${job.id}/applicants`)}
+                                            className="text-[#003971] font-bold hover:underline text-sm"
                                         >
                                             View Applicants
                                         </button>
@@ -336,12 +344,12 @@ function AdminJobs() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-600">
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 font-medium">
                         Showing <span className="font-bold">10</span> of <span className="font-bold">412</span> entries
                     </p>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+                        <button className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors" disabled>
                             <ChevronLeft className="h-4 w-4" />
                         </button>
                         {[1, 2, 3, '...', 12].map((page, idx) => (
@@ -358,10 +366,12 @@ function AdminJobs() {
                                 {page}
                             </button>
                         ))}
-                        <button className="p-2 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50">
+                        <button className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div>

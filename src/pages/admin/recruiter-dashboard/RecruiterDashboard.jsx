@@ -10,10 +10,7 @@ import {
 } from 'lucide-react';
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
 
-import { useNavigate } from 'react-router-dom';
-
-function RecruiterDashboard() {
-    const navigate = useNavigate();
+function RecruiterDashboard({ onNavigate }) {
     const [timeFilter, setTimeFilter] = useState('Today');
     const [showVerifyModal, setShowVerifyModal] = useState(false);
 
@@ -27,7 +24,7 @@ function RecruiterDashboard() {
             icon: Briefcase,
             gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
-            path: '/admin/jobs'
+            section: 'jobs'
         },
         {
             id: 2,
@@ -37,7 +34,7 @@ function RecruiterDashboard() {
             icon: CheckCircle,
             gradient: 'from-[#059669] via-[#10b981] to-[#34d399]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
-            path: '/admin/jobs'
+            section: 'jobs'
         },
         {
             id: 3,
@@ -47,7 +44,7 @@ function RecruiterDashboard() {
             icon: Award,
             gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
-            path: '/admin/search'
+            section: 'search'
         },
         {
             id: 4,
@@ -58,7 +55,7 @@ function RecruiterDashboard() {
             gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]',
             iconBg: 'bg-white/20 backdrop-blur-sm',
             topIcon: Calendar,
-            path: '/admin/jobs'
+            section: 'jobs'
         },
     ];
 
@@ -69,22 +66,20 @@ function RecruiterDashboard() {
             text: '5 new applicants awaiting review for Chief Engineer',
             type: 'applicants',
             icon: Briefcase,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50',
+            iconColor: 'text-[#003971]',
+            iconBg: 'bg-[#EBF3FF]',
             actionText: 'View Applicants',
-            actionLink: '/admin/jobs',
-            path: '/admin/jobs'
+            section: 'jobs'
         },
         {
             id: 2,
             text: '13 matched professionals ready to invite (Deck Officer)',
             type: 'matches',
             icon: Search,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50',
+            iconColor: 'text-[#003971]',
+            iconBg: 'bg-[#EBF3FF]',
             actionText: 'View Matches',
-            actionLink: '/admin/search',
-            path: '/admin/search'
+            section: 'search'
         },
         {
             id: 3,
@@ -94,20 +89,18 @@ function RecruiterDashboard() {
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-50',
             actionText: 'Edit Job',
-            actionLink: '/admin/jobs',
             secondaryAction: true,
-            path: '/admin/jobs'
+            section: 'jobs'
         },
         {
             id: 4,
             text: "Job 'Master' has zero applicants",
             type: 'zero',
             icon: Briefcase,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50',
+            iconColor: 'text-[#003971]',
+            iconBg: 'bg-[#EBF3FF]',
             actionText: 'View Job',
-            actionLink: '/admin/jobs',
-            path: '/admin/jobs'
+            section: 'jobs'
         }
     ];
 
@@ -120,7 +113,6 @@ function RecruiterDashboard() {
             status: 'Active',
             matches: 18,
             image: '/images/login-image.png',
-            path: '/admin/jobs'
         },
         {
             id: 2,
@@ -129,7 +121,6 @@ function RecruiterDashboard() {
             status: 'Ending Soon',
             matches: 6,
             image: '/images/login-image.png',
-            path: '/admin/jobs'
         },
         {
             id: 3,
@@ -138,7 +129,6 @@ function RecruiterDashboard() {
             status: 'Draft',
             matches: 8,
             image: '/images/login-image.png',
-            path: '/admin/jobs'
         }
     ];
 
@@ -150,25 +140,25 @@ function RecruiterDashboard() {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="px-8 py-6 space-y-8">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-[32px] font-bold text-gray-900">Dashboard</h1>
-                    <p className="text-gray-500 mt-1 text-sm">
-                        Welcome back, John <span className="ml-1 text-gray-400">Sunday, January 11, 2026</span>
+                    <h1 className="text-[32px] font-bold text-gray-900 mb-1">Dashboard</h1>
+                    <p className="text-gray-600 text-sm">
+                        Welcome back, John <span className="text-gray-400">Sunday, January 11, 2026</span>
                     </p>
                 </div>
 
                 {/* Time Filter */}
-                <div className="bg-white p-1 rounded-2xl border border-gray-100 inline-flex shadow-sm">
+                <div className="bg-white p-1 rounded-2xl border border-gray-200 inline-flex shadow-sm">
                     {['Today', '7 Days', '1 Month', 'Custom'].map((filter) => (
                         <button
                             key={filter}
                             onClick={() => setTimeFilter(filter)}
-                            className={`px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 ${timeFilter === filter
-                                ? 'bg-[#003971] text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-600'
+                            className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${timeFilter === filter
+                                ? 'bg-[#003971] text-white shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {filter}
@@ -182,7 +172,7 @@ function RecruiterDashboard() {
                 {stats.map((stat) => (
                     <div
                         key={stat.id}
-                        onClick={() => navigate(stat.path)}
+                        onClick={() => onNavigate && onNavigate(stat.section)}
                         className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
                     >
                         <div className="relative z-10 flex flex-col h-full">
@@ -222,7 +212,7 @@ function RecruiterDashboard() {
                                     <span className="text-gray-900 font-medium text-sm">{item.text}</span>
                                 </div>
                                 <button
-                                    onClick={() => navigate(item.path)}
+                                    onClick={() => onNavigate && onNavigate(item.section)}
                                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
                                         ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                                         : 'bg-[#003971] text-white hover:bg-[#002855]'
@@ -267,7 +257,7 @@ function RecruiterDashboard() {
                 <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
                     <button
-                        onClick={() => navigate('/admin/jobs')}
+                        onClick={() => onNavigate && onNavigate('jobs')}
                         className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1"
                     >
                         View All Jobs &gt;
@@ -306,7 +296,7 @@ function RecruiterDashboard() {
                             </div>
                             <div className="col-span-3 flex justify-end">
                                 <button
-                                    onClick={() => navigate('/admin/search')}
+                                    onClick={() => onNavigate && onNavigate('search')}
                                     className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
                                 >
                                     {job.matches} <ChevronRight className="h-3.5 w-3.5" />
@@ -318,7 +308,7 @@ function RecruiterDashboard() {
 
                 <div className="px-8 py-5 border-t border-gray-100 text-center">
                     <button
-                        onClick={() => navigate('/admin/jobs')}
+                        onClick={() => onNavigate && onNavigate('jobs')}
                         className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"
                     >
                         View All Jobs <ChevronRight className="h-4 w-4" />

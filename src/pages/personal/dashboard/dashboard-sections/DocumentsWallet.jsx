@@ -152,13 +152,17 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'category') {
-        return <CategoryDocuments category={selectedCategory} onBack={() => { setView('list'); setSelectedCategory(null); }} />;
+        return <CategoryDocuments 
+            category={selectedCategory} 
+            onBack={() => { setView('list'); setSelectedCategory(null); }} 
+            onUploadClick={() => setView('upload')}
+        />;
     }
 
     return (
-        <div className="w-full max-w-7xl mx-auto h-full overflow-hidden">
+        <div className="w-full max-w-7xl mx-auto h-full overflow-y-auto lg:overflow-hidden">
             {/* Sticky Header Section */}
-            <div className="sticky top-0 bg-gray-50 z-10 px-4 sm:px-6 pt-4 pb-2">
+            <div className="lg:sticky lg:top-0 bg-gray-50 lg:z-10 px-4 sm:px-6 pt-4 pb-2">
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 sm:gap-4">
                     <div className="flex-1">
@@ -232,7 +236,7 @@ const DocumentsWallet = () => {
             </div>
 
             {/* Categories Grid - Single column on mobile, 2 on tablet+ */}
-            <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+            <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {filteredCategories.length > 0 ? (
                     filteredCategories.map((cat) => (
                         <div

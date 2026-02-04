@@ -1,7 +1,7 @@
 import { X, Camera } from 'lucide-react';
 import { useState, useRef } from 'react';
 
-function TakeSelfieModal({ isOpen, onClose, onPhotoTaken }) {
+function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const videoRef = useRef(null);
     const [stream, setStream] = useState(null);
     const [photoTaken, setPhotoTaken] = useState(false);
@@ -27,7 +27,11 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken }) {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
-            onPhotoTaken();
+            if (onSelfieTaken) {
+                onSelfieTaken();
+            } else if (onPhotoTaken) {
+                onPhotoTaken();
+            }
         }, 1500);
     };
 

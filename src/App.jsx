@@ -24,6 +24,8 @@ import CateringMedicalDashboard from './pages/personal/catering-medical/Catering
 import PersonalDashboard from './pages/personal/dashboard/PersonalDashboard';
 import CVResume from './pages/personal/CVResume';
 import AdminLogin from './pages/admin/auth/AdminLogin';
+import RecruiterLogin from './pages/admin/auth/RecruiterLogin';
+import TrainingProviderLogin from './pages/admin/auth/TrainingProviderLogin';
 import RecruiterSignup from './pages/admin/auth/RecruiterSignup';
 import RecruiterOTPVerification from './pages/admin/auth/RecruiterOTPVerification';
 import RecruiterProfileCompletion from './pages/admin/auth/RecruiterProfileCompletion';
@@ -33,14 +35,7 @@ import RecruiterCompanyVerification from './pages/admin/auth/RecruiterCompanyVer
 import RecruiterCompliance from './pages/admin/auth/RecruiterCompliance';
 import RecruiterUnderReview from './pages/admin/auth/RecruiterUnderReview';
 
-import AdminLayout from './pages/admin/recruiter-dashboard/layout/AdminLayout';
-import RecruiterDashboard from './pages/admin/recruiter-dashboard/RecruiterDashboard';
-import AdminSearch from './pages/admin/recruiter-dashboard/search/AdminSearch';
-import AdminJobs from './pages/admin/recruiter-dashboard/jobs/AdminJobs';
-import AdminChats from './pages/admin/recruiter-dashboard/chats/AdminChats';
-import AdminSettings from './pages/admin/recruiter-dashboard/settings/AdminSettings';
-import CandidateSummary from './pages/admin/recruiter-dashboard/candidate/CandidateSummary';
-import JobApplicants from './pages/admin/recruiter-dashboard/jobs/JobApplicants';
+import RecruiterDashboardMain from './pages/admin/recruiter-dashboard/RecruiterDashboardMain';
 import RecruiterNotifications from './pages/admin/recruiter-dashboard/RecruiterNotifications';
 
 import TrainingProviderLayout from './pages/admin/trainingprovider-dashboard/layout/TrainingProviderLayout';
@@ -109,26 +104,20 @@ function App() {
 
         {/* Admin/Recruiter Setup Routes (No Layout) */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/signup" element={<RecruiterSignup />} />
-        <Route path="/admin/otp-verification" element={<RecruiterOTPVerification />} />
-        <Route path="/admin/profile-completion" element={<RecruiterProfileCompletion />} />
-        <Route path="/admin/phone-verification" element={<RecruiterPhoneVerification />} />
-        <Route path="/admin/company-details" element={<RecruiterCompanyDetails />} />
-        <Route path="/admin/company-verification" element={<RecruiterCompanyVerification />} />
-        <Route path="/admin/compliance-declaration" element={<RecruiterCompliance />} />
-        <Route path="/admin/under-review" element={<RecruiterUnderReview />} />
+        <Route path="/recruiter/login" element={<RecruiterLogin />} />
+        <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
+        <Route path="/agent/signup" element={<RecruiterSignup />} />
+        <Route path="/agent/otp-verification" element={<RecruiterOTPVerification />} />
+        <Route path="/agent/profile-completion" element={<RecruiterProfileCompletion />} />
+        <Route path="/agent/phone-verification" element={<RecruiterPhoneVerification />} />
+        <Route path="/agent/company-details" element={<RecruiterCompanyDetails />} />
+        <Route path="/agent/company-verification" element={<RecruiterCompanyVerification />} />
+        <Route path="/agent/compliance-declaration" element={<RecruiterCompliance />} />
+        <Route path="/agent/under-review" element={<RecruiterUnderReview />} />
 
-        {/* Admin/Recruiter Protected Routes (With Layout) */}
-        <Route element={<AdminLayout />}>
-          <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
-          <Route path="/admin/search" element={<AdminSearch />} />
-          <Route path="/admin/candidate/:id" element={<CandidateSummary />} />
-          <Route path="/admin/jobs" element={<AdminJobs />} />
-          <Route path="/admin/jobs/:jobId/applicants" element={<JobApplicants />} />
-          <Route path="/admin/chats" element={<AdminChats />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
-        </Route>
+        {/* Admin/Recruiter Protected Routes */}
+        <Route path="/recruiter-dashboard" element={<RecruiterDashboardMain />} />
+        <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
 
         {/* Training Provider Protected Routes (With Layout) */}
         <Route element={<TrainingProviderLayout />}>

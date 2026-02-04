@@ -82,12 +82,10 @@ function RecruiterProfileCompletion() {
                 finalRole
             });
 
-            // Navigate to appropriate dashboard based on user type
-            if (userType === 'training-provider') {
-                navigate('/trainingprovider-dashboard');
-            } else {
-                navigate('/recruiter-dashboard');
-            }
+            // Navigate to phone verification
+            navigate('/agent/phone-verification', { 
+                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber}` } 
+            });
         } catch (err) {
             console.error('Profile completion error:', err);
             setError(err.message || 'Failed to complete profile. Please try again.');

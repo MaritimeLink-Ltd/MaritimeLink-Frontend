@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
 
 const ApplyToJob = ({ job, onBack }) => {
     const [selectedResume, setSelectedResume] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Sample resume data
     const resumes = [
@@ -19,8 +20,11 @@ const ApplyToJob = ({ job, onBack }) => {
         if (selectedResume) {
             // Handle job application submission
             console.log('Applying with resume:', selectedResume);
-            alert('Application submitted successfully!');
-            onBack();
+            setShowSuccessModal(true);
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                onBack();
+            }, 2000);
         }
     };
 
@@ -58,7 +62,7 @@ const ApplyToJob = ({ job, onBack }) => {
                                     {job?.salary || 'GBP 50000'}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-1 text-blue-600 text-sm">
+                            <div className="flex items-center gap-1 text-[#003971] text-sm">
                                 <MapPin size={14} />
                                 <span>{job?.location || 'London'}</span>
                             </div>
@@ -77,7 +81,7 @@ const ApplyToJob = ({ job, onBack }) => {
                                 key={resume.id}
                                 onClick={() => setSelectedResume(resume)}
                                 className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedResume?.id === resume.id
-                                    ? 'border-blue-900 bg-blue-50'
+                                    ? 'border-[#003971] bg-[#003971]/5'
                                     : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
@@ -102,7 +106,7 @@ const ApplyToJob = ({ job, onBack }) => {
                                     {/* Checkmark */}
                                     {selectedResume?.id === resume.id && (
                                         <div className="absolute top-4 right-4">
-                                            <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
+                                            <div className="w-6 h-6 bg-[#003971] rounded-full flex items-center justify-center">
                                                 <CheckCircle2 size={16} className="text-white" fill="currentColor" />
                                             </div>
                                         </div>
@@ -118,13 +122,26 @@ const ApplyToJob = ({ job, onBack }) => {
                     onClick={handleApply}
                     disabled={!selectedResume}
                     className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] ${selectedResume
-                        ? 'bg-blue-900 hover:bg-blue-800'
+                        ? 'bg-[#003971] hover:bg-[#003971]/90'
                         : 'bg-gray-400 cursor-not-allowed'
                         }`}
                 >
                     Apply
                 </button>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 size={32} className="text-green-600" />
+                        </div>
+                        <h3 className="text-2xl font-semibold text-gray-800 mb-2">Applied Successfully!</h3>
+                        <p className="text-gray-600">Your application has been submitted.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

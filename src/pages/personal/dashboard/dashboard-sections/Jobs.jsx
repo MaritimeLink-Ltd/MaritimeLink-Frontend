@@ -4,7 +4,9 @@ import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Ch
 const Jobs = ({ onApplyClick, onMyJobsClick }) => {
     const [selectedJob, setSelectedJob] = useState(null);
     const [appliedJobs, setAppliedJobs] = useState(new Set());
+    const [savedJobs, setSavedJobs] = useState(new Set());
     const [showFilter, setShowFilter] = useState(false);
+    const [showAppliedModal, setShowAppliedModal] = useState(false);
     const [filters, setFilters] = useState({
         category: null,
         datePosted: null,
@@ -101,9 +103,9 @@ const Jobs = ({ onApplyClick, onMyJobsClick }) => {
     ];
 
     return (
-        <div className="w-full h-full flex flex-col bg-gray-50">
+        <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
             {/* Header */}
-            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white">
+            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white lg:sticky lg:top-0 lg:z-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Jobs for you</h1>
@@ -153,7 +155,7 @@ const Jobs = ({ onApplyClick, onMyJobsClick }) => {
                             <div className="mb-3">
                                 <div className="flex items-start justify-between mb-2">
                                     <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
-                                    <div className="flex items-center gap-1 text-blue-600 text-sm">
+                                    <div className="flex items-center gap-1 text-[#003971] text-sm">
                                         <MapPin size={14} />
                                         <span>{job.location}</span>
                                     </div>
@@ -200,15 +202,34 @@ const Jobs = ({ onApplyClick, onMyJobsClick }) => {
                                                 onClick={() => {
                                                     onApplyClick(selectedJob);
                                                     setAppliedJobs(prev => new Set([...prev, selectedJob.id]));
+                                                    setShowAppliedModal(true);
+                                                    setTimeout(() => setShowAppliedModal(false), 2000);
                                                 }}
-                                                className="px-6 py-2.5 bg-blue-900 text-white rounded-full text-sm font-medium hover:bg-blue-800 transition-colors"
+                                                className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                             >
                                                 Apply Now
                                             </button>
                                         )}
-                                        <button className="flex items-center gap-2 px-5 py-2.5 border-2 border-blue-900 text-blue-900 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors">
-                                            <Bookmark size={16} />
-                                            Save
+                                        <button 
+                                            onClick={() => {
+                                                setSavedJobs(prev => {
+                                                    const newSaved = new Set(prev);
+                                                    if (newSaved.has(selectedJob.id)) {
+                                                        newSaved.delete(selectedJob.id);
+                                                    } else {
+                                                        newSaved.add(selectedJob.id);
+                                                    }
+                                                    return newSaved;
+                                                });
+                                            }}
+                                            className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${
+                                                savedJobs.has(selectedJob.id)
+                                                    ? 'bg-[#003971] border-[#003971] text-white'
+                                                    : 'border-[#003971] text-[#003971] hover:bg-blue-50'
+                                            }`}
+                                        >
+                                            <Bookmark size={16} fill={savedJobs.has(selectedJob.id) ? 'white' : 'none'} />
+                                            {savedJobs.has(selectedJob.id) ? 'Saved' : 'Save'}
                                         </button>
                                     </div>
                                 </div>
@@ -383,6 +404,23 @@ const Jobs = ({ onApplyClick, onMyJobsClick }) => {
                             >
                                 Apply Filter
                             </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Applied Successfully Modal */}
+            {showAppliedModal && (
+                <>
+                    {/* Backdrop */}
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+                        {/* Modal */}
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Check size={32} className="text-green-600" />
+                            </div>
+                            <h3 className="text-2xl font-semibold text-gray-800 mb-2">Applied Successfully!</h3>
+                            <p className="text-gray-600">Your application has been submitted.</p>
                         </div>
                     </div>
                 </>

@@ -1,6 +1,6 @@
 import { X, ShieldCheck } from 'lucide-react';
 
-function VerifyIdentityModal({ isOpen, onClose }) {
+function VerifyIdentityModal({ isOpen, onClose, onStartVerification }) {
     if (!isOpen) return null;
 
     return (
@@ -34,7 +34,7 @@ function VerifyIdentityModal({ isOpen, onClose }) {
                 {/* Buttons */}
                 <div className="space-y-3">
                     <button
-                        onClick={onClose}
+                        onClick={onStartVerification || onClose}
                         className="w-full bg-[#003971] text-white py-3 rounded-xl font-bold hover:bg-[#002855] transition-colors"
                     >
                         Start Now

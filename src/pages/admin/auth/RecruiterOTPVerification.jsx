@@ -72,7 +72,7 @@ function RecruiterOTPVerification() {
             console.log('OTP verified:', otpValue);
 
             // Navigate to next step (e.g., dashboard or profile setup)
-            navigate('/admin/profile-completion');
+            navigate('/agent/profile-completion');
         } catch (err) {
             console.error('OTP verification error:', err);
             setError(err.message || 'Invalid or expired OTP. Please try again.');

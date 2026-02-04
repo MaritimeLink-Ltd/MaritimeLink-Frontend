@@ -71,8 +71,8 @@ function RecruiterPhoneVerification() {
             // TODO: Implement phone verification API call
             console.log('Phone verified:', otpValue);
 
-            // Navigate to dashboard
-            navigate('/recruiter-dashboard');
+            // Navigate to company details
+            navigate('/agent/company-details');
         } catch (err) {
             console.error('Phone verification error:', err);
             setError(err.message || 'Invalid or expired OTP. Please try again.');
@@ -100,7 +100,7 @@ function RecruiterPhoneVerification() {
 
     const handleChangePhone = () => {
         // Navigate back to profile completion to change phone number
-        navigate('/admin/profile-completion');
+        navigate('/agent/profile-completion');
     };
 
     const formatTime = (seconds) => {

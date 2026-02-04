@@ -1,16 +1,59 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
     Search,
     Building2,
     Send,
-    FileText
+    FileText,
+    X,
+    AlertTriangle
 } from 'lucide-react';
 
-function AdminChats() {
-    const [selectedChat, setSelectedChat] = useState(1);
+function AdminChats({ candidateId, candidateName, onViewProfile }) {
+    const [selectedChat, setSelectedChat] = useState(candidateId || 1);
     const [messageInput, setMessageInput] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [selectedReason, setSelectedReason] = useState('');
+    const messagesEndRef = useRef(null);
+    const [messagesList, setMessagesList] = useState([
+        {
+            id: 1,
+            text: 'Hi , we are interested in your resume',
+            sent: false,
+            time: 'Yesterday 12:56pm'
+        },
+        {
+            id: 2,
+            text: 'Lets discuss more , tommorow',
+            sent: false
+        },
+        {
+            id: 3,
+            text: 'is that fine by you?',
+            sent: false
+        },
+        {
+            id: 4,
+            text: 'Hi, Thats Great',
+            sent: true
+        },
+        {
+            id: 5,
+            text: 'Yes , thats fine by me',
+            sent: true,
+            seen: true
+        }
+    ]);
 
-    const chats = [
+    const baseChats = [
+        ...(candidateId && candidateName ? [{
+            id: candidateId,
+            name: candidateName,
+            lastMessage: 'Start conversation',
+            time: 'Now',
+            unread: 0,
+            online: true
+        }] : []),
         {
             id: 1,
             name: 'Ali Shahzaib',
@@ -53,35 +96,59 @@ function AdminChats() {
         }
     ];
 
-    const messages = [
-        {
-            id: 1,
-            text: 'Hi , we are interested in your resume',
-            sent: false,
-            time: 'Yesterday 12:56pm'
-        },
-        {
-            id: 2,
-            text: 'Lets discuss more , tommorow',
-            sent: false
-        },
-        {
-            id: 3,
-            text: 'is that fine by you?',
-            sent: false
-        },
-        {
-            id: 4,
-            text: 'Hi, Thats Great',
-            sent: true
-        },
-        {
-            id: 5,
-            text: 'Yes , thats fine by me',
-            sent: true,
-            seen: true
-        }
+    const chats = baseChats;
+
+    // Filter chats based on search query
+    const filteredChats = chats.filter(chat => 
+        chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const reportReasons = [
+        { id: 'spam', label: 'Spam or unwanted messages' },
+        { id: 'inappropriate', label: 'Inappropriate content' },
+        { id: 'harassment', label: 'Harassment or bullying' },
+        { id: 'scam', label: 'Scam or fraud' },
+        { id: 'fake', label: 'Fake profile' },
+        { id: 'other', label: 'Other' }
     ];
+
+    const handleReport = () => {
+        if (selectedReason) {
+            console.log('Report submitted:', { chatId: selectedChat, reason: selectedReason });
+            // Here you would send to backend
+            setShowReportModal(false);
+            setSelectedReason('');
+            // You could show a success message here
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messagesList]);
+
+    const handleSendMessage = () => {
+        if (messageInput.trim()) {
+            setMessagesList([...messagesList, {
+                id: messagesList.length + 1,
+                text: messageInput,
+                sent: true,
+                time: undefined
+            }]);
+            setMessageInput('');
+        }
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
 
     const currentChat = chats.find(c => c.id === selectedChat);
 
@@ -104,6 +171,8 @@ function AdminChats() {
                             <input
                                 type="text"
                                 placeholder="Search messages..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                             />
                         </div>
@@ -115,7 +184,8 @@ function AdminChats() {
                                 scrollbarColor: '#CBD5E0 transparent'
                             }}
                         >
-                            {chats.map((chat) => (
+                            {filteredChats.length > 0 ? (
+                                filteredChats.map((chat) => (
                                 <button
                                     key={chat.id}
                                     onClick={() => setSelectedChat(chat.id)}
@@ -145,7 +215,12 @@ function AdminChats() {
                                         <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
                                     </div>
                                 </button>
-                            ))}
+                            ))
+                            ) : (
+                                <div className="text-center py-8 text-gray-500 text-sm">
+                                    No chats found
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -176,11 +251,17 @@ function AdminChats() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <button className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm">
+                                <button 
+                                    onClick={() => setShowReportModal(true)}
+                                    className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm"
+                                >
                                     <FileText className="h-4 w-4" />
                                     Report
                                 </button>
-                                <button className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2">
+                                <button 
+                                    onClick={() => onViewProfile && onViewProfile(selectedChat)}
+                                    className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                >
                                     <FileText className="h-4 w-4" />
                                     View Profile
                                 </button>
@@ -188,13 +269,16 @@ function AdminChats() {
                         </div>
 
                         {/* Messages - Scrollable */}
-                        <div className="flex-1 overflow-y-auto p-5 space-y-4"
+                        <div 
+                            className="flex-1 overflow-y-auto p-5 space-y-4"
                             style={{
                                 scrollbarWidth: 'thin',
-                                scrollbarColor: '#CBD5E0 transparent'
+                                scrollbarColor: '#CBD5E0 transparent',
+                                maxHeight: 'calc(100vh - 400px)',
+                                minHeight: '400px'
                             }}
                         >
-                            {messages.map((message, idx) => (
+                            {messagesList.map((message, idx) => (
                                 <div key={message.id}>
                                     {message.time && (
                                         <div className="text-center mb-4">
@@ -216,6 +300,7 @@ function AdminChats() {
                                     </div>
                                 </div>
                             ))}
+                            <div ref={messagesEndRef} />
                         </div>
 
                         {/* Message Input - Fixed at bottom */}
@@ -226,9 +311,13 @@ function AdminChats() {
                                     placeholder="Message..."
                                     value={messageInput}
                                     onChange={(e) => setMessageInput(e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                 />
-                                <button className="bg-[#003971] text-white p-3 rounded-full hover:bg-[#002855] transition-colors">
+                                <button 
+                                    onClick={handleSendMessage}
+                                    className="bg-[#003971] text-white p-3 rounded-full hover:bg-[#002855] transition-colors"
+                                >
                                     <Send className="h-5 w-5" />
                                 </button>
                             </div>
@@ -236,6 +325,79 @@ function AdminChats() {
                     </div>
                 </div>
             </div>
+
+            {/* Report Modal */}
+            {showReportModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                                <h2 className="text-xl font-bold text-gray-900">Report User</h2>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setShowReportModal(false);
+                                    setSelectedReason('');
+                                }}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-gray-600 mb-4">
+                            Please select a reason for reporting {currentChat?.name}
+                        </p>
+
+                        <div className="space-y-2 mb-6">
+                            {reportReasons.map((reason) => (
+                                <label 
+                                    key={reason.id}
+                                    className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${
+                                        selectedReason === reason.id 
+                                            ? 'border-red-600 bg-red-50' 
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="reportReason"
+                                        value={reason.id}
+                                        checked={selectedReason === reason.id}
+                                        onChange={(e) => setSelectedReason(e.target.value)}
+                                        className="w-4 h-4 text-red-600 focus:ring-red-500"
+                                    />
+                                    <span className="text-sm text-gray-900">{reason.label}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowReportModal(false);
+                                    setSelectedReason('');
+                                }}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleReport}
+                                disabled={!selectedReason}
+                                className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                                    selectedReason
+                                        ? 'bg-red-600 text-white hover:bg-red-700'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                                Submit Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

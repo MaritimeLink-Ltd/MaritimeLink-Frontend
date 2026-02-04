@@ -1,18 +1,23 @@
-import React from 'react';
-import { ArrowLeft, MapPin, Building2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const BookCourse = ({ course, onBack }) => {
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+
     const handlePayNow = () => {
-        alert('Proceeding to payment...');
-        onBack();
+        setShowSuccessModal(true);
+        setTimeout(() => {
+            setShowSuccessModal(false);
+            onBack();
+        }, 2000);
     };
 
     return (
         <div className="w-full h-full flex items-center justify-center bg-gray-50 p-8">
             {/* Logo in top-left corner */}
             <div className="absolute top-6 left-6">
-                <img src={logo} alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
+                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
             </div>
 
             {/* Main Form Container - matching officer dashboard sizing */}
@@ -67,11 +72,24 @@ const BookCourse = ({ course, onBack }) => {
                 {/* Pay Now Button - stays at bottom */}
                 <button
                     onClick={handlePayNow}
-                    className="w-full py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors mt-6"
+                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors mt-6"
                 >
                     Pay Now
                 </button>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 size={32} className="text-green-600" />
+                        </div>
+                        <h3 className="text-2xl font-semibold text-gray-800 mb-2">Payment Successful!</h3>
+                        <p className="text-gray-600">Your course has been booked successfully.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

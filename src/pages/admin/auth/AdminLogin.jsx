@@ -35,11 +35,27 @@ function AdminLogin() {
             // TODO: Implement login API call
             console.log('Login submitted:', formData);
 
-            // Check user type and navigate to appropriate dashboard
-            const userType = localStorage.getItem('adminUserType') || 'recruiter';
-            if (userType === 'training-provider') {
+            // Simulate different user types based on email domain for demo
+            let userType = 'admin'; // default
+            
+            if (formData.email.includes('recruiter') || formData.email.includes('agent')) {
+                userType = 'recruiter';
+            } else if (formData.email.includes('training') || formData.email.includes('provider')) {
+                userType = 'training-provider';
+            } else if (formData.email.includes('admin') || formData.email.includes('super')) {
+                userType = 'admin';
+            }
+
+            // Store user type in localStorage
+            localStorage.setItem('userType', userType);
+            localStorage.setItem('userEmail', formData.email);
+
+            // Navigate based on user type
+            if (userType === 'admin') {
+                navigate('/admin-dashboard');
+            } else if (userType === 'training-provider') {
                 navigate('/trainingprovider-dashboard');
-            } else {
+            } else if (userType === 'recruiter') {
                 navigate('/recruiter-dashboard');
             }
         } catch (err) {
@@ -178,7 +194,7 @@ function AdminLogin() {
                         <div className="mt-6 text-center">
                             <p className="text-sm text-gray-600">
                                 Don't have an account?{' '}
-                                <Link to="/admin/signup" className="font-medium text-[#003971] hover:text-[#002855] hover:underline">
+                                <Link to="/agent/signup" className="font-medium text-[#003971] hover:text-[#002855] hover:underline">
                                     Sign up
                                 </Link>
                             </p>

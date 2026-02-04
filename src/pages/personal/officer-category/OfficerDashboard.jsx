@@ -13,6 +13,8 @@ const OfficerDashboard = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
+  const [completedSections, setCompletedSections] = useState([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   
   // Centralized data storage
   const [allData, setAllData] = useState({
@@ -45,6 +47,11 @@ const OfficerDashboard = () => {
       [sectionKey]: sectionData
     });
     
+    // Mark current section as completed
+    if (!completedSections.includes(activeSection)) {
+      setCompletedSections([...completedSections, activeSection]);
+    }
+    
     // Move to next section
     if (activeSection < sections.length) {
       setActiveSection(activeSection + 1);
@@ -69,7 +76,11 @@ const OfficerDashboard = () => {
 
   const handleSaveAndContinue = () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal-dashboard');
+    setShowSaveModal(true);
+    // Auto close modal after 2 seconds
+    setTimeout(() => {
+      setShowSaveModal(false);
+    }, 2000);
   };
 
   const renderSection = () => {
@@ -196,33 +207,35 @@ const OfficerDashboard = () => {
 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
           <div className="bg-white rounded-2xl shadow-md p-3">
-            {sections.map((section) => (
-              <div
-                key={section.id}
-                onClick={() => {
-                  setActiveSection(section.id);
-                  setSidebarOpen(false);
-                }}
-                className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${
-                  activeSection === section.id
-                    ? 'bg-[#003971] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
+            {sections.map((section) => {
+              const isActiveOrCompleted = section.id <= activeSection;
+
+              return (
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
-                    activeSection === section.id
-                      ? 'bg-white text-[#003971]'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
+                  key={section.id}
+                  onClick={() => {
+                    setActiveSection(section.id);
+                    setSidebarOpen(false);
+                  }}
+                  className="flex items-center space-x-2.5 p-2 mb-1 cursor-pointer transition-colors hover:bg-gray-50 rounded-lg"
                 >
-                  {section.id}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                      isActiveOrCompleted
+                        ? 'bg-[#003971] text-white'
+                        : 'bg-gray-300 text-gray-500'
+                    }`}
+                  >
+                    {section.id}
+                  </div>
+                  <span className={`text-xs font-normal leading-tight ${
+                    isActiveOrCompleted ? 'text-[#003971]' : 'text-gray-400'
+                  }`}>
+                    {section.title}
+                  </span>
                 </div>
-                <span className="text-xs font-medium leading-tight">
-                  {section.title}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="bg-white rounded-2xl shadow-md p-3">
@@ -277,30 +290,32 @@ const OfficerDashboard = () => {
 
         {/* Steps Card */}
         <div className="w-full bg-white rounded-2xl shadow-md p-3 mb-4">
-          {sections.map((section) => (
-            <div
-              key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${
-                activeSection === section.id
-                  ? 'bg-[#003971] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
+          {sections.map((section) => {
+            const isActiveOrCompleted = section.id <= activeSection;
+
+            return (
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
-                  activeSection === section.id
-                    ? 'bg-white text-[#003971]'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className="flex items-center space-x-2.5 p-2 mb-1 cursor-pointer transition-colors hover:bg-gray-50 rounded-lg"
               >
-                {section.id}
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                    isActiveOrCompleted
+                      ? 'bg-[#003971] text-white'
+                      : 'bg-gray-300 text-gray-500'
+                  }`}
+                >
+                  {section.id}
+                </div>
+                <span className={`text-xs font-normal leading-tight ${
+                  isActiveOrCompleted ? 'text-[#003971]' : 'text-gray-400'
+                }`}>
+                  {section.title}
+                </span>
               </div>
-              <span className="text-xs font-medium leading-tight">
-                {section.title}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Resume Card */}
@@ -351,6 +366,28 @@ const OfficerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Save Confirmation Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 transform transition-all">
+            <div className="flex flex-col items-center">
+              {/* Success Icon */}
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              {/* Message */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Saved!</h3>
+              <p className="text-gray-600 text-center text-sm">
+                Your progress has been saved successfully
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

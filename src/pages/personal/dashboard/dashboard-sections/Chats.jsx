@@ -1,19 +1,37 @@
 import React, { useState } from 'react';
 import { MessageCircle, Building2, ArrowUp, ArrowLeft } from 'lucide-react';
 
-const Chats = () => {
+const Chats = ({ onViewJob }) => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [showChatList, setShowChatList] = useState(true); // For mobile toggle
 
-  // Sample chat data
-  const conversations = [
+  // Sample chat data - using state so messages can be updated
+  const [conversations, setConversations] = useState([
     {
       id: 1,
       company: 'ABC Company',
       lastMessage: 'Okay Thanks 🙌',
       time: '14:57',
       unread: 1,
+      job: {
+        id: 1,
+        title: 'Senior Seafarer',
+        company: 'ABC Company',
+        location: 'London',
+        salary: 'GBP 50000',
+        category: 'Officer',
+        jobType: 'Contract',
+        jobDescription: 'On-site Job: United Kingdom (London / Joining Port as Assigned)',
+        aboutCompany: 'We are a reputable maritime organization operating international vessels with a strong commitment to safety, compliance, and operational excellence.',
+        whatWeLookFor: 'We value professionalism, discipline, and a strong safety mindset.',
+        responsibilities: [
+          'Navigate and operate vessel safely',
+          'Maintain deck equipment and systems',
+          'Ensure compliance with maritime regulations',
+          'Coordinate with crew members effectively'
+        ]
+      },
       messages: [
         { id: 1, text: 'Hi, we are intrested in your resume', sender: 'company', timestamp: 'Yesterday 12:56pm' },
         { id: 2, text: 'Hi, Thats Great', sender: 'user' },
@@ -28,6 +46,7 @@ const Chats = () => {
       lastMessage: 'okay got it',
       time: '14:57',
       unread: 0,
+      job: null,
       messages: []
     },
     {
@@ -36,6 +55,7 @@ const Chats = () => {
       lastMessage: 'okay got it',
       time: '14:57',
       unread: 0,
+      job: null,
       messages: []
     },
     {
@@ -44,6 +64,7 @@ const Chats = () => {
       lastMessage: 'okay got it',
       time: '14:57',
       unread: 0,
+      job: null,
       messages: []
     },
     {
@@ -52,14 +73,41 @@ const Chats = () => {
       lastMessage: 'okay got it',
       time: '14:57',
       unread: 0,
+      job: null,
       messages: []
     },
-  ];
+  ]);
 
   const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      // Handle message send logic here
-      console.log('Sending message:', messageInput);
+    if (messageInput.trim() && selectedChat) {
+      const newMessage = {
+        id: Date.now(),
+        text: messageInput.trim(),
+        sender: 'user',
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // Update conversations state
+      setConversations(prevConversations => 
+        prevConversations.map(conv => {
+          if (conv.id === selectedChat.id) {
+            return {
+              ...conv,
+              messages: [...conv.messages, newMessage],
+              lastMessage: messageInput.trim(),
+              time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+            };
+          }
+          return conv;
+        })
+      );
+
+      // Update selected chat to show new message immediately
+      setSelectedChat(prev => ({
+        ...prev,
+        messages: [...prev.messages, newMessage]
+      }));
+
       setMessageInput('');
     }
   };
@@ -87,15 +135,15 @@ const Chats = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-50">
+    <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
       {/* Header */}
-      <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white">
+      <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white lg:sticky lg:top-0 lg:z-10">
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Chats</h1>
         <p className="text-gray-500 mt-1 text-base sm:text-lg">Connect with recruiters</p>
       </div>
 
       {/* Chat Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex lg:overflow-hidden">
         {/* Chat List - Left Sidebar - Hidden on mobile when chat is open */}
         <div className={`${selectedChat && 'hidden lg:block'} w-full lg:w-80 bg-white border-r border-gray-200 overflow-y-auto`}>
           {conversations.map((chat) => (
@@ -105,12 +153,12 @@ const Chats = () => {
                 setSelectedChat(chat);
                 setShowChatList(false);
               }}
-              className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedChat?.id === chat.id ? 'bg-blue-50' : ''
+              className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedChat?.id === chat.id ? 'bg-[#003971]/5' : ''
                 }`}
             >
               {/* Company Icon */}
               <div className="shrink-0">
-                <div className="w-12 h-12 bg-blue-900 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-[#003971] rounded-lg flex items-center justify-center">
                   <Building2 size={24} className="text-white" />
                 </div>
               </div>
@@ -129,7 +177,7 @@ const Chats = () => {
               {/* Unread Badge */}
               {chat.unread > 0 && (
                 <div className="shrink-0">
-                  <div className="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-[#003971] rounded-full flex items-center justify-center">
                     <span className="text-xs text-white font-semibold">{chat.unread}</span>
                   </div>
                 </div>
@@ -154,14 +202,19 @@ const Chats = () => {
                   >
                     <ArrowLeft size={20} className="text-gray-700" />
                   </button>
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#003971] rounded-lg flex items-center justify-center flex-shrink-0">
                     <Building2 size={18} className="text-white sm:w-5 sm:h-5" />
                   </div>
                   <h2 className="text-base sm:text-xl font-semibold text-gray-800 truncate">{selectedChat.company}</h2>
                 </div>
-                <button className="hidden sm:flex items-center px-5 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition-colors">
-                  View Job Description
-                </button>
+                {selectedChat.job && (
+                  <button 
+                    onClick={() => onViewJob && onViewJob(selectedChat.job)}
+                    className="hidden sm:flex items-center px-5 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition-colors"
+                  >
+                    View Job Description
+                  </button>
+                )}
               </div>
 
               {/* Messages Area */}
@@ -179,7 +232,7 @@ const Chats = () => {
                     <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div
                         className={`max-w-md px-4 py-2.5 rounded-2xl ${message.sender === 'user'
-                          ? 'bg-blue-900 text-white rounded-br-sm'
+                          ? 'bg-[#003971] text-white rounded-br-sm'
                           : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'
                           }`}
                       >
@@ -206,11 +259,11 @@ const Chats = () => {
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Message..."
-                    className="flex-1 px-4 py-3 bg-gray-100 rounded-full text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-900"
+                    className="flex-1 px-4 py-3 bg-gray-100 rounded-full text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971]"
                   />
                   <button
                     onClick={handleSendMessage}
-                    className="w-12 h-12 bg-blue-900 rounded-full flex items-center justify-center hover:bg-blue-800 transition-colors"
+                    className="w-12 h-12 bg-[#003971] rounded-full flex items-center justify-center hover:bg-[#003971]/90 transition-colors"
                   >
                     <ArrowUp size={20} className="text-white" />
                   </button>

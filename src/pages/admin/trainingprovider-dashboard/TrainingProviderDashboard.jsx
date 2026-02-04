@@ -133,52 +133,55 @@ function TrainingProviderDashboard() {
     ];
 
     return (
-        <div className="min-h-screen">
-            {/* Welcome Section */}
-            <div className="mb-6">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-[28px] font-bold text-gray-900 mb-1">Welcome Kingsley</h1>
-                        <p className="text-gray-500 text-sm">Your training operations at a glance</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="text-right">
-                            <p className="text-sm font-bold text-gray-900">Kingsley Osifo</p>
-                            <p className="text-xs text-gray-500">Training Provider Manager</p>
+        <div className="overflow-y-auto lg:overflow-hidden h-full">
+            <div className="lg:sticky lg:top-0 lg:z-10 bg-[#F5F7FA] pb-4">
+                {/* Welcome Section */}
+                <div className="mb-6">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h1 className="text-[28px] font-bold text-gray-900 mb-1">Welcome Kingsley</h1>
+                            <p className="text-gray-500 text-sm">Your training operations at a glance</p>
                         </div>
-                        <img
-                            className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
-                            src="/images/login-image.png"
-                            alt="User avatar"
-                        />
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-gray-900">Kingsley Osifo</p>
+                                <p className="text-xs text-gray-500">Training Provider Manager</p>
+                            </div>
+                            <img
+                                className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
+                                src="/images/login-image.png"
+                                alt="User avatar"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-                {statsCards.map((card) => (
-                    <div
-                        key={card.id}
-                        onClick={() => navigate(card.path)}
-                        className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
-                    >
-                        <div className="flex items-start justify-between mb-3">
-                            <div className={`${card.iconBg} p-3 rounded-xl`}>
-                                <card.icon className="h-6 w-6 text-white" />
+            <div className="overflow-y-auto lg:h-[calc(100vh-220px)] scrollbar-hide">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                    {statsCards.map((card) => (
+                        <div
+                            key={card.id}
+                            onClick={() => navigate(card.path)}
+                            className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <div className={`${card.iconBg} p-3 rounded-xl`}>
+                                    <card.icon className="h-6 w-6 text-white" />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-[40px] font-bold leading-none">{card.value}</h3>
+                                <p className="text-white/95 text-base font-medium">{card.subtitle}</p>
+                                <p className="text-white/70 text-xs">{card.subtitle}</p>
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <h3 className="text-[40px] font-bold leading-none">{card.value}</h3>
-                            <p className="text-white/95 text-base font-medium">{card.subtitle}</p>
-                            <p className="text-white/70 text-xs">{card.subtitle}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
 
-            {/* Action Required and Quick Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Action Required and Quick Overview */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {/* Action Required - 60% width (3 columns) */}
                 <div className="lg:col-span-3">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Action Required</h2>
@@ -279,6 +282,7 @@ function TrainingProviderDashboard() {
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     );
 }

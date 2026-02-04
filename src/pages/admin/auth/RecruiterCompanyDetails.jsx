@@ -41,8 +41,8 @@ function RecruiterCompanyDetails() {
             // TODO: Implement company details API call
             console.log('Company details submitted:', formData);
 
-            // Navigate to dashboard
-            navigate('/recruiter/dashboard');
+            // Navigate to company verification
+            navigate('/agent/company-verification');
         } catch (err) {
             console.error('Company details error:', err);
             setError(err.message || 'Failed to save company details. Please try again.');
@@ -238,14 +238,6 @@ function RecruiterCompanyDetails() {
                             )}
                         </button>
                     </form>
-
-                    {/* Login Link */}
-                    <p className="mt-3 text-xs text-gray-700">
-                        Already have an account?{' '}
-                        <Link to="/recruiter/login" className="text-[#003971] font-medium hover:underline">
-                            Login
-                        </Link>
-                    </p>
                 </div>
             </div>
 

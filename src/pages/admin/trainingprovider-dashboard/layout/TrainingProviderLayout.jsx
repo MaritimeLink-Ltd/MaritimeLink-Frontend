@@ -137,8 +137,10 @@ function TrainingProviderLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 overflow-y-auto bg-[#F5F7FA] px-8 py-6">
-                    <Outlet />
+                <main className="flex-1 overflow-hidden bg-[#F5F7FA] px-8 py-6">
+                    <div className="h-full overflow-y-auto scrollbar-hide">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

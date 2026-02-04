@@ -20,8 +20,8 @@ function RecruiterCompanyVerification() {
             // TODO: Implement company confirmation API call
             console.log('Company confirmed:', companyData);
 
-            // Navigate to dashboard
-            navigate('/recruiter/dashboard');
+            // Navigate to compliance declaration
+            navigate('/agent/compliance-declaration');
         } catch (err) {
             console.error('Company confirmation error:', err);
         } finally {
@@ -31,7 +31,7 @@ function RecruiterCompanyVerification() {
 
     const handleDecline = () => {
         // Navigate back to company details to enter new company info
-        navigate('/recruiter/company-details');
+        navigate('/agent/company-details');
     };
 
     return (

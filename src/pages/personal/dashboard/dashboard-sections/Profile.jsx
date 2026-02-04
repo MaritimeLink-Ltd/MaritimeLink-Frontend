@@ -35,9 +35,9 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                         </div>
 
                         {/* Maritime Premium Card */}
-                        <div className="bg-blue-900 rounded-xl p-4 sm:p-5 text-white cursor-pointer hover:bg-blue-800 transition-colors relative min-h-[44px] flex items-center">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Crown size={18} />
+                        <div className="bg-[#003971] rounded-xl p-4 sm:p-5 text-white cursor-pointer hover:bg-[#003971]/90 transition-colors relative">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Crown size={20} />
                                 <h4 className="font-semibold text-base">Maritime Premium</h4>
                             </div>
                             <p className="text-sm mb-1">No active membership plan</p>
@@ -56,7 +56,7 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                                 className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group min-h-[44px]"
                             >
                                 <div className="flex items-center gap-3">
-                                    <Lock size={16} className="text-blue-900" />
+                                    <Lock size={16} className="text-[#003971]" />
                                     <span className="text-gray-800 text-sm">Change password</span>
                                 </div>
                                 <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
@@ -70,7 +70,7 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                                 className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
                             >
                                 <div className="flex items-center gap-3">
-                                    <CreditCard size={16} className="text-blue-900" />
+                                    <CreditCard size={16} className="text-[#003971]" />
                                     <span className="text-gray-800 text-sm">Manage Subscription</span>
                                 </div>
                                 <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
@@ -83,13 +83,13 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                             <div className="space-y-2">
                                 <div className="w-full flex items-center justify-between p-3 rounded-lg">
                                     <div className="flex items-center gap-3">
-                                        <Mail size={16} className="text-blue-900" />
+                                        <Mail size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">info@maritime.com</span>
                                     </div>
                                 </div>
                                 <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group">
                                     <div className="flex items-center gap-3">
-                                        <Send size={16} className="text-blue-900" />
+                                        <Send size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">Send feedback</span>
                                     </div>
                                     <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
@@ -103,14 +103,14 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                             <div className="space-y-2">
                                 <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group">
                                     <div className="flex items-center gap-3">
-                                        <FileText size={16} className="text-blue-900" />
+                                        <FileText size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">Terms & condition</span>
                                     </div>
                                     <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
                                 </button>
                                 <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group">
                                     <div className="flex items-center gap-3">
-                                        <Shield size={16} className="text-blue-900" />
+                                        <Shield size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">Privacy policy</span>
                                     </div>
                                     <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
@@ -124,7 +124,7 @@ const Profile = ({ onChangePasswordClick, onManageSubscriptionClick }) => {
                             <div className="space-y-2">
                                 <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors" onClick={handleLogout}>
                                     <div className="flex items-center gap-3">
-                                        <LogOut size={16} className="text-blue-900" />
+                                        <LogOut size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">Log out</span>
                                     </div>
                                 </button>

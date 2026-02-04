@@ -275,7 +275,7 @@ const CVResume = () => {
         return [...Array(5)].map((_, index) => (
             <FaStar
                 key={index}
-                className={index < rating ? 'text-blue-600' : 'text-gray-300'}
+                className={index < rating ? 'text-[#003971]' : 'text-gray-300'}
                 size={18}
             />
         ));
@@ -288,19 +288,19 @@ const CVResume = () => {
                 <span className="opacity-70 flex items-center">Preview Mode:</span>
                 <button
                     onClick={() => switchUserType('officer')}
-                    className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
                 >
                     Officer
                 </button>
                 <button
                     onClick={() => switchUserType('rating')}
-                    className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
                 >
                     Rating/Crew
                 </button>
                 <button
                     onClick={() => switchUserType('medical')}
-                    className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
                 >
                     Medical
                 </button>

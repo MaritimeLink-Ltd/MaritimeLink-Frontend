@@ -16,6 +16,7 @@ import Dashboard from './dashboard-sections/Dashboard';
 import DocumentsWallet from './dashboard-sections/DocumentsWallet';
 import Chats from './dashboard-sections/Chats';
 import Jobs from './dashboard-sections/Jobs';
+import JobDetail from './dashboard-sections/JobDetail';
 import ApplyToJob from './dashboard-sections/ApplyToJob';
 import MyJobs from './dashboard-sections/MyJobs';
 import Training from './dashboard-sections/Training';
@@ -24,17 +25,78 @@ import Profile from './dashboard-sections/Profile';
 import Resume from './dashboard-sections/Resume';
 import ChangePassword from './dashboard-sections/ChangePassword';
 import ManageSubscription from './dashboard-sections/ManageSubscription';
+import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
+import SelectDocumentModal from '../../../components/modals/SelectDocumentModal';
+import UploadDocumentModal from '../../../components/modals/UploadDocumentModal';
+import VerifyDetailsModal from '../../../components/modals/VerifyDetailsModal';
+import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
+import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
+import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 
 const PersonalDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [applyingToJob, setApplyingToJob] = useState(null);
   const [showMyJobs, setShowMyJobs] = useState(false);
+  const [viewingJobFromChat, setViewingJobFromChat] = useState(null);
   const [bookingCourse, setBookingCourse] = useState(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
   const [showOldDashboard, setShowOldDashboard] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
+
+  // KYC Modal States
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(true); // Show on initial load
+  const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
+  const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
+  const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
+  const [showTakeSelfieModal, setShowTakeSelfieModal] = useState(false);
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] = useState(null);
+
+  // KYC Flow Handlers
+  const handleStartVerification = () => {
+    setShowVerifyIdentityModal(false);
+    setShowSelectDocumentModal(true);
+  };
+
+  const handleSelectDocument = (docType) => {
+    setSelectedDocumentType(docType);
+    setShowSelectDocumentModal(false);
+    setShowUploadDocumentModal(true);
+  };
+
+  const handleDocumentUploaded = () => {
+    setShowUploadDocumentModal(false);
+    setShowVerifyDetailsModal(true);
+  };
+
+  const handleDetailsVerified = () => {
+    setShowVerifyDetailsModal(false);
+    setShowTakeSelfieModal(true);
+  };
+
+  const handleSelfieTaken = () => {
+    setShowTakeSelfieModal(false);
+    setShowProcessingModal(true);
+    
+    // Simulate processing time
+    setTimeout(() => {
+      setShowProcessingModal(false);
+      setShowVerificationSubmittedModal(true);
+    }, 3000);
+  };
+
+  const handleVerificationComplete = () => {
+    setShowVerificationSubmittedModal(false);
+    // User can now access dashboard
+  };
+
+  const handleSkipVerification = () => {
+    setShowVerifyIdentityModal(false);
+    // Allow user to continue without verification
+  };
 
   // Handler for dashboard card navigation
   const handleDashboardNavigate = (section) => {
@@ -91,7 +153,6 @@ const PersonalDashboard = () => {
             transform transition-transform duration-300 ease-in-out
             lg:transform-none
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-            border-r border-gray-200
           `}>
             {/* Logo */}
             <div className="p-6">
@@ -118,11 +179,11 @@ const PersonalDashboard = () => {
                     key={item.id}
                     onClick={() => handleTabChange(item.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 mb-1 text-left transition-all duration-200 rounded-lg min-h-[44px] ${isActive
-                      ? 'bg-blue-100 text-blue-700'
+                      ? 'bg-[#003971]/10 text-[#003971]'
                       : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                       }`}
                   >
-                    <Icon size={18} className={isActive ? 'text-blue-600' : 'text-gray-400'} />
+                    <Icon size={18} className={isActive ? 'text-[#003971]' : 'text-gray-400'} />
                     <span className={`text-sm ${isActive ? 'font-semibold' : 'font-medium'}`}>
                       {item.label}
                     </span>
@@ -165,7 +226,14 @@ const PersonalDashboard = () => {
 
         {activeTab === 'documents' && <DocumentsWallet />}
         {activeTab === 'resume' && <Resume />}
-        {activeTab === 'chats' && <Chats />}
+        {activeTab === 'chats' && !viewingJobFromChat && <Chats onViewJob={(job) => setViewingJobFromChat(job)} />}
+        {viewingJobFromChat && (
+          <JobDetail 
+            job={viewingJobFromChat}
+            onBack={() => setViewingJobFromChat(null)}
+            onApplyClick={(job) => setApplyingToJob(job)}
+          />
+        )}
         {activeTab === 'training' && !bookingCourse && <Training onBookClick={(course) => setBookingCourse(course)} />}
         {activeTab === 'profile' && !showChangePassword && !showManageSubscription && (
           <Profile
@@ -182,6 +250,41 @@ const PersonalDashboard = () => {
         {showChangePassword && <ChangePassword onBack={() => setShowChangePassword(false)} />}
         {showManageSubscription && <ManageSubscription onBack={() => setShowManageSubscription(false)} />}
       </div>
+
+      {/* KYC Modals */}
+      <VerifyIdentityModal 
+        isOpen={showVerifyIdentityModal} 
+        onClose={handleSkipVerification}
+        onStartVerification={handleStartVerification}
+      />
+      <SelectDocumentModal 
+        isOpen={showSelectDocumentModal} 
+        onClose={() => setShowSelectDocumentModal(false)}
+        onSelectDocument={handleSelectDocument}
+      />
+      <UploadDocumentModal 
+        isOpen={showUploadDocumentModal} 
+        onClose={() => setShowUploadDocumentModal(false)}
+        onUploadComplete={handleDocumentUploaded}
+        documentType={selectedDocumentType}
+      />
+      <VerifyDetailsModal 
+        isOpen={showVerifyDetailsModal} 
+        onClose={() => setShowVerifyDetailsModal(false)}
+        onConfirm={handleDetailsVerified}
+      />
+      <TakeSelfieModal 
+        isOpen={showTakeSelfieModal} 
+        onClose={() => setShowTakeSelfieModal(false)}
+        onSelfieTaken={handleSelfieTaken}
+      />
+      <ProcessingDocumentModal 
+        isOpen={showProcessingModal} 
+      />
+      <VerificationSubmittedModal 
+        isOpen={showVerificationSubmittedModal} 
+        onClose={handleVerificationComplete}
+      />
     </div>
   );
 };

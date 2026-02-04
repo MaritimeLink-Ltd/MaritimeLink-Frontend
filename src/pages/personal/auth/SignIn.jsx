@@ -33,7 +33,11 @@ function SignIn() {
 
       console.log('Login successful:', response);
 
-      // Navigate to personal dashboard or appropriate page
+      // Store user info
+      localStorage.setItem('userType', 'professional');
+      localStorage.setItem('userEmail', formData.email);
+
+      // Navigate to personal dashboard
       navigate('/personal-dashboard');
     } catch (err) {
       console.error('Login error:', err);

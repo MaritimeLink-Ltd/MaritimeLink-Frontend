@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, FileText, Scan, CheckCircle } from 'lucide-react';
+import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft } from 'lucide-react';
 
 const UploadDocument = ({ onBack, onCompletion }) => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -63,8 +63,15 @@ const UploadDocument = ({ onBack, onCompletion }) => {
 
     return (
         <div className="w-full max-w-7xl mx-auto p-8 relative">
-            {/* Header */}
+            {/* Header with Back Button */}
             <div className="mb-8">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-gray-600 hover:text-[#003971] mb-4 transition-colors"
+                >
+                    <ArrowLeft size={20} />
+                    <span className="font-medium">Back</span>
+                </button>
                 <h1 className="text-3xl font-semibold text-gray-800">Upload Document</h1>
                 <p className="text-gray-500 mt-1 text-lg">Upload new documents to keep your profile updated</p>
             </div>
@@ -122,25 +129,19 @@ const UploadDocument = ({ onBack, onCompletion }) => {
                     <div className="flex gap-6">
                         <div className="flex-1 space-y-2">
                             <label className="block text-sm font-medium text-gray-700">Date Of Issue</label>
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
-                                    onClick={(e) => e.target.showPicker()}
-                                />
-                                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                            </div>
+                            <input
+                                type="date"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
+                                onClick={(e) => e.target.showPicker()}
+                            />
                         </div>
                         <div className="flex-1 space-y-2">
                             <label className="block text-sm font-medium text-gray-700">Valid Till</label>
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
-                                    onClick={(e) => e.target.showPicker()}
-                                />
-                                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                            </div>
+                            <input
+                                type="date"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
+                                onClick={(e) => e.target.showPicker()}
+                            />
                         </div>
                     </div>
 
@@ -199,7 +200,7 @@ const UploadDocument = ({ onBack, onCompletion }) => {
                         <div className="flex flex-col items-center">
                             {ocrState === 'scanning' ? (
                                 <>
-                                    <div className="text-blue-600 mb-4 animate-pulse">
+                                    <div className="text-[#003971] mb-4 animate-pulse">
                                         <Scan size={40} />
                                     </div>
                                     <h3 className="text-xl font-medium text-gray-800 mb-6">OCR in Progress</h3>
