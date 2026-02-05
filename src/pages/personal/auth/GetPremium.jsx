@@ -50,10 +50,10 @@ function GetPremium() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-white">
+    <div className="min-h-screen h-screen flex overflow-hidden bg-white">
       {/* Left Side - Content */}
-      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 overflow-y-auto py-8 sm:py-0">
-        <div className="max-w-md w-full mx-auto lg:mx-0">
+      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 overflow-y-auto scrollbar-hide py-8 lg:py-12">
+        <div className="max-w-md w-full mx-auto lg:mx-0 my-auto">
           {/* Premium Icon */}
           <div className="mb-6">
             <div className="w-14 h-14 bg-[#003971] rounded-full flex items-center justify-center">
@@ -81,11 +81,11 @@ function GetPremium() {
           </h2>
 
           {/* Features List */}
-          <div className="space-y-3 mb-8">
+          <div className="space-y-3 mb-6 lg:mb-8">
             {features.map((feature) => (
               <div
                 key={feature.id}
-                className="p-4 border border-gray-200 rounded-lg bg-white"
+                className="p-3 lg:p-4 border border-gray-200 rounded-lg bg-white"
               >
                 <h3 className="text-base font-semibold text-gray-900 mb-1">
                   {feature.title}
@@ -98,7 +98,7 @@ function GetPremium() {
           {/* Get Premium Button */}
           <button
             onClick={handleGetPremium}
-            className="w-full bg-[#003971] text-white py-3 px-4 rounded-md hover:bg-[#002855] transition-colors duration-200 font-medium flex items-center justify-center gap-2 mb-4 min-h-[44px]"
+            className="w-full bg-[#003971] text-white py-3 px-4 rounded-md hover:bg-[#002855] transition-colors duration-200 font-medium flex items-center justify-center gap-2 mb-3 lg:mb-4 min-h-[44px]"
           >
             <svg
               className="w-5 h-5"

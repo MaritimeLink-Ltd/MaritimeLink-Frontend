@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Building2, ArrowUp, ArrowLeft } from 'lucide-react';
 
 const Chats = ({ onViewJob }) => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [showChatList, setShowChatList] = useState(true); // For mobile toggle
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   // Sample chat data - using state so messages can be updated
   const [conversations, setConversations] = useState([
@@ -109,8 +111,27 @@ const Chats = ({ onViewJob }) => {
       }));
 
       setMessageInput('');
+
+      // Smooth scroll to the new message
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
     }
   };
+
+  // Scroll to bottom when selected chat changes or messages update
+  useEffect(() => {
+    if (selectedChat && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [selectedChat?.messages]);
+
+  // Initial scroll when opening a chat
+  useEffect(() => {
+    if (selectedChat && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [selectedChat?.id]);
 
   // Empty state - no conversations
   if (conversations.length === 0) {
@@ -218,7 +239,7 @@ const Chats = ({ onViewJob }) => {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-gray-50">
+              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-gray-50">
                 {selectedChat.messages.map((message, index) => (
                   <div key={message.id} className="mb-4">
                     {/* Timestamp */}
@@ -248,6 +269,8 @@ const Chats = ({ onViewJob }) => {
                     )}
                   </div>
                 ))}
+                {/* Invisible element at the bottom for scrolling reference */}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}

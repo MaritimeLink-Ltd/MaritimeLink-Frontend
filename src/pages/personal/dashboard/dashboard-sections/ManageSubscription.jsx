@@ -1,14 +1,22 @@
-import React from 'react';
-import { ArrowLeft, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Crown, CheckCircle } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const ManageSubscription = ({ onBack }) => {
+const ManageSubscription = () => {
+    const navigate = useNavigate();
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    
     const handleUpdatePlan = () => {
-        alert('Redirecting to plan selection...');
+        setShowSuccessModal(true);
+        setTimeout(() => {
+            setShowSuccessModal(false);
+            navigate('/personal/profile');
+        }, 2500);
     };
 
     const handleCancel = () => {
-        onBack();
+        navigate('/personal/profile');
     };
 
     const benefits = [
@@ -41,7 +49,7 @@ const ManageSubscription = ({ onBack }) => {
             <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
                 {/* Back Button and Title */}
                 <button
-                    onClick={onBack}
+                    onClick={() => navigate('/personal/profile')}
                     className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-6 transition-colors"
                 >
                     <ArrowLeft size={20} />
@@ -94,6 +102,23 @@ const ManageSubscription = ({ onBack }) => {
                     </button>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="bg-white rounded-2xl p-8 w-[400px] shadow-xl animate-in fade-in zoom-in duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle size={40} className="text-green-600" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2">Plan Upgraded!</h3>
+                            <p className="text-gray-500">
+                                Your subscription has been successfully updated
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

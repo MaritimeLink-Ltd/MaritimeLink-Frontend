@@ -18,12 +18,19 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
     dateOfIssue: '',
     validTill: ''
   });
+  const [licenseDateError, setLicenseDateError] = useState('');
+  const [certificateDateError, setCertificateDateError] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
 
   const handleLicenseChange = (e) => {
     setCurrentLicense({
       ...currentLicense,
       [e.target.name]: e.target.value
     });
+    if (e.target.name === 'dateOfIssue') {
+      setLicenseDateError('');
+    }
   };
 
   const handleCertificateChange = (e) => {
@@ -31,10 +38,33 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
       ...currentCertificate,
       [e.target.name]: e.target.value
     });
+    if (e.target.name === 'dateOfIssue') {
+      setCertificateDateError('');
+    }
   };
 
   const handleAddLicense = () => {
     if (currentLicense.licenseName && currentLicense.licenseNumber) {
+      // Validate date of issue is not in the future
+      if (currentLicense.dateOfIssue) {
+        const issueDate = new Date(currentLicense.dateOfIssue);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (issueDate > today) {
+          setLicenseDateError('Please enter valid date');
+          return;
+        }
+      }
+      // Validate dates if both are provided
+      if (currentLicense.dateOfIssue && currentLicense.validTill) {
+        const issueDate = new Date(currentLicense.dateOfIssue);
+        const validDate = new Date(currentLicense.validTill);
+        if (issueDate >= validDate) {
+          setLicenseDateError('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
+      setLicenseDateError('');
       setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
       setCurrentLicense({
         licenseName: '',
@@ -43,6 +73,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
         dateOfIssue: '',
         validTill: ''
       });
+      setLicenseDateError('');
     }
   };
 
@@ -52,6 +83,26 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
 
   const handleAddCertificate = () => {
     if (currentCertificate.licenseName && currentCertificate.licenseNumber) {
+      // Validate date of issue is not in the future
+      if (currentCertificate.dateOfIssue) {
+        const issueDate = new Date(currentCertificate.dateOfIssue);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (issueDate > today) {
+          setCertificateDateError('Please enter valid date');
+          return;
+        }
+      }
+      // Validate dates if both are provided
+      if (currentCertificate.dateOfIssue && currentCertificate.validTill) {
+        const issueDate = new Date(currentCertificate.dateOfIssue);
+        const validDate = new Date(currentCertificate.validTill);
+        if (issueDate >= validDate) {
+          setCertificateDateError('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
+      setCertificateDateError('');
       setCertificates([...certificates, { ...currentCertificate, id: Date.now() }]);
       setCurrentCertificate({
         licenseName: '',
@@ -60,6 +111,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
         dateOfIssue: '',
         validTill: ''
       });
+      setCertificateDateError('');
     }
   };
 
@@ -144,7 +196,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter your license name"
                   value={currentLicense.licenseName}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -159,7 +211,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter license number"
                   value={currentLicense.licenseNumber}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -174,7 +226,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter issuing authority name"
                   value={currentLicense.issuingCountry}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -190,8 +242,12 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                     placeholder="dd/mm/yyyy"
                     value={currentLicense.dateOfIssue}
                     onChange={handleLicenseChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={today}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
+                  {licenseeDateError && (
+                    <p className="text-red-500 text-xs mt-1">{licenseeDateError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -205,7 +261,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                     placeholder="dd/mm/yyyy"
                     value={currentLicense.validTill}
                     onChange={handleLicenseChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -258,7 +314,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter your license name"
                   value={currentCertificate.licenseName}
                   onChange={handleCertificateChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -273,7 +329,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter license number"
                   value={currentCertificate.licenseNumber}
                   onChange={handleCertificateChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -288,7 +344,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                   placeholder="Enter issuing authority name"
                   value={currentCertificate.issuingCountry}
                   onChange={handleCertificateChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -304,8 +360,12 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                     placeholder="dd/mm/yyyy"
                     value={currentCertificate.dateOfIssue}
                     onChange={handleCertificateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={today}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
+                  {certificateDateError && (
+                    <p className="text-red-500 text-xs mt-1">{certificateDateError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -319,7 +379,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                     placeholder="dd/mm/yyyy"
                     value={currentCertificate.validTill}
                     onChange={handleCertificateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>

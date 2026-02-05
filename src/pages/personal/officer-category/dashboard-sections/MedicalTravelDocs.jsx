@@ -18,12 +18,19 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
     dateOfIssue: '',
     validTill: ''
   });
+  const [medicalDateError, setMedicalDateError] = useState('');
+  const [travelDateError, setTravelDateError] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
 
   const handleMedicalChange = (e) => {
     setCurrentMedical({
       ...currentMedical,
       [e.target.name]: e.target.value
     });
+    if (e.target.name === 'dateOfIssue') {
+      setMedicalDateError('');
+    }
   };
 
   const handleTravelChange = (e) => {
@@ -31,10 +38,33 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
       ...currentTravel,
       [e.target.name]: e.target.value
     });
+    if (e.target.name === 'dateOfIssue') {
+      setTravelDateError('');
+    }
   };
 
   const handleAddMedical = () => {
     if (currentMedical.certificateName && currentMedical.certificateNumber) {
+      // Validate date of issue is not in the future
+      if (currentMedical.dateOfIssue) {
+        const issueDate = new Date(currentMedical.dateOfIssue);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (issueDate > today) {
+          setMedicalDateError('Please enter valid date');
+          return;
+        }
+      }
+      // Validate dates if both are provided
+      if (currentMedical.dateOfIssue && currentMedical.validTill) {
+        const issueDate = new Date(currentMedical.dateOfIssue);
+        const validDate = new Date(currentMedical.validTill);
+        if (issueDate >= validDate) {
+          setMedicalDateError('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
+      setMedicalDateError('');
       setMedicalDocuments([...medicalDocuments, { ...currentMedical, id: Date.now() }]);
       setCurrentMedical({
         certificateName: '',
@@ -43,6 +73,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
         dateOfIssue: '',
         validTill: ''
       });
+      setMedicalDateError('');
     }
   };
 
@@ -52,6 +83,26 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddTravel = () => {
     if (currentTravel.documentName && currentTravel.documentNumber) {
+      // Validate date of issue is not in the future
+      if (currentTravel.dateOfIssue) {
+        const issueDate = new Date(currentTravel.dateOfIssue);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (issueDate > today) {
+          setTravelDateError('Please enter valid date');
+          return;
+        }
+      }
+      // Validate dates if both are provided
+      if (currentTravel.dateOfIssue && currentTravel.validTill) {
+        const issueDate = new Date(currentTravel.dateOfIssue);
+        const validDate = new Date(currentTravel.validTill);
+        if (issueDate >= validDate) {
+          setTravelDateError('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
+      setTravelDateError('');
       setTravelDocuments([...travelDocuments, { ...currentTravel, id: Date.now() }]);
       setCurrentTravel({
         documentName: '',
@@ -60,6 +111,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
         dateOfIssue: '',
         validTill: ''
       });
+      setTravelDateError('');
     }
   };
 
@@ -74,7 +126,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
   return (
     <form className="flex flex-col h-full">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 relative z-0">
         {/* Tab Buttons */}
         <div className="flex space-x-2 mb-6">
           <button
@@ -144,7 +196,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter certificate name"
                   value={currentMedical.certificateName}
                   onChange={handleMedicalChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -159,7 +211,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter certificate number"
                   value={currentMedical.certificateNumber}
                   onChange={handleMedicalChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -174,7 +226,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter country name"
                   value={currentMedical.issuingCountry}
                   onChange={handleMedicalChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -190,8 +242,12 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentMedical.dateOfIssue}
                     onChange={handleMedicalChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={today}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
+                  {medicalDateError && (
+                    <p className="text-red-500 text-xs mt-1">{medicalDateError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -205,7 +261,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentMedical.validTill}
                     onChange={handleMedicalChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    min={currentMedical.dateOfIssue || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -258,7 +315,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter document name"
                   value={currentTravel.documentName}
                   onChange={handleTravelChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -273,7 +330,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter document number"
                   value={currentTravel.documentNumber}
                   onChange={handleTravelChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -288,7 +345,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter country name"
                   value={currentTravel.issuingCountry}
                   onChange={handleTravelChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -304,8 +361,12 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentTravel.dateOfIssue}
                     onChange={handleTravelChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={today}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
+                  {travelDateError && (
+                    <p className="text-red-500 text-xs mt-1">{travelDateError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -319,7 +380,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentTravel.validTill}
                     onChange={handleTravelChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    min={currentTravel.dateOfIssue || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>

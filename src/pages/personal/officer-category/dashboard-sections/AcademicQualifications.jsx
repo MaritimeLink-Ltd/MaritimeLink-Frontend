@@ -35,6 +35,15 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddAcademic = () => {
     if (currentAcademic.qualificationName && currentAcademic.institution) {
+      // Validate dates if both are provided
+      if (currentAcademic.startDate && currentAcademic.endDate) {
+        const start = new Date(currentAcademic.startDate);
+        const end = new Date(currentAcademic.endDate);
+        if (start >= end) {
+          alert('Start Date must be before End Date');
+          return;
+        }
+      }
       setAcademicQualifications([...academicQualifications, { ...currentAcademic, id: Date.now() }]);
       setCurrentAcademic({
         qualificationName: '',
@@ -52,6 +61,15 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddStcw = () => {
     if (currentStcw.qualificationName && currentStcw.certificateNumber) {
+      // Validate dates if both are provided
+      if (currentStcw.dateOfIssue && currentStcw.validTill) {
+        const issueDate = new Date(currentStcw.dateOfIssue);
+        const validDate = new Date(currentStcw.validTill);
+        if (issueDate >= validDate) {
+          alert('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
       setStcwCertificates([...stcwCertificates, { ...currentStcw, id: Date.now() }]);
       setCurrentStcw({
         qualificationName: '',
@@ -74,7 +92,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
   return (
     <form className="flex flex-col h-full">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 relative z-0">
         {/* Tab Buttons */}
         <div className="flex space-x-2 mb-6">
           <button
@@ -144,7 +162,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter program/class name"
                   value={currentAcademic.qualificationName}
                   onChange={handleAcademicChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -159,7 +177,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter your institute name"
                   value={currentAcademic.institution}
                   onChange={handleAcademicChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -174,7 +192,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter your grade"
                   value={currentAcademic.grade}
                   onChange={handleAcademicChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -190,7 +208,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentAcademic.startDate}
                     onChange={handleAcademicChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
 
@@ -205,7 +223,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentAcademic.endDate}
                     onChange={handleAcademicChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -258,7 +276,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter qualification name"
                   value={currentStcw.qualificationName}
                   onChange={handleStcwChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -273,7 +291,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter certificate number"
                   value={currentStcw.certificateNumber}
                   onChange={handleStcwChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -288,7 +306,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter country name"
                   value={currentStcw.issuingCountry}
                   onChange={handleStcwChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -304,7 +322,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentStcw.dateOfIssue}
                     onChange={handleStcwChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
 
@@ -319,7 +337,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentStcw.validTill}
                     onChange={handleStcwChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>

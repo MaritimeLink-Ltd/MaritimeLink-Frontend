@@ -64,12 +64,12 @@ const CateringMedicalDashboard = () => {
       biometricsNextOfKin: sectionData
     });
     console.log('Resume completed!', allData);
-    navigate('/personal-dashboard');
+    navigate('/personal/dashboard');
   };
 
   const handleSaveAndContinue = () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal-dashboard');
+    navigate('/personal/dashboard');
   };
 
   const renderSection = () => {

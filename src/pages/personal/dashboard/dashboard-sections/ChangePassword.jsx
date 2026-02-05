@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const ChangePassword = ({ onBack }) => {
+const ChangePassword = () => {
+    const navigate = useNavigate();
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -13,8 +15,8 @@ const ChangePassword = ({ onBack }) => {
 
     const handleSave = () => {
         // Handle password change logic
-        alert('Password changed successfully!');
-        onBack();
+        console.log('Password changed successfully!');
+        navigate('/personal/profile');
     };
 
     return (
@@ -30,7 +32,7 @@ const ChangePassword = ({ onBack }) => {
                 <div className="flex-1 overflow-y-auto">
                     {/* Back Button and Title */}
                     <button
-                        onClick={onBack}
+                        onClick={() => navigate('/personal/profile')}
                         className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-6 transition-colors"
                     >
                         <ArrowLeft size={20} />
@@ -51,7 +53,7 @@ const ChangePassword = ({ onBack }) => {
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
                                 placeholder="Enter your password"
-                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white relative z-10"
                             />
                             <button
                                 type="button"
@@ -80,7 +82,7 @@ const ChangePassword = ({ onBack }) => {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="Enter your password"
-                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white relative z-10"
                             />
                             <button
                                 type="button"
@@ -106,7 +108,7 @@ const ChangePassword = ({ onBack }) => {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="Enter your password"
-                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white relative z-10"
                             />
                             <button
                                 type="button"

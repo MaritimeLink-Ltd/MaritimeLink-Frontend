@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     FileText,
     Folder,
@@ -10,7 +11,8 @@ import {
     Ship
 } from 'lucide-react';
 
-const Dashboard = ({ onNavigate }) => {
+const Dashboard = () => {
+    const navigate = useNavigate();
     // Quick access cards data
     const quickAccessCards = [
         {
@@ -22,7 +24,7 @@ const Dashboard = ({ onNavigate }) => {
             statusType: 'progress',
             progress: 90,
             buttonText: 'Go To Resume',
-            onClick: () => onNavigate('resume')
+            onClick: () => navigate('/personal/resume')
         },
         {
             id: 'documents',
@@ -32,7 +34,7 @@ const Dashboard = ({ onNavigate }) => {
             status: 'Fully Compliant',
             statusType: 'text',
             buttonText: 'Go To Documents',
-            onClick: () => onNavigate('documents')
+            onClick: () => navigate('/personal/documents')
         },
         {
             id: 'jobs',
@@ -43,7 +45,7 @@ const Dashboard = ({ onNavigate }) => {
             statusType: 'text',
             statusLight: true,
             buttonText: 'Go To Jobs',
-            onClick: () => onNavigate('jobs')
+            onClick: () => navigate('/personal/jobs')
         },
         {
             id: 'courses',
@@ -54,7 +56,7 @@ const Dashboard = ({ onNavigate }) => {
             statusType: 'text',
             statusLight: true,
             buttonText: 'Go To Training',
-            onClick: () => onNavigate('training')
+            onClick: () => navigate('/personal/training')
         }
     ];
 
@@ -140,7 +142,10 @@ const Dashboard = ({ onNavigate }) => {
                 </div>
 
                 {/* Alert Banner */}
-                <div className="bg-orange-50 rounded-xl p-3 sm:p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div 
+                    onClick={() => navigate('/personal/documents')}
+                    className="bg-orange-50 rounded-xl p-3 sm:p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer hover:bg-orange-100 transition-colors"
+                >
                     <div className="flex items-center gap-3 flex-1">
                         <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
                             <AlertCircle size={18} className="text-orange-600" />
@@ -209,10 +214,12 @@ const Dashboard = ({ onNavigate }) => {
                         <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-hide">
                             {alerts.map((alert) => {
                                 const Icon = alert.icon;
+                                const isExpiringAlert = alert.message.includes('certificates expiring');
                                 return (
                                     <div
                                         key={alert.id}
-                                        className="bg-gray-50 rounded-lg p-4 flex items-center gap-3"
+                                        onClick={() => isExpiringAlert && navigate('/personal/documents')}
+                                        className={`bg-gray-50 rounded-lg p-4 flex items-center gap-3 ${isExpiringAlert ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
                                     >
                                         <Icon size={16} className={alert.iconColor} />
                                         <span className="flex-1 text-sm text-gray-800">{alert.message}</span>
@@ -229,10 +236,12 @@ const Dashboard = ({ onNavigate }) => {
                         <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-hide">
                             {recentActivity.map((activity) => {
                                 const Icon = activity.icon;
+                                const isExpiringAlert = activity.message.includes('certificates expiring');
                                 return (
                                     <div
                                         key={activity.id}
-                                        className="bg-gray-50 rounded-lg p-4 flex items-center gap-3"
+                                        onClick={() => isExpiringAlert && navigate('/personal/documents')}
+                                        className={`bg-gray-50 rounded-lg p-4 flex items-center gap-3 ${isExpiringAlert ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
                                     >
                                         <Icon size={16} className={activity.iconColor} />
                                         <span className="flex-1 text-sm text-gray-800">{activity.message}</span>

@@ -8,19 +8,27 @@ import {
     FileText,
     Crown,
     Award,
-    Folder
+    Folder,
+    CheckCircle,
+    Copy
 } from 'lucide-react';
 import UploadDocument from './UploadDocument';
+import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 
 const DocumentsWallet = () => {
     const [activeFilter, setActiveFilter] = useState('All');
-    const [view, setView] = useState('list'); // 'list', 'upload', 'detail', 'category'
+    const [view, setView] = useState('list'); // 'list', 'upload', 'edit', 'detail', 'category'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
-
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Modal states for export and share
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [generatedLink, setGeneratedLink] = useState('');
+    const [linkCopied, setLinkCopied] = useState(false);
 
     const filters = [
         'All',
@@ -143,8 +151,67 @@ const DocumentsWallet = () => {
         setView('category');
     };
 
+    // Handle Export Document Pack
+    const handleExportDocumentPack = () => {
+        setShowExportModal(true);
+        
+        // Simulate zip file preparation
+        setTimeout(() => {
+            // Create dummy content for all documents
+            const allDocsContent = categories.map(cat => 
+                `${cat.title}:\n  Total Documents: ${cat.count}\n  Status: ${cat.status?.label || 'N/A'}\n`
+            ).join('\n');
+            
+            const zipContent = `Maritime Document Pack\n\nExported on: ${new Date().toLocaleDateString()}\nTotal Categories: ${categories.length}\n\n${allDocsContent}`;
+            
+            // Create blob and download
+            const blob = new Blob([zipContent], { type: 'application/zip' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'DocumentPack_Maritime.zip';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            // Close modal after 2 seconds
+            setTimeout(() => {
+                setShowExportModal(false);
+            }, 2000);
+        }, 1500);
+    };
+
+    // Handle Share Secure Link
+    const handleShareSecureLink = () => {
+        // Generate a dummy secure link
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const secureLink = `https://maritimelink.com/shared/documents/${randomId}`;
+        setGeneratedLink(secureLink);
+        setShowShareModal(true);
+        setLinkCopied(false);
+    };
+
+    // Copy link to clipboard
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(generatedLink);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+    };
+
     if (view === 'upload') {
         return <UploadDocument onBack={() => setView('list')} onCompletion={handleUploadComplete} />;
+    }
+
+    if (view === 'edit') {
+        return <EditDocument 
+            document={selectedDoc} 
+            onBack={() => { setView('list'); setSelectedDoc(null); }} 
+            onCompletion={(updatedDoc) => {
+                setSelectedDoc(updatedDoc);
+                setView('detail');
+            }}
+        />;
     }
 
     if (view === 'detail') {
@@ -186,12 +253,18 @@ const DocumentsWallet = () => {
 
                     {/* Action Buttons - Stack on mobile */}
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <button className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]">
+                        <button 
+                            onClick={handleExportDocumentPack}
+                            className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
+                        >
                             <Crown size={14} />
                             <span className="hidden sm:inline">Export Document Pack</span>
                             <span className="sm:hidden">Export Pack</span>
                         </button>
-                        <button className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]">
+                        <button 
+                            onClick={handleShareSecureLink}
+                            className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
+                        >
                             <Crown size={14} />
                             <span className="hidden sm:inline">Share Secure Link</span>
                             <span className="sm:hidden">Share Link</span>
@@ -276,6 +349,104 @@ const DocumentsWallet = () => {
                     </div>
                 )}
             </div>
+
+            {/* Export Document Pack Modal */}
+            {showExportModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                        <div className="text-center">
+                            <div className="mb-4">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full">
+                                    <Download size={32} className="text-[#003366] animate-bounce" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-800 mb-2">Preparing Document Pack</h3>
+                            <p className="text-gray-500 mb-4">
+                                Compressing all your documents into a zip file...
+                            </p>
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div className="bg-[#003366] h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+                            </div>
+                            <p className="text-sm text-gray-400 mt-3">This will take just a moment</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Share Secure Link Modal */}
+            {showShareModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-semibold text-gray-800">Share Secure Link</h3>
+                            <button 
+                                onClick={() => setShowShareModal(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <CheckCircle size={20} className="text-green-500" />
+                                <p className="text-sm text-gray-600">Secure link generated successfully!</p>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-4">
+                                This link provides access to all your documents. Share it securely with trusted parties only.
+                            </p>
+                            
+                            {/* Generated Link */}
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 break-all text-sm text-gray-700 mb-4">
+                                {generatedLink}
+                            </div>
+
+                            {/* Copy Button */}
+                            <button
+                                onClick={handleCopyLink}
+                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${
+                                    linkCopied 
+                                        ? 'bg-green-50 text-green-600 border-2 border-green-500' 
+                                        : 'bg-[#003366] text-white hover:bg-blue-900'
+                                }`}
+                            >
+                                {linkCopied ? (
+                                    <>
+                                        <CheckCircle size={18} />
+                                        <span>Link Copied!</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy size={18} />
+                                        <span>Copy Link</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Document Summary */}
+                        <div className="border-t border-gray-200 pt-4">
+                            <p className="text-xs text-gray-500 mb-3">Documents included in this link:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {categories.map((cat) => (
+                                    <div key={cat.id} className="flex items-center gap-2 text-xs text-gray-600">
+                                        <cat.icon size={14} className={cat.iconColor} />
+                                        <span>{cat.count} {cat.title.split(' ')[0]}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowShareModal(false)}
+                            className="w-full mt-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

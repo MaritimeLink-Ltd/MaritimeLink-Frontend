@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, Banknote, Bookmark } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const MyJobs = ({ onBack, appliedJobs = [], savedJobs = [] }) => {
+const MyJobs = ({ appliedJobs = [], savedJobs = [] }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('applied');
 
     const displayJobs = activeTab === 'applied' ? appliedJobs : savedJobs;
@@ -19,7 +21,7 @@ const MyJobs = ({ onBack, appliedJobs = [], savedJobs = [] }) => {
                 {/* Header with Back Button */}
                 <div className="flex items-center gap-3 mb-6">
                     <button
-                        onClick={onBack}
+                        onClick={() => navigate('/personal/jobs')}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                         <ArrowLeft size={24} className="text-gray-700" />

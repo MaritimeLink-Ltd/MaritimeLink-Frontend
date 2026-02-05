@@ -76,7 +76,7 @@ function CompleteProfile() {
                 navigate('/catering-medical-dashboard', { replace: true });
             } else {
                 // Default fallback
-                navigate('/personal-dashboard', { replace: true });
+                navigate('/personal/dashboard', { replace: true });
             }
         } catch (err) {
             console.error('Complete profile error:', err);

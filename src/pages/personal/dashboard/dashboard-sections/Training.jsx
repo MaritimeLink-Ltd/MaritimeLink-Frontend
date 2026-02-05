@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, SlidersHorizontal, Award, ArrowLeft, X } from 'lucide-react';
 
-const Training = ({ onBookClick }) => {
+const Training = () => {
+    const navigate = useNavigate();
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [showFilter, setShowFilter] = useState(false);
     const [filters, setFilters] = useState({
@@ -168,7 +170,7 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{selectedCourse.title}</h2>
                                 </div>
                                 <button
-                                    onClick={() => onBookClick(selectedCourse)}
+                                    onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
                                     className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] w-full sm:w-auto"
                                 >
                                     Book now
@@ -259,7 +261,10 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['STCW', 'Safety', 'Medical', 'Navigation'].map((cat) => (
                                         <button
                                             key={cat}
-                                            onClick={() => setTempFilters({ ...tempFilters, category: cat })}
+                                            onClick={() => setTempFilters({ 
+                                                ...tempFilters, 
+                                                category: tempFilters.category === cat ? null : cat 
+                                            })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                                                 tempFilters.category === cat
                                                     ? 'bg-gray-800 text-white'
@@ -279,7 +284,10 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['Under GBP 500', 'GBP 500 - 1000', 'Over GBP 1000'].map((price) => (
                                         <button
                                             key={price}
-                                            onClick={() => setTempFilters({ ...tempFilters, priceRange: price })}
+                                            onClick={() => setTempFilters({ 
+                                                ...tempFilters, 
+                                                priceRange: tempFilters.priceRange === price ? null : price 
+                                            })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                                                 tempFilters.priceRange === price
                                                     ? 'bg-gray-800 text-white'
@@ -299,7 +307,10 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['1-3 Days', '4-7 Days', 'Over 7 Days'].map((dur) => (
                                         <button
                                             key={dur}
-                                            onClick={() => setTempFilters({ ...tempFilters, duration: dur })}
+                                            onClick={() => setTempFilters({ 
+                                                ...tempFilters, 
+                                                duration: tempFilters.duration === dur ? null : dur 
+                                            })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                                                 tempFilters.duration === dur
                                                     ? 'bg-gray-800 text-white'

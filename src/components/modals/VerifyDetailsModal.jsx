@@ -59,7 +59,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
                                 type="text"
                                 value={formData.firstName}
                                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 bg-white transition-colors"
                             />
                         </div>
                         <div>
@@ -68,7 +68,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
                                 type="text"
                                 value={formData.lastName}
                                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 bg-white transition-colors"
                             />
                         </div>
                     </div>
@@ -81,7 +81,8 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
                                 type="date"
                                 value={formData.dateOfBirth}
                                 onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                max={new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]}
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 bg-white transition-colors"
                             />
                         </div>
                         <div>
@@ -112,7 +113,8 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
                                 type="date"
                                 value={formData.expiryDate}
                                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 bg-white transition-colors"
                             />
                         </div>
                     </div>
@@ -124,7 +126,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm }) {
                             type="text"
                             value={formData.issuingCountry}
                             onChange={(e) => setFormData({ ...formData, issuingCountry: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 bg-white transition-colors"
                         />
                     </div>
 

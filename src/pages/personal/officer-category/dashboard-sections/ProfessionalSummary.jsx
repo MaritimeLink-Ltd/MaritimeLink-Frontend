@@ -31,7 +31,7 @@ const ProfessionalSummary = ({ onNext, onBack, initialData = {} }) => {
             value={formData.professionalSummary}
             onChange={handleChange}
             rows={10}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm resize-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors resize-none"
           />
         </div>
       </div>

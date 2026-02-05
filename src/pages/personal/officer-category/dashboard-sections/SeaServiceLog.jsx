@@ -25,6 +25,14 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddSeaService = () => {
     if (currentSeaService.companyName && currentSeaService.vesselName) {
+      // Validate dates
+      if (currentSeaService.joiningDate && currentSeaService.till) {
+        if (new Date(currentSeaService.joiningDate) > new Date(currentSeaService.till)) {
+          alert('Till date must be after or equal to Joining date');
+          return;
+        }
+      }
+      
       setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
       setCurrentSeaService({
         companyName: '',
@@ -98,7 +106,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter company name"
               value={currentSeaService.companyName}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -113,7 +121,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter your role"
               value={currentSeaService.role}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -128,7 +136,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel name"
               value={currentSeaService.vesselName}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -143,7 +151,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel IMO number"
               value={currentSeaService.imoNo}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -158,7 +166,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter country name"
               value={currentSeaService.flag}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -173,7 +181,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel type"
               value={currentSeaService.type}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -188,7 +196,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel DWT"
               value={currentSeaService.dwt}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -203,7 +211,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel ME type"
               value={currentSeaService.meType}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -218,7 +226,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="Enter vessel KWT"
               value={currentSeaService.kwt}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -233,7 +241,8 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="dd/mm/yyyy"
               value={currentSeaService.joiningDate}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 
@@ -248,7 +257,8 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
               placeholder="dd/mm/yyyy"
               value={currentSeaService.till}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              min={currentSeaService.joiningDate || undefined}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
         </div>

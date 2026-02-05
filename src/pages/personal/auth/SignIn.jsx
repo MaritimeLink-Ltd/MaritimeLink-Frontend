@@ -38,7 +38,7 @@ function SignIn() {
       localStorage.setItem('userEmail', formData.email);
 
       // Navigate to personal dashboard
-      navigate('/personal-dashboard');
+      navigate('/personal/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

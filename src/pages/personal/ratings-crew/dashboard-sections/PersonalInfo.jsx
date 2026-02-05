@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { countryCodes } from '../../../../utils/countryCodes';
 
 const PersonalInfo = ({ onNext, initialData = {} }) => {
   const [formData, setFormData] = useState({
@@ -11,9 +12,26 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
   });
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Auto-detect country code when typing in contact number
+    if (name === 'contactNumber') {
+      const matchedCode = countryCodes.find(country => 
+        value.startsWith(country.code)
+      );
+      if (matchedCode && value.startsWith('+')) {
+        setFormData({
+          ...formData,
+          countryCode: matchedCode.code,
+          contactNumber: value.slice(matchedCode.code.length)
+        });
+        return;
+      }
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -36,7 +54,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
             placeholder="Enter your full name"
             value={formData.fullName}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
           />
         </div>
 
@@ -53,7 +71,8 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
               placeholder="Enter your date of birth"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              max={new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
         </div>
@@ -70,7 +89,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
             placeholder="Enter your address"
             value={formData.address}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
           />
         </div>
 
@@ -84,12 +103,13 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
               name="countryCode"
               value={formData.countryCode}
               onChange={handleChange}
-              className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             >
-              <option value="+92">🇵🇰 +92</option>
-              <option value="+1">🇺🇸 +1</option>
-              <option value="+44">🇬🇧 +44</option>
-              <option value="+91">🇮🇳 +91</option>
+              {countryCodes.map((country) => (
+                <option key={country.code + country.country} value={country.code}>
+                  {country.flag} {country.code}
+                </option>
+              ))}
             </select>
             <input
               type="tel"
@@ -98,7 +118,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
               placeholder="Enter your contact number"
               value={formData.contactNumber}
               onChange={handleChange}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
         </div>
@@ -115,7 +135,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
             placeholder="Enter your email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
           />
         </div>
       </div>

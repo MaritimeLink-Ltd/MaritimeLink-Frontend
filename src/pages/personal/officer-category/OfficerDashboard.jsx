@@ -71,7 +71,7 @@ const OfficerDashboard = () => {
       biometricsNextOfKin: sectionData
     });
     console.log('Resume completed!', allData);
-    navigate('/personal-dashboard');
+    navigate('/personal/dashboard');
   };
 
   const handleSaveAndContinue = () => {

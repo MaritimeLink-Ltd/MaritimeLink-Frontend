@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const ApplyToJob = ({ job, onBack }) => {
+const ApplyToJob = () => {
+    const navigate = useNavigate();
+    const { jobId } = useParams();
     const [selectedResume, setSelectedResume] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -23,7 +26,7 @@ const ApplyToJob = ({ job, onBack }) => {
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);
-                onBack();
+                navigate('/personal/jobs');
             }, 2000);
         }
     };
@@ -40,7 +43,7 @@ const ApplyToJob = ({ job, onBack }) => {
                 {/* Back Button and Title */}
                 <div className="mb-6">
                     <button
-                        onClick={onBack}
+                        onClick={() => navigate('/personal/jobs')}
                         className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 transition-colors min-h-[44px]"
                     >
                         <ArrowLeft size={20} />

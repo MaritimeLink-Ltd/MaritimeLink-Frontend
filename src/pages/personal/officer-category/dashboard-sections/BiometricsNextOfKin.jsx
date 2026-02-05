@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { countryCodes } from '../../../../utils/countryCodes';
 
 const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
   const [biometricTab, setBiometricTab] = useState('biometric');
@@ -36,16 +37,50 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
   };
 
   const handleNextOfKinChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Auto-detect country code when typing in phone number
+    if (name === 'phone') {
+      const matchedCode = countryCodes.find(country => 
+        value.startsWith(country.code)
+      );
+      if (matchedCode && value.startsWith('+')) {
+        setCurrentNextOfKin({
+          ...currentNextOfKin,
+          countryCode: matchedCode.code,
+          phone: value.slice(matchedCode.code.length)
+        });
+        return;
+      }
+    }
+    
     setCurrentNextOfKin({
       ...currentNextOfKin,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
   const handleRefereeChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Auto-detect country code when typing in phone number
+    if (name === 'phone') {
+      const matchedCode = countryCodes.find(country => 
+        value.startsWith(country.code)
+      );
+      if (matchedCode && value.startsWith('+')) {
+        setCurrentReferee({
+          ...currentReferee,
+          countryCode: matchedCode.code,
+          phone: value.slice(matchedCode.code.length)
+        });
+        return;
+      }
+    }
+    
     setCurrentReferee({
       ...currentReferee,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -90,7 +125,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
   return (
     <form className="flex flex-col h-full">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 relative z-0">
         {/* Tab Buttons */}
         <div className="flex space-x-2 mb-6">
           <button
@@ -171,7 +206,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter height"
                     value={biometricData.height}
                     onChange={handleBiometricChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm pr-10"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm pr-10 bg-white transition-colors"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                     cm
@@ -191,7 +226,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter weight"
                     value={biometricData.weight}
                     onChange={handleBiometricChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm pr-10"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm pr-10 bg-white transition-colors"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                     kg
@@ -214,7 +249,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter BMI"
                     value={biometricData.bmi}
                     onChange={handleBiometricChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm pr-10"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm pr-10 bg-white transition-colors"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                     kg
@@ -233,7 +268,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter enter color"
                   value={biometricData.eyeColor}
                   onChange={handleBiometricChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
             </div>
@@ -251,7 +286,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter overall size"
                   value={biometricData.overallSize}
                   onChange={handleBiometricChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -267,7 +302,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter shoe size"
                     value={biometricData.shoeSize}
                     onChange={handleBiometricChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm pr-10"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm pr-10 bg-white transition-colors"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                     uk
@@ -318,7 +353,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter referee name"
                   value={currentNextOfKin.name}
                   onChange={handleNextOfKinChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -333,7 +368,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter your relationship"
                   value={currentNextOfKin.relationship}
                   onChange={handleNextOfKinChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -346,12 +381,13 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     name="countryCode"
                     value={currentNextOfKin.countryCode}
                     onChange={handleNextOfKinChange}
-                    className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   >
-                    <option value="+92">🇵🇰 +92</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                    <option value="+91">🇮🇳 +91</option>
+                    {countryCodes.map((country) => (
+                      <option key={country.code + country.country} value={country.code}>
+                        {country.flag} {country.code}
+                      </option>
+                    ))}
                   </select>
                   <input
                     type="tel"
@@ -360,7 +396,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter your contact number"
                     value={currentNextOfKin.phone}
                     onChange={handleNextOfKinChange}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -376,7 +412,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter email"
                   value={currentNextOfKin.email}
                   onChange={handleNextOfKinChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
             </div>
@@ -423,7 +459,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter referee name"
                   value={currentReferee.name}
                   onChange={handleRefereeChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -438,7 +474,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter referee position"
                   value={currentReferee.position}
                   onChange={handleRefereeChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -451,12 +487,13 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     name="countryCode"
                     value={currentReferee.countryCode}
                     onChange={handleRefereeChange}
-                    className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   >
-                    <option value="+92">🇵🇰 +92</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                    <option value="+91">🇮🇳 +91</option>
+                    {countryCodes.map((country) => (
+                      <option key={country.code + country.country} value={country.code}>
+                        {country.flag} {country.code}
+                      </option>
+                    ))}
                   </select>
                   <input
                     type="tel"
@@ -465,7 +502,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="Enter your contact number"
                     value={currentReferee.phone}
                     onChange={handleRefereeChange}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -481,7 +518,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter referee email"
                   value={currentReferee.email}
                   onChange={handleRefereeChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
             </div>

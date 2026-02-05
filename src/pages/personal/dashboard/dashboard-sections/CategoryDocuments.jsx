@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download } from 'lucide-react';
+import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle } from 'lucide-react';
 import DocumentDetail from './DocumentDetail';
+import EditDocument from './EditDocument';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
-    const [view, setView] = useState('list'); // 'list', 'detail'
+    const [view, setView] = useState('list'); // 'list', 'detail', 'edit'
     const [selectedDoc, setSelectedDoc] = useState(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [replaceDocId, setReplaceDocId] = useState(null);
 
     const filters = [
         'All',
@@ -19,54 +23,60 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const documents = [
         {
             id: 1,
-            title: 'Licenses Document 1',
+            title: 'Certificate of Competency',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'License Certificate',
+            fileType: 'PDF',
             status: { label: 'VALID', color: 'bg-emerald-600' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
         },
         {
             id: 2,
-            title: 'Licenses Document 2',
+            title: 'Basic Safety Training',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'STCW Certificate',
+            fileType: 'PDF',
             status: { label: 'VALID', color: 'bg-emerald-600' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
         },
         {
             id: 3,
-            title: 'Licenses Document 3',
+            title: 'Medical Fitness Certificate',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'Medical Certificate',
+            fileType: 'PDF',
             status: { label: 'VALID', color: 'bg-emerald-600' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
         },
         {
             id: 4,
-            title: 'Licenses Document 4',
+            title: 'Passport',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'Travel Document',
+            fileType: 'PDF',
             status: { label: 'EXPIRING', color: 'bg-orange-500' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
         },
         {
             id: 5,
-            title: 'Licenses Document 5',
+            title: 'Seaman Book',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'Seaman Document',
+            fileType: 'PDF',
             status: { label: 'EXPIRED', color: 'bg-red-500' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
         },
         {
             id: 6,
-            title: 'Licenses Document 6',
+            title: 'Engineering Degree',
             expires: '2026-12-31',
-            type: 'PDF',
+            type: 'Academic Certificate',
+            fileType: 'PDF',
             status: { label: 'PENDING', color: 'bg-yellow-500' },
             thumbnail: '/placeholder-doc.png',
             expiryDate: '31 December 2026'
@@ -87,6 +97,76 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
         if (onUploadClick) {
             onUploadClick();
         }
+    };
+
+    // Handle Edit Document
+    const handleEditDocument = (doc) => {
+        setSelectedDoc(doc);
+        setView('edit');
+    };
+
+    // Handle Edit Completion
+    const handleEditCompletion = (updatedDoc) => {
+        setSuccessMessage(`"${updatedDoc.title}" updated successfully!`);
+        setShowSuccessModal(true);
+        setTimeout(() => {
+            setShowSuccessModal(false);
+            setView('list');
+            setSelectedDoc(null);
+        }, 2000);
+    };
+
+    // Handle Back from Edit
+    const handleBackFromEdit = () => {
+        setView('list');
+        setSelectedDoc(null);
+    };
+
+    // Handle Replace Document
+    const handleReplaceDocument = (doc) => {
+        console.log('Replacing document:', doc);
+        setReplaceDocId(doc.id);
+        // Trigger file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                setSuccessMessage(`"${doc.title}" replaced with "${file.name}"`);
+                setShowSuccessModal(true);
+                setTimeout(() => {
+                    setShowSuccessModal(false);
+                    setReplaceDocId(null);
+                }, 2000);
+            }
+        };
+        input.click();
+    };
+
+    // Handle Download Document
+    const handleDownloadDocument = (doc) => {
+        setSuccessMessage(`Downloading "${doc.title}"...`);
+        setShowSuccessModal(true);
+        
+        // Simulate download with dummy zip file
+        setTimeout(() => {
+            // Create a dummy blob for zip file
+            const dummyContent = `Document: ${doc.title}\nType: ${doc.type}\nExpires: ${doc.expiryDate}\nStatus: ${doc.status.label}`;
+            const blob = new Blob([dummyContent], { type: 'application/zip' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${doc.title.replace(/\s+/g, '_')}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            setShowSuccessModal(false);
+        }, 1000);
     };
 
     // Filter documents based on active filter
@@ -116,6 +196,11 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     // If viewing document detail, show DocumentDetail component
     if (view === 'detail') {
         return <DocumentDetail document={selectedDoc} onBack={handleBackFromDetail} />;
+    }
+
+    // If editing document, show EditDocument component
+    if (view === 'edit') {
+        return <EditDocument document={selectedDoc} onBack={handleBackFromEdit} onCompletion={handleEditCompletion} />;
     }
 
     return (
@@ -213,21 +298,21 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                                     View
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); /* Handle edit */ }}
+                                    onClick={(e) => { e.stopPropagation(); handleEditDocument(doc); }}
                                     className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
                                 >
                                     <Edit2 size={14} />
                                     Edit
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); /* Handle replace */ }}
+                                    onClick={(e) => { e.stopPropagation(); handleReplaceDocument(doc); }}
                                     className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
                                 >
                                     <RotateCcw size={14} />
                                     Replace
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); /* Handle download */ }}
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadDocument(doc); }}
                                     className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
                                 >
                                     <Download size={14} />
@@ -237,6 +322,24 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                     </div>
                 ))}
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+                        <div className="text-center">
+                            <div className="mb-4">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full">
+                                    <CheckCircle size={32} className="text-green-600" />
+                                </div>
+                            </div>
+                            <p className="text-gray-700 font-medium">
+                                {successMessage}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

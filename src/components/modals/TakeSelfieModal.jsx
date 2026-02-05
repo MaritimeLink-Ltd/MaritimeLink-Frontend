@@ -1,5 +1,5 @@
 import { X, Camera } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const videoRef = useRef(null);
@@ -9,7 +9,7 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const startCamera = async () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' }
+                video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             });
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
@@ -17,8 +17,21 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
             }
         } catch (err) {
             console.error('Error accessing camera:', err);
+            alert('Unable to access camera. Please ensure camera permissions are enabled.');
         }
     };
+
+    useEffect(() => {
+        if (isOpen) {
+            startCamera();
+        }
+        
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [isOpen]);
 
     const capturePhoto = () => {
         setPhotoTaken(true);
@@ -37,14 +50,9 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
 
     if (!isOpen) return null;
 
-    // Auto-start camera when modal opens
-    if (isOpen && !stream && videoRef.current) {
-        startCamera();
-    }
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full relative my-4 max-h-[95vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
                     onClick={() => {
@@ -74,7 +82,7 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                 </p>
 
                 {/* Camera Preview */}
-                <div className="relative mb-6 bg-gray-900 rounded-2xl overflow-hidden aspect-[3/4]">
+                <div className="relative mb-4 sm:mb-6 bg-gray-900 rounded-2xl overflow-hidden" style={{ aspectRatio: '3/4', maxHeight: '60vh' }}>
                     <video
                         ref={videoRef}
                         autoPlay
@@ -85,9 +93,9 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
 
                     {/* Face Oval Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-64 h-80 border-4 border-white/50 rounded-[50%] relative">
+                        <div className="w-48 sm:w-64 h-60 sm:h-80 border-4 border-white/50 rounded-[50%] relative">
                             {/* Instruction Text */}
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-4 text-white text-sm font-medium">
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 sm:mt-4 text-white text-xs sm:text-sm font-medium whitespace-nowrap">
                                 Position your face in the oval
                             </div>
                         </div>

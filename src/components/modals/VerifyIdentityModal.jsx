@@ -4,8 +4,8 @@ function VerifyIdentityModal({ isOpen, onClose, onStartVerification }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full relative">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full relative my-4 max-h-[95vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
                     onClick={onClose}

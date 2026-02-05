@@ -82,6 +82,23 @@ import SystemJobDetail from './pages/admin/admin-dashboard/SystemJobDetail';
 import ManualActionReview from './pages/admin/admin-dashboard/ManualActionReview';
 import AdminProfile from './pages/admin/admin-dashboard/AdminProfile';
 
+// Personal Dashboard Layout and Pages
+import PersonalDashboardLayout from './pages/personal/dashboard/layout/PersonalDashboardLayout';
+import Resume from './pages/personal/dashboard/dashboard-sections/Resume';
+import DocumentsWallet from './pages/personal/dashboard/dashboard-sections/DocumentsWallet';
+import Jobs from './pages/personal/dashboard/dashboard-sections/Jobs';
+import JobDetailPersonal from './pages/personal/dashboard/dashboard-sections/JobDetail';
+import ApplyToJob from './pages/personal/dashboard/dashboard-sections/ApplyToJob';
+import MyJobs from './pages/personal/dashboard/dashboard-sections/MyJobs';
+import Training from './pages/personal/dashboard/dashboard-sections/Training';
+import BookCourse from './pages/personal/dashboard/dashboard-sections/BookCourse';
+import Chats from './pages/personal/dashboard/dashboard-sections/Chats';
+import Profile from './pages/personal/dashboard/dashboard-sections/Profile';
+import ChangePassword from './pages/personal/dashboard/dashboard-sections/ChangePassword';
+import ManageSubscription from './pages/personal/dashboard/dashboard-sections/ManageSubscription';
+import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
+import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
+
 function App() {
   return (
     <Router>
@@ -108,7 +125,6 @@ function App() {
         <Route path="/select-medical" element={<SelectMedical />} />
         <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
         <Route path="/get-premium" element={<GetPremium />} />
-        <Route path="/personal-dashboard" element={<PersonalDashboard />} />
         <Route path="/cv-resume" element={<CVResume />} />
 
         {/* Admin/Recruiter Setup Routes (No Layout) */}
@@ -175,6 +191,25 @@ function App() {
           <Route path="/admin/operations/job/:id" element={<SystemJobDetail />} />
           <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
           <Route path="/admin/profile" element={<AdminProfile />} />
+        </Route>
+
+        {/* Personal Dashboard Protected Routes (With Layout) */}
+        <Route element={<PersonalDashboardLayout />}>
+          <Route path="/personal/dashboard" element={<PersonalDashboard />} />
+          <Route path="/personal/resume" element={<Resume />} />
+          <Route path="/personal/documents" element={<DocumentsWallet />} />
+          <Route path="/personal/jobs" element={<Jobs />} />
+          <Route path="/personal/jobs/:jobId" element={<JobDetailPersonal />} />
+          <Route path="/personal/jobs/apply/:jobId" element={<ApplyToJob />} />
+          <Route path="/personal/my-jobs" element={<MyJobs />} />
+          <Route path="/personal/training" element={<Training />} />
+          <Route path="/personal/training/book/:courseId" element={<BookCourse />} />
+          <Route path="/personal/chats" element={<Chats />} />
+          <Route path="/personal/profile" element={<Profile />} />
+          <Route path="/personal/profile/change-password" element={<ChangePassword />} />
+          <Route path="/personal/profile/manage-subscription" element={<ManageSubscription />} />
+          <Route path="/personal/terms" element={<TermsConditions />} />
+          <Route path="/personal/privacy" element={<PrivacyPolicy />} />
         </Route>
       </Routes>
     </Router>

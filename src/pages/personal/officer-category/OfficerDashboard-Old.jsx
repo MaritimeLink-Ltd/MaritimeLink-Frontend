@@ -548,6 +548,7 @@ const OfficerDashboard = () => {
                       placeholder="Enter your date of birth"
                       value={formData.dateOfBirth}
                       onChange={handleChange}
+                      max={new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
                     />
                   </div>

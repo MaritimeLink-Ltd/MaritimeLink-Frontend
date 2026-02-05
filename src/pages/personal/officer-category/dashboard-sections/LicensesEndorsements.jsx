@@ -35,6 +35,15 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddLicense = () => {
     if (currentLicense.licenseName && currentLicense.licenseNumber) {
+      // Validate dates if both are provided
+      if (currentLicense.dateOfIssue && currentLicense.validTill) {
+        const issueDate = new Date(currentLicense.dateOfIssue);
+        const validDate = new Date(currentLicense.validTill);
+        if (issueDate >= validDate) {
+          alert('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
       setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
       setCurrentLicense({
         licenseName: '',
@@ -52,6 +61,15 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
 
   const handleAddEndorsement = () => {
     if (currentEndorsement.licenseName && currentEndorsement.licenseNumber) {
+      // Validate dates if both are provided
+      if (currentEndorsement.dateOfIssue && currentEndorsement.validTill) {
+        const issueDate = new Date(currentEndorsement.dateOfIssue);
+        const validDate = new Date(currentEndorsement.validTill);
+        if (issueDate >= validDate) {
+          alert('Date of Issue must be before Valid Till date');
+          return;
+        }
+      }
       setEndorsements([...endorsements, { ...currentEndorsement, id: Date.now() }]);
       setCurrentEndorsement({
         licenseName: '',
@@ -74,7 +92,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
   return (
     <form className="flex flex-col h-full">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2 relative z-0">
         {/* Tab Buttons */}
         <div className="flex space-x-2 mb-6">
           <button
@@ -144,7 +162,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter your license name"
                   value={currentLicense.licenseName}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -159,7 +177,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter license number"
                   value={currentLicense.licenseNumber}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -174,7 +192,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter issuing authority name"
                   value={currentLicense.issuingCountry}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -190,7 +208,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentLicense.dateOfIssue}
                     onChange={handleLicenseChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
 
@@ -205,7 +224,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentLicense.validTill}
                     onChange={handleLicenseChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    min={currentLicense.dateOfIssue || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -258,7 +278,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter your license name"
                   value={currentEndorsement.licenseName}
                   onChange={handleEndorsementChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -273,7 +293,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter license number"
                   value={currentEndorsement.licenseNumber}
                   onChange={handleEndorsementChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -288,7 +308,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                   placeholder="Enter issuing authority name"
                   value={currentEndorsement.issuingCountry}
                   onChange={handleEndorsementChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -304,7 +324,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentEndorsement.dateOfIssue}
                     onChange={handleEndorsementChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
 
@@ -319,7 +340,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
                     placeholder="dd/mm/yyyy"
                     value={currentEndorsement.validTill}
                     onChange={handleEndorsementChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                    min={currentEndorsement.dateOfIssue || new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>

@@ -33,9 +33,9 @@ const DocumentDetail = ({ document, onBack }) => {
                 {/* Right Column - Details */}
                 <div className="w-full lg:w-[400px] space-y-8">
                     <div>
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-2">{document.title}</h2>
-                        <span className="inline-block bg-gray-800 text-white text-xs px-3 py-1 rounded-full font-medium">
-                            {document.type || "STCW"}
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-3">{document.title}</h2>
+                        <span className="inline-block bg-gray-800 text-white text-sm px-4 py-1.5 rounded-full font-medium">
+                            {document.type || "STCW Certificate"}
                         </span>
                     </div>
 

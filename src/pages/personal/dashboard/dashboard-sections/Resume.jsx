@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
+import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 
 const Resume = () => {
@@ -253,6 +253,86 @@ const Resume = () => {
         }
     };
 
+    const handleShareResume = async () => {
+        const element = cvRef.current;
+        if (!element) return;
+
+        // Show loading state
+        document.body.style.cursor = 'wait';
+
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#F5F7FA'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = pdfWidth / imgWidth;
+            const pdfImgHeight = imgHeight * ratio;
+
+            let heightLeft = pdfImgHeight;
+            let position = 0;
+            let page = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                page++;
+                position = -pdfHeight * page;
+
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            const fileName = `${userData.name.replace(/\s+/g, '_')}_CV.pdf`;
+            const blob = pdf.output('blob');
+            const file = new File([blob], fileName, { type: 'application/pdf' });
+
+            // Check if Web Share API is supported
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `${userData.name}'s Resume`,
+                    text: `Check out my professional resume`,
+                    files: [file]
+                });
+            } else {
+                // Fallback: Create a shareable link or copy to clipboard
+                const url = URL.createObjectURL(blob);
+                
+                // Try to copy link to clipboard
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(url);
+                    alert('Resume link copied to clipboard! You can paste and share it.');
+                } else {
+                    // Last fallback: Open in new tab
+                    window.open(url, '_blank');
+                    alert('Resume opened in new tab. You can download and share it from there.');
+                }
+                
+                // Clean up after some time
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('Share cancelled');
+            } else {
+                console.error('Share failed', err);
+                alert('Failed to share resume. Please try downloading and sharing manually.');
+            }
+        } finally {
+            document.body.style.cursor = 'default';
+        }
+    };
+
     const renderStars = (rating) => {
         return [...Array(5)].map((_, index) => (
             <FaStar
@@ -265,11 +345,35 @@ const Resume = () => {
 
     return (
         <div className="min-h-screen bg-[#F5F7FA]">
+            {/* Preview Mode Tabs */}
+            <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
+                <span className="opacity-70 flex items-center">Preview Mode:</span>
+                <button
+                    onClick={() => setUserData({...userData, userType: 'officer'})}
+                    className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                    Officer
+                </button>
+                <button
+                    onClick={() => setUserData({...userData, userType: 'rating'})}
+                    className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                    Rating/Crew
+                </button>
+                <button
+                    onClick={() => setUserData({...userData, userType: 'medical'})}
+                    className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                    Medical
+                </button>
+            </div>
+
             {/* Action Buttons Header */}
             <div className="sticky top-0 z-30 bg-white px-4 sm:px-8 py-4 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resume</h1>
                     <div className="flex items-center gap-2 sm:gap-3">
+                        {/* Edit Resume Button - Desktop */}
                         <button
                             onClick={handleEditResume}
                             className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
@@ -277,12 +381,31 @@ const Resume = () => {
                             <FiEdit size={16} />
                             <span className="font-medium text-sm">Edit Resume</span>
                         </button>
+                        {/* Edit Resume Button - Mobile */}
                         <button
                             onClick={handleEditResume}
                             className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
                         >
                             <FiEdit size={18} />
                         </button>
+
+                        {/* Share Resume Button - Desktop */}
+                        <button
+                            onClick={handleShareResume}
+                            className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px]"
+                        >
+                            <FiShare2 size={16} />
+                            <span className="font-medium text-sm">Share Resume</span>
+                        </button>
+                        {/* Share Resume Button - Mobile */}
+                        <button
+                            onClick={handleShareResume}
+                            className="sm:hidden p-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        >
+                            <FiShare2 size={18} />
+                        </button>
+
+                        {/* Download PDF Button - Desktop */}
                         <button
                             onClick={handleDownloadPDF}
                             className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
@@ -290,6 +413,7 @@ const Resume = () => {
                             <FiDownload size={16} />
                             <span className="font-medium text-sm">Download PDF</span>
                         </button>
+                        {/* Download PDF Button - Mobile */}
                         <button
                             onClick={handleDownloadPDF}
                             className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
