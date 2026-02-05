@@ -284,10 +284,10 @@ const CVResume = ({ isReadOnly = false }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F5F7FA]">
+        <div className="h-full flex flex-col overflow-hidden bg-[#F5F7FA]">
             {/* Dev Toolbar */}
             {!isReadOnly && (
-            <div className="bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
+            <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
                 <span className="opacity-70 flex items-center">Preview Mode:</span>
                 <button
                     onClick={() => switchUserType('officer')}
@@ -310,14 +310,14 @@ const CVResume = ({ isReadOnly = false }) => {
             </div>
             )}
 
-
-            <div ref={cvRef}>
-                {/* Navbar */}
-                {!isReadOnly && (
-                <nav className="bg-white px-4 sm:px-8 py-4">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between">
-                        {/* Logo with Menu */}
-                        <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex-1 overflow-y-auto">
+                <div ref={cvRef}>
+                    {/* Navbar */}
+                    {!isReadOnly && (
+                    <nav className="bg-white px-4 sm:px-8 py-4">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between">
+                            {/* Logo with Menu */}
+                            <div className="flex items-center gap-2 sm:gap-4">
                             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                                 <FiMenu size={24} className="text-gray-600" />
                             </button>
@@ -801,7 +801,8 @@ const CVResume = ({ isReadOnly = false }) => {
 
 
                 </div>
-            </div> {/* End of cvRef wrapper */}
+                </div> {/* End of cvRef wrapper */}
+            </div> {/* End of overflow container */}
         </div>
     );
 };

@@ -187,7 +187,7 @@ function AdminLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 overflow-y-auto bg-white px-8 py-6">
+                <main className="flex-1 overflow-hidden bg-white px-8 py-6">
                     <Outlet />
                 </main>
             </div>

@@ -5,10 +5,13 @@ import {
     CheckCircle,
     Info,
     AlertTriangle,
-    AlertCircle
+    AlertCircle,
+    ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function RecruiterNotifications() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState({
         announcement: true,
         toast: true,
@@ -27,6 +30,14 @@ function RecruiterNotifications() {
 
     return (
         <div className="max-w-5xl">
+            {/* Back Icon */}
+            <button
+                onClick={() => navigate(-1)}
+                className="text-gray-600 hover:text-gray-900 mb-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+                <ArrowLeft className="h-5 w-5" />
+            </button>
+            
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">

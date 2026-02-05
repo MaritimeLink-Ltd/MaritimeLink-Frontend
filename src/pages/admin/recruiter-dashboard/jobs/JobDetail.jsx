@@ -23,6 +23,7 @@ function JobDetail({ onBack }) {
     const [showPauseModal, setShowPauseModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [isClosed, setIsClosed] = useState(jobData?.status === 'Closed' || false);
     const [activeTab, setActiveTab] = useState('new');
     const [sortBy, setSortBy] = useState('name');
     const [sortOrder, setSortOrder] = useState('asc');
@@ -334,6 +335,7 @@ function JobDetail({ onBack }) {
     };
 
     const confirmCloseJob = () => {
+        setIsClosed(true);
         setShowCloseModal(false);
         // Navigate back to jobs page after closing
         if (onBack) {
@@ -344,29 +346,31 @@ function JobDetail({ onBack }) {
     };
 
     return (
-        <div className="p-6">
-            {/* Back Icon */}
-            <button
-                onClick={() => onBack ? onBack() : navigate(-1)}
-                className="text-gray-600 hover:text-gray-900 mb-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-                <ArrowLeft className="h-5 w-5" />
-            </button>
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Fixed Header Section */}
+            <div className="flex-shrink-0 px-6 pt-6">
+                {/* Back Icon */}
+                <button
+                    onClick={() => onBack ? onBack() : navigate(-1)}
+                    className="text-gray-600 hover:text-gray-900 mb-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    <ArrowLeft className="h-5 w-5" />
+                </button>
 
-            {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-3xl font-bold text-gray-900">{job.title}</h1>
-                        {/* Published/Unpublished Badge */}
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            isPublished 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-gray-100 text-gray-700'
-                        }`}>
-                            {isPublished ? 'Published' : 'Unpublished'}
-                        </span>
-                    </div>
+                {/* Header */}
+                <div className="flex items-start justify-between mb-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h1 className="text-3xl font-bold text-gray-900">{job.title}</h1>
+                            {/* Published/Unpublished Badge */}
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                isPublished 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-gray-100 text-gray-700'
+                            }`}>
+                                {isPublished ? 'Published' : 'Unpublished'}
+                            </span>
+                        </div>
                     <div className="flex items-center gap-2 text-gray-600">
                         <span>{job.vessel}</span>
                         <span>•</span>
@@ -396,40 +400,44 @@ function JobDetail({ onBack }) {
                             Publish
                         </button>
                     )}
-                    <button 
-                        onClick={handleCloseJob}
-                        className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
-                    >
-                        <XIcon className="h-4 w-4" />
-                        Close Job
-                    </button>
+                    {!isClosed && (
+                        <button 
+                            onClick={handleCloseJob}
+                            className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
+                        >
+                            <XIcon className="h-4 w-4" />
+                            Close Job
+                        </button>
+                    )}
                 </div>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-                {stats.map((stat, index) => (
-                    <div key={index} className={`${stat.color} rounded-xl p-5`}>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center`}>
-                                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-                            </div>
-                        </div>
-                        <div className={`text-xs font-semibold ${stat.iconColor} mb-1`}>
-                            {stat.label}
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">
-                            {stat.value}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                            {stat.subtitle}
-                        </div>
-                    </div>
-                ))}
             </div>
 
-            {/* Tabs and Filters */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                    {stats.map((stat, index) => (
+                        <div key={index} className={`${stat.color} rounded-xl p-5`}>
+                            <div className="flex items-start justify-between mb-3">
+                                <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center`}>
+                                    <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                                </div>
+                            </div>
+                            <div className={`text-xs font-semibold ${stat.iconColor} mb-1`}>
+                                {stat.label}
+                            </div>
+                            <div className="text-3xl font-bold text-gray-900 mb-1">
+                                {stat.value}
+                            </div>
+                            <div className="text-xs text-gray-600">{stat.subtitle}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Tabs and Filters */}
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
                 <div className="border-b border-gray-100 p-4">
                     <div className="flex items-center gap-4">
                         <button 
@@ -510,7 +518,12 @@ function JobDetail({ onBack }) {
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />
                                             <div>
-                                                <div className="font-semibold text-gray-900">{applicant.name}</div>
+                                                <button 
+                                                    onClick={() => navigate(`/admin/candidate/${applicant.id}`, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } })}
+                                                    className="font-semibold text-gray-900 hover:text-blue-600 text-left"
+                                                >
+                                                    {applicant.name}
+                                                </button>
                                                 <div className="text-sm text-gray-500">Age: {applicant.age}</div>
                                             </div>
                                         </div>
@@ -687,6 +700,7 @@ function JobDetail({ onBack }) {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

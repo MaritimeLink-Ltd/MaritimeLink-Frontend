@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Search,
     Filter,
@@ -11,16 +11,24 @@ import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 function AdminSearch({ onViewCandidate }) {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
     const [sortBy, setSortBy] = useState('Best Matches');
     const [currentPage, setCurrentPage] = useState(1);
     const [showFilters, setShowFilters] = useState(true);
     const itemsPerPage = 10;
+
+    // Set search query from navigation state if provided
+    useEffect(() => {
+        if (location.state?.searchQuery) {
+            setSearchQuery(location.state.searchQuery);
+        }
+    }, [location.state]);
 
     const [filters, setFilters] = useState({
         rankPosition: [],

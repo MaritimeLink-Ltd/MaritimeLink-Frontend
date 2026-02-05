@@ -22,6 +22,16 @@ import {
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
     const [profileImage, setProfileImage] = useState('/images/login-image.png');
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+    const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+    const [currentPlan, setCurrentPlan] = useState('Professional');
+    const [planUpgraded, setPlanUpgraded] = useState(false);
 
     // Handle invoice download
     const handleDownloadInvoice = () => {
@@ -73,6 +83,57 @@ function AdminSettings() {
         
         // Save PDF
         doc.save(`invoice_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
+    // Handle password update
+    const handleUpdatePassword = () => {
+        setPasswordError('');
+        setPasswordSuccess('');
+
+        // Validation
+        if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+            setPasswordError('All fields are required');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 8) {
+            setPasswordError('New password must be at least 8 characters');
+            return;
+        }
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            setPasswordError('New passwords do not match');
+            return;
+        }
+
+        // Simulate API call
+        setTimeout(() => {
+            setPasswordSuccess('Password updated successfully!');
+            setPasswordData({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            });
+            
+            // Clear success message after 3 seconds
+            setTimeout(() => setPasswordSuccess(''), 3000);
+        }, 500);
+    };
+
+    // Handle 2FA toggle
+    const handle2FAToggle = () => {
+        setTwoFactorEnabled(!twoFactorEnabled);
+        // In real app, this would make an API call to enable/disable 2FA
+    };
+
+    // Handle upgrade plan
+    const handleUpgradePlan = () => {
+        setCurrentPlan('Enterprise');
+        setPlanUpgraded(true);
+        // In real app, this would make an API call to upgrade the plan
+        
+        // Clear upgraded message after 3 seconds
+        setTimeout(() => setPlanUpgraded(false), 3000);
     };
 
     // Notification states
@@ -143,18 +204,18 @@ function AdminSettings() {
     ];
 
     return (
-        <div className="space-y-3">
-            {/* Header */}
-            <div>
+        <div className="h-screen flex flex-col overflow-hidden">
+            {/* Header - Sticky */}
+            <div className="flex-shrink-0 pb-3">
                 <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
                 <p className="text-gray-500 mt-1 text-sm">Manage your account settings and preferences</p>
             </div>
 
             {/* Settings Container */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                {/* Sidebar */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-3 overflow-hidden">
+                {/* Sidebar - Sticky */}
+                <div className="lg:col-span-1 overflow-y-auto">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3 sticky top-0">
                         {/* Account Section */}
                         <div>
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Account</h3>
@@ -197,8 +258,8 @@ function AdminSettings() {
                     </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="lg:col-span-3">
+                {/* Main Content - Scrollable */}
+                <div className="lg:col-span-3 overflow-y-auto">
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                         {/* Personal Information Section */}
                         {activeSection === 'my-profile' && (
@@ -432,6 +493,13 @@ function AdminSettings() {
                         {/* Billing & Plans Section */}
                         {activeSection === 'billing' && (
                             <div>
+                                {/* Success Message */}
+                                {planUpgraded && (
+                                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 font-medium">
+                                        Plan upgraded successfully to {currentPlan}!
+                                    </div>
+                                )}
+                                
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
@@ -439,7 +507,7 @@ function AdminSettings() {
                                         <p className="text-sm text-gray-500 mt-0.5">Manage your subscription and billing details</p>
                                     </div>
                                     <button className="text-[#003971] font-bold text-sm hover:underline">
-                                        Professional Plan
+                                        {currentPlan} Plan
                                     </button>
                                 </div>
 
@@ -448,7 +516,9 @@ function AdminSettings() {
                                     {/* Price */}
                                     <div className="mb-4">
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-bold text-gray-900">$299</span>
+                                            <span className="text-4xl font-bold text-gray-900">
+                                                ${currentPlan === 'Professional' ? '299' : '599'}
+                                            </span>
                                             <span className="text-gray-500">/month</span>
                                         </div>
                                     </div>
@@ -473,13 +543,30 @@ function AdminSettings() {
                                             </div>
                                             <span className="text-sm text-gray-700">Priority Support</span>
                                         </div>
+                                        {currentPlan === 'Enterprise' && (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                                    <Check className="h-3 w-3 text-green-600" />
+                                                </div>
+                                                <span className="text-sm text-gray-700">Dedicated Account Manager</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Buttons */}
                                     <div className="flex items-center gap-3">
-                                        <button className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors">
-                                            Upgrade Plan
-                                        </button>
+                                        {currentPlan === 'Professional' ? (
+                                            <button 
+                                                onClick={handleUpgradePlan}
+                                                className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
+                                            >
+                                                Upgrade Plan
+                                            </button>
+                                        ) : (
+                                            <span className="px-5 py-2.5 rounded-xl font-bold text-sm bg-green-50 text-green-600 border border-green-200">
+                                                Current Plan
+                                            </span>
+                                        )}
                                         <button 
                                             onClick={handleDownloadInvoice}
                                             className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -501,11 +588,23 @@ function AdminSettings() {
                                     <p className="text-sm text-gray-500 mb-6">Update your password associated with your account.</p>
 
                                     <div className="space-y-6 max-w-2xl">
+                                        {passwordError && (
+                                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium">
+                                                {passwordError}
+                                            </div>
+                                        )}
+                                        {passwordSuccess && (
+                                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 font-medium">
+                                                {passwordSuccess}
+                                            </div>
+                                        )}
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-semibold text-gray-500">Current Password</label>
                                             <input
                                                 type="password"
                                                 placeholder="Enter Current Password"
+                                                value={passwordData.currentPassword}
+                                                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -514,6 +613,8 @@ function AdminSettings() {
                                             <input
                                                 type="password"
                                                 placeholder="Enter New Password"
+                                                value={passwordData.newPassword}
+                                                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -521,13 +622,18 @@ function AdminSettings() {
                                             <label className="text-xs font-semibold text-gray-500">Confirm New Password</label>
                                             <input
                                                 type="password"
-                                                placeholder="Confirm Current Password"
+                                                placeholder="Confirm New Password"
+                                                value={passwordData.confirmPassword}
+                                                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
 
                                         <div className="flex justify-end pt-2">
-                                            <button className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                            <button 
+                                                onClick={handleUpdatePassword}
+                                                className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                            >
                                                 Update Password
                                             </button>
                                         </div>
@@ -541,9 +647,16 @@ function AdminSettings() {
                                             <h2 className="text-lg font-bold text-gray-900">Two-Factor Authentication</h2>
                                             <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
                                         </div>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-100">
-                                            <Check className="h-3 w-3" />
-                                            Enabled
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                                            twoFactorEnabled 
+                                                ? 'bg-green-50 text-green-700 border-green-100'
+                                                : 'bg-gray-50 text-gray-600 border-gray-200'
+                                        }`}>
+                                            {twoFactorEnabled ? (
+                                                <><Check className="h-3 w-3" /> Enabled</>
+                                            ) : (
+                                                'Disabled'
+                                            )}
                                         </span>
                                     </div>
 
@@ -557,8 +670,15 @@ function AdminSettings() {
                                                 <p className="text-xs text-gray-500 mt-0.5">Google Authenticator, Authy, etc.</p>
                                             </div>
                                         </div>
-                                        <button className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                                            Disable
+                                        <button 
+                                            onClick={handle2FAToggle}
+                                            className={`text-sm font-semibold transition-colors px-4 py-2 rounded-lg ${
+                                                twoFactorEnabled
+                                                    ? 'text-red-600 hover:bg-red-50'
+                                                    : 'text-green-600 hover:bg-green-50 bg-green-50'
+                                            }`}
+                                        >
+                                            {twoFactorEnabled ? 'Disable' : 'Enable'}
                                         </button>
                                     </div>
                                 </div>

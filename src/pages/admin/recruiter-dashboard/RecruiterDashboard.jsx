@@ -88,7 +88,9 @@ function RecruiterDashboard({ onNavigate }) {
             iconColor: 'text-[#003971]',
             iconBg: 'bg-[#EBF3FF]',
             actionText: 'View Applicants',
-            section: 'jobs'
+            section: 'jobs',
+            jobId: '000001',
+            targetTab: 'new'
         },
         {
             id: 2,
@@ -109,7 +111,9 @@ function RecruiterDashboard({ onNavigate }) {
             iconBg: 'bg-orange-50',
             actionText: 'Edit Job',
             secondaryAction: true,
-            section: 'jobs'
+            section: 'jobs',
+            jobId: '000002',
+            isEdit: true
         },
         {
             id: 4,
@@ -119,7 +123,8 @@ function RecruiterDashboard({ onNavigate }) {
             iconColor: 'text-[#003971]',
             iconBg: 'bg-[#EBF3FF]',
             actionText: 'View Job',
-            section: 'jobs'
+            section: 'jobs',
+            jobId: '000003'
         }
     ];
 
@@ -127,6 +132,7 @@ function RecruiterDashboard({ onNavigate }) {
     const jobs = [
         {
             id: 1,
+            jobId: '000001',
             title: 'Chief Engineer',
             type: 'Permanent / LNG Tanker',
             status: 'Active',
@@ -135,6 +141,7 @@ function RecruiterDashboard({ onNavigate }) {
         },
         {
             id: 2,
+            jobId: '000002',
             title: '3rd Officer',
             type: 'Permanent / DP Vessel',
             status: 'Ending Soon',
@@ -143,6 +150,7 @@ function RecruiterDashboard({ onNavigate }) {
         },
         {
             id: 3,
+            jobId: '000003',
             title: 'Deck Officer',
             type: 'Temporary / Container Ship',
             status: 'Draft',
@@ -158,8 +166,17 @@ function RecruiterDashboard({ onNavigate }) {
         'Offshore Supply Vessel'
     ];
 
+    // Handle popular search click
+    const handlePopularSearchClick = (searchTerm) => {
+        if (onNavigate) {
+            onNavigate('search');
+        } else {
+            navigate('/admin/search', { state: { searchQuery: searchTerm } });
+        }
+    };
+
     return (
-        <div className="px-8 py-6 space-y-8">
+        <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
@@ -231,7 +248,19 @@ function RecruiterDashboard({ onNavigate }) {
                                     <span className="text-gray-900 font-medium text-sm">{item.text}</span>
                                 </div>
                                 <button
-                                    onClick={() => handleNavigate(item.section)}
+                                    onClick={() => {
+                                        if (item.jobId) {
+                                            if (item.isEdit) {
+                                                // Navigate to edit job
+                                                navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true } });
+                                            } else {
+                                                // Navigate to job detail
+                                                navigate(`/admin/jobs/${item.jobId}`);
+                                            }
+                                        } else {
+                                            handleNavigate(item.section);
+                                        }
+                                    }}
                                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
                                         ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                                         : 'bg-[#003971] text-white hover:bg-[#002855]'
@@ -258,7 +287,11 @@ function RecruiterDashboard({ onNavigate }) {
 
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
                             {popularSearches.map((search, index) => (
-                                <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl">
+                                <div 
+                                    key={index} 
+                                    onClick={() => handlePopularSearchClick(search)}
+                                    className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
+                                >
                                     <div className="flex items-center gap-3">
                                         <span className="text-gray-400 font-bold text-sm w-4">{index + 1}.</span>
                                         <span className="text-gray-900 font-bold text-sm">{search}</span>
@@ -299,7 +332,12 @@ function RecruiterDashboard({ onNavigate }) {
                                     className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
                                 />
                                 <div>
-                                    <h3 className="text-sm font-bold text-gray-900 mb-0.5">{job.title}</h3>
+                                    <button
+                                        onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
+                                        className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
+                                    >
+                                        {job.title}
+                                    </button>
                                     <p className="text-xs text-gray-500 font-medium">{job.type}</p>
                                 </div>
                             </div>
@@ -316,14 +354,14 @@ function RecruiterDashboard({ onNavigate }) {
                             <div className="col-span-3 flex justify-end">
                                 {job.status === 'Draft' ? (
                                     <button
-                                        onClick={() => handleNavigate('jobs')}
+                                        onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true } })}
                                         className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
                                     >
                                         Edit Draft
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => handleNavigate('search')}
+                                        onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
                                         className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
                                     >
                                         {job.matches} <ChevronRight className="h-3.5 w-3.5" />
