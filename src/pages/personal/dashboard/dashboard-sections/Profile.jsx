@@ -7,12 +7,16 @@ const Profile = () => {
     const [showPremiumPlans, setShowPremiumPlans] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
     const handleLogout = () => {
         // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
+        localStorage.removeItem('userType');
+        localStorage.removeItem('userEmail');
         navigate('/signin');
+        setShowLogoutModal(false);
     };
 
     const handleFeedbackSubmit = () => {
@@ -154,7 +158,7 @@ const Profile = () => {
                         <div>
                             <p className="text-xs text-gray-400 mb-3">Account</p>
                             <div className="space-y-2">
-                                <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors" onClick={handleLogout}>
+                                <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors" onClick={() => setShowLogoutModal(true)}>
                                     <div className="flex items-center gap-3">
                                         <LogOut size={16} className="text-[#003971]" />
                                         <span className="text-gray-800 text-sm">Log out</span>
@@ -358,6 +362,38 @@ const Profile = () => {
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteModal(false)}
+                                    className="w-full py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutModal && (
+                <>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowLogoutModal(false)} />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <AlertTriangle size={32} className="text-orange-600" />
+                                </div>
+                                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Logout?</h2>
+                                <p className="text-gray-600">Are you sure you want to logout from your account?</p>
+                            </div>
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
+                                >
+                                    Yes, Logout
+                                </button>
+                                <button
+                                    onClick={() => setShowLogoutModal(false)}
                                     className="w-full py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                                 >
                                     Cancel

@@ -9,6 +9,52 @@ const ApplyToJob = () => {
     const [selectedResume, setSelectedResume] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    // Sample job data
+    const jobs = {
+        '1': {
+            id: 1,
+            title: 'Senior Seafarer',
+            company: 'ABC Company',
+            salary: 'GBP 50000',
+            location: 'London',
+            type: 'Full Time'
+        },
+        '2': {
+            id: 2,
+            title: 'Marine Engineer',
+            company: 'Ocean Dynamics Ltd',
+            salary: 'GBP 45000',
+            location: 'Southampton',
+            type: 'Full Time'
+        },
+        '3': {
+            id: 3,
+            title: 'Deck Officer',
+            company: 'Maritime Solutions',
+            salary: 'GBP 55000',
+            location: 'Liverpool',
+            type: 'Contract'
+        },
+        '4': {
+            id: 4,
+            title: 'Chief Engineer',
+            company: 'Seafarers International',
+            salary: 'GBP 65000',
+            location: 'Glasgow',
+            type: 'Full Time'
+        },
+        '5': {
+            id: 5,
+            title: 'Navigation Officer',
+            company: 'Global Maritime Group',
+            salary: 'GBP 48000',
+            location: 'London',
+            type: 'Full Time'
+        }
+    };
+
+    const job = jobs[jobId] || jobs['1'];
+
     // Sample resume data
     const resumes = [
         {
@@ -55,19 +101,19 @@ const ApplyToJob = () => {
                         <div className="flex items-start justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-800 mb-1">
-                                    {job?.title || 'Senior Seafarer'}
+                                    {job.title}
                                 </h2>
                                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                                     <Building2 size={14} />
-                                    <span>{job?.company || 'ABC Company'}</span>
+                                    <span>{job.company}</span>
                                 </div>
                                 <div className="text-sm text-gray-800 font-medium">
-                                    {job?.salary || 'GBP 50000'}
+                                    {job.salary}
                                 </div>
                             </div>
                             <div className="flex items-center gap-1 text-[#003971] text-sm">
                                 <MapPin size={14} />
-                                <span>{job?.location || 'London'}</span>
+                                <span>{job.location}</span>
                             </div>
                         </div>
                     </div>

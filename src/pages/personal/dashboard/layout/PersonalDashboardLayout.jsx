@@ -12,7 +12,8 @@ import {
     ChevronDown,
     Menu,
     X,
-    LogOut
+    LogOut,
+    AlertTriangle
 } from 'lucide-react';
 
 function PersonalDashboardLayout() {
@@ -20,6 +21,7 @@ function PersonalDashboardLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const isActive = (path) => location.pathname === path;
     
@@ -32,6 +34,7 @@ function PersonalDashboardLayout() {
         localStorage.removeItem('userEmail');
         // Navigate to landing page
         navigate('/');
+        setShowLogoutModal(false);
     };
 
     const navItems = [
@@ -95,6 +98,17 @@ function PersonalDashboardLayout() {
                             ))}
                         </nav>
                     </div>
+
+                    {/* Logout Button */}
+                    <div className="p-4 border-t border-gray-200">
+                        <button
+                            onClick={() => setShowLogoutModal(true)}
+                            className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors duration-150"
+                        >
+                            <LogOut className="h-5 w-5 mr-3 text-gray-400" />
+                            Logout
+                        </button>
+                    </div>
                 </div>
                 </aside>
             )}
@@ -106,6 +120,38 @@ function PersonalDashboardLayout() {
                     <Outlet />
                 </main>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutModal && (
+                <>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowLogoutModal(false)} />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <AlertTriangle size={32} className="text-orange-600" />
+                                </div>
+                                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Logout?</h2>
+                                <p className="text-gray-600">Are you sure you want to logout from your account?</p>
+                            </div>
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
+                                >
+                                    Yes, Logout
+                                </button>
+                                <button
+                                    onClick={() => setShowLogoutModal(false)}
+                                    className="w-full py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
