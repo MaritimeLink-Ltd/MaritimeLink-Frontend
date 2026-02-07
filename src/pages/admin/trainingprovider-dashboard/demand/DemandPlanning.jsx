@@ -19,6 +19,18 @@ function DemandPlanning() {
     const [selectedRegion, setSelectedRegion] = useState('My Region');
     const [selectedCity, setSelectedCity] = useState('My City');
     const [selectedNearbyCities, setSelectedNearbyCities] = useState('Nearby Cities');
+    const [showRegionDropdown, setShowRegionDropdown] = useState(false);
+    const [showCityDropdown, setShowCityDropdown] = useState(false);
+    const [showNearbyCitiesDropdown, setShowNearbyCitiesDropdown] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const regions = ['My Region', 'North Sea', 'Atlantic', 'Mediterranean', 'Pacific'];
+    const cities = ['My City', 'Aberdeen', 'London', 'Liverpool', 'Glasgow', 'Southampton'];
+    const nearbyCities = ['Nearby Cities', 'Edinburgh', 'Dundee', 'Inverness', 'Perth'];
+
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
 
     const statsCards = [
         {
@@ -60,7 +72,8 @@ function DemandPlanning() {
             iconColor: 'text-orange-600',
             iconBg: 'bg-orange-50',
             title: 'STCW Basic Safety',
-            subtitle: '108 expiring soon• 128 expiring in 30 days'
+            subtitle: '108 expiring soon• 128 expiring in 30 days',
+            searchTerms: 'stcw basic safety'
         },
         {
             id: 2,
@@ -68,7 +81,8 @@ function DemandPlanning() {
             iconColor: 'text-blue-600',
             iconBg: 'bg-blue-50',
             title: 'Advanced Firefighting',
-            subtitle: '96 views in 30 days• 10 enquiries'
+            subtitle: '96 views in 30 days• 10 enquiries',
+            searchTerms: 'advanced firefighting'
         },
         {
             id: 3,
@@ -76,7 +90,8 @@ function DemandPlanning() {
             iconColor: 'text-purple-600',
             iconBg: 'bg-purple-50',
             title: 'Confined Space Awareness',
-            subtitle: '144 views in 30 days• No scheduled sessions'
+            subtitle: '144 views in 30 days• No scheduled sessions',
+            searchTerms: 'confined space awareness'
         },
         {
             id: 4,
@@ -84,7 +99,8 @@ function DemandPlanning() {
             iconColor: 'text-teal-600',
             iconBg: 'bg-teal-50',
             title: 'Medical Care Onboard',
-            subtitle: 'High demand in Aberdeen• 50+ expires next month'
+            subtitle: 'High demand in Aberdeen• 50+ expires next month',
+            searchTerms: 'medical care onboard'
         }
     ];
 
@@ -97,7 +113,8 @@ function DemandPlanning() {
             title: 'STCW Basic Safety',
             subtitle: 'Renewals needed soon',
             buttonText: 'Create Course',
-            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]'
+            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
+            searchTerms: 'stcw basic safety renewals'
         },
         {
             id: 2,
@@ -107,7 +124,8 @@ function DemandPlanning() {
             title: 'Advanced Firefighting',
             subtitle: '520 views in 30 days• Moderate capacity',
             buttonText: 'Create Course',
-            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]'
+            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
+            searchTerms: 'advanced firefighting'
         },
         {
             id: 3,
@@ -117,7 +135,8 @@ function DemandPlanning() {
             title: 'Energy Efficiency Program',
             subtitle: '117 views in 30 days• Low capacity',
             buttonText: 'Check Schedule',
-            buttonStyle: 'bg-white text-[#003971] border-2 border-blue-200 hover:bg-blue-50'
+            buttonStyle: 'bg-white text-[#003971] border-2 border-blue-200 hover:bg-blue-50',
+            searchTerms: 'energy efficiency'
         },
         {
             id: 4,
@@ -127,9 +146,23 @@ function DemandPlanning() {
             title: 'Confined Space Awareness',
             subtitle: 'Interest in Aberdeen',
             buttonText: 'Create Course',
-            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]'
+            buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
+            searchTerms: 'confined space aberdeen'
         }
     ];
+
+    // Filter items based on search query
+    const filteredRenewalInsights = renewalInsights.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.searchTerms.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const filteredCapacityWatch = capacityWatch.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.searchTerms.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleCreateCourse = () => {
         navigate('/trainingprovider/courses/create');
@@ -154,18 +187,107 @@ function DemandPlanning() {
                 <div className="flex items-center gap-4 mb-6">
                     {/* Filter Dropdowns */}
                     <div className="flex items-center gap-3">
-                        <button className="px-4 py-2 bg-[#003971] text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-[#002455] transition-colors">
-                            {selectedRegion}
-                            <ChevronDown className="h-4 w-4" />
-                        </button>
-                        <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors">
-                            {selectedCity}
-                            <ChevronDown className="h-4 w-4" />
-                        </button>
-                        <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors">
-                            {selectedNearbyCities}
-                            <ChevronDown className="h-4 w-4" />
-                        </button>
+                        {/* My Region Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => {
+                                    setShowRegionDropdown(!showRegionDropdown);
+                                    setShowCityDropdown(false);
+                                    setShowNearbyCitiesDropdown(false);
+                                }}
+                                className="px-4 py-2 bg-[#003971] text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-[#002455] transition-colors"
+                            >
+                                {selectedRegion}
+                                <ChevronDown className={`h-4 w-4 transition-transform ${showRegionDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showRegionDropdown && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowRegionDropdown(false)} />
+                                    <div className="absolute z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                                        {regions.map((region) => (
+                                            <button
+                                                key={region}
+                                                onClick={() => {
+                                                    setSelectedRegion(region);
+                                                    setShowRegionDropdown(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${selectedRegion === region ? 'text-[#003971] font-semibold' : 'text-gray-700'}`}
+                                            >
+                                                {region}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* My City Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => {
+                                    setShowCityDropdown(!showCityDropdown);
+                                    setShowRegionDropdown(false);
+                                    setShowNearbyCitiesDropdown(false);
+                                }}
+                                className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                            >
+                                {selectedCity}
+                                <ChevronDown className={`h-4 w-4 transition-transform ${showCityDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showCityDropdown && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowCityDropdown(false)} />
+                                    <div className="absolute z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                                        {cities.map((city) => (
+                                            <button
+                                                key={city}
+                                                onClick={() => {
+                                                    setSelectedCity(city);
+                                                    setShowCityDropdown(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${selectedCity === city ? 'text-[#003971] font-semibold' : 'text-gray-700'}`}
+                                            >
+                                                {city}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Nearby Cities Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => {
+                                    setShowNearbyCitiesDropdown(!showNearbyCitiesDropdown);
+                                    setShowRegionDropdown(false);
+                                    setShowCityDropdown(false);
+                                }}
+                                className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                            >
+                                {selectedNearbyCities}
+                                <ChevronDown className={`h-4 w-4 transition-transform ${showNearbyCitiesDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showNearbyCitiesDropdown && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowNearbyCitiesDropdown(false)} />
+                                    <div className="absolute z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                                        {nearbyCities.map((city) => (
+                                            <button
+                                                key={city}
+                                                onClick={() => {
+                                                    setSelectedNearbyCities(city);
+                                                    setShowNearbyCitiesDropdown(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${selectedNearbyCities === city ? 'text-[#003971] font-semibold' : 'text-gray-700'}`}
+                                            >
+                                                {city}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* Search Bar */}
@@ -176,6 +298,8 @@ function DemandPlanning() {
                         <input
                             type="text"
                             placeholder="Search trends..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
                             className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-200 w-64"
                         />
                     </div>
@@ -265,22 +389,28 @@ function DemandPlanning() {
                     </div>
 
                     <div className="space-y-3">
-                        {renewalInsights.map((item) => (
-                            <div
-                                key={item.id}
-                                className="flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
-                                    <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                        {filteredRenewalInsights.length > 0 ? (
+                            filteredRenewalInsights.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-start gap-3 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
+                                        <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-bold text-gray-900 mb-1">
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-xs text-gray-500">{item.subtitle}</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-sm font-bold text-gray-900 mb-1">
-                                        {item.title}
-                                    </h3>
-                                    <p className="text-xs text-gray-500">{item.subtitle}</p>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                <p className="text-sm">No renewal insights found matching your search.</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 
@@ -292,30 +422,36 @@ function DemandPlanning() {
                     </div>
 
                     <div className="space-y-3">
-                        {capacityWatch.map((item) => (
-                            <div
-                                key={item.id}
-                                className="flex items-start justify-between gap-3 p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                    <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
-                                        <item.icon className={`h-5 w-5 ${item.iconColor}`} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-bold text-gray-900 mb-1">
-                                            {item.title}
-                                        </h3>
-                                        <p className="text-xs text-gray-500">{item.subtitle}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={item.buttonText === 'Create Course' ? handleCreateCourse : handleCheckSchedule}
-                                    className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${item.buttonStyle}`}
+                        {filteredCapacityWatch.length > 0 ? (
+                            filteredCapacityWatch.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-start justify-between gap-3 p-4 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    {item.buttonText}
-                                </button>
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                        <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
+                                            <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-bold text-gray-900 mb-1">
+                                                {item.title}
+                                            </h3>
+                                            <p className="text-xs text-gray-500">{item.subtitle}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={item.buttonText === 'Create Course' ? handleCreateCourse : handleCheckSchedule}
+                                        className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${item.buttonStyle}`}
+                                    >
+                                        {item.buttonText}
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                <p className="text-sm">No capacity watch items found matching your search.</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>

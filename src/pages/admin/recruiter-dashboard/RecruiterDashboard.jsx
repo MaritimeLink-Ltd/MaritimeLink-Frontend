@@ -7,7 +7,8 @@ import {
     AlertTriangle,
     Calendar,
     ChevronRight,
-    Search
+    Search,
+    RefreshCw
 } from 'lucide-react';
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
 
@@ -15,6 +16,16 @@ function RecruiterDashboard({ onNavigate }) {
     const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Refresh handler
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        // Simulate refresh
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 1000);
+    };
 
     const handleNavigate = (section) => {
         if (onNavigate) {
@@ -187,19 +198,29 @@ function RecruiterDashboard({ onNavigate }) {
                 </div>
 
                 {/* Time Filter */}
-                <div className="bg-white p-1 rounded-2xl border border-gray-200 inline-flex shadow-sm">
-                    {['Today', '7 Days', '1 Month', 'Custom'].map((filter) => (
-                        <button
-                            key={filter}
-                            onClick={() => setTimeFilter(filter)}
-                            className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${timeFilter === filter
-                                ? 'bg-[#003971] text-white shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            {filter}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-3">
+                    <div className="bg-white p-1 rounded-2xl border border-gray-200 inline-flex shadow-sm">
+                        {['Today', '7 Days', '1 Month', 'Custom'].map((filter) => (
+                            <button
+                                key={filter}
+                                onClick={() => setTimeFilter(filter)}
+                                className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${timeFilter === filter
+                                    ? 'bg-[#003971] text-white shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                {filter}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Refresh Button */}
+                    <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
             </div>
 
@@ -287,8 +308,8 @@ function RecruiterDashboard({ onNavigate }) {
 
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
                             {popularSearches.map((search, index) => (
-                                <div 
-                                    key={index} 
+                                <div
+                                    key={index}
                                     onClick={() => handlePopularSearchClick(search)}
                                     className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
                                 >

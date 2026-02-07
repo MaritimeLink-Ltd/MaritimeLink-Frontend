@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Users, ChevronLeft } from 'lucide-react';
+import { Calendar, MapPin, Users, ChevronLeft, CheckCircle } from 'lucide-react';
 
 export default function ScheduleSession() {
   const navigate = useNavigate();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [form, setForm] = useState({
     startDate: '',
     endDate: '',
@@ -17,6 +18,16 @@ export default function ScheduleSession() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setShowSuccessModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowSuccessModal(false);
+    navigate('/trainingprovider/courses/STCW-BST-001/sessions');
   };
 
   return (
@@ -37,7 +48,7 @@ export default function ScheduleSession() {
 
         {/* Main Form Card */}
         <div className="bg-white rounded-[20px] p-8 shadow-sm border border-gray-100">
-          <form className="space-y-10">
+          <form onSubmit={handleSubmit} className="space-y-10">
             {/* Session Schedule Section */}
             <div>
               <div className="flex items-center gap-2 mb-6">
@@ -165,6 +176,29 @@ export default function ScheduleSession() {
           </form>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Session Created Successfully!</h2>
+              <p className="text-gray-600">
+                Your new training session has been scheduled and is now available.
+              </p>
+            </div>
+            <button
+              onClick={handleCloseModal}
+              className="w-full px-6 py-3 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
+            >
+              Go to Manage Sessions
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

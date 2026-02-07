@@ -25,6 +25,7 @@ function TrainingProviderCourses() {
     const [sessionFilter, setSessionFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [entriesPerPage, setEntriesPerPage] = useState(10);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const coursesData = [
         {
@@ -131,7 +132,7 @@ function TrainingProviderCourses() {
             iconBg: 'bg-slate-100',
             iconColor: 'text-slate-500',
             status: 'Unpublished',
-            capacityStatus: 'Not scheduled',
+            capacityStatus: 'Not Scheduled',
             capacityColor: 'text-gray-400',
             nextSession: '-',
             bookings: null,
@@ -147,21 +148,228 @@ function TrainingProviderCourses() {
             iconBg: 'bg-red-50',
             iconColor: 'text-red-500',
             status: 'Unpublished',
+            capacityStatus: 'Draft',
+            capacityColor: 'text-gray-400',
+            nextSession: '-',
+            bookings: null,
+            totalCapacity: null,
+            progressColor: '',
+            isPublished: false
+        },
+        {
+            id: 9,
+            name: 'Basic First Aid',
+            courseId: '000009',
+            icon: Heart,
+            iconBg: 'bg-pink-50',
+            iconColor: 'text-pink-600',
+            status: 'Published',
+            capacityStatus: 'Nearly Full',
+            capacityColor: 'text-orange-500',
+            nextSession: '20-22 May',
+            bookings: 8,
+            totalCapacity: 10,
+            progressColor: 'bg-orange-500',
+            isPublished: true
+        },
+        {
+            id: 10,
+            name: 'Fire Prevention',
+            courseId: '000010',
+            icon: Flame,
+            iconBg: 'bg-orange-100',
+            iconColor: 'text-orange-700',
+            status: 'Published',
+            capacityStatus: 'Full',
+            capacityColor: 'text-red-500',
+            nextSession: '25-27 May',
+            bookings: 10,
+            totalCapacity: 10,
+            progressColor: 'bg-red-500',
+            isPublished: true
+        },
+        {
+            id: 11,
+            name: 'Crowd Management',
+            courseId: '000011',
+            icon: Users,
+            iconBg: 'bg-blue-100',
+            iconColor: 'text-blue-700',
+            status: 'Published',
             capacityStatus: 'Enrollment Open',
             capacityColor: 'text-green-500',
-            nextSession: '5-6 June',
-            bookings: 6,
-            totalCapacity: 12,
-            progressColor: 'bg-blue-600',
+            nextSession: '1-3 June',
+            bookings: 2,
+            totalCapacity: 20,
+            progressColor: 'bg-green-500',
+            isPublished: true
+        },
+        {
+            id: 12,
+            name: 'Crisis Management',
+            courseId: '000012',
+            icon: Shield,
+            iconBg: 'bg-gray-100',
+            iconColor: 'text-gray-700',
+            status: 'Unpublished',
+            capacityStatus: 'Draft',
+            capacityColor: 'text-gray-400',
+            nextSession: '-',
+            bookings: null,
+            totalCapacity: null,
+            progressColor: '',
             isPublished: false
+        },
+        {
+            id: 13,
+            name: 'Passenger Safety',
+            courseId: '000013',
+            icon: Users,
+            iconBg: 'bg-blue-50',
+            iconColor: 'text-blue-600',
+            status: 'Published',
+            capacityStatus: 'Nearly Full',
+            capacityColor: 'text-orange-500',
+            nextSession: '10-12 June',
+            bookings: 9,
+            totalCapacity: 10,
+            progressColor: 'bg-orange-500',
+            isPublished: true
+        },
+        {
+            id: 14,
+            name: 'Personal Survival Techniques',
+            courseId: '000014',
+            icon: Waves,
+            iconBg: 'bg-blue-200',
+            iconColor: 'text-blue-800',
+            status: 'Published',
+            capacityStatus: 'Full',
+            capacityColor: 'text-red-500',
+            nextSession: '15-17 June',
+            bookings: 12,
+            totalCapacity: 12,
+            progressColor: 'bg-red-500',
+            isPublished: true
+        },
+        {
+            id: 15,
+            name: 'Elementary First Aid',
+            courseId: '000015',
+            icon: Heart,
+            iconBg: 'bg-pink-100',
+            iconColor: 'text-pink-700',
+            status: 'Unpublished',
+            capacityStatus: 'Not Scheduled',
+            capacityColor: 'text-gray-400',
+            nextSession: '-',
+            bookings: null,
+            totalCapacity: null,
+            progressColor: '',
+            isPublished: false
+        },
+        {
+            id: 16,
+            name: 'Marine Environmental Awareness',
+            courseId: '000016',
+            icon: Droplets,
+            iconBg: 'bg-blue-50',
+            iconColor: 'text-blue-600',
+            status: 'Published',
+            capacityStatus: 'Enrollment Open',
+            capacityColor: 'text-green-500',
+            nextSession: '18-20 June',
+            bookings: 3,
+            totalCapacity: 15,
+            progressColor: 'bg-green-500',
+            isPublished: true
         }
     ];
 
-    // Filter courses based on active tab
+    // Filter courses based on active tab, search, and filters
     const filteredCourses = coursesData.filter(course => {
-        if (activeTab === 'published') return course.isPublished;
-        return !course.isPublished;
+        // Prevent unpublished courses from showing 'Enrollment Open'
+        if (!course.isPublished && course.capacityStatus && course.capacityStatus.toLowerCase().includes('enrollment open')) {
+            return false;
+        }
+        // Tab filter
+        if (activeTab === 'published' && !course.isPublished) return false;
+        if (activeTab === 'unpublished' && course.isPublished) return false;
+
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesName = course.name.toLowerCase().includes(query);
+            const matchesId = course.courseId.toLowerCase().includes(query);
+            if (!matchesName && !matchesId) return false;
+        }
+
+        // Status filter
+        if (statusFilter) {
+            if (statusFilter === 'published' && !course.isPublished) return false;
+            if (statusFilter === 'unpublished' && course.isPublished) return false;
+        }
+
+        // Capacity filter
+        if (capacityFilter) {
+            const capacity = course.capacityStatus.toLowerCase();
+            if (capacityFilter === 'full' && capacity !== 'full') return false;
+            if (capacityFilter === 'nearly-full' && capacity !== 'nearly full') return false;
+            if (capacityFilter === 'open' && !capacity.includes('enrollment open')) return false;
+        }
+
+        // Session filter
+        if (sessionFilter) {
+            const hasSession = course.nextSession !== '-' && course.nextSession !== 'Not scheduled';
+            if (sessionFilter === 'scheduled' && !hasSession) return false;
+            if (sessionFilter === 'not-scheduled' && hasSession) return false;
+        }
+
+        return true;
     });
+
+    // Export to CSV handler
+    const handleExportCSV = () => {
+        const headers = ['Course Name', 'Course ID', 'Status', 'Capacity Status', 'Next Session', 'Bookings', 'Total Capacity'];
+        const csvData = filteredCourses.map(course => [
+            course.name,
+            course.courseId,
+            course.status,
+            course.capacityStatus,
+            course.nextSession,
+            course.bookings || 0,
+            course.totalCapacity || 0
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `courses_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Refresh handler
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        // Simulate refresh
+        setTimeout(() => {
+            setSearchQuery('');
+            setStatusFilter('');
+            setCapacityFilter('');
+            setSessionFilter('');
+            setCurrentPage(1);
+            setIsRefreshing(false);
+        }, 500);
+    };
 
     const totalCourses = activeTab === 'published' 
         ? coursesData.filter(c => c.isPublished).length 
@@ -273,12 +481,19 @@ function TrainingProviderCourses() {
                             </div>
 
                             {/* Refresh Button */}
-                            <button className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <RefreshCw className="h-4 w-4 text-gray-500" />
+                            <button 
+                                onClick={handleRefresh}
+                                className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                disabled={isRefreshing}
+                            >
+                                <RefreshCw className={`h-4 w-4 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
 
                             {/* Export CSV Button */}
-                            <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button 
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
                                 <Download className="h-4 w-4 text-gray-500" />
                                 Export CSV
                             </button>
@@ -402,56 +617,66 @@ function TrainingProviderCourses() {
                         <span>Showing</span>
                         <select
                             value={entriesPerPage}
-                            onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+                            onChange={(e) => {
+                                setEntriesPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
                             className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-200"
                         >
                             <option value={10}>10</option>
                             <option value={25}>25</option>
                             <option value={50}>50</option>
                         </select>
-                        <span>of 412 entries</span>
+                        <span>of {filteredCourses.length} entries</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                        <button 
+                        <button
                             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={currentPage === 1}
                         >
                             <ChevronDown className="h-4 w-4 rotate-90" />
                         </button>
-                        
-                        {[1, 2, 3].map((page) => (
-                            <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${
-                                    currentPage === page
-                                        ? 'bg-white border-gray-300 text-gray-900'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        
-                        <span className="px-2 text-gray-400">...</span>
-                        
+                        {/* Dynamic Pagination Buttons */}
+                        {(() => {
+                            const pages = [];
+                            const maxPages = totalPages;
+                            const showPages = 3;
+                            const lastPage = maxPages;
+                            if (maxPages <= 5) {
+                                for (let i = 1; i <= maxPages; i++) {
+                                    pages.push(i);
+                                }
+                            } else {
+                                if (currentPage <= 2) {
+                                    pages.push(1, 2, 3, '...', lastPage);
+                                } else if (currentPage >= maxPages - 1) {
+                                    pages.push(1, '...', maxPages - 2, maxPages - 1, maxPages);
+                                } else {
+                                    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', lastPage);
+                                }
+                            }
+                            return pages.map((page, idx) =>
+                                page === '...'
+                                    ? <span key={idx} className="px-2 text-gray-400">...</span>
+                                    : <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${
+                                            currentPage === page
+                                                ? 'bg-[#003971] border-[#003971] text-white'
+                                                : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                            );
+                        })()}
                         <button
-                            onClick={() => setCurrentPage(12)}
-                            className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${
-                                currentPage === 12
-                                    ? 'bg-white border-gray-300 text-gray-900'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            12
-                        </button>
-
-                        <button 
-                            onClick={() => setCurrentPage(Math.min(12, currentPage + 1))}
-                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                            disabled={currentPage === 12}
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={currentPage === totalPages}
                         >
                             <ChevronDown className="h-4 w-4 -rotate-90" />
                         </button>

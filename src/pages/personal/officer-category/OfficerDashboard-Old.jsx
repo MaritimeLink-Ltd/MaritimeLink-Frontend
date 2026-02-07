@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { countryCodes } from '../../../utils/countryCodes';
 
 const OfficerDashboard = () => {
   const navigate = useNavigate();
@@ -580,12 +581,13 @@ const OfficerDashboard = () => {
                       name="countryCode"
                       value={formData.countryCode}
                       onChange={handleChange}
-                      className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                      className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
                     >
-                      <option value="+92">🇵🇰 +92</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+91">🇮🇳 +91</option>
+                      {countryCodes.map((country) => (
+                        <option key={country.code + country.country} value={country.code}>
+                          {country.flag} {country.code}
+                        </option>
+                      ))}
                     </select>
                     <input
                       type="tel"
@@ -2161,12 +2163,13 @@ const OfficerDashboard = () => {
                             name="countryCode"
                             value={currentNextOfKin.countryCode}
                             onChange={handleNextOfKinChange}
-                            className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                            className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
                           >
-                            <option value="+92">🇵🇰 +92</option>
-                            <option value="+1">🇺🇸 +1</option>
-                            <option value="+44">🇬🇧 +44</option>
-                            <option value="+91">🇮🇳 +91</option>
+                            {countryCodes.map((country) => (
+                              <option key={country.code + country.country} value={country.code}>
+                                {country.flag} {country.code}
+                              </option>
+                            ))}
                           </select>
                           <input
                             type="tel"
@@ -2270,12 +2273,13 @@ const OfficerDashboard = () => {
                             name="countryCode"
                             value={currentReferee.countryCode}
                             onChange={handleRefereeChange}
-                            className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                            className="w-32 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
                           >
-                            <option value="+92">🇵🇰 +92</option>
-                            <option value="+1">🇺🇸 +1</option>
-                            <option value="+44">🇬🇧 +44</option>
-                            <option value="+91">🇮🇳 +91</option>
+                            {countryCodes.map((country) => (
+                              <option key={country.code + country.country} value={country.code}>
+                                {country.flag} {country.code}
+                              </option>
+                            ))}
                           </select>
                           <input
                             type="tel"

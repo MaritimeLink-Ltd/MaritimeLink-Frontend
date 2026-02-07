@@ -18,10 +18,19 @@ import {
     Smartphone,
     Monitor
 } from 'lucide-react';
+import { countryCodes } from '../../../../utils/countryCodes';
 
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
     const [profileImage, setProfileImage] = useState('/images/login-image.png');
+    const [profileData, setProfileData] = useState({
+        firstName: 'James',
+        lastName: 'Anderson',
+        email: 'james.anderson@maritimelink.com',
+        countryCode: '+44',
+        phoneNumber: '20 7123 4567',
+        role: 'HR Manager'
+    });
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -328,7 +337,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                                             <input
                                                 type="text"
-                                                defaultValue="James"
+                                                value={profileData.firstName}
+                                                onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -336,7 +346,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                                             <input
                                                 type="text"
-                                                defaultValue="Anderson"
+                                                value={profileData.lastName}
+                                                onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -348,7 +359,8 @@ function AdminSettings() {
                                         <div className="relative">
                                             <input
                                                 type="email"
-                                                defaultValue="james.anderson@maritimelink.com"
+                                                value={profileData.email}
+                                                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                                                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -359,20 +371,36 @@ function AdminSettings() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="tel"
-                                                    defaultValue="+44 20 7123 4567"
-                                                    className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
-                                                />
-                                                <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={profileData.countryCode}
+                                                    onChange={(e) => setProfileData({ ...profileData, countryCode: e.target.value })}
+                                                    className="w-32 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                                >
+                                                    {countryCodes.map((country) => (
+                                                        <option key={country.code + country.country} value={country.code}>
+                                                            {country.flag} {country.code}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="relative flex-1">
+                                                    <input
+                                                        type="tel"
+                                                        value={profileData.phoneNumber}
+                                                        onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
+                                                        className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                                        placeholder="Enter phone number"
+                                                    />
+                                                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                </div>
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
                                             <input
                                                 type="text"
-                                                defaultValue="HR Manager"
+                                                value={profileData.role}
+                                                onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>

@@ -18,16 +18,26 @@ function AdminLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const isActive = (path) => location.pathname === path;
 
-    const handleLogout = () => {
+    const handleLogoutClick = () => {
+        setDropdownOpen(false);
+        setShowLogoutModal(true);
+    };
+
+    const handleLogoutConfirm = () => {
         // Clear any stored user data
         localStorage.removeItem('userType');
         localStorage.removeItem('userEmail');
         localStorage.removeItem('adminUserType');
         // Navigate to landing page
         navigate('/');
+    };
+
+    const handleLogoutCancel = () => {
+        setShowLogoutModal(false);
     };
 
     const navItems = [
@@ -172,7 +182,7 @@ function AdminLayout() {
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
                                             <button
-                                                onClick={handleLogout}
+                                                onClick={handleLogoutClick}
                                                 className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                                             >
                                                 <LogOut className="h-4 w-4 mr-3" />
@@ -191,6 +201,37 @@ function AdminLayout() {
                     <Outlet />
                 </main>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                <LogOut className="h-6 w-6 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Logout Confirmation</h3>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Are you sure you want to logout? You will need to login again to access your dashboard.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleLogoutCancel}
+                                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleLogoutConfirm}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

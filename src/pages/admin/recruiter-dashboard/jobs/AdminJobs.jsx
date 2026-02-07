@@ -11,7 +11,8 @@ import {
     CheckCircle,
     Users,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Check
 } from 'lucide-react';
 
 function AdminJobs({ onViewApplicants, onCreateJob }) {
@@ -24,6 +25,17 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         jobType: 'Job Type',
         vessel: 'Vessel'
     });
+    const [showExportNotification, setShowExportNotification] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Refresh handler
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        // Simulate refresh
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 1000);
+    };
 
     const handleExportCSV = () => {
         // Prepare CSV data
@@ -47,19 +59,23 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
         // Create CSV content
         const csvContent = csvRows.join('\\n');
-        
+
         // Create blob and download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        
+
         link.setAttribute('href', url);
         link.setAttribute('download', `jobs_export_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Show export notification
+        setShowExportNotification(true);
+        setTimeout(() => setShowExportNotification(false), 3000);
     };
 
     const jobs = [
@@ -345,7 +361,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
                         <p className="text-gray-600 mt-1 text-sm font-medium">Manage your job listings and applications</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job')}
                         className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                     >
@@ -435,11 +451,15 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>
 
-                            <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                                <RefreshCw className="h-4 w-4 text-gray-600" />
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`h-4 w-4 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
 
-                            <button 
+                            <button
                                 onClick={handleExportCSV}
                                 className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
                             >
@@ -464,111 +484,118 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Action</th>
                                     </tr>
                                 </thead>
-                        <tbody>
-                            {currentJobs.map((job, idx) => (
-                                <tr key={job.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-gray-900">{job.title}</div>
-                                        <div className="text-xs text-gray-500 mt-0.5">
-                                            ID:<br />
-                                            {job.id}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-gray-900">{job.vessel}</div>
-                                        <div className="text-xs text-gray-500 mt-0.5">{job.domain}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-gray-700">{job.location}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-sm font-bold ${job.badge === 'Pro' ? 'text-blue-600' : 'text-gray-500'}`}>
-                                            {job.badge}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-gray-700 text-sm">{job.posted}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-sm font-bold ${job.status === 'Active' ? 'text-green-600' :
-                                            job.status === 'Draft' ? 'text-orange-600' :
-                                                'text-orange-600'
-                                            }`}>
-                                            {job.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {job.status !== 'Draft' ? (
-                                            <button
-                                                onClick={() => {
-                                                    if (onViewApplicants) {
-                                                        // Use internal callback for embedded dashboard
-                                                        onViewApplicants(job.id);
-                                                    } else {
-                                                        // Use navigation for standalone route
-                                                        navigate(`/admin/jobs/${job.id}`, { state: { jobData: job } });
-                                                    }
-                                                }}
-                                                className="text-[#003971] font-bold hover:underline text-sm"
-                                            >
-                                                View Applicants
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true } })}
-                                                className="text-gray-600 font-bold hover:underline text-sm"
-                                            >
-                                                Edit Draft
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                <tbody>
+                                    {currentJobs.map((job, idx) => (
+                                        <tr key={job.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-gray-900">{job.title}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                    ID:<br />
+                                                    {job.id}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-gray-900">{job.vessel}</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">{job.domain}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-gray-700">{job.location}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-sm font-bold ${job.badge === 'Pro' ? 'text-blue-600' : 'text-gray-500'}`}>
+                                                    {job.badge}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-gray-700 text-sm">{job.posted}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-sm font-bold ${job.status === 'Active' ? 'text-green-600' :
+                                                    job.status === 'Draft' ? 'text-orange-600' :
+                                                        'text-orange-600'
+                                                    }`}>
+                                                    {job.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {job.status !== 'Draft' ? (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (onViewApplicants) {
+                                                                // Use internal callback for embedded dashboard
+                                                                onViewApplicants(job.id);
+                                                            } else {
+                                                                // Use navigation for standalone route
+                                                                navigate(`/admin/jobs/${job.id}`, { state: { jobData: job } });
+                                                            }
+                                                        }}
+                                                        className="text-[#003971] font-bold hover:underline text-sm"
+                                                    >
+                                                        View Applicants
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true } })}
+                                                        className="text-gray-600 font-bold hover:underline text-sm"
+                                                    >
+                                                        Edit Draft
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
-                    <p className="text-sm text-gray-600 font-medium">
-                        Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalJobs)} of {totalJobs} entries
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors" 
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        {getPageNumbers().map((page, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => page !== '...' && handlePageChange(page)}
-                                className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${
-                                    page === currentPage
-                                        ? 'bg-[#003971] text-white'
-                                        : page === '...'
-                                            ? 'text-gray-400 cursor-default'
-                                            : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                                    }`}
-                                disabled={page === '...'}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        <button 
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+                        {/* Pagination */}
+                        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+                            <p className="text-sm text-gray-600 font-medium">
+                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalJobs)} of {totalJobs} entries
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                {getPageNumbers().map((page, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => page !== '...' && handlePageChange(page)}
+                                        className={`min-w-[40px] h-10 px-2 rounded-lg text-sm font-bold transition-colors ${page === currentPage
+                                            ? 'bg-[#003971] text-white'
+                                            : page === '...'
+                                                ? 'text-gray-400 cursor-default'
+                                                : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                        disabled={page === '...'}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Export Notification */}
+            {showExportNotification && (
+                <div className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-fade-in-up z-50">
+                    <Check className="h-5 w-5" />
+                    <span className="font-medium">Jobs exported successfully!</span>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

@@ -59,7 +59,7 @@ function TrainingProviderDashboard() {
             title: '12 learners waiting for Advanced Engineering Courses',
             subtitle: 'Next session: 10-12 June, Aberdeen',
             hasButton: false,
-            path: null
+            path: '/trainingprovider/courses'
         },
         {
             id: 2,
@@ -164,7 +164,7 @@ function TrainingProviderDashboard() {
                         <div
                             key={card.id}
                             onClick={() => navigate(card.path)}
-                            className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                            className={`bg-gradient-to-br ${card.bgGradient} rounded-[20px] p-6 text-white shadow-md cursor-pointer active:scale-[0.98] relative`}
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div className={`${card.iconBg} p-3 rounded-xl`}>
@@ -189,7 +189,8 @@ function TrainingProviderDashboard() {
                         {actionItems.map((item) => (
                             <div
                                 key={item.id}
-                                className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                                onClick={() => item.path && navigate(item.path)}
+                                className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${item.path ? 'cursor-pointer' : ''}`}
                             >
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -226,9 +227,6 @@ function TrainingProviderDashboard() {
                     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
                         <div className="flex items-center justify-between mb-5">
                             <h2 className="text-lg font-bold text-gray-900">Quick Overview</h2>
-                            <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                                <MoreVertical className="h-5 w-5 text-gray-400" />
-                            </button>
                         </div>
 
                         {/* Table Header */}

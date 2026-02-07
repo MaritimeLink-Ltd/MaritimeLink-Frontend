@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Zap,
     X,
     CheckCircle,
     Info,
     AlertTriangle,
-    AlertCircle
+    AlertCircle,
+    ChevronLeft
 } from 'lucide-react';
 
 function TrainingProviderNotifications() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState({
         announcement: true,
         toast: true,
@@ -27,6 +30,15 @@ function TrainingProviderNotifications() {
 
     return (
         <div className="max-w-5xl">
+            {/* Back Button */}
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+            >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+            </button>
+
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">

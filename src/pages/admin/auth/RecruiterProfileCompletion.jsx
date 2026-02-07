@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { countryCodes } from '../../../utils/countryCodes';
 
 function RecruiterProfileCompletion() {
     const navigate = useNavigate();
@@ -159,18 +160,18 @@ function RecruiterProfileCompletion() {
                             </label>
                             <div className="relative flex gap-2">
                                 {/* Country Code Dropdown */}
-                                <div className="relative w-24">
+                                <div className="relative w-32">
                                     <select
                                         name="countryCode"
                                         value={formData.countryCode}
                                         onChange={handleChange}
                                         className="block w-full pl-3 pr-8 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm appearance-none min-h-[44px]"
                                     >
-                                        <option value="+44">+44</option>
-                                        <option value="+1">+1</option>
-                                        <option value="+92">+92</option>
-                                        <option value="+91">+91</option>
-                                        <option value="+971">+971</option>
+                                        {countryCodes.map((country) => (
+                                            <option key={country.code + country.country} value={country.code}>
+                                                {country.flag} {country.code}
+                                            </option>
+                                        ))}
                                     </select>
                                     <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
                                         <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

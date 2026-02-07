@@ -3,7 +3,6 @@ import {
     User,
     Shield,
     Bell,
-    Key,
     Camera,
     Save,
     MapPin,
@@ -16,6 +15,7 @@ import {
     Copy,
     Trash2
 } from 'lucide-react';
+import { countryCodes } from '../../../utils/countryCodes';
 
 const TrainingProviderProfile = () => {
     const [activeTab, setActiveTab] = useState('general');
@@ -24,7 +24,8 @@ const TrainingProviderProfile = () => {
         firstName: 'Kingsley',
         lastName: 'Osifo',
         email: 'kingsley@maritimelink.com',
-        phone: '+44 7700 900077',
+        countryCode: '+44',
+        phone: '7700900077',
         jobTitle: 'Training Manager',
         department: 'Operations',
         companyName: 'MaritimeLink Training',
@@ -39,6 +40,10 @@ const TrainingProviderProfile = () => {
         confirm: ''
     });
 
+    const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+
     const [notifications, setNotifications] = useState({
         securityAlerts: true,
         bookingRequests: true,
@@ -48,15 +53,50 @@ const TrainingProviderProfile = () => {
         slaBreaches: true
     });
 
-    const [apiKeys, setApiKeys] = useState([
-        { id: 1, name: 'LMS Integration', hint: 'pk_live...92x', created: 'Oct 24, 2024', lastUsed: '2 mins ago' }
-    ]);
+    // Handle password update
+    const handleUpdatePassword = () => {
+        setPasswordError('');
+        setPasswordSuccess('');
+
+        // Validation
+        if (!passwords.current || !passwords.new || !passwords.confirm) {
+            setPasswordError('All fields are required');
+            return;
+        }
+
+        if (passwords.new.length < 8) {
+            setPasswordError('New password must be at least 8 characters');
+            return;
+        }
+
+        if (passwords.new !== passwords.confirm) {
+            setPasswordError('New passwords do not match');
+            return;
+        }
+
+        // Simulate API call
+        setTimeout(() => {
+            setPasswordSuccess('Password updated successfully!');
+            setPasswords({
+                current: '',
+                new: '',
+                confirm: ''
+            });
+
+            // Clear success message after 3 seconds
+            setTimeout(() => setPasswordSuccess(''), 3000);
+        }, 500);
+    };
+
+    // Handle 2FA toggle
+    const handle2FAToggle = () => {
+        setTwoFactorEnabled(!twoFactorEnabled);
+    };
 
     const menuItems = [
         { id: 'general', label: 'General Profile', icon: User },
         { id: 'security', label: 'Security', icon: Shield },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'api', label: 'API Keys', icon: Key }
+        { id: 'notifications', label: 'Notifications', icon: Bell }
     ];
 
     const Toggle = ({ checked, onChange }) => (
@@ -73,17 +113,17 @@ const TrainingProviderProfile = () => {
     );
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Header - Sticky */}
+            <div className="flex-shrink-0 pb-4">
                 <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
                 <p className="text-sm text-gray-500 mt-1">Manage your personal information and security preferences</p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Sidebar Navigation */}
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
+                {/* Left Sidebar Navigation - Sticky */}
                 <div className="w-full lg:w-64 flex-shrink-0">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-0">
                         <div className="p-2 space-y-1">
                             {menuItems.map((item) => (
                                 <button
@@ -102,8 +142,8 @@ const TrainingProviderProfile = () => {
                     </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 space-y-6">
+                {/* Main Content Area - Scrollable */}
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                     {activeTab === 'general' && (
                         <>
                             {/* Personal Information Card */}
@@ -157,12 +197,27 @@ const TrainingProviderProfile = () => {
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-semibold text-gray-500">Phone Number</label>
-                                            <input
-                                                type="text"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
-                                            />
+                                            <div className="flex gap-2">
+                                                <select
+                                                    name="countryCode"
+                                                    value={formData.countryCode}
+                                                    onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
+                                                    className="w-32 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                                >
+                                                    {countryCodes.map((country) => (
+                                                        <option key={country.code + country.country} value={country.code}>
+                                                            {country.flag} {country.code}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <input
+                                                    type="tel"
+                                                    value={formData.phone}
+                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                    className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                                    placeholder="Enter phone number"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-1.5">
@@ -260,6 +315,16 @@ const TrainingProviderProfile = () => {
                                 <p className="text-sm text-gray-500 mb-6">Update your password associated with your account.</p>
 
                                 <div className="space-y-6 max-w-2xl">
+                                    {passwordError && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium">
+                                            {passwordError}
+                                        </div>
+                                    )}
+                                    {passwordSuccess && (
+                                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 font-medium">
+                                            {passwordSuccess}
+                                        </div>
+                                    )}
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-semibold text-gray-500">Current Password</label>
                                         <input
@@ -284,7 +349,7 @@ const TrainingProviderProfile = () => {
                                         <label className="text-xs font-semibold text-gray-500">Confirm New Password</label>
                                         <input
                                             type="password"
-                                            placeholder="Confirm Current Password"
+                                            placeholder="Confirm New Password"
                                             value={passwords.confirm}
                                             onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
@@ -292,7 +357,10 @@ const TrainingProviderProfile = () => {
                                     </div>
 
                                     <div className="flex justify-end pt-2">
-                                        <button className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                        <button
+                                            onClick={handleUpdatePassword}
+                                            className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                        >
                                             Update Password
                                         </button>
                                     </div>
@@ -306,9 +374,15 @@ const TrainingProviderProfile = () => {
                                         <h2 className="text-lg font-bold text-gray-900">Two-Factor Authentication</h2>
                                         <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
                                     </div>
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-100">
-                                        <CheckCircle className="h-3 w-3" />
-                                        Enabled
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${twoFactorEnabled
+                                            ? 'bg-green-50 text-green-700 border-green-100'
+                                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                                        }`}>
+                                        {twoFactorEnabled ? (
+                                            <><CheckCircle className="h-3 w-3" /> Enabled</>
+                                        ) : (
+                                            'Disabled'
+                                        )}
                                     </span>
                                 </div>
 
@@ -322,8 +396,14 @@ const TrainingProviderProfile = () => {
                                             <p className="text-xs text-gray-500 mt-0.5">Google Authenticator, Authy, etc.</p>
                                         </div>
                                     </div>
-                                    <button className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                                        Disable
+                                    <button
+                                        onClick={handle2FAToggle}
+                                        className={`text-sm font-semibold transition-colors px-4 py-2 rounded-lg ${twoFactorEnabled
+                                                ? 'text-red-600 hover:bg-red-50'
+                                                : 'text-green-600 hover:bg-green-50 bg-green-50'
+                                            }`}
+                                    >
+                                        {twoFactorEnabled ? 'Disable' : 'Enable'}
                                     </button>
                                 </div>
                             </div>
@@ -455,64 +535,6 @@ const TrainingProviderProfile = () => {
                                 </div>
                             </div>
                         </>
-                    )}
-
-                    {activeTab === 'api' && (
-                        /* API Keys Section */
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
-                                    <p className="text-sm text-gray-500 mt-1">Manage API keys for external integrations.</p>
-                                </div>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
-                                    <Plus className="h-4 w-4" />
-                                    Create New Key
-                                </button>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-gray-50">
-                                            <th className="text-left text-xs font-semibold text-gray-500 pb-3 pl-2">Name</th>
-                                            <th className="text-left text-xs font-semibold text-gray-500 pb-3">Key Hint</th>
-                                            <th className="text-left text-xs font-semibold text-gray-500 pb-3">Created</th>
-                                            <th className="text-left text-xs font-semibold text-gray-500 pb-3">Last Used</th>
-                                            <th className="text-right text-xs font-semibold text-gray-500 pb-3 pr-2">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {apiKeys.map((key) => (
-                                            <tr key={key.id} className="group hover:bg-gray-50/50 transition-colors">
-                                                <td className="py-4 pl-2">
-                                                    <span className="text-sm font-bold text-gray-900">{key.name}</span>
-                                                </td>
-                                                <td className="py-4">
-                                                    <code className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">{key.hint}</code>
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className="text-sm text-gray-500">{key.created}</span>
-                                                </td>
-                                                <td className="py-4">
-                                                    <span className="text-sm text-gray-500">{key.lastUsed}</span>
-                                                </td>
-                                                <td className="py-4 pr-2 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-all">
-                                                            <Copy className="h-4 w-4" />
-                                                        </button>
-                                                        <button className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     )}
                 </div>
             </div>

@@ -4,7 +4,12 @@ import { Search, ChevronLeft, ChevronRight, ChevronDown, Anchor, LifeBuoy, Users
 
 export default function Bookings() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('Upcoming (5)');
+    const [activeTab, setActiveTab] = useState('upcoming');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [regionFilter, setRegionFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(9);
 
     // Mock data for bookings
     const bookings = [
@@ -20,7 +25,8 @@ export default function Bookings() {
             bookingStatus: 'Pending',
             icon: LifeBuoy,
             iconColor: 'text-blue-600',
-            iconBg: 'bg-blue-50'
+            iconBg: 'bg-blue-50',
+            isUpcoming: true
         },
         {
             id: 'CSA-02',
@@ -34,7 +40,8 @@ export default function Bookings() {
             bookingStatus: 'Full',
             icon: Anchor,
             iconColor: 'text-purple-600',
-            iconBg: 'bg-purple-50'
+            iconBg: 'bg-purple-50',
+            isUpcoming: false
         },
         {
             id: 'SBS-03',
@@ -48,7 +55,8 @@ export default function Bookings() {
             bookingStatus: 'Pending',
             icon: Users,
             iconColor: 'text-indigo-600',
-            iconBg: 'bg-indigo-50'
+            iconBg: 'bg-indigo-50',
+            isUpcoming: true
         },
         {
             id: 'GWO-04',
@@ -62,7 +70,8 @@ export default function Bookings() {
             bookingStatus: 'Open',
             icon: Anchor,
             iconColor: 'text-teal-600',
-            iconBg: 'bg-teal-50'
+            iconBg: 'bg-teal-50',
+            isUpcoming: true
         },
         {
             id: 'AFF-05',
@@ -76,7 +85,8 @@ export default function Bookings() {
             bookingStatus: 'Full',
             icon: Flame,
             iconColor: 'text-orange-600',
-            iconBg: 'bg-orange-50'
+            iconBg: 'bg-orange-50',
+            isUpcoming: true
         },
         {
             id: 'SSO-06',
@@ -90,7 +100,8 @@ export default function Bookings() {
             bookingStatus: 'Open',
             icon: UserCircle,
             iconColor: 'text-cyan-600',
-            iconBg: 'bg-cyan-50'
+            iconBg: 'bg-cyan-50',
+            isUpcoming: false
         },
         {
             id: 'SBS-07',
@@ -104,7 +115,8 @@ export default function Bookings() {
             bookingStatus: 'Pending',
             icon: Users,
             iconColor: 'text-indigo-600',
-            iconBg: 'bg-indigo-50'
+            iconBg: 'bg-indigo-50',
+            isUpcoming: true
         },
         {
             id: 'MFA-08',
@@ -118,9 +130,62 @@ export default function Bookings() {
             bookingStatus: 'Open',
             icon: LifeBuoy,
             iconColor: 'text-pink-600',
-            iconBg: 'bg-pink-50'
+            iconBg: 'bg-pink-50',
+            isUpcoming: false
         }
     ];
+
+    // Get upcoming count for tab display
+    const upcomingCount = bookings.filter(b => b.isUpcoming).length;
+
+    // Filter bookings based on search, tab, and filters
+    const filteredBookings = bookings.filter(booking => {
+        // Tab filter
+        if (activeTab === 'upcoming') {
+            if (!booking.isUpcoming) return false;
+        } else if (activeTab === 'past') {
+            if (booking.isUpcoming) return false;
+        }
+        // 'all' tab shows everything
+
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesCourse = booking.course.toLowerCase().includes(query);
+            const matchesSession = booking.sessionCode.toLowerCase().includes(query);
+            const matchesLocation = booking.location.toLowerCase().includes(query);
+            const matchesId = booking.id.toLowerCase().includes(query);
+            if (!matchesCourse && !matchesSession && !matchesLocation && !matchesId) return false;
+        }
+
+        // Region filter
+        if (regionFilter) {
+            if (regionFilter === 'aberdeen' && booking.location !== 'Aberdeen') return false;
+            if (regionFilter === 'liverpool' && booking.location !== 'Liverpool') return false;
+        }
+
+        // Status filter
+        if (statusFilter) {
+            if (statusFilter === 'full' && booking.bookingStatus !== 'Full') return false;
+            if (statusFilter === 'pending' && booking.bookingStatus !== 'Pending') return false;
+            if (statusFilter === 'open' && booking.bookingStatus !== 'Open') return false;
+        }
+
+        return true;
+    });
+
+    const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentBookings = filteredBookings.slice(startIndex, endIndex);
+
+    const handlePreviousPage = () => {
+        if (currentPage > 1) setCurrentPage(currentPage - 1);
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    };
 
     const getProgressColor = (current, total) => {
         const percentage = (current / total) * 100;
@@ -156,6 +221,11 @@ export default function Bookings() {
                             <input
                                 type="text"
                                 placeholder="Search sessions..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
                             />
                         </div>
@@ -163,23 +233,36 @@ export default function Bookings() {
                         {/* Tab Buttons & Filters */}
                         <div className="flex items-center gap-3">
                             <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                                {['All', 'Upcoming (5)', 'Past'].map((tab) => (
+                                {[
+                                    { key: 'all', label: 'All' },
+                                    { key: 'upcoming', label: `Upcoming (${upcomingCount})` },
+                                    { key: 'past', label: 'Past' }
+                                ].map((tab) => (
                                     <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === tab
+                                        key={tab.key}
+                                        onClick={() => {
+                                            setActiveTab(tab.key);
+                                            setCurrentPage(1);
+                                        }}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === tab.key
                                             ? 'bg-white text-gray-900 shadow-sm'
                                             : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
-                                        {tab}
+                                        {tab.label}
                                     </button>
                                 ))}
                             </div>
 
                             {/* Region Filter */}
                             <div className="relative">
-                                <select className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer">
+                                <select
+                                    value={regionFilter}
+                                    onChange={(e) => {
+                                        setRegionFilter(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer">
                                     <option value="">My Region</option>
                                     <option value="aberdeen">Aberdeen</option>
                                     <option value="liverpool">Liverpool</option>
@@ -189,7 +272,13 @@ export default function Bookings() {
 
                             {/* Status Filter */}
                             <div className="relative">
-                                <select className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => {
+                                        setStatusFilter(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer">
                                     <option value="">Status</option>
                                     <option value="full">Full</option>
                                     <option value="pending">Pending</option>
@@ -214,7 +303,7 @@ export default function Bookings() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {bookings.map((booking) => (
+                            {currentBookings.map((booking) => (
                                 <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                                     {/* Course */}
                                     <td className="px-6 py-4">
@@ -295,29 +384,56 @@ export default function Bookings() {
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                         <span>Showing</span>
-                        <span className="border border-gray-200 rounded px-2 py-1 text-sm">1 - 9</span>
-                        <span>of 87 bookings</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
+                            className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-200"
+                        >
+                            <option value={5}>5</option>
+                            <option value={9}>9</option>
+                            <option value={25}>25</option>
+                        </select>
+                        <span>of {filteredBookings.length} bookings</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                        <button
+                            onClick={handlePreviousPage}
+                            disabled={currentPage === 1}
+                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        {[1, 2, 3].map((page) => (
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
                             <button
                                 key={page}
-                                className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${page === 1
-                                    ? 'bg-white border-gray-300 text-gray-900'
+                                onClick={() => setCurrentPage(page)}
+                                className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${page === currentPage
+                                    ? 'bg-[#003971] border-[#003971] text-white'
                                     : 'border-transparent text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 {page}
                             </button>
                         ))}
-                        <span className="px-2 text-gray-400">...</span>
-                        <button className="min-w-[32px] h-8 text-sm font-medium rounded border-transparent text-gray-500 hover:text-gray-700">
-                            12
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600">
+                        {totalPages > 5 && (
+                            <>
+                                <span className="px-2 text-gray-400">...</span>
+                                <button
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${totalPages === currentPage
+                                        ? 'bg-[#003971] border-[#003971] text-white'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        }`}>
+                                    {totalPages}
+                                </button>
+                            </>
+                        )}
+                        <button
+                            onClick={handleNextPage}
+                            disabled={currentPage === totalPages}
+                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     </div>

@@ -54,6 +54,7 @@ import CourseDetail from './pages/admin/trainingprovider-dashboard/courses/Cours
 import ManageSessions from './pages/admin/trainingprovider-dashboard/courses/ManageSessions';
 import ScheduleSession from './pages/admin/trainingprovider-dashboard/courses/ScheduleSession';
 import TrainingProviderCreateCourse from './pages/admin/trainingprovider-dashboard/courses/CreateCourse';
+import EditCourse from './pages/admin/trainingprovider-dashboard/courses/EditCourse';
 import Bookings from './pages/admin/trainingprovider-dashboard/bookings/Bookings';
 import BookingDetail from './pages/admin/trainingprovider-dashboard/bookings/BookingDetail';
 import TrainingProviderNotifications from './pages/admin/trainingprovider-dashboard/TrainingProviderNotifications';
@@ -164,10 +165,13 @@ function App() {
           <Route path="/trainingprovider/courses/:courseId/sessions" element={<ManageSessions />} />
           <Route path="/trainingprovider/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
           <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
+          <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
           <Route path="/trainingprovider/bookings" element={<Bookings />} />
           <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
           <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
           <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
+          <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
+          <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
         </Route>
 
         {/* Super Admin Protected Routes (With Layout) */}
