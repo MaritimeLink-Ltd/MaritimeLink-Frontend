@@ -1,14 +1,184 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, Briefcase, GraduationCap, CheckCircle, AlertTriangle, XCircle, RefreshCw, Download, Clock, Eye, FileEdit, PauseCircle, Upload, Plus } from 'lucide-react';
 
 function Marketplace() {
     const [activeMainTab, setActiveMainTab] = useState('Oversight');
     const [activeSubTab, setActiveSubTab] = useState('Jobs');
     const [timeFilter, setTimeFilter] = useState('Today');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('Status');
+    const [riskFilter, setRiskFilter] = useState('Risk Level');
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showExportNotification, setShowExportNotification] = useState(false);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 7; // Adjusted for view
+
+    // Dropdown Visibility State
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [showRiskDropdown, setShowRiskDropdown] = useState(false);
+    const fileInputRef = useRef(null);
+
+    // Bulk Upload State
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadComplete, setUploadComplete] = useState(false);
+
+    const navigate = useNavigate();
+
+    // Handlers
+    const handleCreateNew = () => {
+        if (activeSubTab === 'Jobs') {
+            navigate('/admin/marketplace/create-job', {
+                state: {
+                    dashboardType: 'admin',
+                    returnPath: '/admin/marketplace'
+                }
+            });
+        } else {
+            navigate('/admin/create-course');
+        }
+    };
+
+    const handleBulkUploadClick = () => {
+        setShowUploadModal(true);
+        setUploadFile(null);
+        setUploadComplete(false);
+    };
+
+    const handleFileSelect = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setUploadFile(file);
+        }
+    };
+
+    const handleUploadSubmit = () => {
+        if (!uploadFile) return;
+
+        setIsUploading(true);
+        // Simulate upload delay
+        setTimeout(() => {
+            setIsUploading(false);
+            setUploadComplete(true);
+            // Close modal after brief success message
+            setTimeout(() => {
+                setShowUploadModal(false);
+                setUploadComplete(false);
+                setUploadFile(null);
+            }, 2000);
+        }, 1500);
+    };
+
+    const handleBulkUploadFile = (event) => {
+        // Kept for backward compatibility if needed, but handleFileSelect is preferred
+        handleFileSelect(event);
+    };
 
     const mainTabs = ['Oversight', 'MaritimeLink Listings'];
     const timeFilters = ['Today', '7 Days', '30 Days'];
+
+    // Filter Options
+    const statusOptions = ['All', 'Active', 'Draft', 'Paused', 'Flagged'];
+    const riskOptions = ['All', 'High', 'Medium', 'Low'];
+
+    // Refresh handler
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        // Reset filters
+        setSearchQuery('');
+        setStatusFilter('Status');
+        setRiskFilter('Risk Level');
+        setCurrentPage(1);
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 1000);
+    };
+
+    // Export CSV handler
+    const handleExportCSV = () => {
+        const currentData = getCurrentData();
+        const headers = isMaritimeLinkTab
+            ? (activeSubTab === 'Jobs'
+                ? ['ID', 'Job Title', 'Type', 'Location', 'Status', 'Applications', 'Views', 'Posted']
+                : ['ID', 'Course Name', 'Type', 'Location', 'Status', 'Bookings', 'Views', 'Posted'])
+            : (activeSubTab === 'Jobs'
+                ? ['ID', 'Recruiter/Company', 'Total Live Jobs', 'Jobs Posted', 'Total Applications', 'Flagged Jobs', 'Risk Level']
+                : ['ID', 'Course Name', 'Type', 'Company/Provider', 'Status', 'Bookings', 'Posted']);
+
+        const csvRows = [headers.join(',')];
+
+        currentData.forEach(record => {
+            let row;
+            if (isMaritimeLinkTab) {
+                if (activeSubTab === 'Jobs') {
+                    row = [
+                        record.id,
+                        `"${record.jobTitle}"`,
+                        `"${record.type}"`,
+                        `"${record.location}"`,
+                        record.status,
+                        record.applications,
+                        record.views,
+                        `"${record.posted}"`
+                    ];
+                } else {
+                    row = [
+                        record.id,
+                        `"${record.courseName}"`,
+                        `"${record.type}"`,
+                        `"${record.location}"`,
+                        record.status,
+                        record.bookings,
+                        record.views,
+                        `"${record.posted}"`
+                    ];
+                }
+            } else {
+                if (activeSubTab === 'Jobs') {
+                    row = [
+                        record.id,
+                        `"${record.recruiterName}"`,
+                        record.totalLiveJobs,
+                        record.jobsPosted,
+                        record.totalApplications,
+                        record.flaggedJobs,
+                        record.riskLevel
+                    ];
+                } else {
+                    row = [
+                        record.id,
+                        `"${record.courseName}"`,
+                        `"${record.type}"`,
+                        `"${record.company}"`,
+                        record.status,
+                        record.bookings,
+                        `"${record.posted}"`
+                    ];
+                }
+            }
+            csvRows.push(row.join(','));
+        });
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `marketplace_${activeMainTab.toLowerCase()}_${activeSubTab.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setShowExportNotification(true);
+        setTimeout(() => setShowExportNotification(false), 3000);
+    };
 
     // Oversight - Jobs Stats
     const oversightJobsStats = [
@@ -311,16 +481,99 @@ function Marketplace() {
     };
 
     const getCurrentData = () => {
+        let data;
         if (activeMainTab === 'Oversight') {
-            return activeSubTab === 'Jobs' ? oversightJobsData : oversightTrainingData;
+            data = activeSubTab === 'Jobs' ? oversightJobsData : oversightTrainingData;
         } else {
-            return activeSubTab === 'Jobs' ? maritimeLinkJobsData : maritimeLinkTrainingData;
+            data = activeSubTab === 'Jobs' ? maritimeLinkJobsData : maritimeLinkTrainingData;
         }
+
+        // Apply search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            data = data.filter(record => {
+                if (isMaritimeLinkTab) {
+                    if (activeSubTab === 'Jobs') {
+                        return record.jobTitle?.toLowerCase().includes(query) ||
+                            record.type?.toLowerCase().includes(query) ||
+                            record.location?.toLowerCase().includes(query);
+                    } else {
+                        return record.courseName?.toLowerCase().includes(query) ||
+                            record.type?.toLowerCase().includes(query) ||
+                            record.location?.toLowerCase().includes(query);
+                    }
+                } else {
+                    if (activeSubTab === 'Jobs') {
+                        return record.recruiterName?.toLowerCase().includes(query) ||
+                            record.recruiterSubtext?.toLowerCase().includes(query);
+                    } else {
+                        return record.courseName?.toLowerCase().includes(query) ||
+                            record.company?.toLowerCase().includes(query);
+                    }
+                }
+            });
+        }
+
+        // Apply Status Filter
+        if (statusFilter !== 'Status' && statusFilter !== 'All') {
+            data = data.filter(record => record.status === statusFilter);
+        }
+
+        // Apply Risk Filter (Only valid for Oversight Jobs usually, but we implement generic check)
+        if (riskFilter !== 'Risk Level' && riskFilter !== 'All') {
+            data = data.filter(record => record.riskLevel === riskFilter);
+        }
+
+        // Apply Time Filter based on posted field
+        if (timeFilter !== '30 Days') {
+            data = data.filter(record => {
+                const posted = record.posted?.toLowerCase() || '';
+                let daysAgo = 0;
+
+                if (posted.includes('today')) {
+                    daysAgo = 0;
+                } else if (posted.includes('yesterday')) {
+                    daysAgo = 1;
+                } else if (posted.includes('hour')) {
+                    daysAgo = 0;
+                } else if (posted.includes('day')) {
+                    const match = posted.match(/(\d+)/);
+                    daysAgo = match ? parseInt(match[1]) : 1;
+                } else if (posted.includes('week')) {
+                    const match = posted.match(/(\d+)/);
+                    daysAgo = match ? parseInt(match[1]) * 7 : 7;
+                } else if (posted.includes('month')) {
+                    const match = posted.match(/(\d+)/);
+                    daysAgo = match ? parseInt(match[1]) * 30 : 30;
+                }
+
+                if (timeFilter === 'Today') {
+                    return daysAgo === 0;
+                } else if (timeFilter === '7 Days') {
+                    return daysAgo <= 7;
+                }
+                return true;
+            });
+        }
+
+        return data;
     };
 
     const currentStats = getCurrentStats();
     const currentData = getCurrentData();
     const isMaritimeLinkTab = activeMainTab === 'MaritimeLink Listings';
+
+    // Pagination Logic
+    const totalPages = Math.ceil(currentData.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = currentData.slice(startIndex, endIndex);
+
+    const handlePageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     return (
         <div className="h-screen flex flex-col overflow-hidden">
@@ -430,11 +683,24 @@ function Marketplace() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#003971] rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+                        <input
+                            type="file"
+                            ref={fileInputRef} // I need to verify if I have declared this ref
+                            style={{ display: 'none' }}
+                            accept=".csv"
+                            onChange={handleBulkUploadFile}
+                        />
+                        <button
+                            onClick={handleBulkUploadClick}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#003971] rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                        >
                             <Upload className="h-4 w-4" />
                             Bulk Upload (CSV)
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors">
+                        <button
+                            onClick={handleCreateNew}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors"
+                        >
                             <Plus className="h-4 w-4" />
                             {activeSubTab === 'Jobs' ? 'Create New Job' : 'Create New Course'}
                         </button>
@@ -453,24 +719,83 @@ function Marketplace() {
                             <input
                                 type="text"
                                 placeholder="Search listings..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                             />
                         </div>
 
                         {/* Filters */}
                         <div className="flex items-center gap-2">
-                            <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                Status
-                                <ChevronDown className="h-4 w-4" />
+                            {/* Status Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                    className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 ${statusFilter !== 'Status' ? 'border-[#1e5a8f] text-[#1e5a8f] bg-[#1e5a8f]/5' : 'border-gray-200 text-gray-700'}`}
+                                >
+                                    {statusFilter}
+                                    <ChevronDown className="h-4 w-4" />
+                                </button>
+                                {showStatusDropdown && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                                        {statusOptions.map((option) => (
+                                            <button
+                                                key={option}
+                                                onClick={() => {
+                                                    setStatusFilter(option === 'All' ? 'Status' : option);
+                                                    setShowStatusDropdown(false);
+                                                    setCurrentPage(1);
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${statusFilter === option || (statusFilter === 'Status' && option === 'All') ? 'text-[#1e5a8f] font-semibold bg-gray-50' : 'text-gray-700'}`}
+                                            >
+                                                {option}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Risk Level Dropdown - Only show for Oversight Jobs or where applicable */}
+                            {(!isMaritimeLinkTab && activeSubTab === 'Jobs') && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowRiskDropdown(!showRiskDropdown)}
+                                        className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 ${riskFilter !== 'Risk Level' ? 'border-[#1e5a8f] text-[#1e5a8f] bg-[#1e5a8f]/5' : 'border-gray-200 text-gray-700'}`}
+                                    >
+                                        {riskFilter}
+                                        <ChevronDown className="h-4 w-4" />
+                                    </button>
+                                    {showRiskDropdown && (
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                                            {riskOptions.map((option) => (
+                                                <button
+                                                    key={option}
+                                                    onClick={() => {
+                                                        setRiskFilter(option === 'All' ? 'Risk Level' : option);
+                                                        setShowRiskDropdown(false);
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${riskFilter === option || (riskFilter === 'Risk Level' && option === 'All') ? 'text-[#1e5a8f] font-semibold bg-gray-50' : 'text-gray-700'}`}
+                                                >
+                                                    {option}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
-                            <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                Risk Level
-                                <ChevronDown className="h-4 w-4" />
-                            </button>
-                            <button className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
-                                <RefreshCw className="h-4 w-4" />
-                            </button>
-                            <button className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
                                 <Download className="h-4 w-4" />
                                 Export CSV
                             </button>
@@ -598,7 +923,7 @@ function Marketplace() {
                             {isMaritimeLinkTab ? (
                                 // MaritimeLink table rows
                                 activeSubTab === 'Jobs' ? (
-                                    maritimeLinkJobsData.map((record) => (
+                                    paginatedData.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="text-sm font-semibold text-gray-900">{record.jobTitle}</div>
@@ -637,7 +962,7 @@ function Marketplace() {
                                         </tr>
                                     ))
                                 ) : (
-                                    maritimeLinkTrainingData.map((record) => (
+                                    paginatedData.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="text-sm font-semibold text-gray-900">{record.courseName}</div>
@@ -679,7 +1004,7 @@ function Marketplace() {
                             ) : (
                                 // Oversight table rows
                                 activeSubTab === 'Jobs' ? (
-                                    oversightJobsData.map((record) => (
+                                    paginatedData.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="text-sm font-semibold text-gray-900">{record.recruiterName}</div>
@@ -713,7 +1038,7 @@ function Marketplace() {
                                         </tr>
                                     ))
                                 ) : (
-                                    oversightTrainingData.map((record) => (
+                                    paginatedData.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="text-sm font-semibold text-gray-900">{record.courseName}</div>
@@ -757,31 +1082,133 @@ function Marketplace() {
                 {/* Pagination */}
                 <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-white">
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-semibold">10</span> of <span className="font-semibold">124</span> entries
+                        Showing <span className="font-semibold">{Math.min(startIndex + 1, currentData.length)}</span> - <span className="font-semibold">{Math.min(endIndex, currentData.length)}</span> of <span className="font-semibold">{currentData.length}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             &larr;
                         </button>
-                        <button className="px-3 py-1.5 bg-[#1e5a8f] text-white rounded-lg text-sm font-medium">
-                            1
-                        </button>
-                        <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            2
-                        </button>
-                        <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            3
-                        </button>
-                        <span className="px-2 text-gray-500">...</span>
-                        <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            12
-                        </button>
-                        <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${currentPage === page
+                                    ? 'bg-[#1e5a8f] text-white'
+                                    : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             &rarr;
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Export Success Notification */}
+            {showExportNotification && (
+                <div className="fixed bottom-6 right-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-up z-50">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="font-semibold">Data exported successfully!</span>
+                </div>
+            )}
+            {/* Bulk Upload Modal */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+                        <button
+                            onClick={() => setShowUploadModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <XCircle className="h-6 w-6" />
+                        </button>
+
+                        <div className="text-center mb-6">
+                            <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                                <Upload className="h-6 w-6 text-[#003971]" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">Bulk Upload {activeSubTab}</h3>
+                            <p className="text-gray-500 text-sm mt-1">Upload a CSV file to import multiple listings at once</p>
+                        </div>
+
+                        {!uploadComplete ? (
+                            <>
+                                <div
+                                    onClick={() => fileInputRef.current.click()}
+                                    className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center cursor-pointer transition-colors ${uploadFile ? 'border-[#003971] bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        style={{ display: 'none' }}
+                                        accept=".csv"
+                                        onChange={handleFileSelect}
+                                    />
+
+                                    {uploadFile ? (
+                                        <div className="flex flex-col items-center">
+                                            <FileEdit className="h-8 w-8 text-[#003971] mb-2" />
+                                            <span className="font-semibold text-gray-900">{uploadFile.name}</span>
+                                            <span className="text-xs text-gray-500">{(uploadFile.size / 1024).toFixed(2)} KB</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center">
+                                            <Download className="h-8 w-8 text-gray-400 mb-2" />
+                                            <span className="text-sm font-semibold text-gray-700">Click to upload or drag and drop</span>
+                                            <span className="text-xs text-gray-500 mt-1">CSV files only (max 10MB)</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowUploadModal(false)}
+                                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUploadSubmit}
+                                        disabled={!uploadFile || isUploading}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg text-white font-semibold transition-all ${!uploadFile || isUploading
+                                            ? 'bg-gray-300 cursor-not-allowed'
+                                            : 'bg-[#003971] hover:bg-[#002855] shadow-lg hover:shadow-xl'
+                                            }`}
+                                    >
+                                        {isUploading ? (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                                <span>Uploading...</span>
+                                            </div>
+                                        ) : (
+                                            'Upload File'
+                                        )}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-8">
+                                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300">
+                                    <CheckCircle className="h-8 w-8 text-green-600" />
+                                </div>
+                                <h4 className="text-xl font-bold text-gray-900 mb-2">Upload Successful!</h4>
+                                <p className="text-gray-500">Your listings have been queued for processing.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

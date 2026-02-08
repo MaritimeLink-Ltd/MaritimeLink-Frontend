@@ -362,7 +362,12 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         <p className="text-gray-600 mt-1 text-sm font-medium">Manage your job listings and applications</p>
                     </div>
                     <button
-                        onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job')}
+                        onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job', {
+                            state: {
+                                dashboardType: 'recruiter',
+                                returnPath: '/admin/jobs'
+                            }
+                        })}
                         className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                     >
                         <Plus className="h-4 w-4" />
@@ -535,7 +540,14 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true } })}
+                                                        onClick={() => navigate('/admin/upload-job', {
+                                                            state: {
+                                                                jobData: job,
+                                                                isEdit: true,
+                                                                dashboardType: 'recruiter',
+                                                                returnPath: '/admin/jobs'
+                                                            }
+                                                        })}
                                                         className="text-gray-600 font-bold hover:underline text-sm"
                                                     >
                                                         Edit Draft

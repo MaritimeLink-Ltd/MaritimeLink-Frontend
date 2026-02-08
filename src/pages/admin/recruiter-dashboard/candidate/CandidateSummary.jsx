@@ -268,13 +268,16 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : '/admin/cv-resume')}
-                            className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
-                        >
-                            <FileText className="h-5 w-5" />
-                            View Resume
-                        </button>
+                        {/* Hide View Resume button for Admin Marketplace */}
+                        {!location.pathname.includes('/marketplace/candidate/') && (
+                            <button
+                                onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : '/admin/cv-resume')}
+                                className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
+                            >
+                                <FileText className="h-5 w-5" />
+                                View Resume
+                            </button>
+                        )}
                         <button
                             onClick={() => setShowDocumentWallet(true)}
                             className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors"
@@ -282,8 +285,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             <Wallet className="h-5 w-5" />
                             View Document Wallet
                         </button>
-                        {/* Hide Message button for Training Provider dashboard */}
-                        {!location.pathname.includes('/trainingprovider/') && (
+                        {/* Hide Message button for Training Provider dashboard and Admin Marketplace */}
+                        {!location.pathname.includes('/trainingprovider/') && !location.pathname.includes('/marketplace/candidate/') && (
                             <button
                                 onClick={() => onMessage ? onMessage(candidateId, candidate.name) : navigate('/admin/chats')}
                                 className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
@@ -339,8 +342,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
                 </div>
 
-                {/* Application Status */}
-                {shouldShowApplicationStatus && (
+                {/* Application Status - Hide for Admin Marketplace */}
+                {shouldShowApplicationStatus && !location.pathname.includes('/marketplace/candidate/') && (
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-[#003971]">Application Status</h2>

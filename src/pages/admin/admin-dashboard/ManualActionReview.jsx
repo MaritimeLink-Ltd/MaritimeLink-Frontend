@@ -1,8 +1,9 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Shield, AlertTriangle, FileText, CheckCircle, Clock, ChevronRight } from 'lucide-react';
 
 function ManualActionReview() {
     const { id } = useParams();
+    const navigate = useNavigate();
 
     // Sample data based on design
     const actionData = {
@@ -33,12 +34,12 @@ function ManualActionReview() {
             {/* Header */}
             <div className="flex-shrink-0 mb-8 pt-2">
                 <div className="flex items-center gap-2 mb-1">
-                    <Link
-                        to="/admin/operations"
+                    <button
+                        onClick={() => navigate(-1)}
                         className="p-2 -ml-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         <ArrowLeft className="h-5 w-5" />
-                    </Link>
+                    </button>
                     <h1 className="text-2xl font-bold text-gray-900">Review Action</h1>
                 </div>
                 <div className="pl-9 text-sm text-gray-400 font-medium">ID: {actionData.id}</div>

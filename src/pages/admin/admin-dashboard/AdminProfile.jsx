@@ -16,7 +16,8 @@ import {
     CheckCircle,
     Plus,
     Copy,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-react';
 
 const AdminProfile = () => {
@@ -55,6 +56,15 @@ const AdminProfile = () => {
         { id: 2, name: 'Staging Environment', hint: 'pk_test...88a', created: 'Sep 12, 2024', lastUsed: '1 day ago' }
     ]);
 
+    const [showCreateKeyModal, setShowCreateKeyModal] = useState(false);
+    const [newKeyData, setNewKeyData] = useState({
+        name: '',
+        description: '',
+        expiresIn: '90'
+    });
+    const [createdKey, setCreatedKey] = useState(null);
+    const [keyCopied, setKeyCopied] = useState(false);
+
     const menuItems = [
         { id: 'general', label: 'General Profile', icon: User },
         { id: 'security', label: 'Security', icon: Shield },
@@ -75,18 +85,58 @@ const AdminProfile = () => {
         </button>
     );
 
+    const generateApiKey = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let key = 'pk_live_';
+        for (let i = 0; i < 32; i++) {
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return key;
+    };
+
+    const handleCreateKey = () => {
+        if (!newKeyData.name.trim()) return;
+
+        const fullKey = generateApiKey();
+        const newKey = {
+            id: apiKeys.length + 1,
+            name: newKeyData.name,
+            hint: fullKey.slice(0, 7) + '...' + fullKey.slice(-3),
+            created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            lastUsed: 'Never'
+        };
+
+        setCreatedKey(fullKey);
+        setApiKeys([...apiKeys, newKey]);
+    };
+
+    const handleCloseModal = () => {
+        setShowCreateKeyModal(false);
+        setNewKeyData({ name: '', description: '', expiresIn: '90' });
+        setCreatedKey(null);
+        setKeyCopied(false);
+    };
+
+    const handleCopyKey = () => {
+        if (createdKey) {
+            navigator.clipboard.writeText(createdKey);
+            setKeyCopied(true);
+            setTimeout(() => setKeyCopied(false), 2000);
+        }
+    };
+
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Header - Sticky */}
+            <div className="flex-shrink-0 pb-4">
                 <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
                 <p className="text-sm text-gray-500 mt-1">Manage your personal information and security preferences</p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Sidebar Navigation */}
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
+                {/* Left Sidebar Navigation - Sticky */}
                 <div className="w-full lg:w-64 flex-shrink-0">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-0">
                         <div className="p-2 space-y-1">
                             {menuItems.map((item) => (
                                 <button
@@ -105,8 +155,8 @@ const AdminProfile = () => {
                     </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex-1 space-y-6">
+                {/* Main Content Area - Scrollable */}
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                     {activeTab === 'general' && (
                         <>
                             {/* Personal Information Card */}
@@ -302,35 +352,6 @@ const AdminProfile = () => {
                                 </div>
                             </div>
 
-                            {/* 2FA Section */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-gray-900">Two-Factor Authentication</h2>
-                                        <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
-                                    </div>
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-100">
-                                        <CheckCircle className="h-3 w-3" />
-                                        Enabled
-                                    </span>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between border border-gray-200/60">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                                            <Smartphone className="h-6 w-6 text-gray-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-sm font-bold text-gray-900">Authenticator App</h3>
-                                            <p className="text-xs text-gray-500 mt-0.5">Google Authenticator, Authy, etc.</p>
-                                        </div>
-                                    </div>
-                                    <button className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                                        Disable
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Active Sessions */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                 <h2 className="text-lg font-bold text-gray-900 mb-6">Active Sessions</h2>
@@ -484,7 +505,10 @@ const AdminProfile = () => {
                                     <h2 className="text-lg font-bold text-gray-900">API Keys</h2>
                                     <p className="text-sm text-gray-500 mt-1">Manage API keys for external integrations.</p>
                                 </div>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                <button
+                                    onClick={() => setShowCreateKeyModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                >
                                     <Plus className="h-4 w-4" />
                                     Create New Key
                                 </button>
@@ -535,6 +559,145 @@ const AdminProfile = () => {
                     )}
                 </div>
             </div>
+
+            {/* Create New API Key Modal */}
+            {showCreateKeyModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-[#0f385c]/10 rounded-xl">
+                                    <Key className="h-5 w-5 text-[#0f385c]" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                        {createdKey ? 'API Key Created' : 'Create New API Key'}
+                                    </h3>
+                                    <p className="text-xs text-gray-500">
+                                        {createdKey ? "Copy your key now - it won't be shown again" : 'Generate a new API key for integrations'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleCloseModal}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6">
+                            {!createdKey ? (
+                                <div className="space-y-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-500">Key Name *</label>
+                                        <input
+                                            type="text"
+                                            value={newKeyData.name}
+                                            onChange={(e) => setNewKeyData({ ...newKeyData, name: e.target.value })}
+                                            placeholder="e.g., Production Backend"
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-500">Description (Optional)</label>
+                                        <textarea
+                                            value={newKeyData.description}
+                                            onChange={(e) => setNewKeyData({ ...newKeyData, description: e.target.value })}
+                                            placeholder="What will this key be used for?"
+                                            rows={3}
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-500">Expires In</label>
+                                        <select
+                                            value={newKeyData.expiresIn}
+                                            onChange={(e) => setNewKeyData({ ...newKeyData, expiresIn: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                        >
+                                            <option value="30">30 Days</option>
+                                            <option value="60">60 Days</option>
+                                            <option value="90">90 Days</option>
+                                            <option value="180">180 Days</option>
+                                            <option value="365">1 Year</option>
+                                            <option value="never">Never</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                        <div className="flex items-start gap-3">
+                                            <Shield className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-amber-800">Important</p>
+                                                <p className="text-xs text-amber-700 mt-1">
+                                                    This is the only time you will see this key. Copy it now and store it securely.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-500">Your API Key</label>
+                                        <div className="flex items-center gap-2">
+                                            <code className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-gray-800 break-all">
+                                                {createdKey}
+                                            </code>
+                                            <button
+                                                onClick={handleCopyKey}
+                                                className={`p-3 rounded-xl transition-all ${keyCopied
+                                                    ? 'bg-green-100 text-green-600'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {keyCopied ? <CheckCircle className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50/50">
+                            {!createdKey ? (
+                                <>
+                                    <button
+                                        onClick={handleCloseModal}
+                                        className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateKey}
+                                        disabled={!newKeyData.name.trim()}
+                                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors shadow-sm ${newKeyData.name.trim()
+                                            ? 'bg-[#0f385c] hover:bg-[#0a2742] text-white'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <Key className="h-4 w-4" />
+                                        Generate Key
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={handleCloseModal}
+                                    className="px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                >
+                                    Done
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

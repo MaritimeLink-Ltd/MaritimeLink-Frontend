@@ -7,7 +7,10 @@ function UploadJob({ onBack: onBackProp }) {
     const location = useLocation();
     const editData = location.state?.jobData;
     const isEditMode = location.state?.isEdit || false;
-    
+    const dashboardType = location.state?.dashboardType || 'recruiter'; // 'admin' or 'recruiter'
+
+    const returnPath = location.state?.returnPath;
+
     const [step, setStep] = useState(1);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [formData, setFormData] = useState({
@@ -42,9 +45,11 @@ function UploadJob({ onBack: onBackProp }) {
     const handleBack = () => {
         if (step === 1) {
             if (onBackProp) {
+                // If onBack callback is provided, use it (for inline rendering)
                 onBackProp();
             } else {
-                navigate('/recruiter-dashboard');
+                // Navigate back to previous page in history
+                navigate(-1);
             }
         } else {
             setStep(1);
@@ -59,10 +64,8 @@ function UploadJob({ onBack: onBackProp }) {
 
     const handleCloseModal = () => {
         setShowSuccessModal(false);
-        // Navigate to success page with job data
-        navigate('/admin/jobs', { 
-            state: { jobData: formData } 
-        });
+        // Navigate back to previous page in history
+        navigate(-1);
     };
 
     return (
@@ -125,8 +128,8 @@ function UploadJob({ onBack: onBackProp }) {
                                             key={category}
                                             onClick={() => setFormData({ ...formData, category })}
                                             className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${formData.category === category
-                                                    ? 'bg-[#1e5a8f] text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                ? 'bg-[#1e5a8f] text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                         >
                                             {category}
@@ -146,8 +149,8 @@ function UploadJob({ onBack: onBackProp }) {
                                             key={type}
                                             onClick={() => setFormData({ ...formData, contractType: type })}
                                             className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${formData.contractType === type
-                                                    ? 'bg-[#1e5a8f] text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                ? 'bg-[#1e5a8f] text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                         >
                                             {type}

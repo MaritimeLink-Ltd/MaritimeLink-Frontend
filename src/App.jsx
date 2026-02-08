@@ -181,20 +181,27 @@ function App() {
           <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
           <Route path="/admin/transaction-history" element={<TransactionHistory />} />
           <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
+          <Route path="/admin/marketplace/create-job" element={<UploadJob />} />
           <Route path="/admin/create-course" element={<CreateCourse />} />
           <Route path="/admin/accounts" element={<Accounts />} />
           <Route path="/admin/accounts/:id" element={<AccountProfile />} />
+          <Route path="/admin/accounts/compliance/:id" element={<ComplianceProfile />} />
           <Route path="/admin/companies" element={<Companies />} />
           <Route path="/admin/companies/:id" element={<CompanyProfile />} />
           <Route path="/admin/compliance" element={<Compliance />} />
           <Route path="/admin/compliance/:id" element={<ComplianceProfile />} />
           <Route path="/admin/marketplace" element={<Marketplace />} />
+          <Route path="/admin/marketplace/internal/jobs/:jobId" element={<JobDetail />} />
+          <Route path="/admin/marketplace/internal/courses/:courseId" element={<CourseDetail />} />
+          <Route path="/admin/marketplace/oversight/jobs/:jobId" element={<JobDetail />} />
+          <Route path="/admin/marketplace/oversight/courses/:courseId" element={<CourseDetail />} />
           <Route path="/admin/operations" element={<Operations />} />
           <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
           <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />
           <Route path="/admin/operations/job/:id" element={<SystemJobDetail />} />
           <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
           <Route path="/admin/profile" element={<AdminProfile />} />
+          <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
         </Route>
 
         {/* Personal Dashboard Protected Routes (With Layout) */}

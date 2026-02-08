@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Zap,
     X,
@@ -6,10 +7,12 @@ import {
     Info,
     AlertTriangle,
     AlertCircle,
-    ChevronRight
+    ChevronRight,
+    ChevronLeft
 } from 'lucide-react';
 
 function Notifications() {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState({
         announcement: true,
         toast: true,
@@ -30,8 +33,16 @@ function Notifications() {
         <div className="max-w-5xl">
             {/* Header */}
             <div className="mb-8">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-4 mb-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                    >
+                        <ChevronLeft className="h-6 w-6 text-gray-600" />
+                    </button>
                     <h1 className="text-[32px] font-bold text-gray-900">Notifications</h1>
+                </div>
+                <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                         <span>Home</span>
                         <span>/</span>

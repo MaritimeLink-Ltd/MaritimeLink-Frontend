@@ -44,7 +44,7 @@ function AdminLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50/50">
+        <div className="h-screen bg-gray-50/50 flex overflow-hidden">
             {/* Sidebar */}
             <aside className={`fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-100 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <div className="flex h-full flex-col">
@@ -127,7 +127,7 @@ function AdminLayout() {
             )}
 
             {/* Main Content */}
-            <div className="lg:pl-64">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:pl-64">
                 {/* Top Header */}
                 <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4">
                     <div className="flex items-center justify-between gap-4">
@@ -141,16 +141,6 @@ function AdminLayout() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-4 ml-auto">
-                            {/* Search Bar */}
-                            <div className="relative hidden sm:block">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    className="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
-                                />
-                            </div>
-
                             {/* Notification */}
                             <button
                                 onClick={() => navigate('/admin/notifications')}
@@ -199,8 +189,10 @@ function AdminLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="p-6 lg:p-8">
-                    <Outlet />
+                <main className="flex-1 overflow-hidden p-6 lg:p-8">
+                    <div className="h-full overflow-y-auto scrollbar-hide">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

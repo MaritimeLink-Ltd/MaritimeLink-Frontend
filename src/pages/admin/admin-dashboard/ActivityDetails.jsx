@@ -1,8 +1,10 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Clock, CheckCircle, Monitor, MapPin, Globe } from 'lucide-react';
 
 function ActivityDetails() {
     const { id } = useParams();
+
+    const navigate = useNavigate();
 
     // Sample activity detail data (in real app, this would be fetched based on id)
     const activityDetail = {
@@ -47,13 +49,13 @@ function ActivityDetails() {
         <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <Link
-                    to="/admin/operations"
+                <button
+                    onClick={() => navigate(-1)}
                     className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     <span className="text-sm font-medium">Back to Operations</span>
-                </Link>
+                </button>
 
                 <div>
                     <h1 className="text-[28px] font-bold text-gray-900">Activity Details</h1>

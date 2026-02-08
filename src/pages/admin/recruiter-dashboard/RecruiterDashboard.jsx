@@ -44,50 +44,36 @@ function RecruiterDashboard({ onNavigate }) {
         }
     };
 
-    // Stats Data
-    const stats = [
-        {
-            id: 1,
-            title: 'Active Jobs',
-            value: '7',
-            subtext: 'Currently open',
-            icon: Briefcase,
-            gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]',
-            iconBg: 'bg-white/20 backdrop-blur-sm',
-            section: 'jobs'
-        },
-        {
-            id: 2,
-            title: 'New Applications',
-            value: '26',
-            subtext: 'Since last login',
-            icon: CheckCircle,
-            gradient: 'from-[#059669] via-[#10b981] to-[#34d399]',
-            iconBg: 'bg-white/20 backdrop-blur-sm',
-            section: 'jobs'
-        },
-        {
-            id: 3,
-            title: 'Matched Professionals',
-            value: '84',
-            subtext: 'Not yet applied',
-            icon: Award,
-            gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
-            iconBg: 'bg-white/20 backdrop-blur-sm',
-            section: 'search'
-        },
-        {
-            id: 4,
-            title: 'Jobs Needing Attention',
-            value: '3',
-            subtext: 'Expiring soon / Drafts',
-            icon: AlertTriangle,
-            gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]',
-            iconBg: 'bg-white/20 backdrop-blur-sm',
-            topIcon: Calendar,
-            section: 'jobs'
-        },
-    ];
+    // Stats Data based on time filter
+    const statsData = {
+        'Today': [
+            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 2, title: 'New Applications', value: '5', subtext: 'Since 12:00 AM', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 3, title: 'Matched Professionals', value: '12', subtext: 'Today', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
+            { id: 4, title: 'Jobs Needing Attention', value: '1', subtext: 'Expiring today', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
+        ],
+        '7 Days': [
+            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 2, title: 'New Applications', value: '26', subtext: 'This week', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 3, title: 'Matched Professionals', value: '84', subtext: 'This week', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
+            { id: 4, title: 'Jobs Needing Attention', value: '3', subtext: 'Expiring soon / Drafts', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
+        ],
+        '1 Month': [
+            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 2, title: 'New Applications', value: '142', subtext: 'This month', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 3, title: 'Matched Professionals', value: '256', subtext: 'This month', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
+            { id: 4, title: 'Jobs Needing Attention', value: '5', subtext: 'Expiring this month', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
+        ],
+        'Custom': [
+            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 2, title: 'New Applications', value: '26', subtext: 'Custom range', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+            { id: 3, title: 'Matched Professionals', value: '84', subtext: 'Custom range', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
+            { id: 4, title: 'Jobs Needing Attention', value: '3', subtext: 'Custom range', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
+        ]
+    };
+
+    // Get current stats based on time filter
+    const stats = statsData[timeFilter] || statsData['Today'];
 
     // Action Items Data
     const actionItems = [
@@ -273,7 +259,7 @@ function RecruiterDashboard({ onNavigate }) {
                                         if (item.jobId) {
                                             if (item.isEdit) {
                                                 // Navigate to edit job
-                                                navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true } });
+                                                navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true, dashboardType: 'recruiter' } });
                                             } else {
                                                 // Navigate to job detail
                                                 navigate(`/admin/jobs/${item.jobId}`);
@@ -375,7 +361,7 @@ function RecruiterDashboard({ onNavigate }) {
                             <div className="col-span-3 flex justify-end">
                                 {job.status === 'Draft' ? (
                                     <button
-                                        onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true } })}
+                                        onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true, dashboardType: 'recruiter' } })}
                                         className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
                                     >
                                         Edit Draft

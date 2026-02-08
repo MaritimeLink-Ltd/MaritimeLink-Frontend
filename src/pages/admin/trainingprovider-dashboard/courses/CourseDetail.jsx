@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Calendar, MapPin, User, Users, Edit, MoreVertical, Download, Printer, Plus, ChevronDown } from 'lucide-react';
 
 const applicantsData = [
@@ -82,6 +82,7 @@ export default function CourseDetail() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showExportNotification, setShowExportNotification] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { courseId } = useParams();
   const printRef = useRef(null);
 
@@ -261,17 +262,21 @@ export default function CourseDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleEditCourse}
-            className="px-5 py-2 text-sm font-medium rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 flex items-center gap-2">
-            <Edit className="h-4 w-4" /> Edit Course
-          </button>
-          <button
-            className="px-5 py-2 text-sm font-medium rounded-md bg-[#003971] text-white hover:bg-[#002855] flex items-center gap-2"
-            onClick={() => navigate(`/trainingprovider/courses/STCW-BST-001/sessions`)}
-          >
-            <Calendar className="h-4 w-4" /> Manage Session
-          </button>
+          {!location.pathname.includes('/marketplace') && (
+            <>
+              <button
+                onClick={handleEditCourse}
+                className="px-5 py-2 text-sm font-medium rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 flex items-center gap-2">
+                <Edit className="h-4 w-4" /> Edit Course
+              </button>
+              <button
+                className="px-5 py-2 text-sm font-medium rounded-md bg-[#003971] text-white hover:bg-[#002855] flex items-center gap-2"
+                onClick={() => navigate(`/trainingprovider/courses/STCW-BST-001/sessions`)}
+              >
+                <Calendar className="h-4 w-4" /> Manage Session
+              </button>
+            </>
+          )}
           <button className="p-2.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-500">
             <MoreVertical className="h-5 w-5" />
           </button>

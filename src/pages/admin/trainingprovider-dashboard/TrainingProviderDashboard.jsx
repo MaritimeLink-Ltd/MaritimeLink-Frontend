@@ -16,39 +16,31 @@ import { useNavigate } from 'react-router-dom';
 function TrainingProviderDashboard() {
     const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
+    const [timeFilter, setTimeFilter] = useState('7 Days');
 
-    const statsCards = [
-        {
-            id: 1,
-            title: 'Active Courses',
-            value: '5',
-            subtitle: 'Active Courses',
-            icon: BookOpen,
-            bgGradient: 'from-[#1E4976] to-[#2E6BA8]',
-            iconBg: 'bg-white/20',
-            path: '/trainingprovider/courses'
-        },
-        {
-            id: 2,
-            title: 'New Bookings',
-            value: '18',
-            subtitle: 'New Bookings',
-            icon: Calendar,
-            bgGradient: 'from-[#0FA968] to-[#1BC47D]',
-            iconBg: 'bg-white/20',
-            path: '/trainingprovider/bookings'
-        },
-        {
-            id: 3,
-            title: 'Demand Signals',
-            value: '4',
-            subtitle: 'Demand Signals',
-            icon: TrendingUp,
-            bgGradient: 'from-[#E86C5F] to-[#F28B7D]',
-            iconBg: 'bg-white/20',
-            path: '/trainingprovider/demand'
-        }
-    ];
+    const timeFilters = ['Today', '7 Days', '30 Days'];
+
+    // Stats cards data based on time filter
+    const statsData = {
+        'Today': [
+            { id: 1, title: 'Active Courses', value: '5', subtitle: 'Active Courses', icon: BookOpen, bgGradient: 'from-[#1E4976] to-[#2E6BA8]', iconBg: 'bg-white/20', path: '/trainingprovider/courses' },
+            { id: 2, title: 'New Bookings', value: '4', subtitle: 'Today', icon: Calendar, bgGradient: 'from-[#0FA968] to-[#1BC47D]', iconBg: 'bg-white/20', path: '/trainingprovider/bookings' },
+            { id: 3, title: 'Demand Signals', value: '1', subtitle: 'Today', icon: TrendingUp, bgGradient: 'from-[#E86C5F] to-[#F28B7D]', iconBg: 'bg-white/20', path: '/trainingprovider/demand' }
+        ],
+        '7 Days': [
+            { id: 1, title: 'Active Courses', value: '5', subtitle: 'Active Courses', icon: BookOpen, bgGradient: 'from-[#1E4976] to-[#2E6BA8]', iconBg: 'bg-white/20', path: '/trainingprovider/courses' },
+            { id: 2, title: 'New Bookings', value: '18', subtitle: 'This Week', icon: Calendar, bgGradient: 'from-[#0FA968] to-[#1BC47D]', iconBg: 'bg-white/20', path: '/trainingprovider/bookings' },
+            { id: 3, title: 'Demand Signals', value: '4', subtitle: 'This Week', icon: TrendingUp, bgGradient: 'from-[#E86C5F] to-[#F28B7D]', iconBg: 'bg-white/20', path: '/trainingprovider/demand' }
+        ],
+        '30 Days': [
+            { id: 1, title: 'Active Courses', value: '5', subtitle: 'Active Courses', icon: BookOpen, bgGradient: 'from-[#1E4976] to-[#2E6BA8]', iconBg: 'bg-white/20', path: '/trainingprovider/courses' },
+            { id: 2, title: 'New Bookings', value: '67', subtitle: 'This Month', icon: Calendar, bgGradient: 'from-[#0FA968] to-[#1BC47D]', iconBg: 'bg-white/20', path: '/trainingprovider/bookings' },
+            { id: 3, title: 'Demand Signals', value: '12', subtitle: 'This Month', icon: TrendingUp, bgGradient: 'from-[#E86C5F] to-[#F28B7D]', iconBg: 'bg-white/20', path: '/trainingprovider/demand' }
+        ]
+    };
+
+    // Get current stats based on time filter
+    const statsCards = statsData[timeFilter] || statsData['7 Days'];
 
     const actionItems = [
         {
@@ -143,6 +135,21 @@ function TrainingProviderDashboard() {
                             <p className="text-gray-500 text-sm">Your training operations at a glance</p>
                         </div>
                         <div className="flex items-center gap-3">
+                            {/* Time Filter */}
+                            <div className="bg-gray-50 p-1 rounded-xl inline-flex border border-gray-100">
+                                {timeFilters.map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setTimeFilter(filter)}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${timeFilter === filter
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="text-right">
                                 <p className="text-sm font-bold text-gray-900">Kingsley Osifo</p>
                                 <p className="text-xs text-gray-500">Training Provider Manager</p>
@@ -182,105 +189,105 @@ function TrainingProviderDashboard() {
 
                 {/* Action Required and Quick Overview */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Action Required - 60% width (3 columns) */}
-                <div className="lg:col-span-3">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Action Required</h2>
-                    <div className="space-y-3">
-                        {actionItems.map((item) => (
-                            <div
-                                key={item.id}
-                                onClick={() => item.path && navigate(item.path)}
-                                className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${item.path ? 'cursor-pointer' : ''}`}
-                            >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                                        <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
-                                            <item.icon className={`h-5 w-5 ${item.iconColor}`} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-gray-900 mb-1 leading-tight">
-                                                {item.title}
-                                            </h3>
-                                            <p className="text-xs text-gray-500 leading-relaxed">{item.subtitle}</p>
-                                        </div>
-                                    </div>
-                                    {item.hasButton && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigate(item.path);
-                                            }}
-                                            className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition-all flex-shrink-0 ${item.buttonStyle}`}
-                                        >
-                                            <span>{item.buttonText}</span>
-                                            <ChevronRight className="h-3.5 w-3.5" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Quick Overview - 40% width (2 columns) */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
-                        <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-lg font-bold text-gray-900">Quick Overview</h2>
-                        </div>
-
-                        {/* Table Header */}
-                        <div className="flex justify-between pb-3 mb-4 border-b border-gray-200">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                COURSE
-                            </div>
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                STATUS / CAPACITY
-                            </div>
-                        </div>
-
-                        {/* Course List */}
+                    {/* Action Required - 60% width (3 columns) */}
+                    <div className="lg:col-span-3">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Action Required</h2>
                         <div className="space-y-3">
-                            {courses.map((course, index) => (
+                            {actionItems.map((item) => (
                                 <div
-                                    key={course.id}
-                                    onClick={() => navigate(`/trainingprovider/courses/${course.id}`)}
-                                    className={`flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg px-2 -mx-2 ${index !== courses.length - 1 ? 'border-b border-gray-100' : ''
-                                        }`}
+                                    key={item.id}
+                                    onClick={() => item.path && navigate(item.path)}
+                                    className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${item.path ? 'cursor-pointer' : ''}`}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`${course.iconBg} p-2.5 rounded-lg`}>
-                                            <course.icon className={`h-5 w-5 ${course.iconColor}`} />
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className={`${item.iconBg} p-2.5 rounded-lg flex-shrink-0`}>
+                                                <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-sm font-bold text-gray-900 mb-1 leading-tight">
+                                                    {item.title}
+                                                </h3>
+                                                <p className="text-xs text-gray-500 leading-relaxed">{item.subtitle}</p>
+                                            </div>
                                         </div>
-                                        <span className="text-sm font-bold text-gray-900">
-                                            {course.name}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${course.statusColor}`}>
-                                            {course.status}
-                                        </span>
-                                        <span className="text-sm font-bold text-gray-700 min-w-[55px] text-right">
-                                            {course.capacity}
-                                        </span>
+                                        {item.hasButton && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(item.path);
+                                                }}
+                                                className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition-all flex-shrink-0 ${item.buttonStyle}`}
+                                            >
+                                                <span>{item.buttonText}</span>
+                                                <ChevronRight className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
+                    </div>
 
-                        {/* View All Courses Link */}
-                        <div className="mt-5 pt-4 border-t border-gray-200">
-                            <button
-                                onClick={() => navigate('/trainingprovider/courses')}
-                                className="w-full text-center text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors"
-                            >
-                                View All Courses
-                            </button>
+                    {/* Quick Overview - 40% width (2 columns) */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
+                            <div className="flex items-center justify-between mb-5">
+                                <h2 className="text-lg font-bold text-gray-900">Quick Overview</h2>
+                            </div>
+
+                            {/* Table Header */}
+                            <div className="flex justify-between pb-3 mb-4 border-b border-gray-200">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                    COURSE
+                                </div>
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                    STATUS / CAPACITY
+                                </div>
+                            </div>
+
+                            {/* Course List */}
+                            <div className="space-y-3">
+                                {courses.map((course, index) => (
+                                    <div
+                                        key={course.id}
+                                        onClick={() => navigate(`/trainingprovider/courses/${course.id}`)}
+                                        className={`flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg px-2 -mx-2 ${index !== courses.length - 1 ? 'border-b border-gray-100' : ''
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`${course.iconBg} p-2.5 rounded-lg`}>
+                                                <course.icon className={`h-5 w-5 ${course.iconColor}`} />
+                                            </div>
+                                            <span className="text-sm font-bold text-gray-900">
+                                                {course.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold ${course.statusColor}`}>
+                                                {course.status}
+                                            </span>
+                                            <span className="text-sm font-bold text-gray-700 min-w-[55px] text-right">
+                                                {course.capacity}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* View All Courses Link */}
+                            <div className="mt-5 pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={() => navigate('/trainingprovider/courses')}
+                                    className="w-full text-center text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors"
+                                >
+                                    View All Courses
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     );
 }

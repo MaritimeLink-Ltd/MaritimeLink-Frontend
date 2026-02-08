@@ -1,11 +1,42 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, User, Clock, RefreshCw, Lock, Paperclip, AlertTriangle, Send, CheckCircle } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Mail, Phone, User, Clock, RefreshCw, Lock, Paperclip, AlertTriangle, Send, CheckCircle, X } from 'lucide-react';
 
 function SupportCaseDetails() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Reply to User');
     const [replyText, setReplyText] = useState('');
+    const [activeModal, setActiveModal] = useState(null); // 'assign', 'resolve', 'close', 'report'
+
+    // Button States
+    const [isAssigned, setIsAssigned] = useState(false);
+    const [isResolved, setIsResolved] = useState(false);
+    const [isClosed, setIsClosed] = useState(false);
+
+    const handleAction = (type) => {
+        setActiveModal(type);
+    };
+
+    const closeModal = () => {
+        setActiveModal(null);
+    };
+
+    const confirmAction = () => {
+        // Here you would implement the actual API call
+        console.log(`Confirmed action: ${activeModal}`);
+
+        // Update local state based on action
+        if (activeModal === 'assign') {
+            setIsAssigned(true);
+        } else if (activeModal === 'resolve') {
+            setIsResolved(true);
+        } else if (activeModal === 'close') {
+            setIsClosed(true);
+        }
+
+        closeModal();
+    };
 
     // Sample case detail data (in real app, this would be fetched based on id)
     const caseDetail = {
@@ -71,13 +102,13 @@ function SupportCaseDetails() {
             <div className="flex-shrink-0 mb-6 pt-2">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link
-                            to="/admin/operations"
+                        <button
+                            onClick={() => navigate(-1)}
                             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
                         >
                             <ArrowLeft className="h-4 w-4" />
                             <span className="text-sm font-medium">Back to Cases</span>
-                        </Link>
+                        </button>
                         <div className="h-6 w-px bg-gray-300 mx-2"></div>
                         <div className="flex items-center gap-3">
                             <span className="text-xl font-bold text-gray-900">{caseDetail.id}</span>
@@ -87,16 +118,37 @@ function SupportCaseDetails() {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
-                        <button className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors bg-white shadow-sm">
-                            Assign to Me
+                        <button
+                            onClick={() => !isAssigned && handleAction('assign')}
+                            disabled={isAssigned}
+                            className={`px-5 py-2 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssigned
+                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                    : 'border-gray-200 text-gray-700 hover:bg-gray-50 bg-white'
+                                }`}
+                        >
+                            {isAssigned ? 'Assigned' : 'Assign to Me'}
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2 border border-green-200 bg-green-50 rounded-lg text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
+                        <button
+                            onClick={() => !isResolved && handleAction('resolve')}
+                            disabled={isResolved}
+                            className={`flex items-center gap-2 px-5 py-2 border rounded-lg text-sm font-semibold transition-colors ${isResolved
+                                    ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
+                                    : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                                }`}
+                        >
                             <CheckCircle className="h-4 w-4" />
-                            Resolve
+                            {isResolved ? 'Resolved' : 'Resolve'}
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2 bg-orange-50 border border-orange-200 rounded-lg text-sm font-semibold text-orange-700 hover:bg-orange-100 transition-colors">
-                            <span className="text-orange-600 font-bold text-lg leading-none">&times;</span>
-                            Close Case
+                        <button
+                            onClick={() => !isClosed && handleAction('close')}
+                            disabled={isClosed}
+                            className={`flex items-center gap-2 px-5 py-2 border rounded-lg text-sm font-semibold transition-colors ${isClosed
+                                    ? 'bg-orange-50 text-orange-400 border-orange-100 cursor-not-allowed'
+                                    : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+                                }`}
+                        >
+                            <span className={`font-bold text-lg leading-none ${isClosed ? 'text-orange-400' : 'text-orange-600'}`}>&times;</span>
+                            {isClosed ? 'Closed' : 'Close Case'}
                         </button>
                     </div>
                 </div>
@@ -285,7 +337,6 @@ function SupportCaseDetails() {
                                     {tab}
                                 </button>
                             ))}
-                            <span className="text-sm font-bold text-gray-300">Internal Note</span>
                         </div>
 
                         {/* Reply Input */}
@@ -298,10 +349,11 @@ function SupportCaseDetails() {
                             />
                             <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center gap-1">
-                                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors">
-                                        <Paperclip className="h-5 w-5" />
-                                    </button>
-                                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors">
+                                    <button
+                                        onClick={() => handleAction('report')}
+                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors"
+                                        title="Report Issue"
+                                    >
                                         <AlertTriangle className="h-5 w-5" />
                                     </button>
                                 </div>
@@ -314,8 +366,92 @@ function SupportCaseDetails() {
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            {activeModal && (
+                <ActionModal
+                    isOpen={!!activeModal}
+                    onClose={closeModal}
+                    onConfirm={confirmAction}
+                    type={activeModal}
+                />
+            )}
         </div>
     );
 }
 
 export default SupportCaseDetails;
+
+const ActionModal = ({ isOpen, onClose, onConfirm, type }) => {
+    if (!isOpen) return null;
+
+    let content = {};
+    switch (type) {
+        case 'assign':
+            content = {
+                title: 'Assign Case to Me',
+                message: 'Are you sure you want to take ownership of this case? It will be moved to your active queue.',
+                confirmLabel: 'Confirm Assignment',
+                confirmColor: 'bg-blue-600 hover:bg-blue-700'
+            };
+            break;
+        case 'resolve':
+            content = {
+                title: 'Resolve Case',
+                message: 'This will mark the case as resolved and notify the user. Please ensure all issues have been addressed.',
+                confirmLabel: 'Mark as Resolved',
+                confirmColor: 'bg-green-600 hover:bg-green-700'
+            };
+            break;
+        case 'close':
+            content = {
+                title: 'Close Case',
+                message: 'Closing this case will prevent further replies. Use this for cases that are invalid or completed.',
+                confirmLabel: 'Close Case',
+                confirmColor: 'bg-orange-600 hover:bg-orange-700'
+            };
+            break;
+        case 'report':
+            content = {
+                title: 'Report Issue',
+                message: 'Flag this case for review by a supervisor? This is used for abusive language or policy violations.',
+                confirmLabel: 'Flag Case',
+                confirmColor: 'bg-red-600 hover:bg-red-700'
+            };
+            break;
+        default:
+            return null;
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all scale-100 opacity-100">
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-900">{content.title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed mb-8">
+                        {content.message}
+                    </p>
+                    <div className="flex items-center justify-end gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className={`px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm transition-colors ${content.confirmColor}`}
+                        >
+                            {content.confirmLabel}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

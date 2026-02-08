@@ -13,52 +13,33 @@ import {
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    // Quick access cards data
-    const quickAccessCards = [
-        {
-            id: 'resume',
-            title: 'Resume',
-            icon: FileText,
-            iconColor: 'text-[#003971]',
-            status: '90% complete',
-            statusType: 'progress',
-            progress: 90,
-            buttonText: 'Go To Resume',
-            onClick: () => navigate('/personal/resume')
-        },
-        {
-            id: 'documents',
-            title: 'Document Wallet',
-            icon: Folder,
-            iconColor: 'text-[#003971]',
-            status: 'Fully Compliant',
-            statusType: 'text',
-            buttonText: 'Go To Documents',
-            onClick: () => navigate('/personal/documents')
-        },
-        {
-            id: 'jobs',
-            title: 'Jobs',
-            icon: Briefcase,
-            iconColor: 'text-[#003971]',
-            status: '6 jobs matching your profile',
-            statusType: 'text',
-            statusLight: true,
-            buttonText: 'Go To Jobs',
-            onClick: () => navigate('/personal/jobs')
-        },
-        {
-            id: 'courses',
-            title: 'Courses',
-            icon: GraduationCap,
-            iconColor: 'text-[#003971]',
-            status: '2 recommended courses',
-            statusType: 'text',
-            statusLight: true,
-            buttonText: 'Go To Training',
-            onClick: () => navigate('/personal/training')
-        }
-    ];
+    const [timeFilter, setTimeFilter] = useState('7 Days');
+    const timeFilters = ['Today', '7 Days', '30 Days'];
+
+    // Quick access cards data based on time filter
+    const quickAccessData = {
+        'Today': [
+            { id: 'resume', title: 'Resume', icon: FileText, iconColor: 'text-[#003971]', status: '90% complete', statusType: 'progress', progress: 90, buttonText: 'Go To Resume', onClick: () => navigate('/personal/resume') },
+            { id: 'documents', title: 'Document Wallet', icon: Folder, iconColor: 'text-[#003971]', status: 'Fully Compliant', statusType: 'text', buttonText: 'Go To Documents', onClick: () => navigate('/personal/documents') },
+            { id: 'jobs', title: 'Jobs', icon: Briefcase, iconColor: 'text-[#003971]', status: '2 new jobs today', statusType: 'text', statusLight: true, buttonText: 'Go To Jobs', onClick: () => navigate('/personal/jobs') },
+            { id: 'courses', title: 'Courses', icon: GraduationCap, iconColor: 'text-[#003971]', status: '1 recommended today', statusType: 'text', statusLight: true, buttonText: 'Go To Training', onClick: () => navigate('/personal/training') }
+        ],
+        '7 Days': [
+            { id: 'resume', title: 'Resume', icon: FileText, iconColor: 'text-[#003971]', status: '90% complete', statusType: 'progress', progress: 90, buttonText: 'Go To Resume', onClick: () => navigate('/personal/resume') },
+            { id: 'documents', title: 'Document Wallet', icon: Folder, iconColor: 'text-[#003971]', status: 'Fully Compliant', statusType: 'text', buttonText: 'Go To Documents', onClick: () => navigate('/personal/documents') },
+            { id: 'jobs', title: 'Jobs', icon: Briefcase, iconColor: 'text-[#003971]', status: '6 jobs matching your profile', statusType: 'text', statusLight: true, buttonText: 'Go To Jobs', onClick: () => navigate('/personal/jobs') },
+            { id: 'courses', title: 'Courses', icon: GraduationCap, iconColor: 'text-[#003971]', status: '2 recommended courses', statusType: 'text', statusLight: true, buttonText: 'Go To Training', onClick: () => navigate('/personal/training') }
+        ],
+        '30 Days': [
+            { id: 'resume', title: 'Resume', icon: FileText, iconColor: 'text-[#003971]', status: '90% complete', statusType: 'progress', progress: 90, buttonText: 'Go To Resume', onClick: () => navigate('/personal/resume') },
+            { id: 'documents', title: 'Document Wallet', icon: Folder, iconColor: 'text-[#003971]', status: 'Fully Compliant', statusType: 'text', buttonText: 'Go To Documents', onClick: () => navigate('/personal/documents') },
+            { id: 'jobs', title: 'Jobs', icon: Briefcase, iconColor: 'text-[#003971]', status: '24 jobs this month', statusType: 'text', statusLight: true, buttonText: 'Go To Jobs', onClick: () => navigate('/personal/jobs') },
+            { id: 'courses', title: 'Courses', icon: GraduationCap, iconColor: 'text-[#003971]', status: '8 recommended this month', statusType: 'text', statusLight: true, buttonText: 'Go To Training', onClick: () => navigate('/personal/training') }
+        ]
+    };
+
+    // Get quick access cards based on time filter
+    const quickAccessCards = quickAccessData[timeFilter] || quickAccessData['7 Days'];
 
     // Alerts data
     const alerts = [
@@ -136,13 +117,30 @@ const Dashboard = () => {
             {/* Sticky Header Section */}
             <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 bg-white lg:sticky lg:top-0 lg:z-10">
                 {/* Header */}
-                <div className="mb-4">
-                    <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Dashboard</h1>
-                    <p className="text-gray-500 text-sm sm:text-base mt-1">View everything at a glance</p>
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Dashboard</h1>
+                        <p className="text-gray-500 text-sm sm:text-base mt-1">View everything at a glance</p>
+                    </div>
+                    {/* Time Filter */}
+                    <div className="bg-gray-50 p-1 rounded-xl inline-flex border border-gray-100">
+                        {timeFilters.map((filter) => (
+                            <button
+                                key={filter}
+                                onClick={() => setTimeFilter(filter)}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${timeFilter === filter
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                {filter}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Alert Banner */}
-                <div 
+                <div
                     onClick={() => navigate('/personal/documents')}
                     className="bg-orange-50 rounded-xl p-3 sm:p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer hover:bg-orange-100 transition-colors"
                 >

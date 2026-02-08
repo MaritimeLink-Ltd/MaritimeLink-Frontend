@@ -5,9 +5,10 @@ import { ArrowLeft, ExternalLink, Edit, MoreVertical, Trash2, Users as UsersIcon
 function CompanyProfile() {
     const navigate = useNavigate();
 
-    // Sample team members data
-    const teamMembers = [
+    // Sample team members data (converted to state for interactivity)
+    const [teamMembers, setTeamMembers] = useState([
         {
+            id: 1,
             name: 'David Turner',
             email: 'david.t@oceanhire.com',
             role: 'Admin',
@@ -17,6 +18,7 @@ function CompanyProfile() {
             joined: 'Oct 24, 2023'
         },
         {
+            id: 2,
             name: 'Sarah Miller',
             email: 'sarah.m@oceanhire.com',
             role: 'Recruiter',
@@ -26,6 +28,7 @@ function CompanyProfile() {
             joined: 'Nov 01, 2023'
         },
         {
+            id: 3,
             name: 'James Wilson',
             email: 'james.w@oceanhire.com',
             role: 'Viewer',
@@ -34,7 +37,24 @@ function CompanyProfile() {
             statusBg: 'bg-orange-50',
             joined: 'Yesterday'
         }
-    ];
+    ]);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [memberToDelete, setMemberToDelete] = useState(null);
+
+    const handleDeleteClick = (member) => {
+        setMemberToDelete(member);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (memberToDelete) {
+            setTeamMembers(teamMembers.filter(member => member.id !== memberToDelete.id));
+            setIsDeleteModalOpen(false);
+            setMemberToDelete(null);
+        }
+    };
 
     // Recent activity data
     const activities = [
@@ -89,19 +109,7 @@ function CompanyProfile() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                            <MoreVertical className="h-5 w-5" />
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                            <Edit className="h-4 w-4" />
-                            Edit
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                            Merge Profile
-                        </button>
+                        {/* Actions removed as per request */}
                     </div>
                 </div>
             </div>
@@ -191,9 +199,7 @@ function CompanyProfile() {
                                     {teamMembers.length}
                                 </span>
                             </h3>
-                            <button className="text-sm font-bold text-[#1e5a8f] hover:underline">
-                                + Add Member
-                            </button>
+                            {/* Removed Add Member button */}
                         </div>
 
                         {/* Team Members Table */}
@@ -219,8 +225,8 @@ function CompanyProfile() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {teamMembers.map((member, index) => (
-                                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                    {teamMembers.map((member) => (
+                                        <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -246,7 +252,10 @@ function CompanyProfile() {
                                                 <span className="text-sm text-gray-600">{member.joined}</span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                                <button
+                                                    onClick={() => handleDeleteClick(member)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
                                             </td>
@@ -260,23 +269,7 @@ function CompanyProfile() {
 
                 {/* Right Column - 1/3 width */}
                 <div className="space-y-6">
-                    {/* Potential Duplicate Detected */}
-                    <div className="bg-white rounded-xl border border-gray-100 p-5">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
-                                <UsersIcon className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="text-sm font-bold text-gray-900 mb-2">Potential Duplicate Detected</h3>
-                                <p className="text-sm text-gray-600 mb-3">
-                                    We found another company profile <span className="font-semibold">"Ocean Hire Ltd"</span> that shares a similar domain.
-                                </p>
-                                <button className="text-sm font-bold text-[#1e5a8f] hover:underline">
-                                    Review & Merge
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Potential Duplicate Detected - Removed */}
 
                     {/* Recent Activity */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -302,6 +295,37 @@ function CompanyProfile() {
                     </div>
                 </div>
             </div>
+
+            {/* Custom Delete Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Trash2 className="h-6 w-6 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove Team Member?</h3>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Are you sure you want to remove <span className="font-semibold text-gray-900">{memberToDelete?.name}</span>? This action cannot be undone.
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsDeleteModalOpen(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

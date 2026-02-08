@@ -32,192 +32,115 @@ function AdminDashboard() {
     const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
 
-    // Top Stats Cards
-    const topStats = [
-        {
-            id: 1,
-            icon: Users,
-            value: '12',
-            value: '12',
-            label: 'Pending Approvals',
-            badge: '+4 today',
-            gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]',
-            path: '/admin/compliance'
+    // Time-based mock data
+    const mockData = {
+        'Today': {
+            topStats: [
+                { id: 1, icon: Users, value: '12', label: 'Pending Approvals', badge: '+4 today', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
+                { id: 2, icon: AlertTriangle, value: '5', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
+                { id: 3, icon: Shield, value: '8', label: 'Expiring Compliance', badge: 'In next 48h', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+            ],
+            activityStats: [
+                { icon: Briefcase, label: 'Jobs Posted', value: '24', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { icon: PlayCircle, label: 'Courses', value: '12', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: FileText, label: 'Applications', value: '156', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
+                { icon: Calendar, label: 'Bookings', value: '8', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
+            ],
+            metrics: [
+                { label: 'SUCCESS RATE', sublabel: '3 Days Avg.', value: '', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50' },
+                { label: 'Providers', value: '10' },
+                { label: 'Recruiters', value: '8' },
+                { label: 'Professionals', value: '142' }
+            ],
+            revenue: { subscriptions: '1,250', totalRevenue: '£45,200', change: '+12.5%' },
+            revenueBreakdown: [
+                { label: 'Professionals', revenue: '£125,000', users: '1,200 Active', change: '+8%', icon: Users, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { label: 'Recruiters', revenue: '£300,000', users: '50 Active', change: '+15%', icon: Building, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' }
+            ],
+            trainingSources: [
+                { label: 'Course Sales', value: '£8,450' },
+                { label: 'Pending Payouts', value: '£1,200' },
+                { label: 'Refunds', value: '£0' }
+            ]
         },
-        {
-            id: 2,
-            icon: AlertTriangle,
-            value: '5',
-            label: 'Flagged Issues',
-            badge: 'Needs Attention',
-            gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]',
-            path: '/admin/flagged-accounts'
+        '7 Days': {
+            topStats: [
+                { id: 1, icon: Users, value: '45', label: 'Pending Approvals', badge: '+18 this week', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
+                { id: 2, icon: AlertTriangle, value: '12', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
+                { id: 3, icon: Shield, value: '24', label: 'Expiring Compliance', badge: 'This week', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+            ],
+            activityStats: [
+                { icon: Briefcase, label: 'Jobs Posted', value: '156', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { icon: PlayCircle, label: 'Courses', value: '48', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: FileText, label: 'Applications', value: '892', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
+                { icon: Calendar, label: 'Bookings', value: '67', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
+            ],
+            metrics: [
+                { label: 'SUCCESS RATE', sublabel: '7 Days Avg.', value: '', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50' },
+                { label: 'Providers', value: '28' },
+                { label: 'Recruiters', value: '35' },
+                { label: 'Professionals', value: '456' }
+            ],
+            revenue: { subscriptions: '3,450', totalRevenue: '£125,800', change: '+18.2%' },
+            revenueBreakdown: [
+                { label: 'Professionals', revenue: '£340,000', users: '2,450 Active', change: '+12%', icon: Users, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { label: 'Recruiters', revenue: '£580,000', users: '120 Active', change: '+22%', icon: Building, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' }
+            ],
+            trainingSources: [
+                { label: 'Course Sales', value: '£42,300' },
+                { label: 'Pending Payouts', value: '£8,500' },
+                { label: 'Refunds', value: '£450' }
+            ]
         },
-        {
-            id: 3,
-            icon: Shield,
-            value: '8',
-            label: 'Expiring Compliance',
-            badge: 'In next 48h',
-            gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]',
-            path: '/admin/compliance'
+        '30 Days': {
+            topStats: [
+                { id: 1, icon: Users, value: '189', label: 'Pending Approvals', badge: '+67 this month', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
+                { id: 2, icon: AlertTriangle, value: '34', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
+                { id: 3, icon: Shield, value: '78', label: 'Expiring Compliance', badge: 'This month', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+            ],
+            activityStats: [
+                { icon: Briefcase, label: 'Jobs Posted', value: '567', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { icon: PlayCircle, label: 'Courses', value: '145', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: FileText, label: 'Applications', value: '3,245', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
+                { icon: Calendar, label: 'Bookings', value: '234', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
+            ],
+            metrics: [
+                { label: 'SUCCESS RATE', sublabel: '30 Days Avg.', value: '', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50' },
+                { label: 'Providers', value: '89' },
+                { label: 'Recruiters', value: '124' },
+                { label: 'Professionals', value: '1,567' }
+            ],
+            revenue: { subscriptions: '12,800', totalRevenue: '£456,000', change: '+24.8%' },
+            revenueBreakdown: [
+                { label: 'Professionals', revenue: '£890,000', users: '5,600 Active', change: '+18%', icon: Users, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+                { label: 'Recruiters', revenue: '£1,250,000', users: '280 Active', change: '+32%', icon: Building, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' }
+            ],
+            trainingSources: [
+                { label: 'Course Sales', value: '£168,500' },
+                { label: 'Pending Payouts', value: '£24,300' },
+                { label: 'Refunds', value: '£2,100' }
+            ]
         }
-    ];
+    };
 
-    // Platform Activity Stats
-    const activityStats = [
-        {
-            icon: Briefcase,
-            label: 'Jobs Posted',
-            value: '24',
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50'
-        },
-        {
-            icon: PlayCircle,
-            label: 'Courses',
-            value: '12',
-            iconColor: 'text-purple-500',
-            iconBg: 'bg-purple-50'
-        },
-        {
-            icon: FileText,
-            label: 'Applications',
-            value: '156',
-            iconColor: 'text-green-500',
-            iconBg: 'bg-green-50',
-            badge: 'NEW'
-        },
-        {
-            icon: Calendar,
-            label: 'Bookings',
-            value: '8',
-            iconColor: 'text-orange-500',
-            iconBg: 'bg-orange-50'
-        }
-    ];
+    // Get current data based on time filter
+    const currentData = mockData[timeFilter] || mockData['Today'];
 
-    // Additional metrics
-    const metrics = [
-        { label: 'SUCCESS RATE', sublabel: '3 Days Avg.', value: '', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50' },
-        { label: 'Providers', value: '10' },
-        { label: 'Recruiters', value: '8' },
-        { label: 'Professionals', value: '142' }
-    ];
-
-    // Review Queue
+    // Review Queue (static - not affected by time filter)
     const reviewQueue = [
-        {
-            id: 1,
-            company: 'Ocean Hire Agency',
-            issue: 'Domain Mismatch',
-            time: '2h ago',
-            type: 'error',
-            icon: AlertTriangle,
-            iconColor: 'text-red-500',
-            iconBg: 'bg-red-50'
-        },
-        {
-            id: 2,
-            company: 'Sarah Jenkin',
-            issue: 'Blurry ID',
-            time: '5h ago',
-            type: 'warning',
-            icon: AlertTriangle,
-            iconColor: 'text-yellow-500',
-            iconBg: 'bg-yellow-50'
-        },
-        {
-            id: 3,
-            company: 'Pacific Maritime',
-            issue: 'Verification Pending',
-            time: '1d ago',
-            type: 'info',
-            icon: AlertTriangle,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50'
-        },
-        {
-            id: 4,
-            company: 'Blue Wave Shipping',
-            issue: 'Expired License',
-            time: '1d ago',
-            type: 'error',
-            icon: AlertTriangle,
-            iconColor: 'text-red-500',
-            iconBg: 'bg-red-50'
-        },
-        {
-            id: 5,
-            company: 'John Doe',
-            issue: 'Incomplete Profile',
-            time: '2d ago',
-            type: 'warning',
-            icon: AlertTriangle,
-            iconColor: 'text-yellow-500',
-            iconBg: 'bg-yellow-50'
-        }
+        { id: 1, company: 'Ocean Hire Agency', issue: 'Domain Mismatch', time: '2h ago', type: 'error', icon: AlertTriangle, iconColor: 'text-red-500', iconBg: 'bg-red-50' },
+        { id: 2, company: 'Sarah Jenkin', issue: 'Blurry ID', time: '5h ago', type: 'warning', icon: AlertTriangle, iconColor: 'text-yellow-500', iconBg: 'bg-yellow-50' },
+        { id: 3, company: 'Pacific Maritime', issue: 'Verification Pending', time: '1d ago', type: 'info', icon: AlertTriangle, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+        { id: 4, company: 'Blue Wave Shipping', issue: 'Expired License', time: '1d ago', type: 'error', icon: AlertTriangle, iconColor: 'text-red-500', iconBg: 'bg-red-50' },
+        { id: 5, company: 'John Doe', issue: 'Incomplete Profile', time: '2d ago', type: 'warning', icon: AlertTriangle, iconColor: 'text-yellow-500', iconBg: 'bg-yellow-50' }
     ];
 
-    // System Alerts
+    // System Alerts (static)
     const systemAlerts = [
-        {
-            id: 1,
-            message: 'Multiple accounts flagged for',
-            time: 'Just now',
-            severity: 'high',
-            color: 'bg-red-500'
-        },
-        {
-            id: 2,
-            message: 'Unusual spike in new',
-            time: 'Just now',
-            severity: 'medium',
-            color: 'bg-orange-500'
-        },
-        {
-            id: 3,
-            message: 'System maintenance',
-            time: 'Just now',
-            severity: 'info',
-            color: 'bg-blue-500'
-        },
-        {
-            id: 4,
-            message: 'Payment gateway latency',
-            time: 'Just now',
-            severity: 'medium',
-            color: 'bg-orange-500'
-        }
-    ];
-
-    // Revenue Breakdown
-    const revenueBreakdown = [
-        {
-            label: 'Professionals',
-            revenue: '£125,000',
-            users: '1,200 Active',
-            change: '+8%',
-            icon: Users,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50'
-        },
-        {
-            label: 'Recruiters',
-            revenue: '£300,000',
-            users: '50 Active',
-            change: '+15%',
-            icon: Building,
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50'
-        }
-    ];
-
-    // Training Revenue Sources
-    const trainingSources = [
-        { label: 'Course Sales', value: '£8,450' },
-        { label: 'Pending Payouts', value: '£1,200' },
-        { label: 'Refunds', value: '£0' }
+        { id: 1, message: 'Multiple accounts flagged for', time: 'Just now', severity: 'high', color: 'bg-red-500' },
+        { id: 2, message: 'Unusual spike in new', time: 'Just now', severity: 'medium', color: 'bg-orange-500' },
+        { id: 3, message: 'System maintenance', time: 'Just now', severity: 'info', color: 'bg-blue-500' },
+        { id: 4, message: 'Payment gateway latency', time: 'Just now', severity: 'medium', color: 'bg-orange-500' }
     ];
 
     return (
@@ -236,7 +159,7 @@ function AdminDashboard() {
 
             {/* Top Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {topStats.map((stat) => (
+                {currentData.topStats.map((stat) => (
                     <div
                         key={stat.id}
                         onClick={() => navigate(stat.path)}
@@ -303,7 +226,7 @@ function AdminDashboard() {
 
                         {/* Activity Stats Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            {activityStats.map((stat, index) => (
+                            {currentData.activityStats.map((stat, index) => (
                                 <div key={index} className="bg-white rounded-xl p-4 border border-gray-100">
                                     <div className={`p-2.5 rounded-lg ${stat.iconBg} inline-flex mb-3`}>
                                         <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
@@ -323,7 +246,7 @@ function AdminDashboard() {
 
                         {/* Additional Metrics */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {metrics.map((metric, index) => (
+                            {currentData.metrics.map((metric, index) => (
                                 <div key={index} className="bg-gray-50 rounded-xl p-4">
                                     {metric.icon ? (
                                         <>
@@ -420,44 +343,43 @@ function AdminDashboard() {
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Review Approval - Dark Blue Card */}
                         <button
                             onClick={() => navigate('/admin/compliance')}
-                            className="bg-gradient-to-br from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8] text-white rounded-2xl p-6 text-left hover:shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                            className="bg-[#0f385c] text-white rounded-2xl p-6 text-left hover:shadow-lg transition-all hover:bg-[#0a2742]"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-sm">
-                                    <CheckCircle className="h-5 w-5 text-white" />
-                                </div>
+                            <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm inline-flex mb-8">
+                                <CheckCircle className="h-5 w-5 text-white" />
                             </div>
-                            <h3 className="text-lg font-bold mb-1">Review Approval</h3>
-                            <p className="text-sm text-white/80">Start next pending item</p>
+                            <h3 className="text-base font-bold mb-1">Review Approval</h3>
+                            <p className="text-sm text-white/70">Start next pending item</p>
                         </button>
 
-                        <Link
-                            to="/admin/flagged-accounts"
-                            className="bg-white border-2 border-gray-100 rounded-2xl p-6 text-left hover:shadow-md transition-shadow block"
+                        {/* Flagged Accounts - White Card */}
+                        <button
+                            onClick={() => navigate('/admin/flagged-accounts')}
+                            className="bg-white rounded-2xl border border-gray-100 p-6 text-left hover:shadow-md transition-all hover:border-gray-200"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-blue-50">
-                                    <AlertTriangle className="h-5 w-5 text-blue-500" />
-                                </div>
+                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 inline-flex mb-8">
+                                <AlertTriangle className="h-5 w-5 text-gray-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">Flagged Accounts</h3>
+                            <h3 className="text-base font-bold text-gray-900 mb-1">Flagged Accounts</h3>
                             <p className="text-sm text-gray-500">View all 5 issues</p>
-                        </Link>
+                        </button>
 
-                        <Link
-                            to="/admin/upload-job"
-                            className="bg-white border-2 border-gray-100 rounded-2xl p-6 text-left hover:shadow-md transition-shadow block"
+                        {/* Upload Job - White Card */}
+                        <button
+                            onClick={() => navigate('/admin/marketplace/create-job', {
+                                state: { dashboardType: 'admin', returnPath: '/admin-dashboard' }
+                            })}
+                            className="bg-white rounded-2xl border border-gray-100 p-6 text-left hover:shadow-md transition-all hover:border-gray-200"
                         >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-blue-50">
-                                    <ArrowUpRight className="h-5 w-5 text-blue-500" />
-                                </div>
+                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 inline-flex mb-8">
+                                <ArrowUpRight className="h-5 w-5 text-gray-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">Upload Job</h3>
+                            <h3 className="text-base font-bold text-gray-900 mb-1">Upload Job</h3>
                             <p className="text-sm text-gray-500">Import external listing</p>
-                        </Link>
+                        </button>
                     </div>
                 </div>
 
@@ -472,7 +394,7 @@ function AdminDashboard() {
                             </div>
                             <div className="flex items-center gap-1 text-green-500 text-sm font-bold">
                                 <TrendingUp className="h-4 w-4" />
-                                +12.5%
+                                {currentData.revenue.change}
                             </div>
                         </div>
 
@@ -482,11 +404,11 @@ function AdminDashboard() {
                                 <Users className="h-4 w-4 text-white/80" />
                                 <span className="text-xs font-bold text-white/80 tracking-wide">ACTIVE SUBSCRIPTIONS</span>
                             </div>
-                            <div className="text-4xl font-extrabold text-white mb-4">1,250</div>
+                            <div className="text-4xl font-extrabold text-white mb-4">{currentData.revenue.subscriptions}</div>
 
                             <div className="pt-4 border-t border-white/20">
                                 <span className="text-xs font-bold text-white/80 tracking-wide block mb-2">TOTAL REVENUE</span>
-                                <div className="text-3xl font-extrabold text-white">£425,000</div>
+                                <div className="text-3xl font-extrabold text-white">{currentData.revenue.totalRevenue}</div>
                             </div>
                         </div>
 
@@ -494,7 +416,7 @@ function AdminDashboard() {
                         <div>
                             <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4">BREAKDOWN</h3>
                             <div className="space-y-4">
-                                {revenueBreakdown.map((item, index) => (
+                                {currentData.revenueBreakdown.map((item, index) => (
                                     <div key={index} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-lg ${item.iconBg}`}>
@@ -546,7 +468,7 @@ function AdminDashboard() {
                         <div>
                             <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4">SOURCES</h3>
                             <div className="space-y-3">
-                                {trainingSources.map((source, index) => (
+                                {currentData.trainingSources.map((source, index) => (
                                     <div key={index} className="flex items-center justify-between py-2">
                                         <div className="flex items-center gap-2">
                                             <DollarSign className="h-4 w-4 text-gray-400" />
