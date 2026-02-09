@@ -245,8 +245,8 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) 
                     max={today}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
-                  {licenseeDateError && (
-                    <p className="text-red-500 text-xs mt-1">{licenseeDateError}</p>
+                  {licenseDateError && (
+                    <p className="text-red-500 text-xs mt-1">{licenseDateError}</p>
                   )}
                 </div>
 

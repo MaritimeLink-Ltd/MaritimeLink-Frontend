@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, MapPin, Users, ChevronLeft, CheckCircle } from 'lucide-react';
 
 export default function ScheduleSession() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isEdit = location.state?.isEdit || false;
+  const sessionData = location.state?.sessionData || null;
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [form, setForm] = useState({
-    startDate: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
-    location: 'Training Center A',
-    instructor: 'Jane Cooper',
-    totalSeats: 20,
+    startDate: sessionData?.startDate || '',
+    endDate: sessionData?.endDate || '',
+    startTime: sessionData?.startTime || '',
+    endTime: sessionData?.endTime || '',
+    location: sessionData?.location || 'Training Center A',
+    instructor: sessionData?.instructor || 'Jane Cooper',
+    totalSeats: sessionData?.totalSeats || 20,
   });
 
   const handleChange = (e) => {
@@ -42,8 +46,8 @@ export default function ScheduleSession() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Sessions
           </button>
-          <h1 className="text-[28px] font-bold text-gray-900 mb-2">Schedule New Session</h1>
-          <p className="text-gray-500 text-sm">Create a new training session for this course.</p>
+          <h1 className="text-[28px] font-bold text-gray-900 mb-2">{isEdit ? 'Edit Session' : 'Schedule New Session'}</h1>
+          <p className="text-gray-500 text-sm">{isEdit ? 'Update the training session details.' : 'Create a new training session for this course.'}</p>
         </div>
 
         {/* Main Form Card */}
@@ -170,7 +174,7 @@ export default function ScheduleSession() {
                 type="submit"
                 className="px-6 py-2.5 text-sm font-semibold rounded-lg bg-[#003971] text-white hover:bg-[#002855] transition-colors shadow-sm"
               >
-                Create Session
+                {isEdit ? 'Update Session' : 'Create Session'}
               </button>
             </div>
           </form>
@@ -185,9 +189,9 @@ export default function ScheduleSession() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Session Created Successfully!</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{isEdit ? 'Session Updated Successfully!' : 'Session Created Successfully!'}</h2>
               <p className="text-gray-600">
-                Your new training session has been scheduled and is now available.
+                {isEdit ? 'Your training session has been updated successfully.' : 'Your new training session has been scheduled and is now available.'}
               </p>
             </div>
             <button

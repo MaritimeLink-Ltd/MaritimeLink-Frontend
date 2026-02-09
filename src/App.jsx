@@ -164,6 +164,7 @@ function App() {
           <Route path="/trainingprovider/courses/:courseId" element={<CourseDetail />} />
           <Route path="/trainingprovider/courses/:courseId/sessions" element={<ManageSessions />} />
           <Route path="/trainingprovider/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
+          <Route path="/trainingprovider/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
           <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
           <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
           <Route path="/trainingprovider/bookings" element={<Bookings />} />

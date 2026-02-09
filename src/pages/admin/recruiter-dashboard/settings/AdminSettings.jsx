@@ -41,55 +41,74 @@ function AdminSettings() {
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
     const [currentPlan, setCurrentPlan] = useState('Professional');
     const [planUpgraded, setPlanUpgraded] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+
+    // Handle profile data change
+    const handleProfileChange = (field, value) => {
+        setProfileData({ ...profileData, [field]: value });
+        setHasChanges(true);
+        setIsSaved(false);
+    };
+
+    // Handle save changes
+    const handleSaveChanges = () => {
+        setIsSaved(true);
+        setHasChanges(false);
+        // Reset saved state after 2 seconds
+        setTimeout(() => {
+            setIsSaved(false);
+        }, 2000);
+    };
 
     // Handle invoice download
     const handleDownloadInvoice = () => {
         const doc = new jsPDF();
-        
+
         // Add content to PDF
         doc.setFontSize(20);
         doc.text('INVOICE', 105, 20, { align: 'center' });
-        
+
         doc.setFontSize(12);
         doc.text('MaritimeLink', 20, 40);
         doc.text('Invoice #: INV-2026-001', 20, 50);
         doc.text('Date: February 4, 2026', 20, 60);
         doc.text('Due Date: March 4, 2026', 20, 70);
-        
+
         doc.setFontSize(14);
         doc.text('Bill To:', 20, 90);
         doc.setFontSize(11);
         doc.text('Company Name: Musharof Recruiting Agency', 20, 100);
         doc.text('Email: recruiter@example.com', 20, 110);
-        
+
         doc.setFontSize(14);
         doc.text('Invoice Details:', 20, 130);
-        
+
         // Table header
         doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
         doc.text('Description', 20, 145);
         doc.text('Amount', 160, 145);
-        
+
         // Table content
         doc.setFont(undefined, 'normal');
         doc.text('Professional Plan - Monthly', 20, 155);
         doc.text('$99.00', 160, 155);
-        
+
         doc.text('Priority Support', 20, 165);
         doc.text('$29.00', 160, 165);
-        
+
         // Total
         doc.line(20, 175, 190, 175);
         doc.setFont(undefined, 'bold');
         doc.text('Total:', 20, 185);
         doc.text('$128.00', 160, 185);
-        
+
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         doc.text('Thank you for your business!', 105, 250, { align: 'center' });
         doc.text('For questions, contact support@maritimelink.com', 105, 260, { align: 'center' });
-        
+
         // Save PDF
         doc.save(`invoice_${new Date().toISOString().split('T')[0]}.pdf`);
     };
@@ -123,7 +142,7 @@ function AdminSettings() {
                 newPassword: '',
                 confirmPassword: ''
             });
-            
+
             // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(''), 3000);
         }, 500);
@@ -140,7 +159,7 @@ function AdminSettings() {
         setCurrentPlan('Enterprise');
         setPlanUpgraded(true);
         // In real app, this would make an API call to upgrade the plan
-        
+
         // Clear upgraded message after 3 seconds
         setTimeout(() => setPlanUpgraded(false), 3000);
     };
@@ -198,7 +217,7 @@ function AdminSettings() {
 
     // Handle profile image removal
     const handleImageRemove = () => {
-        setProfileImage('/images/login-image.png');
+        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
     };
 
     const accountSections = [
@@ -279,10 +298,19 @@ function AdminSettings() {
                                         <h2 className="text-lg font-bold text-gray-900">Personal Information</h2>
                                         <p className="text-sm text-gray-500 mt-0.5">Update your photo and personal details here.</p>
                                     </div>
-                                    <button className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2">
-                                        <Save className="h-4 w-4" />
-                                        Save Changes
-                                    </button>
+                                    {(hasChanges || isSaved) && (
+                                        <button
+                                            onClick={handleSaveChanges}
+                                            disabled={isSaved}
+                                            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${isSaved
+                                                ? 'bg-green-500 text-white cursor-default'
+                                                : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                                }`}
+                                        >
+                                            <Save className="h-4 w-4" />
+                                            {isSaved ? 'Saved' : 'Save Changes'}
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Profile Photo */}
@@ -312,12 +340,6 @@ function AdminSettings() {
                                             <h3 className="font-bold text-gray-900 mb-1">Profile Photo</h3>
                                             <p className="text-sm text-gray-500 mb-3">This will be displayed on your profile.</p>
                                             <div className="flex items-center gap-3">
-                                                <label
-                                                    htmlFor="profile-photo-upload"
-                                                    className="text-sm font-medium text-gray-700 hover:text-gray-900 cursor-pointer"
-                                                >
-                                                    Update
-                                                </label>
                                                 <button
                                                     onClick={handleImageRemove}
                                                     className="text-sm font-medium text-red-600 hover:text-red-700"
@@ -338,7 +360,7 @@ function AdminSettings() {
                                             <input
                                                 type="text"
                                                 value={profileData.firstName}
-                                                onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                                                onChange={(e) => handleProfileChange('firstName', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -347,7 +369,7 @@ function AdminSettings() {
                                             <input
                                                 type="text"
                                                 value={profileData.lastName}
-                                                onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                                                onChange={(e) => handleProfileChange('lastName', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -360,7 +382,7 @@ function AdminSettings() {
                                             <input
                                                 type="email"
                                                 value={profileData.email}
-                                                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                                onChange={(e) => handleProfileChange('email', e.target.value)}
                                                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -374,7 +396,7 @@ function AdminSettings() {
                                             <div className="flex gap-2">
                                                 <select
                                                     value={profileData.countryCode}
-                                                    onChange={(e) => setProfileData({ ...profileData, countryCode: e.target.value })}
+                                                    onChange={(e) => handleProfileChange('countryCode', e.target.value)}
                                                     className="w-32 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                                 >
                                                     {countryCodes.map((country) => (
@@ -387,7 +409,7 @@ function AdminSettings() {
                                                     <input
                                                         type="tel"
                                                         value={profileData.phoneNumber}
-                                                        onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
+                                                        onChange={(e) => handleProfileChange('phoneNumber', e.target.value)}
                                                         className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                                         placeholder="Enter phone number"
                                                     />
@@ -400,7 +422,7 @@ function AdminSettings() {
                                             <input
                                                 type="text"
                                                 value={profileData.role}
-                                                onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
+                                                onChange={(e) => handleProfileChange('role', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -527,7 +549,7 @@ function AdminSettings() {
                                         Plan upgraded successfully to {currentPlan}!
                                     </div>
                                 )}
-                                
+
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
@@ -584,7 +606,7 @@ function AdminSettings() {
                                     {/* Buttons */}
                                     <div className="flex items-center gap-3">
                                         {currentPlan === 'Professional' ? (
-                                            <button 
+                                            <button
                                                 onClick={handleUpgradePlan}
                                                 className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
                                             >
@@ -595,7 +617,7 @@ function AdminSettings() {
                                                 Current Plan
                                             </span>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={handleDownloadInvoice}
                                             className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
                                         >
@@ -632,7 +654,7 @@ function AdminSettings() {
                                                 type="password"
                                                 placeholder="Enter Current Password"
                                                 value={passwordData.currentPassword}
-                                                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -642,7 +664,7 @@ function AdminSettings() {
                                                 type="password"
                                                 placeholder="Enter New Password"
                                                 value={passwordData.newPassword}
-                                                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                                                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -652,13 +674,13 @@ function AdminSettings() {
                                                 type="password"
                                                 placeholder="Confirm New Password"
                                                 value={passwordData.confirmPassword}
-                                                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                                                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
 
                                         <div className="flex justify-end pt-2">
-                                            <button 
+                                            <button
                                                 onClick={handleUpdatePassword}
                                                 className="px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
                                             >
@@ -668,48 +690,6 @@ function AdminSettings() {
                                     </div>
                                 </div>
 
-                                {/* 2FA Section */}
-                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div>
-                                            <h2 className="text-lg font-bold text-gray-900">Two-Factor Authentication</h2>
-                                            <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
-                                        </div>
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-                                            twoFactorEnabled 
-                                                ? 'bg-green-50 text-green-700 border-green-100'
-                                                : 'bg-gray-50 text-gray-600 border-gray-200'
-                                        }`}>
-                                            {twoFactorEnabled ? (
-                                                <><Check className="h-3 w-3" /> Enabled</>
-                                            ) : (
-                                                'Disabled'
-                                            )}
-                                        </span>
-                                    </div>
-
-                                    <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between border border-gray-200/60">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                                                <Smartphone className="h-6 w-6 text-gray-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Authenticator App</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Google Authenticator, Authy, etc.</p>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={handle2FAToggle}
-                                            className={`text-sm font-semibold transition-colors px-4 py-2 rounded-lg ${
-                                                twoFactorEnabled
-                                                    ? 'text-red-600 hover:bg-red-50'
-                                                    : 'text-green-600 hover:bg-green-50 bg-green-50'
-                                            }`}
-                                        >
-                                            {twoFactorEnabled ? 'Disable' : 'Enable'}
-                                        </button>
-                                    </div>
-                                </div>
 
                                 {/* Active Sessions */}
                                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

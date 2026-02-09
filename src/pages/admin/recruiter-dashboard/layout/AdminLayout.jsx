@@ -132,20 +132,8 @@ function AdminLayout() {
                             </button>
                         </div>
 
-                        {/* Right Section: Search, Notifications, Profile */}
+                        {/* Right Section: Notifications, Profile */}
                         <div className="flex items-center space-x-6">
-                            {/* Search Bar - Moved to right */}
-                            <div className="max-w-xs relative hidden sm:block">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Search className="h-4 w-4 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    name="search"
-                                    className="block w-64 pl-9 pr-3 py-2 border border-gray-100 rounded-xl leading-5 bg-gray-50/50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-100 focus:border-blue-200 text-sm transition-all duration-200"
-                                    placeholder="Search..."
-                                />
-                            </div>
 
                             {/* Notification */}
                             <button

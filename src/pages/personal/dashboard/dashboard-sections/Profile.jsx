@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -10,6 +10,7 @@ const Profile = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    const [profileImage, setProfileImage] = useState('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
 
     const handleLogout = () => {
         // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
@@ -36,6 +37,37 @@ const Profile = () => {
         navigate('/signin');
     };
 
+    // Handle profile image upload
+    const handleImageUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Handle profile image removal
+    const handleImageRemove = () => {
+        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+    };
+
     return (
         <div className="w-full h-full bg-gray-50 overflow-y-auto">
             {/* Main Content - Two Column Layout with spacing */}
@@ -47,19 +79,49 @@ const Profile = () => {
 
                         {/* Profile Picture and Info */}
                         <div className="flex flex-col items-start mb-6 sm:mb-8">
-                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 mb-4 overflow-hidden">
-                                <img
-                                    src="https://placehold.co/128x128/e5e7eb/6b7280?text=User"
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
+                            <div className="relative mb-4">
+                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 overflow-hidden">
+                                    <img
+                                        src={profileImage}
+                                        alt="Profile"
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <input
+                                    type="file"
+                                    id="profile-photo-upload"
+                                    className="hidden"
+                                    accept="image/jpeg,image/jpg,image/png,image/gif"
+                                    capture="user"
+                                    onChange={handleImageUpload}
                                 />
+                                <label
+                                    htmlFor="profile-photo-upload"
+                                    className="absolute bottom-0 right-0 bg-white border-2 border-gray-200 rounded-full p-2 hover:bg-gray-50 transition-colors cursor-pointer shadow-sm"
+                                >
+                                    <Camera className="h-4 w-4 text-gray-600" />
+                                </label>
                             </div>
                             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">Ali Shahzaib</h3>
-                            <p className="text-xs sm:text-sm text-gray-500">www.alishahzaib23@gmail.com</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-3">www.alishahzaib23@gmail.com</p>
+                            <div className="flex items-center gap-3">
+                                <label
+                                    htmlFor="profile-photo-upload"
+                                    className="text-sm font-medium text-[#003971] hover:text-[#002855] cursor-pointer"
+                                >
+                                    Update Photo
+                                </label>
+                                <button
+                                    onClick={handleImageRemove}
+                                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                                >
+                                    Remove
+                                </button>
+                            </div>
                         </div>
 
                         {/* Maritime Premium Card */}
-                        <div 
+                        <div
                             onClick={() => setShowPremiumPlans(true)}
                             className="bg-[#003971] rounded-xl p-4 sm:p-5 text-white cursor-pointer hover:bg-[#003971]/90 transition-colors relative"
                         >
@@ -114,7 +176,7 @@ const Profile = () => {
                                         <span className="text-gray-800 text-sm">info@maritime.com</span>
                                     </div>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => setShowFeedbackModal(true)}
                                     className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
                                 >
@@ -131,7 +193,7 @@ const Profile = () => {
                         <div className="mb-8">
                             <p className="text-xs text-gray-400 mb-3">Legal</p>
                             <div className="space-y-2">
-                                <button 
+                                <button
                                     onClick={() => navigate('/personal/terms')}
                                     className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
                                 >
@@ -141,7 +203,7 @@ const Profile = () => {
                                     </div>
                                     <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => navigate('/personal/privacy')}
                                     className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
                                 >
@@ -164,7 +226,7 @@ const Profile = () => {
                                         <span className="text-gray-800 text-sm">Log out</span>
                                     </div>
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setShowDeleteModal(true)}
                                     className="w-full flex items-center justify-between p-3 hover:bg-red-50 rounded-lg transition-colors"
                                 >

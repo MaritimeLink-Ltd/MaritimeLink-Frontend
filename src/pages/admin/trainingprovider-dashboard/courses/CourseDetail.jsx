@@ -277,9 +277,6 @@ export default function CourseDetail() {
               </button>
             </>
           )}
-          <button className="p-2.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-500">
-            <MoreVertical className="h-5 w-5" />
-          </button>
         </div>
       </div>
 

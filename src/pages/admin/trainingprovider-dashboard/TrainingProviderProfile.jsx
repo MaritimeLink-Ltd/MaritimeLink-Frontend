@@ -53,6 +53,58 @@ const TrainingProviderProfile = () => {
         slaBreaches: true
     });
 
+    const [hasChanges, setHasChanges] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+    const [profileImage, setProfileImage] = useState('/images/login-image.png');
+
+    // Handle form data change
+    const handleFormChange = (field, value) => {
+        setFormData({ ...formData, [field]: value });
+        setHasChanges(true);
+        setIsSaved(false);
+    };
+
+    // Handle save changes
+    const handleSaveChanges = () => {
+        setIsSaved(true);
+        setHasChanges(false);
+        // Reset saved state after 2 seconds
+        setTimeout(() => {
+            setIsSaved(false);
+        }, 2000);
+    };
+
+    // Handle profile image upload
+    const handleImageUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Handle profile image removal
+    const handleImageRemove = () => {
+        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+    };
+
     // Handle password update
     const handleUpdatePassword = () => {
         setPasswordError('');
@@ -155,14 +207,31 @@ const TrainingProviderProfile = () => {
                                     <div className="flex-shrink-0">
                                         <div className="relative">
                                             <img
-                                                src="/images/login-image.png"
+                                                src={profileImage}
                                                 alt="Profile"
                                                 className="w-24 h-24 rounded-full object-cover border-4 border-gray-50"
                                             />
-                                            <button className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:text-gray-900">
+                                            <input
+                                                type="file"
+                                                id="profile-photo-upload"
+                                                className="hidden"
+                                                accept="image/jpeg,image/jpg,image/png,image/gif"
+                                                capture="user"
+                                                onChange={handleImageUpload}
+                                            />
+                                            <label
+                                                htmlFor="profile-photo-upload"
+                                                className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                                            >
                                                 <Camera className="h-4 w-4" />
-                                            </button>
+                                            </label>
                                         </div>
+                                        <button
+                                            onClick={handleImageRemove}
+                                            className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                                        >
+                                            Remove
+                                        </button>
                                     </div>
 
                                     {/* Form Fields */}
@@ -172,7 +241,7 @@ const TrainingProviderProfile = () => {
                                             <input
                                                 type="text"
                                                 value={formData.firstName}
-                                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                                onChange={(e) => handleFormChange('firstName', e.target.value)}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -181,7 +250,7 @@ const TrainingProviderProfile = () => {
                                             <input
                                                 type="text"
                                                 value={formData.lastName}
-                                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                                onChange={(e) => handleFormChange('lastName', e.target.value)}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -191,7 +260,7 @@ const TrainingProviderProfile = () => {
                                             <input
                                                 type="email"
                                                 value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                onChange={(e) => handleFormChange('email', e.target.value)}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -201,7 +270,7 @@ const TrainingProviderProfile = () => {
                                                 <select
                                                     name="countryCode"
                                                     value={formData.countryCode}
-                                                    onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
+                                                    onChange={(e) => handleFormChange('countryCode', e.target.value)}
                                                     className="w-32 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                                 >
                                                     {countryCodes.map((country) => (
@@ -213,7 +282,7 @@ const TrainingProviderProfile = () => {
                                                 <input
                                                     type="tel"
                                                     value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                    onChange={(e) => handleFormChange('phone', e.target.value)}
                                                     className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                                     placeholder="Enter phone number"
                                                 />
@@ -225,7 +294,7 @@ const TrainingProviderProfile = () => {
                                             <input
                                                 type="text"
                                                 value={formData.jobTitle}
-                                                onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                                                onChange={(e) => handleFormChange('jobTitle', e.target.value)}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -234,7 +303,7 @@ const TrainingProviderProfile = () => {
                                             <input
                                                 type="text"
                                                 value={formData.department}
-                                                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                                onChange={(e) => handleFormChange('department', e.target.value)}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -242,10 +311,19 @@ const TrainingProviderProfile = () => {
                                 </div>
 
                                 <div className="flex justify-end mt-8 border-t border-gray-100 pt-6">
-                                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#003971] hover:bg-[#002455] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
-                                        <Save className="h-4 w-4" />
-                                        Save Changes
-                                    </button>
+                                    {(hasChanges || isSaved) && (
+                                        <button
+                                            onClick={handleSaveChanges}
+                                            disabled={isSaved}
+                                            className={`flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors shadow-sm ${isSaved
+                                                ? 'bg-green-500 text-white cursor-default'
+                                                : 'bg-[#003971] hover:bg-[#002455] text-white'
+                                                }`}
+                                        >
+                                            <Save className="h-4 w-4" />
+                                            {isSaved ? 'Saved' : 'Save Changes'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -375,8 +453,8 @@ const TrainingProviderProfile = () => {
                                         <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account.</p>
                                     </div>
                                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${twoFactorEnabled
-                                            ? 'bg-green-50 text-green-700 border-green-100'
-                                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                                        ? 'bg-green-50 text-green-700 border-green-100'
+                                        : 'bg-gray-50 text-gray-600 border-gray-200'
                                         }`}>
                                         {twoFactorEnabled ? (
                                             <><CheckCircle className="h-3 w-3" /> Enabled</>
@@ -399,8 +477,8 @@ const TrainingProviderProfile = () => {
                                     <button
                                         onClick={handle2FAToggle}
                                         className={`text-sm font-semibold transition-colors px-4 py-2 rounded-lg ${twoFactorEnabled
-                                                ? 'text-red-600 hover:bg-red-50'
-                                                : 'text-green-600 hover:bg-green-50 bg-green-50'
+                                            ? 'text-red-600 hover:bg-red-50'
+                                            : 'text-green-600 hover:bg-green-50 bg-green-50'
                                             }`}
                                     >
                                         {twoFactorEnabled ? 'Disable' : 'Enable'}

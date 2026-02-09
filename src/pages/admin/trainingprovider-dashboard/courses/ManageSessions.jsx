@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Users, User, ChevronDown, Download, Plus } from 'lucide-react';
+import { Calendar, MapPin, Users, User, ChevronDown, Download, Plus, X, AlertTriangle } from 'lucide-react';
 
 const sessionsData = [
   {
@@ -68,6 +68,9 @@ export default function ManageSessions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [showExportNotification, setShowExportNotification] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [showCancelledNotification, setShowCancelledNotification] = useState(false);
   const navigate = useNavigate();
 
   // Filter sessions based on search and filters
@@ -150,15 +153,36 @@ export default function ManageSessions() {
   };
 
   // Edit session handler
-  const handleEditSession = (sessionId) => {
-    alert(`Edit Session: ${sessionId}\nThis would navigate to edit session form`);
+  const handleEditSession = (session) => {
+    navigate(`/trainingprovider/courses/STCW-BST-001/sessions/edit`, {
+      state: {
+        isEdit: true,
+        sessionData: {
+          id: session.id,
+          startDate: session.date.split(' - ')[0],
+          endDate: session.date.split(' - ')[1]?.replace(', 2024', '') || '',
+          startTime: session.time.split(' - ')[0],
+          endTime: session.time.split(' - ')[1],
+          location: session.location,
+          instructor: session.instructor,
+          totalSeats: session.total
+        }
+      }
+    });
   };
 
-  // Cancel session handler
-  const handleCancelSession = (sessionId) => {
-    if (confirm(`Are you sure you want to cancel session ${sessionId}?`)) {
-      alert(`Session ${sessionId} cancelled successfully`);
-    }
+  // Cancel session handler - show modal
+  const handleCancelSession = (session) => {
+    setSelectedSession(session);
+    setShowCancelModal(true);
+  };
+
+  // Confirm cancel session
+  const handleConfirmCancel = () => {
+    setShowCancelModal(false);
+    setSelectedSession(null);
+    setShowCancelledNotification(true);
+    setTimeout(() => setShowCancelledNotification(false), 3000);
   };
 
   return (
@@ -304,10 +328,10 @@ export default function ManageSessions() {
                   </td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => handleEditSession(session.id)}
+                      onClick={() => handleEditSession(session)}
                       className="text-sm font-medium text-blue-600 hover:text-blue-700 mr-3">Edit</button>
                     <button
-                      onClick={() => handleCancelSession(session.id)}
+                      onClick={() => handleCancelSession(session)}
                       className="text-sm font-medium text-red-500 hover:text-red-700">Cancel</button>
                   </td>
                 </tr>
@@ -345,8 +369,8 @@ export default function ManageSessions() {
                 key={page}
                 onClick={() => setCurrentPage(page)}
                 className={`min-w-[32px] h-8 text-sm font-medium rounded border ${currentPage === page
-                    ? 'bg-[#003971] border-[#003971] text-white'
-                    : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                  ? 'bg-[#003971] border-[#003971] text-white'
+                  : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
                   }`}
               >
                 {page}
@@ -361,6 +385,54 @@ export default function ManageSessions() {
           </div>
         </div>
       </div>
+
+      {/* Cancelled Notification Toast */}
+      {showCancelledNotification && (
+        <div className="fixed top-4 left-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-left duration-300">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-medium">Session Cancelled Successfully!</span>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && selectedSession && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowCancelModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Cancel Session?</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to cancel session <span className="font-semibold">{selectedSession.id}</span>?
+                This action cannot be undone and all bookings will be cancelled.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Keep Session
+                </button>
+                <button
+                  onClick={handleConfirmCancel}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Cancel Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

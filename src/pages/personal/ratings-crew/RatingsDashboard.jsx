@@ -182,31 +182,33 @@ const RatingsDashboard = () => {
 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
           <div className="bg-white rounded-2xl shadow-md p-3">
-            {sections.map((section) => (
-              <div
-                key={section.id}
-                onClick={() => {
-                  setActiveSection(section.id);
-                  setSidebarOpen(false);
-                }}
-                className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${activeSection === section.id
-                    ? 'bg-[#003971] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
+            {sections.map((section) => {
+              const isActiveOrCompleted = section.id <= activeSection;
+
+              return (
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${activeSection === section.id
-                      ? 'bg-white text-[#003971]'
-                      : 'bg-gray-200 text-gray-600'
-                    }`}
+                  key={section.id}
+                  onClick={() => {
+                    setActiveSection(section.id);
+                    setSidebarOpen(false);
+                  }}
+                  className="flex items-center space-x-2.5 p-2 mb-1 cursor-pointer transition-colors hover:bg-gray-50 rounded-lg"
                 >
-                  {section.id}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isActiveOrCompleted
+                        ? 'bg-[#003971] text-white'
+                        : 'bg-gray-300 text-gray-500'
+                      }`}
+                  >
+                    {section.id}
+                  </div>
+                  <span className={`text-xs font-normal leading-tight ${isActiveOrCompleted ? 'text-[#003971]' : 'text-gray-400'
+                    }`}>
+                    {section.title}
+                  </span>
                 </div>
-                <span className="text-xs font-medium leading-tight">
-                  {section.title}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="bg-white rounded-2xl shadow-md p-3">
@@ -261,28 +263,30 @@ const RatingsDashboard = () => {
 
         {/* Steps Card */}
         <div className="w-full bg-white rounded-2xl shadow-md p-3 mb-4">
-          {sections.map((section) => (
-            <div
-              key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${activeSection === section.id
-                  ? 'bg-[#003971] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-                }`}
-            >
+          {sections.map((section) => {
+            const isActiveOrCompleted = section.id <= activeSection;
+
+            return (
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${activeSection === section.id
-                    ? 'bg-white text-[#003971]'
-                    : 'bg-gray-200 text-gray-600'
-                  }`}
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className="flex items-center space-x-2.5 p-2 mb-1 cursor-pointer transition-colors hover:bg-gray-50 rounded-lg"
               >
-                {section.id}
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isActiveOrCompleted
+                    ? 'bg-[#003971] text-white'
+                    : 'bg-gray-300 text-gray-500'
+                    }`}
+                >
+                  {section.id}
+                </div>
+                <span className={`text-xs font-normal leading-tight ${isActiveOrCompleted ? 'text-[#003971]' : 'text-gray-400'
+                  }`}>
+                  {section.title}
+                </span>
               </div>
-              <span className="text-xs font-medium leading-tight">
-                {section.title}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Resume Card */}
