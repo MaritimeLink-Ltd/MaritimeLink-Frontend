@@ -226,7 +226,14 @@ export default function CourseDetail() {
   // View Profile handler
   const handleViewProfile = (applicant) => {
     // Navigate to candidate profile page - using applicant id or a default id
-    navigate(`/trainingprovider/candidate/${applicant.id || '1'}`);
+    // Check if we are in the admin dashboard context (Marketplace)
+    const isAdminMarketplace = location.pathname.includes('/admin/marketplace');
+
+    if (isAdminMarketplace) {
+      navigate(`/admin/marketplace/candidate/${applicant.id || '1'}`);
+    } else {
+      navigate(`/trainingprovider/candidate/${applicant.id || '1'}`);
+    }
   };
 
 

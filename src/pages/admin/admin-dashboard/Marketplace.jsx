@@ -5,7 +5,7 @@ import { Search, ChevronDown, Briefcase, GraduationCap, CheckCircle, AlertTriang
 function Marketplace() {
     const [activeMainTab, setActiveMainTab] = useState('Oversight');
     const [activeSubTab, setActiveSubTab] = useState('Jobs');
-    const [timeFilter, setTimeFilter] = useState('Today');
+    const [timeFilter, setTimeFilter] = useState('30 Days');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('Status');
     const [riskFilter, setRiskFilter] = useState('Risk Level');
@@ -14,7 +14,7 @@ function Marketplace() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 7; // Adjusted for view
+    const itemsPerPage = 10; // Updated to 10 per page
 
     // Dropdown Visibility State
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -383,33 +383,92 @@ function Marketplace() {
         }
     ];
 
-    // Oversight Training Data
-    const oversightTrainingData = [
-        {
-            id: '1',
-            courseName: 'Basic Safety Training (BST)',
-            courseProvider: 'by SeamanShip',
-            type: 'STCW',
-            typeColor: 'text-blue-600',
-            company: 'SeamanShip',
-            status: 'Active',
-            statusColor: 'text-green-600',
-            bookings: 24,
-            posted: '1 month ago'
-        },
-        {
-            id: '2',
-            courseName: 'Advanced Fire Fighting',
-            courseProvider: 'by Global Marine',
-            type: 'SAFETY',
-            typeColor: 'text-blue-600',
-            company: 'Global Marine',
-            status: 'Flagged',
-            statusColor: 'text-red-600',
-            bookings: 12,
-            posted: '2 weeks ago'
-        }
-    ];
+    // Oversight Training Data - Generated Dummy Data
+    const generateTrainingData = () => {
+        const baseData = [
+            {
+                id: '1',
+                courseName: 'Basic Safety Training (BST)',
+                courseProvider: 'by SeamanShip',
+                type: 'STCW',
+                typeColor: 'text-blue-600',
+                company: 'SeamanShip',
+                status: 'Active',
+                statusColor: 'text-green-600',
+                bookings: 24,
+                posted: '1 month ago',
+                riskLevel: 'Low',
+                riskColor: 'text-green-600'
+            },
+            {
+                id: '2',
+                courseName: 'Advanced Fire Fighting',
+                courseProvider: 'by Global Marine',
+                type: 'SAFETY',
+                typeColor: 'text-blue-600',
+                company: 'Global Marine',
+                status: 'Flagged',
+                statusColor: 'text-red-600',
+                bookings: 12,
+                posted: '2 weeks ago',
+                riskLevel: 'High',
+                riskColor: 'text-red-600'
+            }
+        ];
+
+        const courseTypes = ['STCW', 'SAFETY', 'REFRESHER', 'TECHNICAL', 'MEDICAL'];
+        const companies = ['Maersk Training', 'V.Ships', 'Anglo-Eastern', 'Wilhelmsen', 'Bernhard Schulte', 'Columbia Shipmanagement'];
+        const statuses = ['Active', 'Flagged', 'Draft', 'Paused'];
+        const riskLevels = ['Low', 'Medium', 'High'];
+
+        const dummyData = Array.from({ length: 122 }, (_, i) => {
+            const type = courseTypes[Math.floor(Math.random() * courseTypes.length)];
+            const company = companies[Math.floor(Math.random() * companies.length)];
+            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            const risk = riskLevels[Math.floor(Math.random() * riskLevels.length)];
+
+            let statusColor = 'text-gray-600';
+            if (status === 'Active') statusColor = 'text-green-600';
+            if (status === 'Flagged') statusColor = 'text-red-600';
+            if (status === 'Draft') statusColor = 'text-gray-400';
+            if (status === 'Paused') statusColor = 'text-orange-600';
+
+            let riskColor = 'text-green-600';
+            if (risk === 'Medium') riskColor = 'text-orange-600';
+            if (risk === 'High') riskColor = 'text-red-600';
+
+            // Generate realistic posted times including "Today"
+            const daysAgo = Math.floor(Math.random() * 30); // 0 to 29
+            let postedTime;
+            if (daysAgo === 0) {
+                const hoursAgo = Math.floor(Math.random() * 23) + 1;
+                postedTime = `${hoursAgo} hours ago`; // Counts as 'Today'
+            } else if (daysAgo === 1) {
+                postedTime = 'Yesterday';
+            } else {
+                postedTime = `${daysAgo} days ago`;
+            }
+
+            return {
+                id: (i + 3).toString(),
+                courseName: `${type} Course ${i + 1}`,
+                courseProvider: `by ${company}`,
+                type: type,
+                typeColor: 'text-blue-600',
+                company: company,
+                status: status,
+                statusColor: statusColor,
+                bookings: Math.floor(Math.random() * 50) + 5,
+                posted: postedTime,
+                riskLevel: risk,
+                riskColor: riskColor
+            };
+        });
+
+        return [...baseData, ...dummyData];
+    };
+
+    const oversightTrainingData = generateTrainingData();
 
     // MaritimeLink Jobs Data
     const maritimeLinkJobsData = [
@@ -755,8 +814,8 @@ function Marketplace() {
                                 )}
                             </div>
 
-                            {/* Risk Level Dropdown - Only show for Oversight Jobs or where applicable */}
-                            {(!isMaritimeLinkTab && activeSubTab === 'Jobs') && (
+                            {/* Risk Level Dropdown - Now active for both Jobs and Training in Oversight */}
+                            {(!isMaritimeLinkTab) && (
                                 <div className="relative">
                                     <button
                                         onClick={() => setShowRiskDropdown(!showRiskDropdown)}
