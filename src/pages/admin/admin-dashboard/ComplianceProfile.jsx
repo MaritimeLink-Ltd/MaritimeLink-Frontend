@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileText, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileText, X, Download } from 'lucide-react';
 
 function ComplianceProfile() {
     const navigate = useNavigate();
@@ -153,9 +153,34 @@ function ComplianceProfile() {
                                 <p className="text-sm text-gray-500">{document.size} • {document.date}</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
-                            <X className="w-6 h-6 text-gray-500" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const response = await fetch(document.url);
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = window.document.createElement('a');
+                                        link.href = url;
+                                        link.download = document.name;
+                                        window.document.body.appendChild(link);
+                                        link.click();
+                                        window.document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                        console.error('Download failed:', error);
+                                        window.open(document.url, '_blank');
+                                    }
+                                }}
+                                className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Download"
+                            >
+                                <Download className="h-5 w-5" />
+                            </button>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+                                <X className="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
                     </div>
                     <div className="flex-1 bg-gray-100 p-4 overflow-auto flex items-center justify-center">
                         <img src={document.url} alt={document.name} className="max-w-full max-h-full object-contain shadow-lg rounded-lg" />

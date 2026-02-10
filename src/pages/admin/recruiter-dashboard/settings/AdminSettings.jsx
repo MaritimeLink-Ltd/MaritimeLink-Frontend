@@ -43,6 +43,17 @@ function AdminSettings() {
     const [planUpgraded, setPlanUpgraded] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
+    const [isCompanySaved, setIsCompanySaved] = useState(false);
+    const [companyData, setCompanyData] = useState({
+        name: 'Ocean Crewing Services Ltd',
+        website: 'https://oceancrewing.com',
+        linkedin: 'https://linkedin.com/company/ocean-crewing',
+        address: '12 Maritime Way',
+        city: 'London',
+        state: 'Greater London',
+        postcode: 'EC3R 8AD',
+        country: 'United Kingdom'
+    });
 
     // Handle profile data change
     const handleProfileChange = (field, value) => {
@@ -58,6 +69,21 @@ function AdminSettings() {
         // Reset saved state after 2 seconds
         setTimeout(() => {
             setIsSaved(false);
+        }, 2000);
+    };
+
+    // Handle company data change
+    const handleCompanyChange = (field, value) => {
+        setCompanyData({ ...companyData, [field]: value });
+        setIsCompanySaved(false);
+    };
+
+    // Handle company save
+    const handleCompanyUpdate = () => {
+        setIsCompanySaved(true);
+        // Reset saved state after 2 seconds
+        setTimeout(() => {
+            setIsCompanySaved(false);
         }, 2000);
     };
 
@@ -232,7 +258,7 @@ function AdminSettings() {
     ];
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden">
             {/* Header - Sticky */}
             <div className="flex-shrink-0 pb-3">
                 <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
@@ -433,16 +459,23 @@ function AdminSettings() {
 
                         {/* Company Profile Section */}
                         {activeSection === 'company-profile' && (
-                            <div>
+                            <div className="pb-8">
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
                                         <h2 className="text-lg font-bold text-gray-900">Company Details</h2>
                                         <p className="text-sm text-gray-500 mt-0.5">Manage your recruitment agency information.</p>
                                     </div>
-                                    <button className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2">
-                                        <Save className="h-4 w-4" />
-                                        Update Company
+                                    <button
+                                        onClick={handleCompanyUpdate}
+                                        disabled={isCompanySaved}
+                                        className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${isCompanySaved
+                                            ? 'bg-green-500 text-white cursor-default'
+                                            : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                            }`}
+                                    >
+                                        {isCompanySaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                                        {isCompanySaved ? 'Updated' : 'Update Company'}
                                     </button>
                                 </div>
 
@@ -453,7 +486,8 @@ function AdminSettings() {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
                                         <input
                                             type="text"
-                                            defaultValue="Ocean Crewing Services Ltd"
+                                            value={companyData.name}
+                                            onChange={(e) => handleCompanyChange('name', e.target.value)}
                                             className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                         />
                                     </div>
@@ -464,7 +498,8 @@ function AdminSettings() {
                                         <div className="relative">
                                             <input
                                                 type="url"
-                                                defaultValue="https://oceancrewing.com"
+                                                value={companyData.website}
+                                                onChange={(e) => handleCompanyChange('website', e.target.value)}
                                                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                             <Globe className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -477,7 +512,8 @@ function AdminSettings() {
                                         <div className="relative">
                                             <input
                                                 type="url"
-                                                defaultValue="https://linkedin.com/company/ocean-crewing"
+                                                value={companyData.linkedin}
+                                                onChange={(e) => handleCompanyChange('linkedin', e.target.value)}
                                                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                             <Linkedin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -490,7 +526,8 @@ function AdminSettings() {
                                         <div className="relative">
                                             <input
                                                 type="text"
-                                                defaultValue="12 Maritime Way"
+                                                value={companyData.address}
+                                                onChange={(e) => handleCompanyChange('address', e.target.value)}
                                                 className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                             <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -503,7 +540,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                                             <input
                                                 type="text"
-                                                defaultValue="London"
+                                                value={companyData.city}
+                                                onChange={(e) => handleCompanyChange('city', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -511,7 +549,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">County/State</label>
                                             <input
                                                 type="text"
-                                                defaultValue="Greater London"
+                                                value={companyData.state}
+                                                onChange={(e) => handleCompanyChange('state', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -523,7 +562,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Postcode/Zip</label>
                                             <input
                                                 type="text"
-                                                defaultValue="EC3R 8AD"
+                                                value={companyData.postcode}
+                                                onChange={(e) => handleCompanyChange('postcode', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>
@@ -531,7 +571,8 @@ function AdminSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
                                             <input
                                                 type="text"
-                                                defaultValue="United Kingdom"
+                                                value={companyData.country}
+                                                onChange={(e) => handleCompanyChange('country', e.target.value)}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                             />
                                         </div>

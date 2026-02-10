@@ -119,44 +119,44 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 id: 1,
                 name: "Certificates of Competency (CoC)",
                 documents: [
-                    { id: 1, name: "Officer of Watch (OOW) Certificate", expiryDate: "2025-08-15", status: "valid" },
-                    { id: 2, name: "Chief Mate Certificate", expiryDate: "2025-11-20", status: "valid" },
-                    { id: 3, name: "Master Mariner Certificate", expiryDate: "2024-02-10", status: "expired" }
+                    { id: 1, name: "Officer of Watch (OOW) Certificate", expiryDate: "2025-08-15", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 2, name: "Chief Mate Certificate", expiryDate: "2025-11-20", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 3, name: "Master Mariner Certificate", expiryDate: "2024-02-10", status: "expired", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
                 ]
             },
             {
                 id: 2,
                 name: "Training Certificates",
                 documents: [
-                    { id: 4, name: "Basic Safety Training (BST)", expiryDate: "2025-06-30", status: "valid" },
-                    { id: 5, name: "Advanced Fire Fighting", expiryDate: "2025-09-18", status: "valid" },
-                    { id: 6, name: "Medical First Aid", expiryDate: "2024-12-01", status: "expiring-soon" },
-                    { id: 7, name: "Ship Security Officer (SSO)", expiryDate: "2026-03-25", status: "valid" }
+                    { id: 4, name: "Basic Safety Training (BST)", expiryDate: "2025-06-30", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 5, name: "Advanced Fire Fighting", expiryDate: "2025-09-18", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 6, name: "Medical First Aid", expiryDate: "2024-12-01", status: "expiring-soon", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 7, name: "Ship Security Officer (SSO)", expiryDate: "2026-03-25", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
                 ]
             },
             {
                 id: 3,
                 name: "Medical Certificates",
                 documents: [
-                    { id: 8, name: "Seafarer Medical Examination Certificate (SMEC)", expiryDate: "2025-07-10", status: "valid" },
-                    { id: 9, name: "Eyesight Test Report", expiryDate: "2025-07-10", status: "valid" }
+                    { id: 8, name: "Seafarer Medical Examination Certificate (SMEC)", expiryDate: "2025-07-10", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 9, name: "Eyesight Test Report", expiryDate: "2025-07-10", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
                 ]
             },
             {
                 id: 4,
                 name: "Passport & Visa",
                 documents: [
-                    { id: 10, name: "Passport", expiryDate: "2028-04-15", status: "valid" },
-                    { id: 11, name: "Schengen Visa", expiryDate: "2024-03-20", status: "expired" },
-                    { id: 12, name: "US C1/D Visa", expiryDate: "2026-12-30", status: "valid" }
+                    { id: 10, name: "Passport", expiryDate: "2028-04-15", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 11, name: "Schengen Visa", expiryDate: "2024-03-20", status: "expired", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 12, name: "US C1/D Visa", expiryDate: "2026-12-30", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
                 ]
             },
             {
                 id: 5,
                 name: "Seamans Book & Discharge Book",
                 documents: [
-                    { id: 13, name: "Seaman's Book", expiryDate: "2027-05-22", status: "valid" },
-                    { id: 14, name: "Discharge Book", expiryDate: "N/A", status: "valid" }
+                    { id: 13, name: "Seaman's Book", expiryDate: "2027-05-22", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+                    { id: 14, name: "Discharge Book", expiryDate: "N/A", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
                 ]
             }
         ]
@@ -625,6 +625,23 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
+                                        onClick={async () => {
+                                            try {
+                                                const response = await fetch(selectedDocument.url);
+                                                const blob = await response.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = window.document.createElement('a');
+                                                link.href = url;
+                                                link.download = selectedDocument.name;
+                                                window.document.body.appendChild(link);
+                                                link.click();
+                                                window.document.body.removeChild(link);
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (error) {
+                                                console.error('Download failed:', error);
+                                                window.open(selectedDocument.url, '_blank');
+                                            }
+                                        }}
                                         className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
                                         title="Download"
                                     >
