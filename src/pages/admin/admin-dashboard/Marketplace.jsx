@@ -357,7 +357,8 @@ function Marketplace() {
             totalApplications: 148,
             flaggedJobs: 2,
             riskLevel: 'Medium',
-            riskColor: 'text-orange-600'
+            riskColor: 'text-orange-600',
+            status: 'Active'
         },
         {
             id: '2',
@@ -368,7 +369,8 @@ function Marketplace() {
             totalApplications: 148,
             flaggedJobs: 1,
             riskLevel: 'Low',
-            riskColor: 'text-green-600'
+            riskColor: 'text-green-600',
+            status: 'Active'
         },
         {
             id: '3',
@@ -379,7 +381,20 @@ function Marketplace() {
             totalApplications: 148,
             flaggedJobs: 2,
             riskLevel: 'Low',
-            riskColor: 'text-green-600'
+            riskColor: 'text-green-600',
+            status: 'Active'
+        },
+        {
+            id: '4',
+            recruiterName: 'New Horizon Crewing',
+            recruiterSubtext: 'Pending Approval',
+            totalLiveJobs: 0,
+            jobsPosted: 0,
+            totalApplications: 0,
+            flaggedJobs: 0,
+            riskLevel: 'Low',
+            riskColor: 'text-green-600',
+            status: 'Draft'
         }
     ];
 
@@ -493,10 +508,49 @@ function Marketplace() {
             typeColor: 'text-blue-600',
             location: 'Norway',
             status: 'Draft',
-            statusColor: 'text-orange-600',
+            statusColor: 'text-gray-600',
             applications: 0,
             views: 0,
             posted: 'Today'
+        },
+        {
+            id: '3',
+            jobTitle: 'Second Officer',
+            jobSubtext: 'Official MaritimeLink Listing',
+            type: 'OFFICER',
+            typeColor: 'text-blue-600',
+            location: 'Singapore',
+            status: 'Draft',
+            statusColor: 'text-gray-600',
+            applications: 0,
+            views: 0,
+            posted: 'Yesterday'
+        },
+        {
+            id: '4',
+            jobTitle: 'Electrical Technical Officer',
+            jobSubtext: 'Official MaritimeLink Listing',
+            type: 'TECHNICAL',
+            typeColor: 'text-blue-600',
+            location: 'Rotterdam',
+            status: 'Draft',
+            statusColor: 'text-gray-600',
+            applications: 0,
+            views: 0,
+            posted: '2 days ago'
+        },
+        {
+            id: '5',
+            jobTitle: 'Master Mariner',
+            jobSubtext: 'Official MaritimeLink Listing',
+            type: 'CAPTAIN',
+            typeColor: 'text-blue-600',
+            location: 'Dubai',
+            status: 'Draft',
+            statusColor: 'text-gray-600',
+            applications: 0,
+            views: 0,
+            posted: '3 days ago'
         }
     ];
 
@@ -527,6 +581,19 @@ function Marketplace() {
             bookings: 73,
             views: '-',
             posted: '2 months ago'
+        },
+        {
+            id: '3',
+            courseName: 'Advanced Fire Fighting',
+            courseSubtext: 'Official MaritimeLink Course',
+            type: 'SAFETY',
+            typeColor: 'text-blue-600',
+            location: '5 Days',
+            status: 'Draft',
+            statusColor: 'text-gray-600',
+            bookings: 0,
+            views: '-',
+            posted: 'Today'
         }
     ];
 
@@ -635,7 +702,7 @@ function Marketplace() {
     };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50 p-6">
             {/* Header */}
             <div className="flex-shrink-0 mb-6">
                 <div className="flex items-start justify-between mb-6">
@@ -767,8 +834,8 @@ function Marketplace() {
                 </div>
             )}
 
-            {/* Marketplace Table Card - Scrollable */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+            {/* Marketplace Table Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col mb-6">
                 {/* Search and Filters */}
                 <div className="flex-shrink-0 p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between gap-4">
@@ -862,10 +929,10 @@ function Marketplace() {
                     </div>
                 </div>
 
-                {/* Table - Scrollable Content */}
-                <div className="flex-1 overflow-auto">
+                {/* Table - Content */}
+                <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50 sticky top-0 z-10">
+                        <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 {isMaritimeLinkTab ? (
                                     // MaritimeLink columns
@@ -1011,12 +1078,28 @@ function Marketplace() {
                                                 <span className="text-sm text-gray-500">{record.posted}</span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <Link
-                                                    to={`/admin/marketplace/internal/jobs/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
+                                                {record.status === 'Draft' ? (
+                                                    <button
+                                                        onClick={() => navigate('/admin/marketplace/create-job', {
+                                                            state: {
+                                                                dashboardType: 'admin',
+                                                                isEdit: true,
+                                                                jobData: record,
+                                                                returnPath: '/admin/marketplace'
+                                                            }
+                                                        })}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        Edit Job
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/marketplace/internal/jobs/${record.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -1050,12 +1133,28 @@ function Marketplace() {
                                                 <span className="text-sm text-gray-500">{record.posted}</span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <Link
-                                                    to={`/admin/marketplace/internal/courses/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
+                                                {record.status === 'Draft' ? (
+                                                    <button
+                                                        onClick={() => navigate('/admin/create-course', {
+                                                            state: {
+                                                                dashboardType: 'admin',
+                                                                isEdit: true,
+                                                                courseData: record,
+                                                                returnPath: '/admin/marketplace'
+                                                            }
+                                                        })}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        Edit Course
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/marketplace/internal/courses/${record.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -1087,12 +1186,28 @@ function Marketplace() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <Link
-                                                    to={`/admin/marketplace/oversight/jobs/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Jobs
-                                                </Link>
+                                                {record.status === 'Draft' ? (
+                                                    <button
+                                                        onClick={() => navigate('/admin/marketplace/create-job', {
+                                                            state: {
+                                                                dashboardType: 'admin',
+                                                                isEdit: true,
+                                                                jobData: { ...record, jobTitle: record.recruiterName }, // Mapping recruiterName to jobTitle for demo purposes
+                                                                returnPath: '/admin/marketplace'
+                                                            }
+                                                        })}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        Edit Job
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/marketplace/oversight/jobs/${record.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Jobs
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -1123,12 +1238,28 @@ function Marketplace() {
                                                 <span className="text-sm text-gray-500">{record.posted}</span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <Link
-                                                    to={`/admin/marketplace/oversight/courses/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
+                                                {record.status === 'Draft' ? (
+                                                    <button
+                                                        onClick={() => navigate('/admin/create-course', {
+                                                            state: {
+                                                                dashboardType: 'admin',
+                                                                isEdit: true,
+                                                                courseData: record,
+                                                                returnPath: '/admin/marketplace'
+                                                            }
+                                                        })}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        Edit Course
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/marketplace/oversight/courses/${record.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     ))

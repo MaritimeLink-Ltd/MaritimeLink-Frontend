@@ -14,7 +14,6 @@ import {
     Building,
     DollarSign,
     ArrowUpRight,
-    MoreVertical,
     Search,
     ChevronDown,
     Link as LinkIcon,
@@ -163,7 +162,7 @@ function AdminDashboard() {
                     <div
                         key={stat.id}
                         onClick={() => navigate(stat.path)}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-pointer`}
                     >
                         <div className="relative z-10">
                             {/* Icon and Badge */}
@@ -309,9 +308,6 @@ function AdminDashboard() {
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-lg font-bold text-gray-900">System Alerts</h2>
-                                <button className="text-gray-400 hover:text-gray-600">
-                                    <MoreVertical className="h-5 w-5" />
-                                </button>
                             </div>
 
                             <div className="space-y-3">
@@ -441,9 +437,6 @@ function AdminDashboard() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-gray-900">Training Revenue</h2>
-                            <button className="text-gray-400 hover:text-gray-600">
-                                <MoreVertical className="h-5 w-5" />
-                            </button>
                         </div>
 
                         {/* Net Revenue Display */}

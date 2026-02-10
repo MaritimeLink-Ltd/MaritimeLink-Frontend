@@ -64,6 +64,7 @@ const AdminProfile = () => {
     });
     const [createdKey, setCreatedKey] = useState(null);
     const [keyCopied, setKeyCopied] = useState(false);
+    const [copiedId, setCopiedId] = useState(null);
 
     const menuItems = [
         { id: 'general', label: 'General Profile', icon: User },
@@ -123,6 +124,16 @@ const AdminProfile = () => {
             setKeyCopied(true);
             setTimeout(() => setKeyCopied(false), 2000);
         }
+    };
+
+    const handleCopyHint = (id, hint) => {
+        navigator.clipboard.writeText(hint);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const handleDeleteKey = (id) => {
+        setApiKeys(apiKeys.filter(key => key.id !== id));
     };
 
     return (
@@ -337,15 +348,42 @@ const AdminProfile = () => {
                                         <label className="text-xs font-semibold text-gray-500">Confirm New Password</label>
                                         <input
                                             type="password"
-                                            placeholder="Confirm Current Password"
+                                            placeholder="Confirm New Password"
                                             value={passwords.confirm}
                                             onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
                                         />
                                     </div>
-
+                                    {/* Error and Success Messages */}
+                                    {passwords.new && passwords.confirm && passwords.new !== passwords.confirm && (
+                                        <div className="text-red-600 text-sm font-medium">New passwords do not match.</div>
+                                    )}
+                                    {passwords.new && passwords.confirm && passwords.new === passwords.confirm && passwords.new.length >= 8 && (
+                                        <div className="text-green-600 text-sm font-medium">Passwords match.</div>
+                                    )}
                                     <div className="flex justify-end pt-2">
-                                        <button className="px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                                        <button
+                                            className="px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                                            onClick={() => {
+                                                if (!passwords.current || !passwords.new || !passwords.confirm) {
+                                                    alert('All fields are required');
+                                                    return;
+                                                }
+                                                if (passwords.new.length < 8) {
+                                                    alert('New password must be at least 8 characters');
+                                                    return;
+                                                }
+                                                if (passwords.new !== passwords.confirm) {
+                                                    alert('New passwords do not match');
+                                                    return;
+                                                }
+                                                // Simulate API call
+                                                setTimeout(() => {
+                                                    alert('Password updated successfully!');
+                                                    setPasswords({ current: '', new: '', confirm: '' });
+                                                }, 500);
+                                            }}
+                                        >
                                             Update Password
                                         </button>
                                     </div>
@@ -542,10 +580,22 @@ const AdminProfile = () => {
                                                 </td>
                                                 <td className="py-4 pr-2 text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-all">
-                                                            <Copy className="h-4 w-4" />
+                                                        <button
+                                                            onClick={() => handleCopyHint(key.id, key.hint)}
+                                                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-all"
+                                                            title="Copy Key Hint"
+                                                        >
+                                                            {copiedId === key.id ? (
+                                                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
                                                         </button>
-                                                        <button className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                        <button
+                                                            onClick={() => handleDeleteKey(key.id)}
+                                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            title="Delete Key"
+                                                        >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     </div>

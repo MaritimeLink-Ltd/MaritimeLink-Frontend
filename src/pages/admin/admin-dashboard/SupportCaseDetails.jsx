@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, User, Clock, RefreshCw, Lock, Paperclip, AlertTriangle, Send, CheckCircle, X } from 'lucide-react';
 
@@ -39,9 +39,10 @@ function SupportCaseDetails() {
     };
 
     // Sample case detail data (in real app, this would be fetched based on id)
-    const caseDetail = {
+    const [caseData, setCaseData] = useState({
         id: `#${id}`,
         user: {
+            id: '1',
             name: 'Mark Bennett',
             role: 'SEAFARER',
             email: 'mark.bennett@email.co',
@@ -92,14 +93,58 @@ function SupportCaseDetails() {
                 timestamp: ''
             }
         ]
-    };
+    });
 
     const replyTabs = ['Reply to User', 'Internal Note'];
 
+    const handleSend = () => {
+        if (!replyText.trim()) return;
+
+        if (activeTab === 'Reply to User') {
+            const newMessage = {
+                id: caseData.conversation.length + 1,
+                sender: 'agent',
+                name: 'James T.',
+                timestamp: 'Just now',
+                message: replyText,
+                avatar: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect fill="%23003971" width="32" height="32" rx="16"/><text x="50%" y="50%" dy=".35em" fill="white" font-family="Arial" font-size="12" text-anchor="middle">JT</text></svg>'
+            };
+            setCaseData({
+                ...caseData,
+                conversation: [...caseData.conversation, newMessage]
+            });
+        } else {
+            const newNote = {
+                id: caseData.internalNotes.length + 1,
+                content: replyText,
+                author: 'James T.',
+                timestamp: 'Just now'
+            };
+            setCaseData({
+                ...caseData,
+                internalNotes: [...caseData.internalNotes, newNote]
+            });
+        }
+        setReplyText('');
+    };
+
+    const handleAddNote = () => {
+        setActiveTab('Internal Note');
+        document.querySelector('textarea')?.focus();
+    };
+
+    // Ref for conversation container
+    const conversationEndRef = useRef(null);
+
+    // Auto-scroll to bottom when conversation changes
+    useEffect(() => {
+        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [caseData.conversation]);
+
     return (
-        <div className="h-[calc(100vh-9rem)] flex flex-col overflow-hidden">
+        <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
             {/* Header */}
-            <div className="flex-shrink-0 mb-6 pt-2">
+            <div className="flex-shrink-0 mb-4 pt-2 px-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
@@ -111,8 +156,8 @@ function SupportCaseDetails() {
                         </button>
                         <div className="h-6 w-px bg-gray-300 mx-2"></div>
                         <div className="flex items-center gap-3">
-                            <span className="text-xl font-bold text-gray-900">{caseDetail.id}</span>
-                            <span className="text-lg text-gray-600">{caseDetail.user.name}</span>
+                            <span className="text-xl font-bold text-gray-900">{caseData.id}</span>
+                            <span className="text-lg text-gray-600">{caseData.user.name}</span>
                         </div>
                     </div>
 
@@ -121,9 +166,9 @@ function SupportCaseDetails() {
                         <button
                             onClick={() => !isAssigned && handleAction('assign')}
                             disabled={isAssigned}
-                            className={`px-5 py-2 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssigned
-                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                    : 'border-gray-200 text-gray-700 hover:bg-gray-50 bg-white'
+                            className={`px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssigned
+                                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                : 'border-gray-200 text-gray-700 hover:bg-gray-50 bg-white'
                                 }`}
                         >
                             {isAssigned ? 'Assigned' : 'Assign to Me'}
@@ -131,9 +176,9 @@ function SupportCaseDetails() {
                         <button
                             onClick={() => !isResolved && handleAction('resolve')}
                             disabled={isResolved}
-                            className={`flex items-center gap-2 px-5 py-2 border rounded-lg text-sm font-semibold transition-colors ${isResolved
-                                    ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
-                                    : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${isResolved
+                                ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
+                                : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
                                 }`}
                         >
                             <CheckCircle className="h-4 w-4" />
@@ -142,9 +187,9 @@ function SupportCaseDetails() {
                         <button
                             onClick={() => !isClosed && handleAction('close')}
                             disabled={isClosed}
-                            className={`flex items-center gap-2 px-5 py-2 border rounded-lg text-sm font-semibold transition-colors ${isClosed
-                                    ? 'bg-orange-50 text-orange-400 border-orange-100 cursor-not-allowed'
-                                    : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${isClosed
+                                ? 'bg-orange-50 text-orange-400 border-orange-100 cursor-not-allowed'
+                                : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
                                 }`}
                         >
                             <span className={`font-bold text-lg leading-none ${isClosed ? 'text-orange-400' : 'text-orange-600'}`}>&times;</span>
@@ -155,88 +200,91 @@ function SupportCaseDetails() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex gap-8 overflow-hidden pb-1">
+            <div className="flex-1 flex gap-6 overflow-hidden pb-4 px-6 min-h-0">
                 {/* Left Sidebar */}
-                <div className="w-[360px] flex-shrink-0 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
                     {/* User Info Card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                        <div className="flex flex-col items-center mb-6">
-                            <div className="w-20 h-20 rounded-full bg-gray-100 mb-3 overflow-hidden">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                        <div className="flex flex-col items-center mb-4">
+                            <div className="w-16 h-16 rounded-full bg-gray-100 mb-2 overflow-hidden">
                                 <img
-                                    src={caseDetail.user.avatar}
-                                    alt={caseDetail.user.name}
+                                    src={caseData.user.avatar}
+                                    alt={caseData.user.name}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">{caseDetail.user.name}</h3>
-                            <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wider uppercase rounded-md">
-                                {caseDetail.user.role}
+                            <h3 className="text-base font-bold text-gray-900 mb-0.5">{caseData.user.name}</h3>
+                            <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wider uppercase rounded-md">
+                                {caseData.user.role}
                             </span>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 text-sm text-gray-600 pl-2">
-                                <Mail className="h-4 w-4 text-gray-400" />
-                                <span>{caseDetail.user.email}</span>
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
+                                <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                <span>{caseData.user.email}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-gray-600 pl-2">
-                                <Phone className="h-4 w-4 text-gray-400" />
-                                <span>{caseDetail.user.phone}</span>
+                            <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
+                                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                <span>{caseData.user.phone}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-blue-600 hover:underline cursor-pointer pl-2 font-medium">
-                                <User className="h-4 w-4" />
+                            <button
+                                onClick={() => navigate(`/admin/accounts/${caseData.user.id}`)}
+                                className="flex items-center gap-3 text-xs text-blue-600 hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
+                            >
+                                <User className="h-3.5 w-3.5" />
                                 <span>View Profile</span>
-                            </div>
+                            </button>
                         </div>
                     </div>
 
                     {/* Case Details Card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-6">CASE DETAILS</h4>
+                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">CASE DETAILS</h4>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <div>
-                                <p className="text-xs text-gray-400 font-medium mb-1.5">Subject</p>
-                                <p className="text-sm font-bold text-gray-900 leading-snug">{caseDetail.caseDetails.subject}</p>
+                                <p className="text-[10px] text-gray-400 font-medium mb-1">Subject</p>
+                                <p className="text-xs font-bold text-gray-900 leading-snug">{caseData.caseDetails.subject}</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-xs text-gray-400 font-medium mb-1.5">Priority</p>
-                                    <p className={`text-sm font-bold ${caseDetail.caseDetails.priorityColor}`}>
-                                        {caseDetail.caseDetails.priority}
+                                    <p className="text-[10px] text-gray-400 font-medium mb-1">Priority</p>
+                                    <p className={`text-xs font-bold ${caseData.caseDetails.priorityColor}`}>
+                                        {caseData.caseDetails.priority}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-400 font-medium mb-1.5">Category</p>
-                                    <p className="text-sm font-semibold text-gray-900">{caseDetail.caseDetails.category}</p>
+                                    <p className="text-[10px] text-gray-400 font-medium mb-1">Category</p>
+                                    <p className="text-xs font-semibold text-gray-900">{caseData.caseDetails.category}</p>
                                 </div>
                             </div>
 
                             <div>
-                                <p className="text-xs text-gray-400 font-medium mb-2">Assigned To</p>
-                                <div className="flex items-center gap-2.5">
+                                <p className="text-[10px] text-gray-400 font-medium mb-1.5">Assigned To</p>
+                                <div className="flex items-center gap-2">
                                     <img
-                                        src={caseDetail.caseDetails.assignedTo.avatar}
-                                        alt={caseDetail.caseDetails.assignedTo.name}
-                                        className="w-6 h-6 rounded-full"
+                                        src={caseData.caseDetails.assignedTo.avatar}
+                                        alt={caseData.caseDetails.assignedTo.name}
+                                        className="w-5 h-5 rounded-full"
                                     />
-                                    <span className="text-sm font-semibold text-gray-900">
-                                        {caseDetail.caseDetails.assignedTo.name}
+                                    <span className="text-xs font-semibold text-gray-900">
+                                        {caseData.caseDetails.assignedTo.name}
                                     </span>
                                 </div>
                             </div>
 
                             <div>
-                                <p className="text-xs text-gray-400 font-medium mb-2">Timestamps</p>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                                        <Clock className="h-3.5 w-3.5 text-gray-400" />
-                                        <span>Created {caseDetail.caseDetails.createdAt}</span>
+                                <p className="text-[10px] text-gray-400 font-medium mb-1.5">Timestamps</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                        <Clock className="h-3 w-3 text-gray-400" />
+                                        <span>Created {caseData.caseDetails.createdAt}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                                        <RefreshCw className="h-3.5 w-3.5 text-gray-400" />
-                                        <span>Updated {caseDetail.caseDetails.updatedAt}</span>
+                                    <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                        <RefreshCw className="h-3 w-3 text-gray-400" />
+                                        <span>Updated {caseData.caseDetails.updatedAt}</span>
                                     </div>
                                 </div>
                             </div>
@@ -244,31 +292,34 @@ function SupportCaseDetails() {
                     </div>
 
                     {/* Internal Notes Card */}
-                    <div className="bg-amber-50 rounded-2xl border border-amber-100 p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Lock className="h-4 w-4 text-amber-500" />
-                            <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider">INTERNAL NOTES</h4>
+                    <div className="bg-amber-50 rounded-xl border border-amber-100 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                            <h4 className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">INTERNAL NOTES</h4>
                         </div>
 
-                        <div className="space-y-3 mb-4">
-                            {caseDetail.internalNotes.map((note) => (
-                                <div key={note.id} className="bg-white rounded-lg p-3 border border-amber-100 shadow-sm">
-                                    <p className="text-sm text-gray-700 mb-2 leading-relaxed">{note.content}</p>
+                        <div className="space-y-2.5 mb-3">
+                            {caseData.internalNotes.map((note) => (
+                                <div key={note.id} className="bg-white rounded-lg p-2.5 border border-amber-100 shadow-sm">
+                                    <p className="text-xs text-gray-700 mb-1.5 leading-relaxed">{note.content}</p>
                                     <p className="text-[10px] text-gray-400 text-right uppercase tracking-wide font-medium">- {note.author}, {note.timestamp}</p>
                                 </div>
                             ))}
                         </div>
 
-                        <button className="w-full py-2.5 bg-white border border-amber-200 rounded-lg text-sm font-bold text-amber-600 hover:bg-amber-50 transition-colors shadow-sm">
+                        <button
+                            onClick={handleAddNote}
+                            className="w-full py-2 bg-white border border-amber-200 rounded-lg text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors shadow-sm"
+                        >
                             Add Note
                         </button>
                     </div>
                 </div>
 
                 {/* Right Content - Conversation */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm min-w-0">
                     {/* Conversation Area */}
-                    <div className="flex-1 overflow-y-auto p-8 bg-gray-50/50 custom-scrollbar">
+                    <div className="flex-1 p-8 bg-gray-50/50 custom-scrollbar" style={{ overflowY: 'auto', maxHeight: '100%' }}>
                         {/* Date Header */}
                         <div className="text-center mb-8">
                             <span className="px-3 py-1 bg-gray-200/60 rounded-full text-xs font-bold text-gray-500">Today</span>
@@ -276,10 +327,11 @@ function SupportCaseDetails() {
 
                         {/* Messages */}
                         <div className="space-y-8">
-                            {caseDetail.conversation.map((msg) => {
+                            {caseData.conversation.map((msg) => {
                                 if (msg.sender === 'user') {
                                     return (
                                         <div key={msg.id} className="max-w-[75%]">
+                                            {/* User name and timestamp inside scrollable area */}
                                             <div className="flex items-center gap-2 mb-2 ml-1">
                                                 <span className="text-sm font-bold text-gray-900">{msg.name}</span>
                                                 <span className="text-xs text-gray-400 font-medium">{msg.timestamp}</span>
@@ -293,6 +345,7 @@ function SupportCaseDetails() {
                                     return (
                                         <div key={msg.id} className="flex justify-end">
                                             <div className="max-w-[75%]">
+                                                {/* Agent name and timestamp inside scrollable area */}
                                                 <div className="flex items-center justify-end gap-2 mb-2 mr-1">
                                                     <span className="text-sm font-bold text-gray-900">{msg.name}</span>
                                                     <span className="text-xs text-gray-400 font-medium">{msg.timestamp}</span>
@@ -319,17 +372,19 @@ function SupportCaseDetails() {
                                 return null;
                             })}
                         </div>
+                        {/* Scroll anchor at the end of scrollable area */}
+                        <div ref={conversationEndRef} />
                     </div>
 
                     {/* Reply Section */}
-                    <div className="flex-shrink-0 border-t border-gray-100 bg-white p-6">
+                    <div className="flex-shrink-0 border-t border-gray-100 bg-white p-4">
                         {/* Tabs */}
-                        <div className="flex items-center gap-6 mb-4">
+                        <div className="flex items-center gap-4 mb-2">
                             {replyTabs.map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`text-sm font-bold transition-colors ${activeTab === tab
+                                    className={`text-xs font-bold transition-colors ${activeTab === tab
                                         ? 'text-[#003971]'
                                         : 'text-gray-400 hover:text-gray-600'
                                         }`}
@@ -340,26 +395,29 @@ function SupportCaseDetails() {
                         </div>
 
                         {/* Reply Input */}
-                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 focus-within:ring-2 focus-within:ring-blue-100 transition-shadow">
+                        <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 focus-within:ring-2 focus-within:ring-blue-100 transition-shadow">
                             <textarea
                                 value={replyText}
                                 onChange={(e) => setReplyText(e.target.value)}
-                                placeholder="Type your reply here..."
-                                className="w-full h-24 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-relaxed"
+                                placeholder={`Type your ${activeTab === 'Internal Note' ? 'internal note' : 'reply'} here...`}
+                                className="w-full h-16 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-relaxed"
                             />
-                            <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center justify-between mt-1">
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => handleAction('report')}
-                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors"
+                                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors"
                                         title="Report Issue"
                                     >
-                                        <AlertTriangle className="h-5 w-5" />
+                                        <AlertTriangle className="h-4 w-4" />
                                     </button>
                                 </div>
-                                <button className="flex items-center gap-2 px-6 py-2.5 bg-[#003971] text-white rounded-lg text-sm font-bold hover:bg-[#002a54] transition-colors shadow-sm">
-                                    <Send className="h-4 w-4" />
-                                    Send Reply
+                                <button
+                                    onClick={handleSend}
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#003971] text-white rounded-lg text-xs font-bold hover:bg-[#002a54] transition-colors shadow-sm"
+                                >
+                                    <Send className="h-3 w-3" />
+                                    {activeTab === 'Internal Note' ? 'Add Note' : 'Send Reply'}
                                 </button>
                             </div>
                         </div>

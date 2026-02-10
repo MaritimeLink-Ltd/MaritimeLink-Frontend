@@ -363,7 +363,7 @@ function JobDetail({ onBack }) {
     };
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50">
             {/* Fixed Header Section */}
             <div className="flex-shrink-0 px-6 pt-6">
                 {/* Back Icon */}
@@ -431,7 +431,7 @@ function JobDetail({ onBack }) {
             </div>
 
             {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="flex-1 px-6 pb-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 mb-6">
                     {stats.map((stat, index) => (

@@ -2,26 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import authService from '../../../services/authService';
 
-
-function ForgotPassword({ userType }) {
+function AdminForgotPassword() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
-
-    // Determine heading and back link based on userType
-    let heading = 'Forgot Password';
-    let backLink = '/signin';
-    let backText = 'Back to Login';
-    if (userType === 'recruiter') {
-        heading = 'Recruiter Forgot Password';
-        backLink = '/recruiter/login';
-        backText = 'Back to Recruiter Login';
-    } else if (userType === 'training-provider') {
-        heading = 'Training Provider Forgot Password';
-        backLink = '/training-provider/login';
-        backText = 'Back to Training Provider Login';
-    }
 
     const handleChange = (e) => {
         setEmail(e.target.value);
@@ -36,8 +21,10 @@ function ForgotPassword({ userType }) {
 
         try {
             await authService.forgotPassword(email);
+            console.log('Password reset link sent');
             setSuccess(true);
         } catch (err) {
+            console.error('Forgot password error:', err);
             if (err.status === 404) {
                 setError('No account found with this email address.');
             } else {
@@ -50,6 +37,7 @@ function ForgotPassword({ userType }) {
 
     return (
         <div className="h-screen flex overflow-hidden">
+            {/* Left Side - Form */}
             <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
                 <div className="max-w-md w-full mx-auto lg:mx-0">
                     {/* Logo */}
@@ -65,7 +53,7 @@ function ForgotPassword({ userType }) {
                     <p className="text-sm text-[#003971] mb-2">Welcome to MaritimeLink</p>
 
                     {/* Forgot Password Heading */}
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{heading}</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Forgot Password</h1>
 
                     {/* Subtitle */}
                     <p className="text-sm text-gray-600 mb-8">
@@ -152,11 +140,11 @@ function ForgotPassword({ userType }) {
 
                     {/* Back to Login Link */}
                     <div className="mt-8 text-center">
-                        <Link to={backLink} className="text-sm text-[#003971] hover:underline inline-flex items-center gap-1">
+                        <Link to="/admin/login" className="text-sm text-[#003971] hover:underline inline-flex items-center gap-1">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
-                            {backText}
+                            Back to Admin Login
                         </Link>
                     </div>
                 </div>
@@ -174,4 +162,4 @@ function ForgotPassword({ userType }) {
     );
 }
 
-export default ForgotPassword;
+export default AdminForgotPassword;

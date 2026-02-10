@@ -30,7 +30,7 @@ function ManualActionReview() {
     };
 
     return (
-        <div className="h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50">
             {/* Header */}
             <div className="flex-shrink-0 mb-8 pt-2">
                 <div className="flex items-center gap-2 mb-1">
@@ -46,9 +46,9 @@ function ManualActionReview() {
             </div>
 
             {/* Content Grid */}
-            <div className="flex-1 flex gap-6 overflow-hidden pb-4">
+            <div className="flex-1 flex gap-6 pb-4">
                 {/* Left Column - Main Info */}
-                <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex-1 flex flex-col gap-6">
                     {/* Action Details Card */}
                     <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
                         <div className="flex items-start justify-between mb-8">

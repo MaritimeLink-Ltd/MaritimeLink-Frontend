@@ -15,7 +15,9 @@ import {
     File,
     Calendar,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Eye,
+    Download
 } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
@@ -24,6 +26,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const location = useLocation();
     const { candidateId: urlCandidateId } = useParams();
     const candidateId = propCandidateId || urlCandidateId;
+    const isAdminMarketplace = location.pathname.includes('/marketplace/');
 
     // Map applicant status to application stage
     const getInitialStage = () => {
@@ -49,6 +52,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showDocumentWallet, setShowDocumentWallet] = useState(false);
     const [showRequestSuccess, setShowRequestSuccess] = useState(false);
+    const [selectedDocument, setSelectedDocument] = useState(null);
 
     // Show application status if coming from job detail or explicitly passed as prop
     // But NOT for matches (candidates who haven't applied yet)
@@ -212,7 +216,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const currentStageIndex = applicationStage ? stages.findIndex(s => s.id === applicationStage) : -1;
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50 p-6">
             {/* Back Icon - Fixed */}
             <div className="flex-shrink-0 mb-4">
                 <button
@@ -224,7 +228,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+            <div className="space-y-6">
 
                 {/* Header Section */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
@@ -515,10 +519,22 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Status Badge */}
-                                                                <div className={`${statusBadge.bg} ${statusBadge.text} px-3 py-1.5 rounded-lg font-medium text-sm flex items-center gap-1.5 flex-shrink-0`}>
-                                                                    {statusBadge.icon}
-                                                                    {statusBadge.label}
+                                                                {/* Status Badge & Actions */}
+                                                                <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                                                                    <div className={`${statusBadge.bg} ${statusBadge.text} px-3 py-1.5 rounded-lg font-medium text-sm flex items-center gap-1.5`}>
+                                                                        {statusBadge.icon}
+                                                                        {statusBadge.label}
+                                                                    </div>
+
+                                                                    {isAdminMarketplace && (
+                                                                        <button
+                                                                            onClick={() => setSelectedDocument(doc)}
+                                                                            className="p-2 text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
+                                                                            title="View Document"
+                                                                        >
+                                                                            <Eye className="h-5 w-5" />
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -529,33 +545,46 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     ))}
                                 </div>
 
-                                {/* Info Banner */}
-                                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                                    <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-medium text-blue-900 mb-1">Restricted Access</p>
-                                        <p className="text-sm text-blue-700">
-                                            You are viewing document metadata only. To access full documents, please send a request to the candidate.
-                                        </p>
+                                {/* Info Banner - Hide for Admin */}
+                                {!isAdminMarketplace && (
+                                    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-medium text-blue-900 mb-1">Restricted Access</p>
+                                            <p className="text-sm text-blue-700">
+                                                You are viewing document metadata only. To access full documents, please send a request to the candidate.
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Footer - Fixed */}
                             <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 flex-shrink-0">
-                                <button
-                                    onClick={() => setShowDocumentWallet(false)}
-                                    className="px-6 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    onClick={handleRequestDocuments}
-                                    className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                >
-                                    <Wallet className="h-5 w-5" />
-                                    Request Documents
-                                </button>
+                                {!isAdminMarketplace && (
+                                    <button
+                                        onClick={() => setShowDocumentWallet(false)}
+                                        className="px-6 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                )}
+                                {isAdminMarketplace ? (
+                                    <button
+                                        onClick={() => setShowDocumentWallet(false)}
+                                        className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors"
+                                    >
+                                        Done
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleRequestDocuments}
+                                        className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                    >
+                                        <Wallet className="h-5 w-5" />
+                                        Request Documents
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -569,6 +598,75 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             <div>
                                 <p className="font-bold">Request Sent Successfully!</p>
                                 <p className="text-sm text-green-100">The candidate will be notified of your document request.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {/* Document Preview Modal */}
+                {selectedDocument && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+                        <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl animate-fade-in relative">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={() => setSelectedDocument(null)}
+                                        className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <ChevronLeft className="h-6 w-6" />
+                                    </button>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900">{selectedDocument.name}</h3>
+                                        <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                            <Calendar className="h-4 w-4" />
+                                            Expiry: {selectedDocument.expiryDate}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Download"
+                                    >
+                                        <Download className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedDocument(null)}
+                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <X className="h-6 w-6" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Preview Content */}
+                            <div className="flex-1 bg-gray-100 p-6 overflow-auto flex items-center justify-center">
+                                <div className="bg-white shadow-lg rounded-xl overflow-hidden max-w-2xl w-full aspect-[3/4] flex flex-col relative">
+                                    {/* Placeholder for PDF/Image Content */}
+                                    <div className="flex-1 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                        <img
+                                            src="https://images.unsplash.com/photo-1618044733300-9472054094ee?q=80&w=1000&auto=format&fit=crop"
+                                            alt="Document Preview"
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+
+                                    {/* Mock Document Footer */}
+                                    <div className="p-4 bg-white flex items-center justify-between border-t border-gray-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                                <span className="text-xs font-bold text-gray-600">JD</span>
+                                            </div>
+                                            <div className="text-xs">
+                                                <p className="font-bold text-gray-900">John Doe</p>
+                                                <p className="text-gray-500">Uploaded on May 12, 2024</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-bold text-[#003971] bg-blue-50 px-2 py-1 rounded">
+                                            VERIFIED
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

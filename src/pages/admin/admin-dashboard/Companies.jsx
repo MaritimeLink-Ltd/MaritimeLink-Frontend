@@ -5,6 +5,7 @@ import { Search, ChevronDown, Building, CheckCircle, AlertTriangle, RefreshCw, D
 function Companies() {
     const [activeTab, setActiveTab] = useState('All Companies');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const tabs = ['All Companies', 'Recruiters', 'Training Providers'];
 
@@ -397,6 +398,8 @@ function Companies() {
 
                             <button
                                 onClick={() => {
+                                    setIsRefreshing(true);
+                                    setTimeout(() => setIsRefreshing(false), 1000);
                                     setStatusFilter('');
                                     setTypeFilter('');
                                     setCountryFilter('');
@@ -407,7 +410,7 @@ function Companies() {
                                 className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
                                 title="Reset Filters"
                             >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
                             <button
                                 onClick={handleExportCSV}

@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 function CreateCourse() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const editData = location.state?.courseData;
+    const isEditMode = location.state?.isEdit || false;
+
+    // Initialize state with default values or edit data if available
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
-        courseTitle: '',
-        location: '',
-        category: 'STCW',
-        certificationType: 'Mandatory',
+        courseTitle: editData?.courseName || '',
+        location: editData?.location || '',
+        category: editData?.type || 'STCW',
+        certificationType: 'Mandatory', // Default as it might not be in the mock data
         description: ''
     });
 
@@ -46,8 +51,8 @@ function CreateCourse() {
                 </button>
 
                 <div className="mb-6 text-left">
-                    <h1 className="text-[28px] font-bold text-gray-900 mb-1">Create a Course</h1>
-                    <p className="text-gray-500 text-sm">Post a new course listing to the marketplace</p>
+                    <h1 className="text-[28px] font-bold text-gray-900 mb-1">{isEditMode ? 'Edit Course' : 'Create a Course'}</h1>
+                    <p className="text-gray-500 text-sm">{isEditMode ? 'Update your course listing details' : 'Post a new course listing to the marketplace'}</p>
                 </div>
             </div>
 
@@ -155,7 +160,7 @@ function CreateCourse() {
                                 onClick={handlePublish}
                                 className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm"
                             >
-                                Publish Job
+                                {isEditMode ? 'Update Course' : 'Publish Course'}
                             </button>
                         </div>
                     )}

@@ -239,7 +239,7 @@ export default function CourseDetail() {
 
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Export Notification Toast */}
       {showExportNotification && (
         <div className="fixed top-4 left-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-left duration-300">
@@ -331,7 +331,7 @@ export default function CourseDetail() {
       </div>
 
       {/* Applicants Table Card */}
-      <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 flex flex-col mb-6">
         {/* Filters Row */}
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
@@ -378,7 +378,7 @@ export default function CourseDetail() {
           </div>
         </div>
         {/* Table */}
-        <div className="flex-1 overflow-auto" ref={printRef}>
+        <div className="overflow-x-auto" ref={printRef}>
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0">
               <tr>

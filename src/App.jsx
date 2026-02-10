@@ -6,7 +6,7 @@ import OTPVerification from './pages/personal/auth/OTPVerification';
 import SelectProfession from './pages/personal/auth/SelectProfession';
 import CompleteProfile from './pages/personal/auth/CompleteProfile';
 import IDUpload from './pages/personal/auth/IDUpload';
-import ForgotPassword from './pages/personal/auth/ForgotPassword';
+// ...existing code...
 import ResetPassword from './pages/personal/auth/ResetPassword';
 import GetPremium from './pages/personal/auth/GetPremium';
 import OfficerCategory from './pages/personal/officer-category/OfficerCategory';
@@ -24,6 +24,9 @@ import CateringMedicalDashboard from './pages/personal/catering-medical/Catering
 import PersonalDashboard from './pages/personal/dashboard/PersonalDashboard';
 import CVResume from './pages/personal/CVResume';
 import AdminLogin from './pages/admin/auth/AdminLogin';
+import AdminForgotPassword from './pages/admin/auth/AdminForgotPassword';
+// Placeholder for recruiter and training provider forgot password
+import ForgotPassword from './pages/personal/auth/ForgotPassword';
 import RecruiterLogin from './pages/admin/auth/RecruiterLogin';
 import TrainingProviderLogin from './pages/admin/auth/TrainingProviderLogin';
 import RecruiterSignup from './pages/admin/auth/RecruiterSignup';
@@ -130,6 +133,9 @@ function App() {
 
         {/* Admin/Recruiter Setup Routes (No Layout) */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+        <Route path="/agent/forgot-password" element={<ForgotPassword userType="recruiter" />} />
+        <Route path="/training-provider/forgot-password" element={<ForgotPassword userType="training-provider" />} />
         <Route path="/recruiter/login" element={<RecruiterLogin />} />
         <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
         <Route path="/agent/signup" element={<RecruiterSignup />} />

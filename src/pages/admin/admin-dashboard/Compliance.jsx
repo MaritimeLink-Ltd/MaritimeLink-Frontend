@@ -147,6 +147,7 @@ function Compliance() {
 
     // State for Search and Filters
     const [searchQuery, setSearchQuery] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [statusFilter, setStatusFilter] = useState('');
     const [riskFilter, setRiskFilter] = useState('');
     const [slaFilter, setSlaFilter] = useState('');
@@ -247,7 +248,7 @@ function Compliance() {
     };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-gray-50 p-6">
             {/* Header */}
             <div className="flex-shrink-0 mb-6">
                 <h1 className="text-[28px] font-bold text-gray-900 mb-2">Compliance</h1>
@@ -320,7 +321,7 @@ function Compliance() {
             </div>
 
             {/* Compliance Table Card - Scrollable */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col mb-6">
                 {/* Search and Filters */}
                 <div className="flex-shrink-0 p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between gap-4">
@@ -430,6 +431,8 @@ function Compliance() {
 
                             <button
                                 onClick={() => {
+                                    setIsRefreshing(true);
+                                    setTimeout(() => setIsRefreshing(false), 1000);
                                     setStatusFilter('');
                                     setRiskFilter('');
                                     setSlaFilter('');
@@ -439,7 +442,7 @@ function Compliance() {
                                 className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
                                 title="Reset Filters"
                             >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
                             <button
                                 onClick={handleExportCSV}
@@ -453,9 +456,9 @@ function Compliance() {
                 </div>
 
                 {/* Table - Scrollable Content */}
-                <div className="flex-1 overflow-auto">
+                <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50 sticky top-0 z-10">
+                        <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     User

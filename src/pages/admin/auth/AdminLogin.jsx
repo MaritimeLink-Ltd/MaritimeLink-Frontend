@@ -37,7 +37,7 @@ function AdminLogin() {
 
             // Simulate different user types based on email domain for demo
             let userType = 'admin'; // default
-            
+
             if (formData.email.includes('recruiter') || formData.email.includes('agent')) {
                 userType = 'recruiter';
             } else if (formData.email.includes('training') || formData.email.includes('provider')) {
@@ -190,15 +190,6 @@ function AdminLogin() {
                             )}
                         </button>
 
-                        {/* Sign Up Link */}
-                        <div className="mt-6 text-center">
-                            <p className="text-sm text-gray-600">
-                                Don't have an account?{' '}
-                                <Link to="/agent/signup" className="font-medium text-[#003971] hover:text-[#002855] hover:underline">
-                                    Sign up
-                                </Link>
-                            </p>
-                        </div>
                     </form>
                 </div>
             </div>
