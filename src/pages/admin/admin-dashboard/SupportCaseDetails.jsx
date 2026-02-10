@@ -401,6 +401,12 @@ function SupportCaseDetails() {
                                 onChange={(e) => setReplyText(e.target.value)}
                                 placeholder={`Type your ${activeTab === 'Internal Note' ? 'internal note' : 'reply'} here...`}
                                 className="w-full h-16 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-relaxed"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
                             />
                             <div className="flex items-center justify-between mt-1">
                                 <div className="flex items-center gap-1">
