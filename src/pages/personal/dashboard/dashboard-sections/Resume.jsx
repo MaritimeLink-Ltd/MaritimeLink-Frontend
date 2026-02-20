@@ -5,12 +5,12 @@ import { jsPDF } from 'jspdf';
 import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 
-const Resume = () => {
+const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({
         name: 'Ali Shahzaib',
         category: 'Deck Officer',
-        userType: 'officer', // 'officer', 'rating', or 'medical'
+        userType: defaultUserType, // 'officer', 'rating', or 'medical'
         phone: '+1235662 89632',
         email: 'pambeasly@gmail.com',
         address: 'House #1 Street 43 California, USA',
@@ -307,7 +307,7 @@ const Resume = () => {
             } else {
                 // Fallback: Create a shareable link or copy to clipboard
                 const url = URL.createObjectURL(blob);
-                
+
                 // Try to copy link to clipboard
                 if (navigator.clipboard) {
                     await navigator.clipboard.writeText(url);
@@ -317,7 +317,7 @@ const Resume = () => {
                     window.open(url, '_blank');
                     alert('Resume opened in new tab. You can download and share it from there.');
                 }
-                
+
                 // Clean up after some time
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             }
@@ -346,30 +346,32 @@ const Resume = () => {
     return (
         <div className="min-h-screen bg-[#F5F7FA]">
             {/* Preview Mode Tabs */}
-            <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
-                <span className="opacity-70 flex items-center">Preview Mode:</span>
-                <button
-                    onClick={() => setUserData({...userData, userType: 'officer'})}
-                    className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                >
-                    Officer
-                </button>
-                <button
-                    onClick={() => setUserData({...userData, userType: 'rating'})}
-                    className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                >
-                    Rating/Crew
-                </button>
-                <button
-                    onClick={() => setUserData({...userData, userType: 'medical'})}
-                    className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                >
-                    Medical
-                </button>
-            </div>
+            {!isReviewMode && (
+                <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
+                    <span className="opacity-70 flex items-center">Preview Mode:</span>
+                    <button
+                        onClick={() => setUserData({ ...userData, userType: 'officer' })}
+                        className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    >
+                        Officer
+                    </button>
+                    <button
+                        onClick={() => setUserData({ ...userData, userType: 'rating' })}
+                        className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    >
+                        Rating/Crew
+                    </button>
+                    <button
+                        onClick={() => setUserData({ ...userData, userType: 'medical' })}
+                        className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    >
+                        Medical
+                    </button>
+                </div>
+            )}
 
             {/* Action Buttons Header */}
-            <div className="sticky top-0 z-30 bg-white px-4 sm:px-8 py-4 border-b border-gray-200">
+            <div className={`${isReviewMode ? '' : 'sticky top-0 z-30'} bg-white px-4 sm:px-8 py-4 border-b border-gray-200`}>
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resume</h1>
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -390,36 +392,44 @@ const Resume = () => {
                         </button>
 
                         {/* Share Resume Button - Desktop */}
-                        <button
-                            onClick={handleShareResume}
-                            className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px]"
-                        >
-                            <FiShare2 size={16} />
-                            <span className="font-medium text-sm">Share Resume</span>
-                        </button>
+                        {!isReviewMode && (
+                            <button
+                                onClick={handleShareResume}
+                                className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px]"
+                            >
+                                <FiShare2 size={16} />
+                                <span className="font-medium text-sm">Share Resume</span>
+                            </button>
+                        )}
                         {/* Share Resume Button - Mobile */}
-                        <button
-                            onClick={handleShareResume}
-                            className="sm:hidden p-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        >
-                            <FiShare2 size={18} />
-                        </button>
+                        {!isReviewMode && (
+                            <button
+                                onClick={handleShareResume}
+                                className="sm:hidden p-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
+                                <FiShare2 size={18} />
+                            </button>
+                        )}
 
                         {/* Download PDF Button - Desktop */}
-                        <button
-                            onClick={handleDownloadPDF}
-                            className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
-                        >
-                            <FiDownload size={16} />
-                            <span className="font-medium text-sm">Download PDF</span>
-                        </button>
+                        {!isReviewMode && (
+                            <button
+                                onClick={handleDownloadPDF}
+                                className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
+                            >
+                                <FiDownload size={16} />
+                                <span className="font-medium text-sm">Download PDF</span>
+                            </button>
+                        )}
                         {/* Download PDF Button - Mobile */}
-                        <button
-                            onClick={handleDownloadPDF}
-                            className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        >
-                            <FiDownload size={18} />
-                        </button>
+                        {!isReviewMode && (
+                            <button
+                                onClick={handleDownloadPDF}
+                                className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
+                                <FiDownload size={18} />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

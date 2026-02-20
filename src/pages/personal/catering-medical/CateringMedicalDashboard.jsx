@@ -8,6 +8,7 @@ import SeaServiceLog from '../officer-category/dashboard-sections/SeaServiceLog'
 import AcademicQualifications from '../officer-category/dashboard-sections/AcademicQualifications';
 import MedicalTravelDocs from '../officer-category/dashboard-sections/MedicalTravelDocs';
 import BiometricsNextOfKin from '../officer-category/dashboard-sections/BiometricsNextOfKin';
+import Resume from '../dashboard/dashboard-sections/Resume';
 
 const CateringMedicalDashboard = () => {
   const navigate = useNavigate();
@@ -26,6 +27,27 @@ const CateringMedicalDashboard = () => {
     biometricsNextOfKin: {}
   });
 
+  // Map of which sidebar sections have sub-tabs and their order
+  const sectionTabs = {
+    4: ['licenses', 'certificates'],
+    6: ['academic', 'stcw'],
+    7: ['medical', 'travel'],
+    8: ['biometric', 'nextOfKin', 'referees'],
+  };
+  // Track the active sub-tab per section
+  const [activeSubTab, setActiveSubTab] = useState({});
+
+  // Helper: get active tab for current section (defaults to first)
+  const getCurrentTab = () => {
+    const tabs = sectionTabs[activeSection];
+    if (!tabs) return null;
+    return activeSubTab[activeSection] || tabs[0];
+  };
+
+  const setCurrentTab = (tab) => {
+    setActiveSubTab(prev => ({ ...prev, [activeSection]: tab }));
+  };
+
   const sections = [
     { id: 1, title: 'Personal Information' },
     { id: 2, title: 'Professional Summary' },
@@ -38,6 +60,16 @@ const CateringMedicalDashboard = () => {
   ];
 
   const handleNext = (sectionData) => {
+    const tabs = sectionTabs[activeSection];
+    const currentTab = getCurrentTab();
+
+    if (tabs && currentTab !== tabs[tabs.length - 1]) {
+      // Still more sub-tabs to go through — advance the sub-tab
+      const nextTabIndex = tabs.indexOf(currentTab) + 1;
+      setCurrentTab(tabs[nextTabIndex]);
+      return;
+    }
+
     // Save section data
     const sectionKey = Object.keys(allData)[activeSection - 1];
     setAllData({
@@ -58,18 +90,30 @@ const CateringMedicalDashboard = () => {
   };
 
   const handleCompleteResume = (sectionData) => {
+    const tabs = sectionTabs[activeSection];
+    const currentTab = getCurrentTab();
+
+    if (tabs && currentTab !== tabs[tabs.length - 1]) {
+      // Still more sub-tabs to go through — advance the sub-tab
+      const nextTabIndex = tabs.indexOf(currentTab) + 1;
+      setCurrentTab(tabs[nextTabIndex]);
+      return;
+    }
+
     // Save final section data
     setAllData({
       ...allData,
       biometricsNextOfKin: sectionData
     });
     console.log('Resume completed!', allData);
-    navigate('/personal/dashboard');
+
+    // Move to Review Resume section
+    setActiveSection(9);
   };
 
   const handleSaveAndContinue = () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal/dashboard');
+    navigate('/personal/documents');
   };
 
   const renderSection = () => {
@@ -103,6 +147,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.professionalLicensesCertificates}
+            activeTab={getCurrentTab() || 'licenses'}
+            setActiveTab={setCurrentTab}
           />
         );
       case 5:
@@ -119,6 +165,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.academicQualifications}
+            activeTab={getCurrentTab() || 'academic'}
+            setActiveTab={setCurrentTab}
           />
         );
       case 7:
@@ -127,6 +175,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.medicalTravelDocs}
+            activeTab={getCurrentTab() || 'medical'}
+            setActiveTab={setCurrentTab}
           />
         );
       case 8:
@@ -135,8 +185,12 @@ const CateringMedicalDashboard = () => {
             onNext={handleCompleteResume}
             onBack={handleGoBack}
             initialData={allData.biometricsNextOfKin}
+            activeTab={getCurrentTab() || 'biometric'}
+            setActiveTab={setCurrentTab}
           />
         );
+      case 9:
+        return <Resume isReviewMode={true} defaultUserType="medical" />;
       default:
         return <div>Section not found</div>;
     }
@@ -151,7 +205,8 @@ const CateringMedicalDashboard = () => {
       5: 'Sea Service Log',
       6: 'Academic Qualifications & STCW Certificates',
       7: 'Medical & Travel Documents',
-      8: 'Biometric, Next Of Kin & Referees'
+      8: 'Biometric, Next Of Kin & Referees',
+      9: 'Review Resume'
     };
     return titles[activeSection] || 'Unknown';
   };
@@ -165,7 +220,8 @@ const CateringMedicalDashboard = () => {
       5: 'Add your sea service details',
       6: 'Add your academic and certificate details',
       7: 'Add your medical and travel documents',
-      8: 'Fill out to get started'
+      8: 'Fill out to get started',
+      9: 'Review your complete profile before proceeding'
     };
     return descriptions[activeSection] || '';
   };
@@ -234,18 +290,18 @@ const CateringMedicalDashboard = () => {
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
                   className="bg-[#003971] h-1.5 rounded-full"
-                  style={{ width: `${Math.round((activeSection / sections.length) * 100)}%` }}
+                  style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
                 ></div>
               </div>
             </div>
             <p className="text-xs text-gray-600 mb-2">
-              {Math.round((activeSection / sections.length) * 100)}% complete
+              {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
             </p>
             <button
               onClick={handleSaveAndContinue}
               className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
             >
-              Save & Continue Later
+              {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
             </button>
           </div>
         </div>
@@ -285,8 +341,8 @@ const CateringMedicalDashboard = () => {
               >
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isActiveOrCompleted
-                      ? 'bg-[#003971] text-white'
-                      : 'bg-gray-300 text-gray-500'
+                    ? 'bg-[#003971] text-white'
+                    : 'bg-gray-300 text-gray-500'
                     }`}
                 >
                   {section.id}
@@ -313,37 +369,39 @@ const CateringMedicalDashboard = () => {
             <div className="w-full bg-gray-200 rounded-full h-1.5">
               <div
                 className="bg-[#003971] h-1.5 rounded-full"
-                style={{ width: `${Math.round((activeSection / sections.length) * 100)}%` }}
+                style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
               ></div>
             </div>
           </div>
           <p className="text-xs text-gray-600 mb-3">
-            {Math.round((activeSection / sections.length) * 100)}% complete
+            {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
           </p>
           <button
             onClick={handleSaveAndContinue}
             className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
           >
-            Save & Continue Later
+            {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex justify-center overflow-auto py-10 px-4">
-        <div className="w-full max-w-3xl flex flex-col items-center">
+      <div className={`flex-1 flex justify-center overflow-auto py-10 px-4 ${activeSection === 9 ? 'bg-[#F5F7FA]' : ''}`}>
+        <div className={`w-full flex flex-col items-center ${activeSection === 9 ? 'max-w-7xl' : 'max-w-3xl'}`}>
           {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              {getSectionTitle()}
-            </h1>
-            <p className="text-gray-500 text-sm">
-              {getSectionDescription()}
-            </p>
-          </div>
+          {activeSection !== 9 && (
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                {getSectionTitle()}
+              </h1>
+              <p className="text-gray-500 text-sm">
+                {getSectionDescription()}
+              </p>
+            </div>
+          )}
 
           {/* Form Container */}
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh]">
+          <div className={`w-full ${activeSection === 9 ? '' : 'max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh] flex flex-col'}`}>
             {renderSection()}
           </div>
         </div>

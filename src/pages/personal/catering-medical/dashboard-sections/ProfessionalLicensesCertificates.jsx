@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {} }) => {
-  const [activeTab, setActiveTab] = useState('licenses');
+const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
   const [currentLicense, setCurrentLicense] = useState({
     licenseName: '',

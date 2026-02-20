@@ -7,6 +7,7 @@ import SeaServiceLog from '../officer-category/dashboard-sections/SeaServiceLog'
 import AcademicQualifications from '../officer-category/dashboard-sections/AcademicQualifications';
 import MedicalTravelDocs from '../officer-category/dashboard-sections/MedicalTravelDocs';
 import BiometricsNextOfKin from '../officer-category/dashboard-sections/BiometricsNextOfKin';
+import Resume from '../dashboard/dashboard-sections/Resume';
 
 const RatingsDashboard = () => {
   const navigate = useNavigate();
@@ -24,6 +25,26 @@ const RatingsDashboard = () => {
     biometricsNextOfKin: {}
   });
 
+  // Map of which sidebar sections have sub-tabs and their order
+  const sectionTabs = {
+    5: ['academic', 'stcw'],
+    6: ['medical', 'travel'],
+    7: ['biometric', 'nextOfKin', 'referees'],
+  };
+  // Track the active sub-tab per section
+  const [activeSubTab, setActiveSubTab] = useState({});
+
+  // Helper: get active tab for current section (defaults to first)
+  const getCurrentTab = () => {
+    const tabs = sectionTabs[activeSection];
+    if (!tabs) return null;
+    return activeSubTab[activeSection] || tabs[0];
+  };
+
+  const setCurrentTab = (tab) => {
+    setActiveSubTab(prev => ({ ...prev, [activeSection]: tab }));
+  };
+
   const sections = [
     { id: 1, title: 'Personal Information' },
     { id: 2, title: 'Professional Summary' },
@@ -35,6 +56,16 @@ const RatingsDashboard = () => {
   ];
 
   const handleNext = (sectionData) => {
+    const tabs = sectionTabs[activeSection];
+    const currentTab = getCurrentTab();
+
+    if (tabs && currentTab !== tabs[tabs.length - 1]) {
+      // Still more sub-tabs — advance the sub-tab
+      const nextTabIndex = tabs.indexOf(currentTab) + 1;
+      setCurrentTab(tabs[nextTabIndex]);
+      return;
+    }
+
     // Save section data
     const sectionKey = Object.keys(allData)[activeSection - 1];
     setAllData({
@@ -55,18 +86,30 @@ const RatingsDashboard = () => {
   };
 
   const handleCompleteResume = (sectionData) => {
+    const tabs = sectionTabs[activeSection];
+    const currentTab = getCurrentTab();
+
+    if (tabs && currentTab !== tabs[tabs.length - 1]) {
+      // Still more sub-tabs — advance the sub-tab
+      const nextTabIndex = tabs.indexOf(currentTab) + 1;
+      setCurrentTab(tabs[nextTabIndex]);
+      return;
+    }
+
     // Save final section data
     setAllData({
       ...allData,
       biometricsNextOfKin: sectionData
     });
     console.log('Resume completed!', allData);
-    navigate('/personal/dashboard');
+
+    // Move to Review Resume section
+    setActiveSection(8);
   };
 
   const handleSaveAndContinue = () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal/dashboard');
+    navigate('/personal/documents');
   };
 
   const renderSection = () => {
@@ -108,6 +151,8 @@ const RatingsDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.academicQualifications}
+            activeTab={getCurrentTab() || 'academic'}
+            setActiveTab={setCurrentTab}
           />
         );
       case 6:
@@ -116,6 +161,8 @@ const RatingsDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.medicalTravelDocs}
+            activeTab={getCurrentTab() || 'medical'}
+            setActiveTab={setCurrentTab}
           />
         );
       case 7:
@@ -124,8 +171,12 @@ const RatingsDashboard = () => {
             onNext={handleCompleteResume}
             onBack={handleGoBack}
             initialData={allData.biometricsNextOfKin}
+            activeTab={getCurrentTab() || 'biometric'}
+            setActiveTab={setCurrentTab}
           />
         );
+      case 8:
+        return <Resume isReviewMode={true} defaultUserType="rating" />;
       default:
         return <div>Section not found</div>;
     }
@@ -139,7 +190,8 @@ const RatingsDashboard = () => {
       4: 'Sea Service Log',
       5: 'Academic Qualifications & STCW Certificates',
       6: 'Medical & Travel Documents',
-      7: 'Biometric, Next Of Kin & Referees'
+      7: 'Biometric, Next Of Kin & Referees',
+      8: 'Review Resume'
     };
     return titles[activeSection] || 'Unknown';
   };
@@ -152,7 +204,8 @@ const RatingsDashboard = () => {
       4: 'Add your sea service details',
       5: 'Add your academic and certificate details',
       6: 'Add your medical and travel documents',
-      7: 'Fill out to get started'
+      7: 'Fill out to get started',
+      8: 'Review your complete profile before proceeding'
     };
     return descriptions[activeSection] || '';
   };
@@ -196,8 +249,8 @@ const RatingsDashboard = () => {
                 >
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isActiveOrCompleted
-                        ? 'bg-[#003971] text-white'
-                        : 'bg-gray-300 text-gray-500'
+                      ? 'bg-[#003971] text-white'
+                      : 'bg-gray-300 text-gray-500'
                       }`}
                   >
                     {section.id}
@@ -223,18 +276,18 @@ const RatingsDashboard = () => {
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
                   className="bg-[#003971] h-1.5 rounded-full"
-                  style={{ width: `${Math.round((activeSection / sections.length) * 100)}%` }}
+                  style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
                 ></div>
               </div>
             </div>
             <p className="text-xs text-gray-600 mb-2">
-              {Math.round((activeSection / sections.length) * 100)}% complete
+              {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
             </p>
             <button
               onClick={handleSaveAndContinue}
               className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
             >
-              Save & Continue Later
+              {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
             </button>
           </div>
         </div>
@@ -302,37 +355,39 @@ const RatingsDashboard = () => {
             <div className="w-full bg-gray-200 rounded-full h-1.5">
               <div
                 className="bg-[#003971] h-1.5 rounded-full"
-                style={{ width: `${Math.round((activeSection / sections.length) * 100)}%` }}
+                style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
               ></div>
             </div>
           </div>
           <p className="text-xs text-gray-600 mb-3">
-            {Math.round((activeSection / sections.length) * 100)}% complete
+            {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
           </p>
           <button
             onClick={handleSaveAndContinue}
             className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
           >
-            Save & Continue Later
+            {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex justify-center overflow-auto py-10 px-4">
-        <div className="w-full max-w-3xl flex flex-col items-center">
+      <div className={`flex-1 flex justify-center overflow-auto py-10 px-4 ${activeSection === 8 ? 'bg-[#F5F7FA]' : ''}`}>
+        <div className={`w-full flex flex-col items-center ${activeSection === 8 ? 'max-w-7xl' : 'max-w-3xl'}`}>
           {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              {getSectionTitle()}
-            </h1>
-            <p className="text-gray-500 text-sm">
-              {getSectionDescription()}
-            </p>
-          </div>
+          {activeSection !== 8 && (
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                {getSectionTitle()}
+              </h1>
+              <p className="text-gray-500 text-sm">
+                {getSectionDescription()}
+              </p>
+            </div>
+          )}
 
           {/* Form Container */}
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh]">
+          <div className={`w-full ${activeSection === 8 ? '' : 'max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh] flex flex-col'}`}>
             {renderSection()}
           </div>
         </div>

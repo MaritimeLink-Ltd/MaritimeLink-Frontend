@@ -39,11 +39,11 @@ const CateringMedicalCategory = () => {
           {/* Content */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Select Category
+              Select Role
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Catering & Medical Role</p>
 
-            {/* Category Options */}
+            {/* Role Options */}
             <div className="space-y-4 mb-6">
               {categories.map((category) => (
                 <div

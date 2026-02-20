@@ -10,25 +10,33 @@ import {
     Award,
     Folder,
     CheckCircle,
-    Copy
+    Copy,
+    Star
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import UploadDocument from './UploadDocument';
 import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 
 const DocumentsWallet = () => {
+    const navigate = useNavigate();
     const [activeFilter, setActiveFilter] = useState('All');
     const [view, setView] = useState('list'); // 'list', 'upload', 'edit', 'detail', 'category'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    
+
     // Modal states for export and share
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [generatedLink, setGeneratedLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
+
+    // Track if user clicked already
+    const [exportClickedOnce, setExportClickedOnce] = useState(false);
+    const [shareClickedOnce, setShareClickedOnce] = useState(false);
 
     const filters = [
         'All',
@@ -153,17 +161,24 @@ const DocumentsWallet = () => {
 
     // Handle Export Document Pack
     const handleExportDocumentPack = () => {
+        if (!exportClickedOnce) {
+            // Show premium modal instead of export modal directly
+            setShowPremiumModal(true);
+            setExportClickedOnce(true);
+            return;
+        }
+
         setShowExportModal(true);
-        
+
         // Simulate zip file preparation
         setTimeout(() => {
             // Create dummy content for all documents
-            const allDocsContent = categories.map(cat => 
+            const allDocsContent = categories.map(cat =>
                 `${cat.title}:\n  Total Documents: ${cat.count}\n  Status: ${cat.status?.label || 'N/A'}\n`
             ).join('\n');
-            
+
             const zipContent = `Maritime Document Pack\n\nExported on: ${new Date().toLocaleDateString()}\nTotal Categories: ${categories.length}\n\n${allDocsContent}`;
-            
+
             // Create blob and download
             const blob = new Blob([zipContent], { type: 'application/zip' });
             const url = URL.createObjectURL(blob);
@@ -174,7 +189,7 @@ const DocumentsWallet = () => {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
+
             // Close modal after 2 seconds
             setTimeout(() => {
                 setShowExportModal(false);
@@ -184,6 +199,13 @@ const DocumentsWallet = () => {
 
     // Handle Share Secure Link
     const handleShareSecureLink = () => {
+        if (!shareClickedOnce) {
+            // Show premium modal instead of share modal directly
+            setShowPremiumModal(true);
+            setShareClickedOnce(true);
+            return;
+        }
+
         // Generate a dummy secure link
         const randomId = Math.random().toString(36).substring(2, 15);
         const secureLink = `https://maritimelink.com/shared/documents/${randomId}`;
@@ -204,9 +226,9 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'edit') {
-        return <EditDocument 
-            document={selectedDoc} 
-            onBack={() => { setView('list'); setSelectedDoc(null); }} 
+        return <EditDocument
+            document={selectedDoc}
+            onBack={() => { setView('list'); setSelectedDoc(null); }}
             onCompletion={(updatedDoc) => {
                 setSelectedDoc(updatedDoc);
                 setView('detail');
@@ -219,9 +241,9 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'category') {
-        return <CategoryDocuments 
-            category={selectedCategory} 
-            onBack={() => { setView('list'); setSelectedCategory(null); }} 
+        return <CategoryDocuments
+            category={selectedCategory}
+            onBack={() => { setView('list'); setSelectedCategory(null); }}
             onUploadClick={() => setView('upload')}
         />;
     }
@@ -253,7 +275,7 @@ const DocumentsWallet = () => {
 
                     {/* Action Buttons - Stack on mobile */}
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <button 
+                        <button
                             onClick={handleExportDocumentPack}
                             className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
                         >
@@ -261,7 +283,7 @@ const DocumentsWallet = () => {
                             <span className="hidden sm:inline">Export Document Pack</span>
                             <span className="sm:hidden">Export Pack</span>
                         </button>
-                        <button 
+                        <button
                             onClick={handleShareSecureLink}
                             className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
                         >
@@ -379,7 +401,7 @@ const DocumentsWallet = () => {
                     <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-semibold text-gray-800">Share Secure Link</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowShareModal(false)}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
@@ -395,7 +417,7 @@ const DocumentsWallet = () => {
                             <p className="text-sm text-gray-500 mb-4">
                                 This link provides access to all your documents. Share it securely with trusted parties only.
                             </p>
-                            
+
                             {/* Generated Link */}
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 break-all text-sm text-gray-700 mb-4">
                                 {generatedLink}
@@ -404,11 +426,10 @@ const DocumentsWallet = () => {
                             {/* Copy Button */}
                             <button
                                 onClick={handleCopyLink}
-                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${
-                                    linkCopied 
-                                        ? 'bg-green-50 text-green-600 border-2 border-green-500' 
-                                        : 'bg-[#003366] text-white hover:bg-blue-900'
-                                }`}
+                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${linkCopied
+                                    ? 'bg-green-50 text-green-600 border-2 border-green-500'
+                                    : 'bg-[#003366] text-white hover:bg-blue-900'
+                                    }`}
                             >
                                 {linkCopied ? (
                                     <>
@@ -444,6 +465,44 @@ const DocumentsWallet = () => {
                         >
                             Close
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Premium Feature Modal */}
+            {showPremiumModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center">
+                        <div className="mb-6 flex justify-center">
+                            <div className="w-16 h-16 bg-[#003366] rounded-full flex items-center justify-center">
+                                <Star size={32} className="text-yellow-400 fill-yellow-400" />
+                            </div>
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                            Premium Feature
+                        </h3>
+
+                        <p className="text-gray-500 mb-8 text-sm sm:text-base">
+                            Upgrade to Premium to unlock Export Document Pack, Secure Link Sharing, and many other exclusive features to boost your maritime career.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => navigate('/personal/profile/manage-subscription')}
+                                className="w-full bg-[#003366] text-white py-3.5 px-4 rounded-xl hover:bg-blue-900 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
+                            >
+                                <Crown size={20} />
+                                Yes, Upgrade Now
+                            </button>
+
+                            <button
+                                onClick={() => setShowPremiumModal(false)}
+                                className="w-full text-gray-500 hover:text-gray-700 py-3.5 px-4 rounded-xl font-medium transition-colors border border-gray-200 hover:bg-gray-50 bg-white"
+                            >
+                                Not Now
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

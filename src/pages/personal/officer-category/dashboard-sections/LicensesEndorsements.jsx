@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
-  const [activeTab, setActiveTab] = useState('licenses');
+const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
   const [currentLicense, setCurrentLicense] = useState({
     licenseName: '',
@@ -99,8 +98,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setActiveTab('licenses')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${activeTab === 'licenses'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Licenses
@@ -109,8 +108,8 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setActiveTab('endorsements')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${activeTab === 'endorsements'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Endorsements

@@ -11,9 +11,9 @@ const OfficerCategory = () => {
     if (selectedCategory) {
       console.log('Selected category:', selectedCategory);
       if (selectedCategory === 'Deck Officer') {
-        navigate('/select-deck-officer');
+        navigate('/select-deck-ratings');
       } else if (selectedCategory === 'Engine Officer') {
-        navigate('/select-engine-officer');
+        navigate('/select-engine-ratings');
       }
     }
   };
@@ -39,11 +39,11 @@ const OfficerCategory = () => {
           {/* Content */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Select Category
+              Select Role
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Ratings & Crew Role</p>
 
-            {/* Category Options */}
+            {/* Role Options */}
             <div className="space-y-4 mb-6">
               {categories.map((category) => (
                 <div
@@ -100,8 +100,8 @@ const OfficerCategory = () => {
       {/* Right Section - Image */}
       <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
         <img
-          src="/images/category-image.png"
-          alt="Maritime Officers"
+          src="/images/crew-image.png"
+          alt="Maritime Ratings and Crew"
           className="w-full h-full object-cover rounded-2xl"
         />
       </div>

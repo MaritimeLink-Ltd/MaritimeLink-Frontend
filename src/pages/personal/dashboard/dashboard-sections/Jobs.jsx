@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search } from 'lucide-react';
 
 const Jobs = () => {
     const navigate = useNavigate();
@@ -11,11 +11,22 @@ const Jobs = () => {
     const [showAppliedModal, setShowAppliedModal] = useState(false);
     const [filters, setFilters] = useState({
         category: null,
+        role: null,
         datePosted: null,
         jobType: null
     });
     const [tempFilters, setTempFilters] = useState({ ...filters });
     const [isFilterActive, setIsFilterActive] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const categoryRoles = {
+        'Deck Officer': ['Master', 'Chief Officer', 'Second Officer', 'Third Officer', 'Deck Cadet'],
+        'Engine Officer': ['Chief Engineer', 'Second Engineer', 'Third Engineer', 'Fourth Engineer', 'Engine Cadet', 'Electrical Engineer'],
+        'Deck Ratings': ['Bosun', 'Able Seaman', 'Ordinary Seaman', 'Pumpman', 'Fitter'],
+        'Engine Ratings': ['Motorman', 'Oiler', 'Wiper', 'Fitter'],
+        'Catering': ['Chief Cook', 'Second Cook', 'Messman', 'Steward'],
+        'Medical': ['Doctor', 'Nurse', 'Medic']
+    };
 
     // Sample job data
     const allJobs = [
@@ -25,7 +36,7 @@ const Jobs = () => {
             company: 'Ocean Maritime Ltd',
             location: 'London',
             salary: 'GBP 75000',
-            category: 'Officer',
+            category: 'Engine Officer',
             jobType: 'Permanent',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
             jobDescription: 'On-site Job: United Kingdom (London / Joining Port as Assigned)',
@@ -44,7 +55,7 @@ const Jobs = () => {
             company: 'Global Shipping Co',
             location: 'Southampton',
             salary: 'GBP 55000',
-            category: 'Officer',
+            category: 'Deck Officer',
             jobType: 'Contract',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
             jobDescription: 'On-site Job: United Kingdom (Southampton / Joining Port as Assigned)',
@@ -63,7 +74,7 @@ const Jobs = () => {
             company: 'Maritime Solutions Inc',
             location: 'Liverpool',
             salary: 'GBP 35000',
-            category: 'Ratings and Crew',
+            category: 'Deck Ratings',
             jobType: 'Temporary',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
             jobDescription: 'On-site Job: United Kingdom (Liverpool / Joining Port as Assigned)',
@@ -82,7 +93,7 @@ const Jobs = () => {
             company: 'Culinary Marine Services',
             location: 'Portsmouth',
             salary: 'GBP 40000',
-            category: 'Catering and Medical',
+            category: 'Catering',
             jobType: 'Contract',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
             jobDescription: 'On-site Job: United Kingdom (Portsmouth / Joining Port as Assigned)',
@@ -101,7 +112,7 @@ const Jobs = () => {
             company: 'Engine Room Experts',
             location: 'Newcastle',
             salary: 'GBP 38000',
-            category: 'Ratings and Crew',
+            category: 'Engine Ratings',
             jobType: 'Permanent',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
             jobDescription: 'On-site Job: United Kingdom (Newcastle / Joining Port as Assigned)',
@@ -120,7 +131,7 @@ const Jobs = () => {
             company: 'Maritime Healthcare Services',
             location: 'Bristol',
             salary: 'GBP 48000',
-            category: 'Catering and Medical',
+            category: 'Medical',
             jobType: 'Permanent',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20), // 20 days ago
             jobDescription: 'On-site Job: United Kingdom (Bristol / Joining Port as Assigned)',
@@ -139,7 +150,7 @@ const Jobs = () => {
             company: 'Tech Marine Ltd',
             location: 'Glasgow',
             salary: 'GBP 62000',
-            category: 'Officer',
+            category: 'Engine Officer',
             jobType: 'Contract',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25), // 25 days ago
             jobDescription: 'On-site Job: United Kingdom (Glasgow / Joining Port as Assigned)',
@@ -158,7 +169,7 @@ const Jobs = () => {
             company: 'Seafarer Recruitment Agency',
             location: 'Cardiff',
             salary: 'GBP 28000',
-            category: 'Ratings and Crew',
+            category: 'Deck Ratings',
             jobType: 'Temporary',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 32), // 32 days ago
             jobDescription: 'On-site Job: United Kingdom (Cardiff / Joining Port as Assigned)',
@@ -177,7 +188,7 @@ const Jobs = () => {
             company: 'Premium Catering Maritime',
             location: 'Belfast',
             salary: 'GBP 45000',
-            category: 'Catering and Medical',
+            category: 'Catering',
             jobType: 'Permanent',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
             jobDescription: 'On-site Job: United Kingdom (Belfast / Joining Port as Assigned)',
@@ -196,7 +207,7 @@ const Jobs = () => {
             company: 'Royal Fleet Services',
             location: 'Plymouth',
             salary: 'GBP 48000',
-            category: 'Officer',
+            category: 'Deck Officer',
             jobType: 'Temporary',
             datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8), // 8 days ago
             jobDescription: 'On-site Job: United Kingdom (Plymouth / Joining Port as Assigned)',
@@ -211,10 +222,25 @@ const Jobs = () => {
         }
     ];
 
-    // Filter jobs based on selected filters
+    // Filter jobs based on selected filters and search
     const jobs = allJobs.filter(job => {
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesTitle = job.title.toLowerCase().includes(query);
+            const matchesCompany = job.company.toLowerCase().includes(query);
+            if (!matchesTitle && !matchesCompany) {
+                return false;
+            }
+        }
+
         // Category filter
         if (filters.category && job.category !== filters.category) {
+            return false;
+        }
+
+        // Role filter
+        if (filters.role && job.title !== filters.role) {
             return false;
         }
 
@@ -247,37 +273,52 @@ const Jobs = () => {
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
             {/* Header */}
             <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white lg:sticky lg:top-0 lg:z-10">
-                <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Jobs for you</h1>
                         <p className="text-gray-500 mt-1 text-base sm:text-lg">Jobs based on your resume</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                        <button
-                            onClick={() => navigate('/personal/my-jobs')}
-                            className="flex items-center justify-center gap-2 bg-blue-900 text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-blue-800 transition-colors min-h-[44px] flex-1 sm:flex-initial"
-                        >
-                            <Briefcase size={18} />
-                            My Jobs
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (isFilterActive) {
-                                    setFilters({ category: null, datePosted: null, jobType: null });
-                                    setTempFilters({ category: null, datePosted: null, jobType: null });
-                                    setIsFilterActive(false);
-                                } else {
-                                    setShowFilter(true);
-                                }
-                            }}
-                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${isFilterActive
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-blue-900 text-white hover:bg-blue-800'
-                                }`}
-                        >
-                            {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
-                            {isFilterActive ? 'Remove Filter' : 'Filter'}
-                        </button>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1 max-w-2xl justify-end">
+                        {/* Search Bar */}
+                        <div className="relative w-full sm:max-w-xs">
+                            <input
+                                type="text"
+                                placeholder="Search by title or company..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                            />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                                onClick={() => navigate('/personal/my-jobs')}
+                                className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                            >
+                                <Briefcase size={18} />
+                                My Jobs
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (isFilterActive) {
+                                        setFilters({ category: null, role: null, datePosted: null, jobType: null });
+                                        setTempFilters({ category: null, role: null, datePosted: null, jobType: null });
+                                        setIsFilterActive(false);
+                                    } else {
+                                        setShowFilter(true);
+                                    }
+                                }}
+                                className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${isFilterActive
+                                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                                    : 'bg-[#003971] text-white hover:bg-[#002b54]'
+                                    }`}
+                            >
+                                {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
+                                {isFilterActive ? 'Remove Filter' : 'Filter'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -351,7 +392,7 @@ const Jobs = () => {
                                                 Apply Now
                                             </button>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setSavedJobs(prev => {
                                                     const newSaved = new Set(prev);
@@ -363,11 +404,10 @@ const Jobs = () => {
                                                     return newSaved;
                                                 });
                                             }}
-                                            className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${
-                                                savedJobs.has(selectedJob.id)
-                                                    ? 'bg-[#003971] border-[#003971] text-white'
-                                                    : 'border-[#003971] text-[#003971] hover:bg-blue-50'
-                                            }`}
+                                            className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${savedJobs.has(selectedJob.id)
+                                                ? 'bg-[#003971] border-[#003971] text-white'
+                                                : 'border-[#003971] text-[#003971] hover:bg-blue-50'
+                                                }`}
                                         >
                                             <Bookmark size={16} fill={savedJobs.has(selectedJob.id) ? 'white' : 'none'} />
                                             {savedJobs.has(selectedJob.id) ? 'Saved' : 'Save'}
@@ -479,15 +519,16 @@ const Jobs = () => {
                             <div className="mb-6">
                                 <h3 className="text-base font-semibold text-gray-800 mb-3">Category</h3>
                                 <div className="flex flex-wrap gap-2">
-                                    {['Officer', 'Ratings and Crew', 'Catering and Medical'].map((cat) => (
+                                    {Object.keys(categoryRoles).map((cat) => (
                                         <button
                                             key={cat}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                category: tempFilters.category === cat ? null : cat 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                category: tempFilters.category === cat ? null : cat,
+                                                role: null // Reset role when category changes
                                             })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.category === cat
-                                                ? 'bg-gray-800 text-white'
+                                                ? 'bg-[#003971] text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
                                         >
@@ -497,6 +538,30 @@ const Jobs = () => {
                                 </div>
                             </div>
 
+                            {/* Role Filter (conditionally shown based on category) */}
+                            {tempFilters.category && (
+                                <div className="mb-6 animate-in slide-in-from-top-2 duration-200">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-3">Role ({tempFilters.category})</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {categoryRoles[tempFilters.category].map((role) => (
+                                            <button
+                                                key={role}
+                                                onClick={() => setTempFilters({
+                                                    ...tempFilters,
+                                                    role: tempFilters.role === role ? null : role
+                                                })}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.role === role
+                                                    ? 'bg-[#003971] text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {role}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Date Posted Filter */}
                             <div className="mb-6">
                                 <h3 className="text-base font-semibold text-gray-800 mb-3">Date Posted</h3>
@@ -504,9 +569,9 @@ const Jobs = () => {
                                     {['Last 24 hours', 'Last 7 days', 'Last 30 days'].map((date) => (
                                         <button
                                             key={date}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                datePosted: tempFilters.datePosted === date ? null : date 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                datePosted: tempFilters.datePosted === date ? null : date
                                             })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.datePosted === date
                                                 ? 'bg-gray-800 text-white'
@@ -526,9 +591,9 @@ const Jobs = () => {
                                     {['Temporary', 'Contract', 'Permanent'].map((type) => (
                                         <button
                                             key={type}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                jobType: tempFilters.jobType === type ? null : type 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                jobType: tempFilters.jobType === type ? null : type
                                             })}
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.jobType === type
                                                 ? 'bg-gray-800 text-white'
@@ -546,7 +611,7 @@ const Jobs = () => {
                                 onClick={() => {
                                     setFilters({ ...tempFilters });
                                     setIsFilterActive(
-                                        tempFilters.category || tempFilters.datePosted || tempFilters.jobType
+                                        tempFilters.category || tempFilters.role || tempFilters.datePosted || tempFilters.jobType
                                     );
                                     setShowFilter(false);
                                 }}

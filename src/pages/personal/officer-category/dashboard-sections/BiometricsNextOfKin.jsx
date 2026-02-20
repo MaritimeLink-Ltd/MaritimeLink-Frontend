@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
 
-const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
-  const [biometricTab, setBiometricTab] = useState('biometric');
+const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biometricTab, setActiveTab: setBiometricTab }) => {
   const [biometricData, setBiometricData] = useState(initialData.biometricData || {
     gender: 'Male',
     height: '',
@@ -38,10 +37,10 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
 
   const handleNextOfKinChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Auto-detect country code when typing in phone number
     if (name === 'phone') {
-      const matchedCode = countryCodes.find(country => 
+      const matchedCode = countryCodes.find(country =>
         value.startsWith(country.code)
       );
       if (matchedCode && value.startsWith('+')) {
@@ -53,7 +52,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
         return;
       }
     }
-    
+
     setCurrentNextOfKin({
       ...currentNextOfKin,
       [name]: value
@@ -62,10 +61,10 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
 
   const handleRefereeChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Auto-detect country code when typing in phone number
     if (name === 'phone') {
-      const matchedCode = countryCodes.find(country => 
+      const matchedCode = countryCodes.find(country =>
         value.startsWith(country.code)
       );
       if (matchedCode && value.startsWith('+')) {
@@ -77,7 +76,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
         return;
       }
     }
-    
+
     setCurrentReferee({
       ...currentReferee,
       [name]: value
@@ -132,8 +131,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setBiometricTab('biometric')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'biometric'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Biometric
@@ -142,8 +141,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setBiometricTab('nextOfKin')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'nextOfKin'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Next Of Kin
@@ -152,8 +151,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setBiometricTab('referees')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'referees'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Referees
@@ -173,8 +172,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   type="button"
                   onClick={() => setBiometricData({ ...biometricData, gender: 'Male' })}
                   className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Male'
-                      ? 'bg-[#003971] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#003971] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   Male
@@ -183,8 +182,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
                   type="button"
                   onClick={() => setBiometricData({ ...biometricData, gender: 'Female' })}
                   className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Female'
-                      ? 'bg-[#003971] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#003971] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   Female
@@ -550,7 +549,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {} }) => {
             onClick={handleCompleteResume}
             className="bg-[#003971] text-white py-2 px-10 rounded-lg font-medium hover:bg-[#002855] transition-colors text-sm"
           >
-            Complete Resume
+            {biometricTab === 'referees' ? 'Review Resume' : 'Next'}
           </button>
         </div>
       </div>

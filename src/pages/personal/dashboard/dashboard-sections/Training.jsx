@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, SlidersHorizontal, Award, ArrowLeft, X } from 'lucide-react';
+import { MapPin, Building2, Banknote, SlidersHorizontal, Award, ArrowLeft, X, Search } from 'lucide-react';
 
 const Training = () => {
     const navigate = useNavigate();
@@ -13,6 +13,7 @@ const Training = () => {
     });
     const [tempFilters, setTempFilters] = useState({ ...filters });
     const [isFilterActive, setIsFilterActive] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Sample training courses data
     const allCourses = [
@@ -84,8 +85,18 @@ This training is suitable for new entrants to the maritime industry as well as e
         }
     ];
 
-    // Filter courses based on active filters
+    // Filter courses based on active filters and search
     const courses = allCourses.filter(course => {
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesTitle = course.title.toLowerCase().includes(query);
+            const matchesProvider = course.provider.toLowerCase().includes(query);
+            if (!matchesTitle && !matchesProvider) {
+                return false;
+            }
+        }
+
         if (filters.category && course.category !== filters.category) return false;
         if (filters.priceRange) {
             if (filters.priceRange === 'Under GBP 500' && course.priceValue >= 500) return false;
@@ -109,25 +120,38 @@ This training is suitable for new entrants to the maritime industry as well as e
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Training Courses</h1>
                         <p className="text-gray-500 mt-1 text-base sm:text-lg">Find and book maritime and offshore training</p>
                     </div>
-                    <button 
-                        onClick={() => {
-                            if (isFilterActive) {
-                                setFilters({ category: null, priceRange: null, duration: null });
-                                setTempFilters({ category: null, priceRange: null, duration: null });
-                                setIsFilterActive(false);
-                            } else {
-                                setShowFilter(true);
-                            }
-                        }}
-                        className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] w-full sm:w-auto ${
-                            isFilterActive
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-[#003971] text-white hover:bg-[#003971]/90'
-                        }`}
-                    >
-                        {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
-                        {isFilterActive ? 'Remove Filter' : 'Filter'}
-                    </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1 max-w-2xl justify-end">
+                        {/* Search Bar */}
+                        <div className="relative w-full sm:max-w-xs">
+                            <input
+                                type="text"
+                                placeholder="Search courses or providers..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                            />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                if (isFilterActive) {
+                                    setFilters({ category: null, priceRange: null, duration: null });
+                                    setTempFilters({ category: null, priceRange: null, duration: null });
+                                    setIsFilterActive(false);
+                                } else {
+                                    setShowFilter(true);
+                                }
+                            }}
+                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] w-full sm:w-auto flex-1 sm:flex-initial ${isFilterActive
+                                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                                    : 'bg-[#003971] text-white hover:bg-[#003971]/90'
+                                }`}
+                        >
+                            {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
+                            {isFilterActive ? 'Remove Filter' : 'Filter'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -261,15 +285,14 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['STCW', 'Safety', 'Medical', 'Navigation'].map((cat) => (
                                         <button
                                             key={cat}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                category: tempFilters.category === cat ? null : cat 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                category: tempFilters.category === cat ? null : cat
                                             })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                                tempFilters.category === cat
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.category === cat
                                                     ? 'bg-gray-800 text-white'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
+                                                }`}
                                         >
                                             {cat}
                                         </button>
@@ -284,15 +307,14 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['Under GBP 500', 'GBP 500 - 1000', 'Over GBP 1000'].map((price) => (
                                         <button
                                             key={price}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                priceRange: tempFilters.priceRange === price ? null : price 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                priceRange: tempFilters.priceRange === price ? null : price
                                             })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                                tempFilters.priceRange === price
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.priceRange === price
                                                     ? 'bg-gray-800 text-white'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
+                                                }`}
                                         >
                                             {price}
                                         </button>
@@ -307,15 +329,14 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     {['1-3 Days', '4-7 Days', 'Over 7 Days'].map((dur) => (
                                         <button
                                             key={dur}
-                                            onClick={() => setTempFilters({ 
-                                                ...tempFilters, 
-                                                duration: tempFilters.duration === dur ? null : dur 
+                                            onClick={() => setTempFilters({
+                                                ...tempFilters,
+                                                duration: tempFilters.duration === dur ? null : dur
                                             })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                                tempFilters.duration === dur
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.duration === dur
                                                     ? 'bg-gray-800 text-white'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
+                                                }`}
                                         >
                                             {dur}
                                         </button>

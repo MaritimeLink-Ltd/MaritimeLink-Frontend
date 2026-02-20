@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const SelectDeckRatings = () => {
   const navigate = useNavigate();
   const [selectedRating, setSelectedRating] = useState('Bosun');
+  const [otherRole, setOtherRole] = useState('');
 
   const ratings = [
     'Bosun',
@@ -14,9 +15,9 @@ const SelectDeckRatings = () => {
   ];
 
   const handleNext = () => {
-    if (selectedRating) {
-      console.log('Selected rating:', selectedRating);
-      navigate('/complete-profile', { replace: true });
+    if (selectedRating || otherRole.trim()) {
+      console.log('Selected rating:', selectedRating || otherRole.trim());
+      navigate('/ratings-dashboard', { replace: true });
     }
   };
 
@@ -43,7 +44,7 @@ const SelectDeckRatings = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Select Deck Ratings
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Deck Ratings Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Deck Ratings Role</p>
 
             {/* Ratings Options - Pill Style */}
             <div className="flex flex-wrap gap-3 mb-8">
@@ -59,6 +60,18 @@ const SelectDeckRatings = () => {
                   {rating}
                 </button>
               ))}
+            </div>
+
+            {/* Other Role */}
+            <div className="mb-8">
+              <label className="block text-gray-700 font-medium mb-2">Other</label>
+              <input
+                type="text"
+                placeholder="Write your role"
+                value={otherRole}
+                onChange={(e) => setOtherRole(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971]"
+              />
             </div>
 
             {/* Buttons */}

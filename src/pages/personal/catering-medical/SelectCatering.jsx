@@ -17,7 +17,7 @@ const SelectCatering = () => {
   const handleNext = () => {
     if (selectedCatering || otherRole) {
       console.log('Selected catering:', selectedCatering || otherRole);
-      navigate('/complete-profile', { replace: true });
+      navigate('/catering-medical-dashboard', { replace: true });
     }
   };
 
@@ -44,7 +44,7 @@ const SelectCatering = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Select Catering
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Catering Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Catering Role</p>
 
             {/* Catering Options - Pill Style */}
             <div className="flex flex-wrap gap-3 mb-6">

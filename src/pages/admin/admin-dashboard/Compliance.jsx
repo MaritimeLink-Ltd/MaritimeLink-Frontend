@@ -63,8 +63,6 @@ function Compliance() {
             submitted: '5 hours ago',
             sla: 'Within SLA',
             slaColor: 'text-green-600',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
             slaDot: 'bg-green-500',
             status: 'Pending Review'
         },

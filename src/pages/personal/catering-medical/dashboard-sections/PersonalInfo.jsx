@@ -3,9 +3,14 @@ import { countryCodes } from '../../../../utils/countryCodes';
 
 const PersonalInfo = ({ onNext, initialData = {} }) => {
   const [formData, setFormData] = useState({
-    fullName: initialData.fullName || '',
+    firstName: initialData.firstName || '',
+    lastName: initialData.lastName || '',
     dateOfBirth: initialData.dateOfBirth || '',
-    address: initialData.address || '',
+    streetAddress: initialData.streetAddress || '',
+    city: initialData.city || '',
+    state: initialData.state || '',
+    zipCode: initialData.zipCode || '',
+    country: initialData.country || '',
     countryCode: initialData.countryCode || '+92',
     contactNumber: initialData.contactNumber || '',
     email: initialData.email || ''
@@ -13,10 +18,10 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Auto-detect country code when typing in contact number
     if (name === 'contactNumber') {
-      const matchedCode = countryCodes.find(country => 
+      const matchedCode = countryCodes.find(country =>
         value.startsWith(country.code)
       );
       if (matchedCode && value.startsWith('+')) {
@@ -28,7 +33,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
         return;
       }
     }
-    
+
     setFormData({
       ...formData,
       [name]: value
@@ -42,20 +47,36 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
   return (
     <form className="flex flex-col h-full justify-between">
       <div className="space-y-3">
-        {/* Full Name */}
-        <div>
-          <label htmlFor="fullName" className="block text-gray-700 font-medium mb-1 text-sm">
-            Full Name
-          </label>
-          <input
-            type="text"
-            id="fullName"
-            name="fullName"
-            placeholder="Enter your full name"
-            value={formData.fullName}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
-          />
+        {/* Name Fields */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="firstName" className="block text-gray-700 font-medium mb-1 text-sm">
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              placeholder="First Name"
+              value={formData.firstName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="lastName" className="block text-gray-700 font-medium mb-1 text-sm">
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              placeholder="Last Name"
+              value={formData.lastName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+            />
+          </div>
         </div>
 
         {/* Date of Birth */}
@@ -77,20 +98,57 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
           </div>
         </div>
 
-        {/* Address */}
+        {/* Address Fields */}
         <div>
-          <label htmlFor="address" className="block text-gray-700 font-medium mb-1 text-sm">
+          <label className="block text-gray-700 font-medium mb-1 text-sm">
             Address
           </label>
-          <input
-            type="text"
-            id="address"
-            name="address"
-            placeholder="Enter your address"
-            value={formData.address}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
-          />
+          <div className="space-y-3">
+            <input
+              type="text"
+              name="streetAddress"
+              placeholder="Street Address"
+              value={formData.streetAddress}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                name="city"
+                placeholder="City"
+                value={formData.city}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+              />
+              <input
+                type="text"
+                name="state"
+                placeholder="State / Province"
+                value={formData.state}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                name="zipCode"
+                placeholder="ZIP / Postal Code"
+                value={formData.zipCode}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+              />
+              <input
+                type="text"
+                name="country"
+                placeholder="Country"
+                value={formData.country}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Contact Number */}

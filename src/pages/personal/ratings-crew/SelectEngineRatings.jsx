@@ -16,9 +16,9 @@ const SelectEngineRatings = () => {
   ];
 
   const handleNext = () => {
-    if (selectedRating) {
-      console.log('Selected rating:', selectedRating);
-      navigate('/complete-profile', { replace: true });
+    if (selectedRating || otherRole.trim()) {
+      console.log('Selected rating:', selectedRating || otherRole.trim());
+      navigate('/ratings-dashboard', { replace: true });
     }
   };
 
@@ -45,7 +45,7 @@ const SelectEngineRatings = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Select Engine Ratings
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Engine Ratings Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Engine Ratings Role</p>
 
             {/* Ratings Options - Pill Style */}
             <div className="flex flex-wrap gap-3 mb-6">

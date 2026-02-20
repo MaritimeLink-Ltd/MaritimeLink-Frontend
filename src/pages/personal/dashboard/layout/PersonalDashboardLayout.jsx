@@ -24,7 +24,7 @@ function PersonalDashboardLayout() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const isActive = (path) => location.pathname === path;
-    
+
     // Check if current page is my-jobs page
     const isMyJobsPage = location.pathname === '/personal/my-jobs';
 
@@ -62,59 +62,118 @@ function PersonalDashboardLayout() {
             {/* Sidebar - Hidden on my-jobs page */}
             {!isMyJobsPage && (
                 <aside
-                    className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${
-                        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
+                    className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                        }`}
                 >
-                <div className="h-full flex flex-col">
-                    {/* Logo */}
-                    <div className="p-6">
-                        <img
-                            src="/images/logo.png"
-                            alt="MaritimeLink"
-                            className="h-20 w-auto"
-                        />
-                    </div>
+                    <div className="h-full flex flex-col">
+                        {/* Logo */}
+                        <div className="p-6">
+                            <img
+                                src="/images/logo.png"
+                                alt="MaritimeLink"
+                                className="h-20 w-auto"
+                            />
+                        </div>
 
-                    {/* Navigation Menu */}
-                    <div className="flex-1 px-4 py-2">
-                        <nav className="space-y-1">
-                            {navItems.map((item) => (
-                                <Link
-                                    key={item.name}
-                                    to={item.path}
-                                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
-                                        isActive(item.path)
+                        {/* Navigation Menu */}
+                        <div className="flex-1 px-4 py-2">
+                            <nav className="space-y-1">
+                                {navItems.map((item) => (
+                                    <Link
+                                        key={item.name}
+                                        to={item.path}
+                                        className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(item.path)
                                             ? 'bg-[#003971]/10 text-[#003971]'
                                             : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                                    }`}
-                                    onClick={() => setSidebarOpen(false)}
-                                >
-                                    <item.icon className={`h-5 w-5 mr-3 ${
-                                        isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
-                                    }`} />
-                                    {item.name}
-                                </Link>
-                            ))}
-                        </nav>
-                    </div>
+                                            }`}
+                                        onClick={() => setSidebarOpen(false)}
+                                    >
+                                        <item.icon className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
+                                            }`} />
+                                        {item.name}
+                                    </Link>
+                                ))}
+                            </nav>
+                        </div>
 
-                    {/* Logout Button */}
-                    <div className="p-4 border-t border-gray-200">
-                        <button
-                            onClick={() => setShowLogoutModal(true)}
-                            className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors duration-150"
-                        >
-                            <LogOut className="h-5 w-5 mr-3 text-gray-400" />
-                            Logout
-                        </button>
+                        {/* Logout Button */}
+                        <div className="p-4 border-t border-gray-200">
+                            <button
+                                onClick={() => setShowLogoutModal(true)}
+                                className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors duration-150"
+                            >
+                                <LogOut className="h-5 w-5 mr-3 text-gray-400" />
+                                Logout
+                            </button>
+                        </div>
                     </div>
-                </div>
                 </aside>
             )}
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Top Header */}
+                <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                        {/* Mobile Menu Button */}
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden text-gray-600 hover:text-gray-900"
+                        >
+                            <Menu className="h-6 w-6" />
+                        </button>
+
+                        {/* Right Actions */}
+                        <div className="flex items-center gap-4 ml-auto">
+                            {/* User Profile Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                                >
+                                    <img
+                                        src="/images/login-image.png"
+                                        alt="Profile"
+                                        className="w-8 h-8 rounded-full object-cover"
+                                    />
+                                    <span className="text-sm font-semibold text-gray-900 hidden sm:block">User Profile</span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {dropdownOpen && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setDropdownOpen(false)}
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                                            <Link
+                                                to="/personal/profile"
+                                                onClick={() => setDropdownOpen(false)}
+                                                className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <User className="h-4 w-4 mr-3" />
+                                                Profile
+                                            </Link>
+                                            <button
+                                                onClick={() => {
+                                                    setDropdownOpen(false);
+                                                    setShowLogoutModal(true);
+                                                }}
+                                                className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <LogOut className="h-4 w-4 mr-3" />
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto bg-white">
                     <Outlet />

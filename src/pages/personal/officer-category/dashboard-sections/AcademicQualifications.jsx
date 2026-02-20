@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
-  const [academicTab, setAcademicTab] = useState('academic');
+const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
   const [currentAcademic, setCurrentAcademic] = useState({
     qualificationName: '',
@@ -99,8 +98,8 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setAcademicTab('academic')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${academicTab === 'academic'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Academic Qualifications
@@ -109,8 +108,8 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setAcademicTab('stcw')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${academicTab === 'stcw'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             STCW Certificate

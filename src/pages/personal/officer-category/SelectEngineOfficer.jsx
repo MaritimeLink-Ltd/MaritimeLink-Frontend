@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const SelectEngineOfficer = () => {
   const navigate = useNavigate();
   const [selectedOfficer, setSelectedOfficer] = useState('Chief Engineer');
+  const [otherRole, setOtherRole] = useState('');
 
   const officers = [
     'Chief Engineer',
@@ -18,9 +19,9 @@ const SelectEngineOfficer = () => {
   ];
 
   const handleNext = () => {
-    if (selectedOfficer) {
-      console.log('Selected officer:', selectedOfficer);
-      navigate('/complete-profile', { replace: true });
+    if (selectedOfficer || otherRole.trim()) {
+      console.log('Selected officer:', selectedOfficer || otherRole.trim());
+      navigate('/officer-dashboard', { replace: true });
     }
   };
 
@@ -47,7 +48,7 @@ const SelectEngineOfficer = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Select Engine Officer
             </h1>
-            <p className="text-gray-500 mb-6">Choose Your Engine Officer Category</p>
+            <p className="text-gray-500 mb-6">Choose Your Engine Officer Role</p>
 
             {/* Officer Options - Pill Style */}
             <div className="flex flex-wrap gap-3 mb-8">
@@ -63,6 +64,18 @@ const SelectEngineOfficer = () => {
                   {officer}
                 </button>
               ))}
+            </div>
+
+            {/* Other Role */}
+            <div className="mb-8">
+              <label className="block text-gray-700 font-medium mb-2">Other</label>
+              <input
+                type="text"
+                placeholder="Write your role"
+                value={otherRole}
+                onChange={(e) => setOtherRole(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971]"
+              />
             </div>
 
             {/* Buttons */}

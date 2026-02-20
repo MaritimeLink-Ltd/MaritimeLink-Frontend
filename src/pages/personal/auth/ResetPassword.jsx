@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
 
+function isPasswordStrong(password) {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
+  );
+}
+
 function ResetPassword() {
     const { token } = useParams(); // Get token from URL
     const navigate = useNavigate();
@@ -32,8 +42,8 @@ function ResetPassword() {
             return;
         }
 
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters long');
+        if (!isPasswordStrong(formData.password)) {
+            setError('Password must be at least 8 characters with uppercase, lowercase, a number, and a special character.');
             return;
         }
 
@@ -67,12 +77,12 @@ function ResetPassword() {
     };
 
     return (
-        <div className="h-screen flex overflow-hidden">
+        <div className="h-screen flex overflow-hidden w-full max-w-full min-w-0">
             {/* Left Side - Form */}
-            <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
+            <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
                 <div className="max-w-md w-full mx-auto lg:mx-0">
                     {/* Logo */}
-                    <div className="mb-6 sm:mb-8 -ml-2">
+                    <div className="mb-2 sm:mb-3 -ml-2">
                         <img
                             src="/images/logo.png"
                             alt="MaritimeLink Logo"
@@ -87,7 +97,7 @@ function ResetPassword() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h1>
 
                     {/* Subtitle */}
-                    <p className="text-sm text-gray-600 mb-8">
+                    <p className="text-sm text-gray-600 mb-5">
                         Enter your new password below
                     </p>
 
@@ -235,11 +245,11 @@ function ResetPassword() {
             </div>
 
             {/* Right Side - Image */}
-            <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+            <div className="hidden lg:block lg:w-3/5 min-w-0 relative py-5 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 flex items-center justify-center">
                 <img
                     src="/images/login-image.png"
                     alt="Maritime Professional"
-                    className="w-full h-full object-cover rounded-2xl"
+                    className="w-full max-h-full object-contain rounded-2xl"
                 />
             </div>
         </div>

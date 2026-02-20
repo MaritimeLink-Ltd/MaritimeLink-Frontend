@@ -4,11 +4,9 @@ import SignIn from './pages/personal/auth/SignIn';
 import SignUp from './pages/personal/auth/SignUp';
 import OTPVerification from './pages/personal/auth/OTPVerification';
 import SelectProfession from './pages/personal/auth/SelectProfession';
-import CompleteProfile from './pages/personal/auth/CompleteProfile';
-import IDUpload from './pages/personal/auth/IDUpload';
+import UploadProfilePhoto from './pages/personal/auth/UploadProfilePhoto';
 // ...existing code...
 import ResetPassword from './pages/personal/auth/ResetPassword';
-import GetPremium from './pages/personal/auth/GetPremium';
 import OfficerCategory from './pages/personal/officer-category/OfficerCategory';
 import SelectDeckOfficer from './pages/personal/officer-category/SelectDeckOfficer';
 import SelectEngineOfficer from './pages/personal/officer-category/SelectEngineOfficer';
@@ -105,7 +103,8 @@ import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/Privacy
 
 function App() {
   return (
-    <Router>
+    <div className="min-w-0 w-full max-w-full overflow-x-hidden">
+      <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignIn />} />
@@ -113,9 +112,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/otp-verification" element={<OTPVerification />} />
-        <Route path="/id-upload" element={<IDUpload />} />
+        <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />
+        <Route path="/id-upload" element={<Navigate to="/upload-profile-photo" replace />} />
         <Route path="/select-profession" element={<SelectProfession />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/officer-category" element={<OfficerCategory />} />
         <Route path="/select-deck-officer" element={<SelectDeckOfficer />} />
         <Route path="/select-engine-officer" element={<SelectEngineOfficer />} />
@@ -128,7 +127,6 @@ function App() {
         <Route path="/select-catering" element={<SelectCatering />} />
         <Route path="/select-medical" element={<SelectMedical />} />
         <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
-        <Route path="/get-premium" element={<GetPremium />} />
         <Route path="/cv-resume" element={<CVResume />} />
 
         {/* Admin/Recruiter Setup Routes (No Layout) */}
@@ -231,6 +229,7 @@ function App() {
         </Route>
       </Routes>
     </Router>
+    </div>
   );
 }
 

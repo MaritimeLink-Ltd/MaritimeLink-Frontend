@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = () => {
     const navigate = useNavigate();
     const { jobId } = useParams();
     const [selectedResume, setSelectedResume] = useState(null);
+    const [uploadedResume, setUploadedResume] = useState(null);
+    const [coverLetter, setCoverLetter] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Sample job data
     const jobs = {
@@ -65,10 +68,24 @@ const ApplyToJob = () => {
         }
     ];
 
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setUploadedResume(file);
+            setSelectedResume('uploaded');
+        }
+    };
+
     const handleApply = () => {
         if (selectedResume) {
             // Handle job application submission
-            console.log('Applying with resume:', selectedResume);
+            const applicationData = {
+                jobId,
+                resumeType: selectedResume === 'uploaded' ? 'uploaded' : 'platform',
+                resumeData: selectedResume === 'uploaded' ? uploadedResume : resumes.find(r => r.id === selectedResume),
+                coverLetter
+            };
+            console.log('Applying with data:', applicationData);
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);
@@ -78,14 +95,9 @@ const ApplyToJob = () => {
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-4 sm:p-8">
-            {/* Logo in top-left corner */}
-            <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
-            </div>
-
-            {/* Main Form Container - matching officer dashboard sizing */}
-            <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-6 sm:p-8 h-auto sm:h-[80vh] max-h-screen flex flex-col overflow-y-auto">
+        <div className="w-full h-full flex items-center justify-center p-4 sm:p-8 bg-white lg:bg-gray-50">
+            {/* Main Form Container - matching dashboard sizing */}
+            <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col">
                 {/* Back Button and Title */}
                 <div className="mb-6">
                     <button
@@ -121,49 +133,103 @@ const ApplyToJob = () => {
 
                 {/* Select Resume Section */}
                 <div className="mb-6">
-                    <h3 className="text-base font-semibold text-gray-800 mb-4">Select Resume</h3>
+                    <h3 className="text-base font-semibold text-gray-800 mb-4">Select or Upload CV</h3>
 
-                    {/* Resume Cards */}
-                    <div className="space-y-3">
+                    {/* Platform Resume Card (Highlighted) */}
+                    <div className="space-y-4">
                         {resumes.map((resume) => (
                             <div
                                 key={resume.id}
-                                onClick={() => setSelectedResume(resume)}
-                                className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedResume?.id === resume.id
-                                    ? 'border-[#003971] bg-[#003971]/5'
-                                    : 'border-gray-200 hover:border-gray-300'
+                                onClick={() => setSelectedResume(resume.id)}
+                                className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all overflow-hidden ${selectedResume === resume.id
+                                    ? 'border-[#003971] bg-[#003971]/5 shadow-md'
+                                    : 'border-yellow-400 bg-yellow-50/30 hover:shadow-md'
                                     }`}
                             >
-                                <div className="flex gap-4">
-                                    {/* Resume Thumbnail */}
-                                    <div className="shrink-0">
-                                        <img
-                                            src={resume.thumbnail}
-                                            alt={resume.title}
-                                            className="w-24 h-32 object-cover rounded border border-gray-200"
-                                        />
-                                    </div>
+                                {/* Recommended Badge */}
+                                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 shadow-sm border border-yellow-500">
+                                    <Star size={12} className="fill-yellow-900" />
+                                    Platform CV
+                                </div>
 
-                                    {/* Resume Info */}
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        <h4 className="text-base font-semibold text-gray-800 mb-1">
+                                <div className="flex gap-4">
+                                    <div className="flex-1 flex flex-col justify-center mt-2">
+                                        <h4 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                                             {resume.title}
+                                            <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">95% Match</span>
                                         </h4>
-                                        <p className="text-sm text-gray-500">{resume.createdDate}</p>
+                                        <p className="text-sm text-gray-600 mb-3">{resume.createdDate}</p>
+                                        <p className="text-xs text-gray-500 leading-snug max-w-sm">This is your MaritimeLink profile CV. We highly recommend using this as employers prefer reviewing standard platform profiles.</p>
                                     </div>
 
                                     {/* Checkmark */}
-                                    {selectedResume?.id === resume.id && (
-                                        <div className="absolute top-4 right-4">
-                                            <div className="w-6 h-6 bg-[#003971] rounded-full flex items-center justify-center">
-                                                <CheckCircle2 size={16} className="text-white" fill="currentColor" />
-                                            </div>
+                                    <div className="self-center pr-2">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === resume.id ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                            {selectedResume === resume.id && <Check size={14} className="text-white" strokeWidth={3} />}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="relative flex items-center py-2">
+                            <div className="flex-grow border-t border-gray-200"></div>
+                            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
+                            <div className="flex-grow border-t border-gray-200"></div>
+                        </div>
+
+                        {/* Upload Custom CV Area */}
+                        <div
+                            onClick={() => {
+                                if (uploadedResume) setSelectedResume('uploaded');
+                                else fileInputRef.current.click();
+                            }}
+                            className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all ${selectedResume === 'uploaded'
+                                ? 'border-[#003971] bg-[#003971]/5 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                                }`}
+                        >
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                accept=".pdf,.doc,.docx"
+                                className="hidden"
+                            />
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${uploadedResume ? 'bg-blue-100 text-[#003971]' : 'bg-gray-100 text-gray-500'}`}>
+                                    {uploadedResume ? <FileType size={24} /> : <Upload size={24} />}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-base font-semibold text-gray-800">
+                                        {uploadedResume ? uploadedResume.name : 'Upload Custom CV'}
+                                    </h4>
+                                    <p className="text-sm text-gray-500">
+                                        {uploadedResume ? `Size: ${(uploadedResume.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, DOC, DOCX up to 5MB'}
+                                    </p>
+                                </div>
+                                <div className="self-center">
+                                    {uploadedResume && (
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === 'uploaded' ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                            {selectedResume === 'uploaded' && <Check size={14} className="text-white" strokeWidth={3} />}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        ))}
+                        </div>
                     </div>
+                </div>
+
+                {/* Cover Letter Section */}
+                <div className="mb-8">
+                    <h3 className="text-base font-semibold text-gray-800 mb-2">Cover Letter <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
+                    <p className="text-sm text-gray-500 mb-3">Introduce yourself and explain why you're a great fit for this role.</p>
+                    <textarea
+                        value={coverLetter}
+                        onChange={(e) => setCoverLetter(e.target.value)}
+                        placeholder="Write your cover letter here..."
+                        className="w-full h-32 p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400"
+                    />
                 </div>
 
                 {/* Apply Button */}

@@ -50,9 +50,9 @@ function GetPremium() {
   };
 
   return (
-    <div className="min-h-screen h-screen flex overflow-hidden bg-white">
+    <div className="min-h-screen h-screen flex overflow-hidden w-full max-w-full min-w-0 bg-white">
       {/* Left Side - Content */}
-      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 overflow-y-auto scrollbar-hide py-8 lg:py-12">
+      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 overflow-y-auto scrollbar-hide py-4 lg:py-6">
         <div className="max-w-md w-full mx-auto lg:mx-0 my-auto">
           {/* Premium Icon */}
           <div className="mb-6">
@@ -121,11 +121,11 @@ function GetPremium() {
       </div>
 
       {/* Right Side - Image */}
-      <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+      <div className="hidden lg:block lg:w-3/5 min-w-0 relative py-5 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 flex items-center justify-center">
         <img
           src="/images/premium-image.png"
           alt="Maritime Premium"
-          className="w-full h-full object-cover rounded-2xl"
+          className="w-full max-h-full object-contain rounded-2xl"
         />
       </div>
     </div>

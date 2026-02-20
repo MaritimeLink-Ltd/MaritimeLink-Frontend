@@ -48,12 +48,12 @@ function SignIn() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden w-full max-w-full min-w-0">
       {/* Left Side - Form */}
-      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
+      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
-          <div className="mb-6 sm:mb-8 -ml-2">
+          <div className="mb-2 sm:mb-3 -ml-2">
             <img
               src="/images/logo.png"
               alt="MaritimeLink Logo"
@@ -65,7 +65,7 @@ function SignIn() {
           <p className="text-sm text-[#003971] mb-2">Welcome to MaritimeLink</p>
 
           {/* Sign In Heading */}
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Sign In</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign In</h1>
 
           {/* Error Message */}
           {error && (
@@ -183,11 +183,11 @@ function SignIn() {
       </div>
 
       {/* Right Side - Image */}
-      <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+      <div className="hidden lg:block lg:w-3/5 min-w-0 relative py-5 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 flex items-center justify-center">
         <img
           src="/images/login-image.png"
           alt="Maritime Professional"
-          className="w-full h-full object-cover rounded-2xl"
+          className="w-full max-h-full object-contain rounded-2xl"
         />
       </div>
     </div>

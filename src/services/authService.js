@@ -117,6 +117,36 @@ class AuthService {
     }
 
     /**
+     * Upload profile picture/photo
+     * @param {File} file - Profile photo image file
+     * @returns {Promise<Object>} Upload response with URL
+     */
+    async uploadProfilePhoto(file) {
+        console.log('MOCK API: uploadProfilePhoto called', file);
+        /*
+        try {
+            const formData = new FormData();
+            formData.append('profile_photo', file);
+            const response = await httpClient.request('/api/professional/upload-profile-photo', {
+                method: 'POST',
+                body: formData,
+            });
+            return response;
+        } catch (error) {
+            console.error('Profile photo upload error:', error);
+            throw error;
+        }
+        */
+        return {
+            status: 200,
+            data: {
+                url: URL.createObjectURL ? URL.createObjectURL(file) : 'https://via.placeholder.com/150',
+                message: 'Profile photo uploaded (MOCKED)'
+            }
+        };
+    }
+
+    /**
      * Complete professional profile
      * @param {Object} profileData - Profile completion data
      * @param {string} profileData.professionalId - Professional ID

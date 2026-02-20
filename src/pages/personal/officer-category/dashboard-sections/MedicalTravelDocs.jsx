@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
-  const [medicalTab, setMedicalTab] = useState('medical');
+const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
   const [currentMedical, setCurrentMedical] = useState({
     certificateName: '',
@@ -133,8 +132,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setMedicalTab('medical')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${medicalTab === 'medical'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Medical Document
@@ -143,8 +142,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {} }) => {
             type="button"
             onClick={() => setMedicalTab('travel')}
             className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${medicalTab === 'travel'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-[#003971] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             Travel Document
