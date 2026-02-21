@@ -85,7 +85,22 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   };
 
   const handleNext = () => {
-    onNext({ academicQualifications, stcwCertificates });
+    let finalAcademic = [...academicQualifications];
+    let finalStcw = [...stcwCertificates];
+
+    if (currentAcademic.qualificationName && currentAcademic.institution) {
+      if (!currentAcademic.startDate || !currentAcademic.endDate || new Date(currentAcademic.startDate) < new Date(currentAcademic.endDate)) {
+        finalAcademic.push({ ...currentAcademic, id: Date.now() });
+      }
+    }
+
+    if (currentStcw.qualificationName && currentStcw.certificateNumber) {
+      if (!currentStcw.dateOfIssue || !currentStcw.validTill || new Date(currentStcw.dateOfIssue) < new Date(currentStcw.validTill)) {
+        finalStcw.push({ ...currentStcw, id: Date.now() + 1 });
+      }
+    }
+
+    onNext({ academicQualifications: finalAcademic, stcwCertificates: finalStcw });
   };
 
   return (
@@ -360,7 +375,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
             onClick={academicTab === 'academic' ? handleAddAcademic : handleAddStcw}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

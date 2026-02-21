@@ -11,7 +11,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
     state: initialData.state || '',
     zipCode: initialData.zipCode || '',
     country: initialData.country || '',
-    countryCode: initialData.countryCode || '+92',
+    countryCode: initialData.countryCode || '+44',
     contactNumber: initialData.contactNumber || '',
     email: initialData.email || ''
   });

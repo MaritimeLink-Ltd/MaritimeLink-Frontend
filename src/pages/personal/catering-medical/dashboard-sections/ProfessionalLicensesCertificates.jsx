@@ -119,7 +119,27 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
   };
 
   const handleNext = () => {
-    onNext({ licenses, certificates });
+    let finalLicenses = [...licenses];
+    let finalCertificates = [...certificates];
+
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (currentLicense.licenseName && currentLicense.licenseNumber) {
+      let valid = true;
+      if (currentLicense.dateOfIssue && new Date(currentLicense.dateOfIssue) > todayDate) valid = false;
+      if (currentLicense.dateOfIssue && currentLicense.validTill && new Date(currentLicense.dateOfIssue) >= new Date(currentLicense.validTill)) valid = false;
+      if (valid) finalLicenses.push({ ...currentLicense, id: Date.now() });
+    }
+
+    if (currentCertificate.licenseName && currentCertificate.licenseNumber) {
+      let valid = true;
+      if (currentCertificate.dateOfIssue && new Date(currentCertificate.dateOfIssue) > todayDate) valid = false;
+      if (currentCertificate.dateOfIssue && currentCertificate.validTill && new Date(currentCertificate.dateOfIssue) >= new Date(currentCertificate.validTill)) valid = false;
+      if (valid) finalCertificates.push({ ...currentCertificate, id: Date.now() + 1 });
+    }
+
+    onNext({ licenses: finalLicenses, certificates: finalCertificates });
   };
 
   return (
@@ -402,7 +422,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
             onClick={activeTab === 'licenses' ? handleAddLicense : handleAddCertificate}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

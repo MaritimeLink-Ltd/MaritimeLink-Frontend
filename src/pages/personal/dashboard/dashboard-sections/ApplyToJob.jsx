@@ -95,9 +95,9 @@ const ApplyToJob = () => {
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-4 sm:p-8 bg-white lg:bg-gray-50">
+        <div className="w-full min-h-screen flex justify-center py-10 px-4 sm:px-8 bg-white lg:bg-gray-50 overflow-y-auto">
             {/* Main Form Container - matching dashboard sizing */}
-            <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col">
+            <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col mb-10">
                 {/* Back Button and Title */}
                 <div className="mb-6">
                     <button
@@ -156,7 +156,6 @@ const ApplyToJob = () => {
                                     <div className="flex-1 flex flex-col justify-center mt-2">
                                         <h4 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
                                             {resume.title}
-                                            <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">95% Match</span>
                                         </h4>
                                         <p className="text-sm text-gray-600 mb-3">{resume.createdDate}</p>
                                         <p className="text-xs text-gray-500 leading-snug max-w-sm">This is your MaritimeLink profile CV. We highly recommend using this as employers prefer reviewing standard platform profiles.</p>

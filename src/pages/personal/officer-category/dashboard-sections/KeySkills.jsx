@@ -20,7 +20,11 @@ const KeySkills = ({ onNext, onBack, initialData = {} }) => {
   };
 
   const handleNext = () => {
-    onNext({ skills });
+    let finalSkills = [...skills];
+    if (currentSkill.name && currentSkill.level > 0) {
+      finalSkills.push({ ...currentSkill, id: Date.now() });
+    }
+    onNext({ skills: finalSkills });
   };
 
   return (
@@ -128,7 +132,7 @@ const KeySkills = ({ onNext, onBack, initialData = {} }) => {
             onClick={handleAddSkill}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

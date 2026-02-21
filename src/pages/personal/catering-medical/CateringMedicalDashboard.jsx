@@ -190,7 +190,7 @@ const CateringMedicalDashboard = () => {
           />
         );
       case 9:
-        return <Resume isReviewMode={true} defaultUserType="medical" />;
+        return <Resume isReviewMode={true} defaultUserType="medical" onEdit={() => setActiveSection(1)} formData={allData} />;
       default:
         return <div>Section not found</div>;
     }
@@ -227,7 +227,7 @@ const CateringMedicalDashboard = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar (slide-in) */}
       <div
         className={`lg:hidden fixed inset-y-0 left-0 w-64 bg-white shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -318,9 +318,9 @@ const CateringMedicalDashboard = () => {
       </button>
 
       {/* Desktop Sidebar Column */}
-      <div className="hidden lg:flex flex-col items-center w-72 px-4 py-8">
+      <div className="hidden lg:flex flex-col items-center w-72 px-4 py-4 sticky top-0 self-start">
         {/* Logo outside cards */}
-        <div className="w-full mb-6">
+        <div className="w-full mb-4">
           <img
             src="/images/logo.png"
             alt="MaritimeLink Logo"
@@ -329,7 +329,7 @@ const CateringMedicalDashboard = () => {
         </div>
 
         {/* Steps Card */}
-        <div className="w-full bg-white rounded-2xl shadow-md p-3 mb-4">
+        <div className="w-full bg-white rounded-2xl shadow-md p-3 mb-5">
           {sections.map((section) => {
             const isActiveOrCompleted = section.id <= activeSection;
 
@@ -357,7 +357,7 @@ const CateringMedicalDashboard = () => {
         </div>
 
         {/* Resume Card */}
-        <div className="w-full bg-white rounded-2xl shadow-md p-4 mt-auto">
+        <div className="w-full bg-white rounded-2xl shadow-md p-4">
           <div className="flex items-center space-x-2 mb-2">
             <svg className="w-4 h-4 text-[#003971]" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />

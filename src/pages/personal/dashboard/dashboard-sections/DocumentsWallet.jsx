@@ -249,7 +249,7 @@ const DocumentsWallet = () => {
     }
 
     return (
-        <div className="w-full max-w-7xl mx-auto h-full overflow-y-auto lg:overflow-hidden">
+        <div className="w-full max-w-7xl mx-auto min-h-screen pb-10">
             {/* Sticky Header Section */}
             <div className="lg:sticky lg:top-0 bg-gray-50 lg:z-10 px-4 sm:px-6 pt-4 pb-2">
                 {/* Header Row */}

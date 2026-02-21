@@ -85,7 +85,23 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
   };
 
   const handleNext = () => {
-    onNext({ licenses, endorsements });
+    let finalLicenses = [...licenses];
+    let finalEndorsements = [...endorsements];
+
+    if (currentLicense.licenseName && currentLicense.licenseNumber) {
+      if (!currentLicense.dateOfIssue || !currentLicense.validTill || new Date(currentLicense.dateOfIssue) < new Date(currentLicense.validTill)) {
+        finalLicenses.push({ ...currentLicense, id: Date.now() });
+      }
+    }
+
+    if (currentEndorsement.licenseName && currentEndorsement.licenseNumber) {
+      if (!currentEndorsement.dateOfIssue || !currentEndorsement.validTill || new Date(currentEndorsement.dateOfIssue) < new Date(currentEndorsement.validTill)) {
+        // Use a slightly different ID so they don't collide if both are added same ms
+        finalEndorsements.push({ ...currentEndorsement, id: Date.now() + 1 });
+      }
+    }
+
+    onNext({ licenses: finalLicenses, endorsements: finalEndorsements });
   };
 
   return (
@@ -364,7 +380,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
             onClick={activeTab === 'licenses' ? handleAddLicense : handleAddEndorsement}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

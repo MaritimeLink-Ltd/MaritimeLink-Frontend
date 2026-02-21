@@ -32,7 +32,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
           return;
         }
       }
-      
+
       setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
       setCurrentSeaService({
         companyName: '',
@@ -55,7 +55,13 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
   };
 
   const handleNext = () => {
-    onNext({ seaServiceEntries });
+    let finalEntries = [...seaServiceEntries];
+    if (currentSeaService.companyName && currentSeaService.vesselName) {
+      if (!currentSeaService.joiningDate || !currentSeaService.till || new Date(currentSeaService.joiningDate) <= new Date(currentSeaService.till)) {
+        finalEntries.push({ ...currentSeaService, id: Date.now() });
+      }
+    }
+    onNext({ seaServiceEntries: finalEntries });
   };
 
   return (
@@ -279,7 +285,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {} }) => {
             onClick={handleAddSeaService}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

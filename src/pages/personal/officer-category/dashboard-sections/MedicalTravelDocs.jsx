@@ -119,7 +119,27 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
   };
 
   const handleNext = () => {
-    onNext({ medicalDocuments, travelDocuments });
+    let finalMedical = [...medicalDocuments];
+    let finalTravel = [...travelDocuments];
+
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (currentMedical.certificateName && currentMedical.certificateNumber) {
+      let valid = true;
+      if (currentMedical.dateOfIssue && new Date(currentMedical.dateOfIssue) > todayDate) valid = false;
+      if (currentMedical.dateOfIssue && currentMedical.validTill && new Date(currentMedical.dateOfIssue) >= new Date(currentMedical.validTill)) valid = false;
+      if (valid) finalMedical.push({ ...currentMedical, id: Date.now() });
+    }
+
+    if (currentTravel.documentName && currentTravel.documentNumber) {
+      let valid = true;
+      if (currentTravel.dateOfIssue && new Date(currentTravel.dateOfIssue) > todayDate) valid = false;
+      if (currentTravel.dateOfIssue && currentTravel.validTill && new Date(currentTravel.dateOfIssue) >= new Date(currentTravel.validTill)) valid = false;
+      if (valid) finalTravel.push({ ...currentTravel, id: Date.now() + 1 });
+    }
+
+    onNext({ medicalDocuments: finalMedical, travelDocuments: finalTravel });
   };
 
   return (
@@ -404,7 +424,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
             onClick={medicalTab === 'medical' ? handleAddMedical : handleAddTravel}
             className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
           >
-            + Add Another
+            Save & Add Another
           </button>
           <button
             type="button"

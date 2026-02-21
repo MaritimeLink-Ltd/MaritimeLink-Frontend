@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 
-const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
+const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({
         name: 'Ali Shahzaib',
@@ -187,10 +187,105 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
         ]
     });
 
+    // Update userData based on formData from parent dashboards
+    useEffect(() => {
+        if (!formData) return;
+
+        setUserData((prevData) => {
+            const pi = formData.personalInfo || {};
+            const ps = formData.professionalSummary || {};
+            const sk = formData.skills || {};
+            const lic = formData.licensesEndorsements || {};
+            const profLic = formData.professionalLicensesCertificates || {}; // For Catering/Medical
+            const sea = formData.seaServiceLog || {};
+            const aca = formData.academicQualifications || {};
+            const med = formData.medicalTravelDocs || {};
+            const bio = formData.biometricsNextOfKin || {}; // New mapping
+
+            // Helper to get array. Since formData is present, do not fallback to mock data.
+            const getArray = (arr1, arr2) => {
+                if (Array.isArray(arr1) && arr1.length > 0) return arr1;
+                if (Array.isArray(arr2) && arr2.length > 0) return arr2;
+                return [];
+            };
+
+            const formatDateRange = (start, end) => {
+                if (!start && !end) return '';
+                const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+                const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
+                const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
+                return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
+            };
+
+            return {
+                ...prevData,
+                userType: defaultUserType || prevData.userType,
+                name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : '',
+                phone: pi.contactNumber ? `${pi.countryCode || '+44'} ${pi.contactNumber}` : '',
+                email: pi.email || '',
+                address: [pi.streetAddress, pi.city, pi.state, pi.zipCode, pi.country].filter(Boolean).join(', '),
+                professionalSummary: ps.professionalSummary || ps.summary || '',
+                skills: getArray(sk.skills),
+
+                // If standard structure is empty, fallback to Catering structure
+                licenses: getArray(lic.licenses, profLic.licenses).map(l => ({
+                    ...l,
+                    license: l.license || l.licenseName || '',
+                    capacity: l.capacity || l.capacityRanking || l.rank || '',
+                })),
+                endorsements: getArray(lic.endorsements, profLic.certificates).map(e => ({
+                    ...e,
+                    endorsement: e.endorsement || e.certificateName || e.licenseName || '',
+                })),
+
+                seaServiceLog: getArray(sea.seaServiceLog || sea.seaServiceEntries).map(s => ({
+                    ...s,
+                    company: s.company || s.companyName || '',
+                    kw: s.kw || s.kwt || s.engineKw || '',
+                    duration: s.duration || formatDateRange(s.joiningDate || s.signOn, s.till || s.signOff),
+                })),
+                academicQualifications: getArray(aca.academic || aca.academicQualifications).map(a => ({
+                    ...a,
+                    dates: a.dates || formatDateRange(a.startDate, a.endDate),
+                })),
+                stcwCertificates: getArray(aca.stcw || aca.stcwCertificates).map(c => ({
+                    ...c,
+                    stcwQualification: c.stcwQualification || c.qualificationName || c.certificateName || '',
+                })),
+                medicalCertificates: getArray(med.medical || med.medicalDocuments),
+                travelDocuments: getArray(med.travel || med.travelDocuments),
+
+                // Mappings for Biometrics, Kin, and References block
+                biometricInfo: {
+                    gender: bio.biometricData?.gender || '',
+                    height: bio.biometricData?.height ? `${bio.biometricData?.height}cm` : '',
+                    weight: bio.biometricData?.weight ? `${bio.biometricData?.weight}kg` : '',
+                    bmi: bio.biometricData?.bmi || '',
+                    eyeColor: bio.biometricData?.eyeColor || '',
+                    shoeSize: bio.biometricData?.shoeSize || '',
+                    overallSize: bio.biometricData?.overallSize || '',
+                    boilerSuitSize: bio.biometricData?.boilerSuitSize || '',
+                },
+                nextOfKin: getArray(bio.nextOfKinList).map(kin => ({
+                    ...kin,
+                    phoneNumber: kin.phoneNumber || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
+                })),
+                references: getArray(bio.refereesList).map(ref => ({
+                    ...ref,
+                    phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
+                }))
+            };
+        });
+    }, [formData, defaultUserType]);
+
     const cvRef = useRef(null);
 
     const handleEditResume = () => {
-        navigate('/officer-dashboard');
+        if (onEdit) {
+            onEdit();
+        } else {
+            navigate(-1); // Go back one step in history if onEdit not provided
+        }
     };
 
     const handleDownloadPDF = async () => {
@@ -473,38 +568,42 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     </div>
 
                     {/* Professional Summary */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <FiBriefcase size={20} className="text-[#1E3A5F]" />
-                            <h2 className="text-xl font-bold text-[#1E3A5F]">Professional Summary</h2>
+                    {userData.professionalSummary && (
+                        <div className="mb-8">
+                            <div className="flex items-center gap-2 mb-4">
+                                <FiBriefcase size={20} className="text-[#1E3A5F]" />
+                                <h2 className="text-xl font-bold text-[#1E3A5F]">Professional Summary</h2>
+                            </div>
+                            <p className="text-gray-700 leading-relaxed text-sm">
+                                {userData.professionalSummary}
+                            </p>
                         </div>
-                        <p className="text-gray-700 leading-relaxed text-sm">
-                            {userData.professionalSummary}
-                        </p>
-                    </div>
+                    )}
 
                     {/* Skills */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-5">
-                            <FiTool size={20} className="text-[#1E3A5F]" />
-                            <h2 className="text-xl font-bold text-[#1E3A5F]">Skills</h2>
-                        </div>
-                        <div className="space-y-3">
-                            {userData.skills.map((skill, index) => (
-                                <div key={index} className="flex items-center gap-4">
-                                    <span className="text-gray-800 font-medium min-w-[160px] text-sm">
-                                        {skill.name}
-                                    </span>
-                                    <div className="flex gap-1">
-                                        {renderStars(skill.rating)}
+                    {userData.skills && userData.skills.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-5">
+                                <FiTool size={20} className="text-[#1E3A5F]" />
+                                <h2 className="text-xl font-bold text-[#1E3A5F]">Skills</h2>
+                            </div>
+                            <div className="space-y-3">
+                                {userData.skills.map((skill, index) => (
+                                    <div key={index} className="flex items-center gap-4">
+                                        <span className="text-gray-800 font-medium min-w-[160px] text-sm">
+                                            {skill.name}
+                                        </span>
+                                        <div className="flex gap-1">
+                                            {renderStars(skill.rating || skill.level || 0)}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Licenses Section - For Officers and Medical */}
-                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.licenses && (
+                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.licenses && userData.licenses.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -542,7 +641,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Endorsements/Certificates Section - For Officers and Medical */}
-                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.endorsements && (
+                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.endorsements && userData.endorsements.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -578,7 +677,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Sea Service Log Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.seaServiceLog && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.seaServiceLog && userData.seaServiceLog.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -622,7 +721,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Academic Qualification Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.academicQualifications && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.academicQualifications && userData.academicQualifications.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -654,7 +753,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* STCW Certificates Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.stcwCertificates && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.stcwCertificates && userData.stcwCertificates.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -688,7 +787,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Medical Certificates Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.medicalCertificates && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.medicalCertificates && userData.medicalCertificates.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -722,7 +821,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Travel Documents Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.travelDocuments && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.travelDocuments && userData.travelDocuments.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -756,7 +855,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Biometrics Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.biometricInfo && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.biometricInfo && Object.values(userData.biometricInfo).some(val => val) && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -792,7 +891,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Next Of Kin Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.nextOfKin && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.nextOfKin && userData.nextOfKin.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -824,7 +923,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer' }) => {
                     )}
 
                     {/* Referees Section - For All Types */}
-                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.references && (
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.references && userData.references.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />

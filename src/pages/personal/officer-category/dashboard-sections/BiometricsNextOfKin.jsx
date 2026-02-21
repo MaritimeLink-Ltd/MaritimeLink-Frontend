@@ -15,7 +15,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   const [currentNextOfKin, setCurrentNextOfKin] = useState({
     name: '',
     relationship: '',
-    countryCode: '+92',
+    countryCode: '+44',
     phone: '',
     email: ''
   });
@@ -23,7 +23,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   const [currentReferee, setCurrentReferee] = useState({
     name: '',
     position: '',
-    countryCode: '+92',
+    countryCode: '+44',
     phone: '',
     email: ''
   });
@@ -89,7 +89,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
       setCurrentNextOfKin({
         name: '',
         relationship: '',
-        countryCode: '+92',
+        countryCode: '+44',
         phone: '',
         email: ''
       });
@@ -106,7 +106,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
       setCurrentReferee({
         name: '',
         position: '',
-        countryCode: '+92',
+        countryCode: '+44',
         phone: '',
         email: ''
       });
@@ -118,7 +118,18 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   };
 
   const handleCompleteResume = () => {
-    onNext({ biometricData, nextOfKinList, refereesList });
+    let finalKin = [...nextOfKinList];
+    let finalReferees = [...refereesList];
+
+    if (currentNextOfKin.name && currentNextOfKin.relationship) {
+      finalKin.push({ ...currentNextOfKin, id: Date.now() });
+    }
+
+    if (currentReferee.name && currentReferee.email) {
+      finalReferees.push({ ...currentReferee, id: Date.now() + 1 });
+    }
+
+    onNext({ biometricData, nextOfKinList: finalKin, refereesList: finalReferees });
   };
 
   return (
@@ -541,7 +552,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
               onClick={biometricTab === 'nextOfKin' ? handleAddNextOfKin : handleAddReferee}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
             >
-              + Add Another
+              Save & Add Another
             </button>
           )}
           <button

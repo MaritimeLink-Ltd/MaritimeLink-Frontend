@@ -764,7 +764,7 @@ const OfficerDashboard = () => {
                       onClick={handleAddSkill}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Add Another
+                      Save & Add Another
                     </button>
                     <button
                       type="button"
@@ -1057,7 +1057,7 @@ const OfficerDashboard = () => {
                       onClick={activeTab === 'licenses' ? handleAddLicense : handleAddEndorsement}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Add Another
+                      Save & Add Another
                     </button>
                     <button
                       type="button"
@@ -1298,7 +1298,7 @@ const OfficerDashboard = () => {
                       onClick={handleAddSeaService}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Add Another
+                      Save & Add Another
                     </button>
                     <button
                       type="button"
@@ -1591,7 +1591,7 @@ const OfficerDashboard = () => {
                       onClick={academicTab === 'academic' ? handleAddAcademic : handleAddStcw}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Add Another
+                      Save & Add Another
                     </button>
                     <button
                       type="button"
@@ -1884,7 +1884,7 @@ const OfficerDashboard = () => {
                       onClick={medicalTab === 'medical' ? handleAddMedical : handleAddTravel}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Add Another
+                      Save & Add Another
                     </button>
                     <button
                       type="button"
@@ -2328,7 +2328,7 @@ const OfficerDashboard = () => {
                         onClick={biometricTab === 'nextOfKin' ? handleAddNextOfKin : handleAddReferee}
                         className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                       >
-                        + Add Another
+                        Save & Add Another
                       </button>
                     )}
                     <button
