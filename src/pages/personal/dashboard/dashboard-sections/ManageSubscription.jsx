@@ -6,7 +6,7 @@ import { ArrowLeft, Crown, CheckCircle } from 'lucide-react';
 const ManageSubscription = () => {
     const navigate = useNavigate();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    
+
     const handleUpdatePlan = () => {
         setShowSuccessModal(true);
         setTimeout(() => {
@@ -21,32 +21,31 @@ const ManageSubscription = () => {
 
     const benefits = [
         {
-            title: 'Priority Recruiter Visibility',
-            description: 'Your profile appears higher when recruiters initiate chats'
+            title: 'Securely share documents',
+            description: 'Share your certificates and resumes securely'
         },
         {
-            title: 'Priority Recruiter Visibility',
-            description: 'Your profile appears higher when recruiters initiate chats'
+            title: 'Download files',
+            description: 'Download shared documents and resources seamlessly'
         },
         {
-            title: 'Priority Recruiter Visibility',
-            description: 'Your profile appears higher when recruiters initiate chats'
+            title: 'Receive increased profile visibility',
+            description: 'Stand out from the crowd with a premium badge'
         },
         {
-            title: 'Priority Recruiter Visibility',
-            description: 'Your profile appears higher when recruiters initiate chats'
+            title: 'Gain better visibility for job applications',
+            description: 'Have your applications prioritized by hiring managers'
         }
     ];
 
     return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-8">
-            {/* Logo in top-left corner */}
+        <div className="w-full min-h-screen overflow-y-auto flex flex-col items-center py-20 px-4 sm:px-8 bg-gray-50">
             <div className="absolute top-6 left-6">
                 <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
             </div>
 
             {/* Main Form Container - no fixed height, all content visible */}
-            <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8 my-auto">
                 {/* Back Button and Title */}
                 <button
                     onClick={() => navigate('/personal/profile')}
