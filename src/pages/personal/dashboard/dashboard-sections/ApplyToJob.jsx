@@ -8,9 +8,15 @@ const ApplyToJob = () => {
     const { jobId } = useParams();
     const [selectedResume, setSelectedResume] = useState(null);
     const [uploadedResume, setUploadedResume] = useState(null);
+    const [coverLetterMode, setCoverLetterMode] = useState('write');
     const [coverLetter, setCoverLetter] = useState('');
+    const [uploadedCoverLetter, setUploadedCoverLetter] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const fileInputRef = useRef(null);
+    const coverLetterInputRef = useRef(null);
+
+    const [step, setStep] = useState(1);
+    const [selectedDocuments, setSelectedDocuments] = useState([]);
 
     // Sample job data
     const jobs = {
@@ -68,11 +74,27 @@ const ApplyToJob = () => {
         }
     ];
 
+    // Sample document wallet data
+    const documentWalletItems = [
+        { id: 'doc1', title: 'Passport', expiry: '12 Dec 2030', type: 'Travel' },
+        { id: 'doc2', title: 'Seaman Book', expiry: '15 Aug 2028', type: 'Travel' },
+        { id: 'doc3', title: 'Medical Certificate (ENG1)', expiry: '20 Jan 2026', type: 'Medical' },
+        { id: 'doc4', title: 'Basic Safety Training', expiry: '05 Nov 2027', type: 'STCW' },
+        { id: 'doc5', title: 'Certificate of Competency', expiry: '10 Mar 2029', type: 'License' }
+    ];
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
             setUploadedResume(file);
             setSelectedResume('uploaded');
+        }
+    };
+
+    const handleCoverLetterUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setUploadedCoverLetter(file);
         }
     };
 
@@ -83,7 +105,9 @@ const ApplyToJob = () => {
                 jobId,
                 resumeType: selectedResume === 'uploaded' ? 'uploaded' : 'platform',
                 resumeData: selectedResume === 'uploaded' ? uploadedResume : resumes.find(r => r.id === selectedResume),
-                coverLetter
+                coverLetterMode,
+                coverLetterData: coverLetterMode === 'write' ? coverLetter : uploadedCoverLetter,
+                selectedDocuments
             };
             console.log('Applying with data:', applicationData);
             setShowSuccessModal(true);
@@ -101,11 +125,11 @@ const ApplyToJob = () => {
                 {/* Back Button and Title */}
                 <div className="mb-6">
                     <button
-                        onClick={() => navigate('/personal/jobs')}
+                        onClick={() => step === 2 ? setStep(1) : navigate('/personal/jobs')}
                         className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 transition-colors min-h-[44px]"
                     >
                         <ArrowLeft size={20} />
-                        <span className="text-lg font-medium">Apply To Job</span>
+                        <span className="text-lg font-medium">{step === 2 ? 'Back to Setup' : 'Apply To Job'}</span>
                     </button>
 
                     {/* Job Info Card */}
@@ -131,117 +155,216 @@ const ApplyToJob = () => {
                     </div>
                 </div>
 
-                {/* Select Resume Section */}
-                <div className="mb-6">
-                    <h3 className="text-base font-semibold text-gray-800 mb-4">Select or Upload CV</h3>
+                {/* Step 1: CV & Cover Letter */}
+                {step === 1 && (
+                    <>
+                        {/* Select Resume Section */}
+                        <div className="mb-6">
+                            <h3 className="text-base font-semibold text-gray-800 mb-4">Select or Upload CV</h3>
 
-                    {/* Platform Resume Card (Highlighted) */}
-                    <div className="space-y-4">
-                        {resumes.map((resume) => (
-                            <div
-                                key={resume.id}
-                                onClick={() => setSelectedResume(resume.id)}
-                                className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all overflow-hidden ${selectedResume === resume.id
-                                    ? 'border-[#003971] bg-[#003971]/5 shadow-md'
-                                    : 'border-yellow-400 bg-yellow-50/30 hover:shadow-md'
-                                    }`}
-                            >
-                                {/* Recommended Badge */}
-                                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 shadow-sm border border-yellow-500">
-                                    <Star size={12} className="fill-yellow-900" />
-                                    Platform CV
+                            {/* Platform Resume Card (Highlighted) */}
+                            <div className="space-y-4">
+                                {resumes.map((resume) => (
+                                    <div
+                                        key={resume.id}
+                                        onClick={() => setSelectedResume(resume.id)}
+                                        className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all overflow-hidden ${selectedResume === resume.id
+                                            ? 'border-[#003971] bg-[#003971]/5 shadow-md'
+                                            : 'border-yellow-400 bg-yellow-50/30 hover:shadow-md'
+                                            }`}
+                                    >
+                                        {/* Recommended Badge */}
+                                        <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 shadow-sm border border-yellow-500">
+                                            <Star size={12} className="fill-yellow-900" />
+                                            Platform CV
+                                        </div>
+
+                                        <div className="flex gap-4">
+                                            <div className="flex-1 flex flex-col justify-center mt-2">
+                                                <h4 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                                                    {resume.title}
+                                                </h4>
+                                                <p className="text-sm text-gray-600 mb-3">{resume.createdDate}</p>
+                                                <p className="text-xs text-gray-500 leading-snug max-w-sm">This is your MaritimeLink profile CV. We highly recommend using this as employers prefer reviewing standard platform profiles.</p>
+                                            </div>
+
+                                            {/* Checkmark */}
+                                            <div className="self-center pr-2">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === resume.id ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                                    {selectedResume === resume.id && <Check size={14} className="text-white" strokeWidth={3} />}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <div className="relative flex items-center py-2">
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                    <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
+                                    <div className="flex-grow border-t border-gray-200"></div>
                                 </div>
 
-                                <div className="flex gap-4">
-                                    <div className="flex-1 flex flex-col justify-center mt-2">
-                                        <h4 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
-                                            {resume.title}
-                                        </h4>
-                                        <p className="text-sm text-gray-600 mb-3">{resume.createdDate}</p>
-                                        <p className="text-xs text-gray-500 leading-snug max-w-sm">This is your MaritimeLink profile CV. We highly recommend using this as employers prefer reviewing standard platform profiles.</p>
-                                    </div>
-
-                                    {/* Checkmark */}
-                                    <div className="self-center pr-2">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === resume.id ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
-                                            {selectedResume === resume.id && <Check size={14} className="text-white" strokeWidth={3} />}
+                                {/* Upload Custom CV Area */}
+                                <div
+                                    onClick={() => {
+                                        if (uploadedResume) setSelectedResume('uploaded');
+                                        else fileInputRef.current.click();
+                                    }}
+                                    className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all ${selectedResume === 'uploaded'
+                                        ? 'border-[#003971] bg-[#003971]/5 shadow-md'
+                                        : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                                        }`}
+                                >
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                        accept=".pdf,.doc,.docx"
+                                        className="hidden"
+                                    />
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${uploadedResume ? 'bg-blue-100 text-[#003971]' : 'bg-gray-100 text-gray-500'}`}>
+                                            {uploadedResume ? <FileType size={24} /> : <Upload size={24} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-base font-semibold text-gray-800">
+                                                {uploadedResume ? uploadedResume.name : 'Upload Custom CV'}
+                                            </h4>
+                                            <p className="text-sm text-gray-500">
+                                                {uploadedResume ? `Size: ${(uploadedResume.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, DOC, DOCX up to 5MB'}
+                                            </p>
+                                        </div>
+                                        <div className="self-center">
+                                            {uploadedResume && (
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === 'uploaded' ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                                    {selectedResume === 'uploaded' && <Check size={14} className="text-white" strokeWidth={3} />}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        ))}
-
-                        <div className="relative flex items-center py-2">
-                            <div className="flex-grow border-t border-gray-200"></div>
-                            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
-                            <div className="flex-grow border-t border-gray-200"></div>
                         </div>
 
-                        {/* Upload Custom CV Area */}
-                        <div
-                            onClick={() => {
-                                if (uploadedResume) setSelectedResume('uploaded');
-                                else fileInputRef.current.click();
-                            }}
-                            className={`relative border-2 rounded-xl p-5 cursor-pointer transition-all ${selectedResume === 'uploaded'
-                                ? 'border-[#003971] bg-[#003971]/5 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                        {/* Cover Letter Section */}
+                        <div className="mb-8">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-base font-semibold text-gray-800">Cover Letter <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
+                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                    <button
+                                        onClick={() => setCoverLetterMode('write')}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${coverLetterMode === 'write' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Write
+                                    </button>
+                                    <button
+                                        onClick={() => setCoverLetterMode('upload')}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${coverLetterMode === 'upload' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Upload
+                                    </button>
+                                </div>
+                            </div>
+
+                            {coverLetterMode === 'write' ? (
+                                <>
+                                    <p className="text-sm text-gray-500 mb-3">Introduce yourself and explain why you're a great fit for this role.</p>
+                                    <textarea
+                                        value={coverLetter}
+                                        onChange={(e) => setCoverLetter(e.target.value)}
+                                        placeholder="Write your cover letter here..."
+                                        className="w-full h-32 p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400"
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-500 mb-3">Upload your custom cover letter document.</p>
+                                    <div
+                                        onClick={() => coverLetterInputRef.current.click()}
+                                        className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all ${uploadedCoverLetter
+                                            ? 'border-[#003971] bg-[#003971]/5 shadow-sm'
+                                            : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                                            }`}
+                                    >
+                                        <input
+                                            type="file"
+                                            ref={coverLetterInputRef}
+                                            onChange={handleCoverLetterUpload}
+                                            accept=".pdf,.doc,.docx"
+                                            className="hidden"
+                                        />
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${uploadedCoverLetter ? 'bg-blue-100 text-[#003971]' : 'bg-gray-100 text-gray-500'}`}>
+                                            {uploadedCoverLetter ? <FileType size={24} /> : <Upload size={24} />}
+                                        </div>
+                                        <h4 className="text-base font-semibold text-gray-800 mb-1 text-center">
+                                            {uploadedCoverLetter ? uploadedCoverLetter.name : 'Click to Upload Cover Letter'}
+                                        </h4>
+                                        <p className="text-sm text-gray-500 text-center">
+                                            {uploadedCoverLetter ? `Size: ${(uploadedCoverLetter.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, DOC, DOCX up to 5MB'}
+                                        </p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Next Button */}
+                        <button
+                            onClick={() => setStep(2)}
+                            disabled={!selectedResume}
+                            className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 ${selectedResume
+                                ? 'bg-[#003971] hover:bg-[#003971]/90'
+                                : 'bg-gray-400 cursor-not-allowed'
                                 }`}
                         >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileUpload}
-                                accept=".pdf,.doc,.docx"
-                                className="hidden"
-                            />
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${uploadedResume ? 'bg-blue-100 text-[#003971]' : 'bg-gray-100 text-gray-500'}`}>
-                                    {uploadedResume ? <FileType size={24} /> : <Upload size={24} />}
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="text-base font-semibold text-gray-800">
-                                        {uploadedResume ? uploadedResume.name : 'Upload Custom CV'}
-                                    </h4>
-                                    <p className="text-sm text-gray-500">
-                                        {uploadedResume ? `Size: ${(uploadedResume.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, DOC, DOCX up to 5MB'}
-                                    </p>
-                                </div>
-                                <div className="self-center">
-                                    {uploadedResume && (
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors border ${selectedResume === 'uploaded' ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
-                                            {selectedResume === 'uploaded' && <Check size={14} className="text-white" strokeWidth={3} />}
+                            Next
+                        </button>
+                    </>
+                )}
+
+                {/* Step 2: Document Wallet */}
+                {step === 2 && (
+                    <>
+                        <div className="mb-6">
+                            <h3 className="text-base font-semibold text-gray-800 mb-2">Select From Document Wallet <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
+                            <p className="text-sm text-gray-500 mb-4">Choose any additional documents or certificates you'd like to include with this application.</p>
+
+                            <div className="space-y-3">
+                                {documentWalletItems.map((doc) => (
+                                    <div
+                                        key={doc.id}
+                                        onClick={() => {
+                                            if (selectedDocuments.includes(doc.id)) {
+                                                setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
+                                            } else {
+                                                setSelectedDocuments([...selectedDocuments, doc.id]);
+                                            }
+                                        }}
+                                        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${selectedDocuments.includes(doc.id) ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                            {selectedDocuments.includes(doc.id) && <Check size={14} className="text-white" strokeWidth={3} />}
                                         </div>
-                                    )}
-                                </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-semibold text-gray-800">{doc.title}</h4>
+                                            <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                <span className="bg-gray-100 px-2 rounded">{doc.type}</span>
+                                                <span>Expires: {doc.expiry}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* Cover Letter Section */}
-                <div className="mb-8">
-                    <h3 className="text-base font-semibold text-gray-800 mb-2">Cover Letter <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
-                    <p className="text-sm text-gray-500 mb-3">Introduce yourself and explain why you're a great fit for this role.</p>
-                    <textarea
-                        value={coverLetter}
-                        onChange={(e) => setCoverLetter(e.target.value)}
-                        placeholder="Write your cover letter here..."
-                        className="w-full h-32 p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400"
-                    />
-                </div>
-
-                {/* Apply Button */}
-                <button
-                    onClick={handleApply}
-                    disabled={!selectedResume}
-                    className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] ${selectedResume
-                        ? 'bg-[#003971] hover:bg-[#003971]/90'
-                        : 'bg-gray-400 cursor-not-allowed'
-                        }`}
-                >
-                    Apply
-                </button>
+                        {/* Apply Button */}
+                        <button
+                            onClick={handleApply}
+                            className="w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 bg-[#003971] hover:bg-[#003971]/90"
+                        >
+                            Submit Application
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* Success Modal */}

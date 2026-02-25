@@ -37,7 +37,7 @@ function AdminDashboard() {
             topStats: [
                 { id: 1, icon: Users, value: '12', label: 'Pending Approvals', badge: '+4 today', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
                 { id: 2, icon: AlertTriangle, value: '5', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
-                { id: 3, icon: Shield, value: '8', label: 'Expiring Compliance', badge: 'In next 48h', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+                { id: 3, icon: Shield, value: '8', label: 'Expiring Compliance', badge: 'In next 48h', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/accounts?view=expiring_compliance' }
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '24', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
@@ -66,7 +66,7 @@ function AdminDashboard() {
             topStats: [
                 { id: 1, icon: Users, value: '45', label: 'Pending Approvals', badge: '+18 this week', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
                 { id: 2, icon: AlertTriangle, value: '12', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
-                { id: 3, icon: Shield, value: '24', label: 'Expiring Compliance', badge: 'This week', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+                { id: 3, icon: Shield, value: '24', label: 'Expiring Compliance', badge: 'This week', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/accounts?view=expiring_compliance' }
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '156', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
@@ -95,7 +95,7 @@ function AdminDashboard() {
             topStats: [
                 { id: 1, icon: Users, value: '189', label: 'Pending Approvals', badge: '+67 this month', gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]', path: '/admin/compliance' },
                 { id: 2, icon: AlertTriangle, value: '34', label: 'Flagged Issues', badge: 'Needs Attention', gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]', path: '/admin/flagged-accounts' },
-                { id: 3, icon: Shield, value: '78', label: 'Expiring Compliance', badge: 'This month', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/compliance' }
+                { id: 3, icon: Shield, value: '78', label: 'Expiring Compliance', badge: 'This month', gradient: 'from-[#f59e0b] via-[#fbbf24] to-[#fcd34d]', path: '/admin/accounts?view=expiring_compliance' }
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '567', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },

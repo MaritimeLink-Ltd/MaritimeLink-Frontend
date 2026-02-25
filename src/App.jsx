@@ -105,130 +105,129 @@ function App() {
   return (
     <div className="min-w-0 w-full max-w-full overflow-x-hidden">
       <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/otp-verification" element={<OTPVerification />} />
-        <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />
-        <Route path="/id-upload" element={<Navigate to="/upload-profile-photo" replace />} />
-        <Route path="/select-profession" element={<SelectProfession />} />
-        <Route path="/officer-category" element={<OfficerCategory />} />
-        <Route path="/select-deck-officer" element={<SelectDeckOfficer />} />
-        <Route path="/select-engine-officer" element={<SelectEngineOfficer />} />
-        <Route path="/officer-dashboard" element={<OfficerDashboard />} />
-        <Route path="/ratings-category" element={<RatingsCategory />} />
-        <Route path="/select-deck-ratings" element={<SelectDeckRatings />} />
-        <Route path="/select-engine-ratings" element={<SelectEngineRatings />} />
-        <Route path="/ratings-dashboard" element={<RatingsDashboard />} />
-        <Route path="/catering-medical-category" element={<CateringMedicalCategory />} />
-        <Route path="/select-catering" element={<SelectCatering />} />
-        <Route path="/select-medical" element={<SelectMedical />} />
-        <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
-        <Route path="/cv-resume" element={<CVResume />} />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/otp-verification" element={<OTPVerification />} />
+          <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />
+          <Route path="/id-upload" element={<Navigate to="/upload-profile-photo" replace />} />
+          <Route path="/select-profession" element={<SelectProfession />} />
+          <Route path="/officer-category" element={<OfficerCategory />} />
+          <Route path="/select-deck-officer" element={<SelectDeckOfficer />} />
+          <Route path="/select-engine-officer" element={<SelectEngineOfficer />} />
+          <Route path="/officer-dashboard" element={<OfficerDashboard />} />
+          <Route path="/ratings-category" element={<RatingsCategory />} />
+          <Route path="/select-deck-ratings" element={<SelectDeckRatings />} />
+          <Route path="/select-engine-ratings" element={<SelectEngineRatings />} />
+          <Route path="/ratings-dashboard" element={<RatingsDashboard />} />
+          <Route path="/catering-medical-category" element={<CateringMedicalCategory />} />
+          <Route path="/select-catering" element={<SelectCatering />} />
+          <Route path="/select-medical" element={<SelectMedical />} />
+          <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
+          <Route path="/cv-resume" element={<CVResume />} />
 
-        {/* Admin/Recruiter Setup Routes (No Layout) */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
-        <Route path="/agent/forgot-password" element={<ForgotPassword userType="recruiter" />} />
-        <Route path="/training-provider/forgot-password" element={<ForgotPassword userType="training-provider" />} />
-        <Route path="/recruiter/login" element={<RecruiterLogin />} />
-        <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
-        <Route path="/agent/signup" element={<RecruiterSignup />} />
-        <Route path="/agent/otp-verification" element={<RecruiterOTPVerification />} />
-        <Route path="/agent/profile-completion" element={<RecruiterProfileCompletion />} />
-        <Route path="/agent/phone-verification" element={<RecruiterPhoneVerification />} />
-        <Route path="/agent/company-details" element={<RecruiterCompanyDetails />} />
-        <Route path="/agent/company-verification" element={<RecruiterCompanyVerification />} />
-        <Route path="/agent/compliance-declaration" element={<RecruiterCompliance />} />
-        <Route path="/agent/under-review" element={<RecruiterUnderReview />} />
+          {/* Admin/Recruiter Setup Routes (No Layout) */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+          <Route path="/agent/forgot-password" element={<ForgotPassword userType="recruiter" />} />
+          <Route path="/training-provider/forgot-password" element={<ForgotPassword userType="training-provider" />} />
+          <Route path="/recruiter/login" element={<RecruiterLogin />} />
+          <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
+          <Route path="/agent/signup" element={<RecruiterSignup />} />
+          <Route path="/agent/otp-verification" element={<RecruiterOTPVerification />} />
+          <Route path="/agent/profile-completion" element={<RecruiterProfileCompletion />} />
+          <Route path="/agent/phone-verification" element={<RecruiterPhoneVerification />} />
+          <Route path="/agent/company-details" element={<RecruiterCompanyDetails />} />
+          <Route path="/agent/company-verification" element={<RecruiterCompanyVerification />} />
+          <Route path="/agent/compliance-declaration" element={<RecruiterCompliance />} />
+          <Route path="/agent/under-review" element={<RecruiterUnderReview />} />
 
-        {/* Recruiter Protected Routes (With Layout) */}
-        <Route element={<RecruiterLayout />}>
-          <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
-          <Route path="/admin/search" element={<AdminSearch />} />
-          <Route path="/admin/jobs" element={<AdminJobs />} />
-          <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
-          <Route path="/admin/chats" element={<AdminChats />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
-          <Route path="/admin/cv-resume" element={<CVResume isReadOnly={true} />} />
-          <Route path="/admin/upload-job" element={<UploadJob />} />
-          <Route path="/admin/job-created-success" element={<JobCreatedSuccess />} />
-          <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
-        </Route>
+          {/* Recruiter Protected Routes (With Layout) */}
+          <Route element={<RecruiterLayout />}>
+            <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
+            <Route path="/admin/search" element={<AdminSearch />} />
+            <Route path="/admin/jobs" element={<AdminJobs />} />
+            <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
+            <Route path="/admin/chats" element={<AdminChats />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/cv-resume" element={<CVResume isReadOnly={true} />} />
+            <Route path="/admin/upload-job" element={<UploadJob />} />
+            <Route path="/admin/job-created-success" element={<JobCreatedSuccess />} />
+            <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
+          </Route>
 
-        {/* Training Provider Protected Routes (With Layout) */}
-        <Route element={<TrainingProviderLayout />}>
-          <Route path="/trainingprovider-dashboard" element={<TrainingProviderDashboard />} />
-          <Route path="/trainingprovider/demand" element={<DemandPlanning />} />
-          <Route path="/trainingprovider/courses" element={<TrainingProviderCourses />} />
-          <Route path="/trainingprovider/courses/:courseId" element={<CourseDetail />} />
-          <Route path="/trainingprovider/courses/:courseId/sessions" element={<ManageSessions />} />
-          <Route path="/trainingprovider/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
-          <Route path="/trainingprovider/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
-          <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
-          <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
-          <Route path="/trainingprovider/bookings" element={<Bookings />} />
-          <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
-          <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
-          <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
-          <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
-          <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
-        </Route>
+          {/* Training Provider Protected Routes (With Layout) */}
+          <Route element={<TrainingProviderLayout />}>
+            <Route path="/trainingprovider-dashboard" element={<TrainingProviderDashboard />} />
+            <Route path="/trainingprovider/demand" element={<DemandPlanning />} />
+            <Route path="/trainingprovider/courses" element={<TrainingProviderCourses />} />
+            <Route path="/trainingprovider/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/trainingprovider/courses/:courseId/sessions" element={<ManageSessions />} />
+            <Route path="/trainingprovider/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
+            <Route path="/trainingprovider/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
+            <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
+            <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
+            <Route path="/trainingprovider/bookings" element={<Bookings />} />
+            <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
+            <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
+            <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
+            <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
+            <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
+          </Route>
 
-        {/* Super Admin Protected Routes (With Layout) */}
-        <Route element={<SuperAdminLayout />}>
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/notifications" element={<Notifications />} />
-          <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
-          <Route path="/admin/transaction-history" element={<TransactionHistory />} />
-          <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
-          <Route path="/admin/marketplace/create-job" element={<UploadJob />} />
-          <Route path="/admin/create-course" element={<CreateCourse />} />
-          <Route path="/admin/accounts" element={<Accounts />} />
-          <Route path="/admin/accounts/:id" element={<AccountProfile />} />
-          <Route path="/admin/accounts/compliance/:id" element={<ComplianceProfile />} />
-          <Route path="/admin/companies" element={<Companies />} />
-          <Route path="/admin/companies/:id" element={<CompanyProfile />} />
-          <Route path="/admin/compliance" element={<Compliance />} />
-          <Route path="/admin/compliance/:id" element={<ComplianceProfile />} />
-          <Route path="/admin/marketplace" element={<Marketplace />} />
-          <Route path="/admin/marketplace/internal/jobs/:jobId" element={<JobDetail />} />
-          <Route path="/admin/marketplace/internal/courses/:courseId" element={<CourseDetail />} />
-          <Route path="/admin/marketplace/oversight/jobs/:jobId" element={<JobDetail />} />
-          <Route path="/admin/marketplace/oversight/courses/:courseId" element={<CourseDetail />} />
-          <Route path="/admin/operations" element={<Operations />} />
-          <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
-          <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />
-          <Route path="/admin/operations/job/:id" element={<SystemJobDetail />} />
-          <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
-          <Route path="/admin/profile" element={<AdminProfile />} />
-          <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
-        </Route>
+          {/* Super Admin Protected Routes (With Layout) */}
+          <Route element={<SuperAdminLayout />}>
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/notifications" element={<Notifications />} />
+            <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
+            <Route path="/admin/transaction-history" element={<TransactionHistory />} />
+            <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
+            <Route path="/admin/marketplace/create-job" element={<UploadJob />} />
+            <Route path="/admin/create-course" element={<CreateCourse />} />
+            <Route path="/admin/accounts" element={<Accounts />} />
+            <Route path="/admin/accounts/:id" element={<AccountProfile />} />
+            <Route path="/admin/accounts/compliance/:id" element={<ComplianceProfile />} />
+            <Route path="/admin/companies" element={<Companies />} />
+            <Route path="/admin/companies/:id" element={<CompanyProfile />} />
+            <Route path="/admin/compliance" element={<Compliance />} />
+            <Route path="/admin/compliance/:id" element={<ComplianceProfile />} />
+            <Route path="/admin/marketplace" element={<Marketplace />} />
+            <Route path="/admin/marketplace/internal/jobs/:jobId" element={<JobDetail />} />
+            <Route path="/admin/marketplace/internal/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/admin/marketplace/oversight/jobs/:jobId" element={<JobDetail />} />
+            <Route path="/admin/marketplace/oversight/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/admin/operations" element={<Operations />} />
+            <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
+            <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />
+            <Route path="/admin/operations/job/:id" element={<SystemJobDetail />} />
+            <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
+            <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
+            <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
+          </Route>
 
-        {/* Personal Dashboard Protected Routes (With Layout) */}
-        <Route element={<PersonalDashboardLayout />}>
-          <Route path="/personal/dashboard" element={<PersonalDashboard />} />
-          <Route path="/personal/resume" element={<Resume />} />
-          <Route path="/personal/documents" element={<DocumentsWallet />} />
-          <Route path="/personal/jobs" element={<Jobs />} />
-          <Route path="/personal/jobs/:jobId" element={<JobDetailPersonal />} />
-          <Route path="/personal/jobs/apply/:jobId" element={<ApplyToJob />} />
-          <Route path="/personal/my-jobs" element={<MyJobs />} />
-          <Route path="/personal/training" element={<Training />} />
-          <Route path="/personal/training/book/:courseId" element={<BookCourse />} />
-          <Route path="/personal/chats" element={<Chats />} />
-          <Route path="/personal/profile" element={<Profile />} />
-          <Route path="/personal/profile/change-password" element={<ChangePassword />} />
-          <Route path="/personal/profile/manage-subscription" element={<ManageSubscription />} />
-          <Route path="/personal/terms" element={<TermsConditions />} />
-          <Route path="/personal/privacy" element={<PrivacyPolicy />} />
-        </Route>
-      </Routes>
-    </Router>
+          {/* Personal Dashboard Protected Routes (With Layout) */}
+          <Route element={<PersonalDashboardLayout />}>
+            <Route path="/personal/dashboard" element={<PersonalDashboard />} />
+            <Route path="/personal/resume" element={<Resume />} />
+            <Route path="/personal/documents" element={<DocumentsWallet />} />
+            <Route path="/personal/jobs" element={<Jobs />} />
+            <Route path="/personal/jobs/:jobId" element={<JobDetailPersonal />} />
+            <Route path="/personal/jobs/apply/:jobId" element={<ApplyToJob />} />
+            <Route path="/personal/my-jobs" element={<MyJobs />} />
+            <Route path="/personal/training" element={<Training />} />
+            <Route path="/personal/training/book/:courseId" element={<BookCourse />} />
+            <Route path="/personal/chats" element={<Chats />} />
+            <Route path="/personal/profile" element={<Profile />} />
+            <Route path="/personal/profile/change-password" element={<ChangePassword />} />
+            <Route path="/personal/profile/manage-subscription" element={<ManageSubscription />} />
+            <Route path="/personal/terms" element={<TermsConditions />} />
+            <Route path="/personal/privacy" element={<PrivacyPolicy />} />
+          </Route>
+        </Routes>
+      </Router>
     </div>
   );
 }

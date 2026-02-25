@@ -55,7 +55,7 @@ const TrainingProviderProfile = () => {
 
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-    const [profileImage, setProfileImage] = useState('/images/login-image.png');
+    const [profileImage, setProfileImage] = useState('/images/login-image.webp');
 
     // Handle form data change
     const handleFormChange = (field, value) => {

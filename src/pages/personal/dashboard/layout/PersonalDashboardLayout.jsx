@@ -132,7 +132,7 @@ function PersonalDashboardLayout() {
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
                                 >
                                     <img
-                                        src="/images/login-image.png"
+                                        src="/images/login-image.webp"
                                         alt="Profile"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />

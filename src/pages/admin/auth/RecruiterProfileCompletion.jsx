@@ -84,8 +84,8 @@ function RecruiterProfileCompletion() {
             });
 
             // Navigate to phone verification
-            navigate('/agent/phone-verification', { 
-                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber}` } 
+            navigate('/agent/phone-verification', {
+                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber}` }
             });
         } catch (err) {
             console.error('Profile completion error:', err);
@@ -98,8 +98,8 @@ function RecruiterProfileCompletion() {
     return (
         <div className="h-screen flex overflow-hidden">
             {/* Left Side - Form */}
-            <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
-                <div className="max-w-md w-full mx-auto lg:mx-0">
+            <div className="w-full lg:w-2/5 flex flex-col px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
+                <div className="max-w-md w-full mx-auto lg:mx-0 py-10 lg:py-16">
                     {/* Logo */}
                     <div className="mb-4 sm:mb-6 -ml-2">
                         <img
@@ -258,17 +258,17 @@ function RecruiterProfileCompletion() {
                         </button>
                     </form>
                 </div>
-            </div>
+            </div >
 
             {/* Right Side - Image */}
-            <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+            < div className="hidden lg:flex lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 items-start justify-center bg-gray-50" >
                 <img
-                    src="/images/signup-image.png"
+                    src="/images/signup-image.webp"
                     alt="Maritime Professional"
-                    className="w-full h-full object-cover rounded-2xl"
+                    className="w-[735px] max-h-full object-cover rounded-[15px]"
                 />
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

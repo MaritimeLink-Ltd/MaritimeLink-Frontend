@@ -26,7 +26,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const location = useLocation();
     const { candidateId: urlCandidateId } = useParams();
     const candidateId = propCandidateId || urlCandidateId;
-    const isAdminMarketplace = location.pathname.includes('/marketplace/');
+    const isAdmin = location.pathname.includes('/admin/');
 
     // Map applicant status to application stage
     const getInitialStage = () => {
@@ -272,8 +272,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
-                        {/* Hide View Resume button for Admin Marketplace */}
-                        {!location.pathname.includes('/marketplace/candidate/') && (
+                        {/* Hide View Resume button for Admin Routes */}
+                        {!isAdmin && (
                             <button
                                 onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : '/admin/cv-resume')}
                                 className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
@@ -289,8 +289,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             <Wallet className="h-5 w-5" />
                             View Document Wallet
                         </button>
-                        {/* Hide Message button for Training Provider dashboard and Admin Marketplace */}
-                        {!location.pathname.includes('/trainingprovider/') && !location.pathname.includes('/marketplace/candidate/') && (
+                        {/* Hide Message button for Training Provider dashboard and Admin routes */}
+                        {!location.pathname.includes('/trainingprovider/') && !isAdmin && (
                             <button
                                 onClick={() => onMessage ? onMessage(candidateId, candidate.name) : navigate('/admin/chats')}
                                 className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
@@ -346,8 +346,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
                 </div>
 
-                {/* Application Status - Hide for Admin Marketplace */}
-                {shouldShowApplicationStatus && !location.pathname.includes('/marketplace/candidate/') && (
+                {/* Application Status - Hide for Admin routes */}
+                {shouldShowApplicationStatus && !isAdmin && (
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-[#003971]">Application Status</h2>
@@ -526,7 +526,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                                                         {statusBadge.label}
                                                                     </div>
 
-                                                                    {isAdminMarketplace && (
+                                                                    {isAdmin && (
                                                                         <button
                                                                             onClick={() => setSelectedDocument(doc)}
                                                                             className="p-2 text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
@@ -546,7 +546,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 </div>
 
                                 {/* Info Banner - Hide for Admin */}
-                                {!isAdminMarketplace && (
+                                {!isAdmin && (
                                     <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
                                         <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                                         <div>
@@ -561,7 +561,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
                             {/* Footer - Fixed */}
                             <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 flex-shrink-0">
-                                {!isAdminMarketplace && (
+                                {!isAdmin && (
                                     <button
                                         onClick={() => setShowDocumentWallet(false)}
                                         className="px-6 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
@@ -569,7 +569,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                         Close
                                     </button>
                                 )}
-                                {isAdminMarketplace ? (
+                                {isAdmin ? (
                                     <button
                                         onClick={() => setShowDocumentWallet(false)}
                                         className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors"

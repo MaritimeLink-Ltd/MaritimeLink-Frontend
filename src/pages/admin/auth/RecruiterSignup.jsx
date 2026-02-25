@@ -5,7 +5,7 @@ function RecruiterSignup() {
     const navigate = useNavigate();
     const location = useLocation();
     const isTrainingProvider = location.pathname.includes('training-provider');
-    
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -13,7 +13,7 @@ function RecruiterSignup() {
         userType: isTrainingProvider ? 'training-provider' : 'recruiter',
         agreeToTerms: false
     });
-    
+
     useEffect(() => {
         setFormData(prev => ({
             ...prev,
@@ -282,11 +282,11 @@ function RecruiterSignup() {
             </div>
 
             {/* Right Side - Image */}
-            <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+            <div className="hidden lg:flex lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 items-start justify-center bg-gray-50">
                 <img
-                    src="/images/signup-image.png"
+                    src="/images/signup-image.webp"
                     alt="Maritime Professional"
-                    className="w-full h-full object-cover rounded-2xl"
+                    className="w-[735px] max-h-full object-cover rounded-[15px]"
                 />
             </div>
         </div>

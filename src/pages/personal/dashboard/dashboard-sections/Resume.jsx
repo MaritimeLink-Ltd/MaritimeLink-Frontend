@@ -164,7 +164,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
             gender: 'Male',
             height: '160cm',
             weight: '89kg',
-            bmi: '23.2',
             eyeColor: 'Brown',
             overallSize: 'Medium',
             shoeSize: '9'
@@ -260,7 +259,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     gender: bio.biometricData?.gender || '',
                     height: bio.biometricData?.height ? `${bio.biometricData?.height}cm` : '',
                     weight: bio.biometricData?.weight ? `${bio.biometricData?.weight}kg` : '',
-                    bmi: bio.biometricData?.bmi || '',
                     eyeColor: bio.biometricData?.eyeColor || '',
                     shoeSize: bio.biometricData?.shoeSize || '',
                     overallSize: bio.biometricData?.overallSize || '',
@@ -868,7 +866,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">Gender</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Height</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Weight</th>
-                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">BMI</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Eye Color</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Overall Size</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Shoe Size</th>
@@ -879,7 +876,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.gender}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.height}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.weight}</td>
-                                            <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.bmi}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.eyeColor}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.overallSize}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.shoeSize}</td>

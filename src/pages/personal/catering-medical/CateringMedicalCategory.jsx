@@ -29,9 +29,9 @@ const CateringMedicalCategory = () => {
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
           <div className="mb-4 -ml-2">
-            <img 
-              src="/images/logo.png" 
-              alt="MaritimeLink Logo" 
+            <img
+              src="/images/logo.png"
+              alt="MaritimeLink Logo"
               className="w-28 h-auto"
             />
           </div>
@@ -49,19 +49,17 @@ const CateringMedicalCategory = () => {
                 <div
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    selectedCategory === category
-                      ? 'border-[#003971] bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedCategory === category
+                    ? 'border-[#003971] bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <span className="text-gray-700 font-medium">{category}</span>
                   <div
-                    className={`w-6 h-6 rounded flex items-center justify-center ${
-                      selectedCategory === category
-                        ? 'bg-[#003971]'
-                        : 'border-2 border-gray-300'
-                    }`}
+                    className={`w-6 h-6 rounded flex items-center justify-center ${selectedCategory === category
+                      ? 'bg-[#003971]'
+                      : 'border-2 border-gray-300'
+                      }`}
                   >
                     {selectedCategory === category && (
                       <svg
@@ -100,11 +98,11 @@ const CateringMedicalCategory = () => {
       </div>
 
       {/* Right Section - Image */}
-      <div className="hidden lg:block lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16">
+      <div className="hidden lg:flex lg:w-3/5 relative py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 items-start justify-center bg-gray-50">
         <img
-          src="/images/medical-catering.png"
+          src="/images/medical-catering.webp"
           alt="Maritime Catering and Medical"
-          className="w-full h-full object-cover rounded-2xl"
+          className="w-[735px] max-h-full object-cover rounded-[15px]"
         />
       </div>
     </div>

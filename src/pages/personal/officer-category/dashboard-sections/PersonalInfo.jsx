@@ -4,6 +4,7 @@ import { countryCodes } from '../../../../utils/countryCodes';
 const PersonalInfo = ({ onNext, initialData = {} }) => {
   const [formData, setFormData] = useState({
     firstName: initialData.firstName || '',
+    middleName: initialData.middleName || '',
     lastName: initialData.lastName || '',
     dateOfBirth: initialData.dateOfBirth || '',
     streetAddress: initialData.streetAddress || '',
@@ -45,10 +46,10 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
   };
 
   return (
-    <form className="flex flex-col h-full justify-between">
+    <form className="flex flex-col h-full justify-between" >
       <div className="space-y-3">
         {/* Name Fields */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label htmlFor="firstName" className="block text-gray-700 font-medium mb-1 text-sm">
               First Name
@@ -59,6 +60,20 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
               name="firstName"
               placeholder="First Name"
               value={formData.firstName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="middleName" className="block text-gray-700 font-medium mb-1 text-sm">
+              Middle Name (Optional)
+            </label>
+            <input
+              type="text"
+              id="middleName"
+              name="middleName"
+              placeholder="Middle Name"
+              value={formData.middleName}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
@@ -199,7 +214,7 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
       </div>
 
       {/* Next Button */}
-      <div className="flex justify-end pt-4">
+      <div className="flex justify-end pt-4" >
         <button
           type="button"
           onClick={handleNext}
@@ -207,8 +222,8 @@ const PersonalInfo = ({ onNext, initialData = {} }) => {
         >
           Next
         </button>
-      </div>
-    </form>
+      </div >
+    </form >
   );
 };
 

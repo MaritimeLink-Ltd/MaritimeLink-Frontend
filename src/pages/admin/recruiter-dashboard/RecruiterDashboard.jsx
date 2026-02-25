@@ -188,7 +188,7 @@ function RecruiterDashboard({ onNavigate }) {
             type: 'Permanent / LNG Tanker',
             status: 'Active',
             matches: 18,
-            image: '/images/login-image.png',
+            image: '/images/login-image.webp',
         },
         {
             id: 2,
@@ -197,7 +197,7 @@ function RecruiterDashboard({ onNavigate }) {
             type: 'Permanent / DP Vessel',
             status: 'Ending Soon',
             matches: 6,
-            image: '/images/login-image.png',
+            image: '/images/login-image.webp',
         },
         {
             id: 3,
@@ -206,7 +206,7 @@ function RecruiterDashboard({ onNavigate }) {
             type: 'Temporary / Container Ship',
             status: 'Draft',
             matches: 8,
-            image: '/images/login-image.png',
+            image: '/images/login-image.webp',
         }
     ];
 

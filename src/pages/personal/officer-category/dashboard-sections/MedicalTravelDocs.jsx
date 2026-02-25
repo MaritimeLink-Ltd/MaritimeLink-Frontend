@@ -6,6 +6,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     certificateName: '',
     certificateNumber: '',
     issuingCountry: '',
+    institutionCountry: '',
     dateOfIssue: '',
     validTill: ''
   });
@@ -69,6 +70,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         certificateName: '',
         certificateNumber: '',
         issuingCountry: '',
+        institutionCountry: '',
         dateOfIssue: '',
         validTill: ''
       });
@@ -191,7 +193,9 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{doc.certificateName}</p>
-                    <p className="text-xs text-gray-600">{doc.issuingCountry}</p>
+                    <p className="text-xs text-gray-600">
+                      {doc.issuingCountry} {doc.institutionCountry ? `(${doc.institutionCountry})` : ''}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {doc.dateOfIssue && doc.validTill ?
                         `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -238,15 +242,26 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                 <label htmlFor="medicalIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
-                  id="medicalIssuingCountry"
-                  name="issuingCountry"
-                  placeholder="Enter country name"
-                  value={currentMedical.issuingCountry}
-                  onChange={handleMedicalChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                  <input
+                    type="text"
+                    id="medicalIssuingCountry"
+                    name="issuingCountry"
+                    placeholder="Enter country name"
+                    value={currentMedical.issuingCountry}
+                    onChange={handleMedicalChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                  />
+                  <input
+                    type="text"
+                    id="medicalInstitutionCountry"
+                    name="institutionCountry"
+                    placeholder="Institution Country (Optional)"
+                    value={currentMedical.institutionCountry}
+                    onChange={handleMedicalChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

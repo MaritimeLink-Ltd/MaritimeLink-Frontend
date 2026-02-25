@@ -88,7 +88,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '20 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'new'
         },
         {
@@ -101,7 +101,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '21 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'new'
         },
         {
@@ -114,7 +114,7 @@ function JobDetail({ onBack }) {
             compliance: 'Expiring Soon',
             complianceSubtext: 'Ends in 45 days',
             applicationDate: '22 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'new'
         },
         // Matches
@@ -128,7 +128,7 @@ function JobDetail({ onBack }) {
             compliance: 'Expiring Soon',
             complianceSubtext: 'Ends in 2 days',
             applicationDate: '20 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'matches'
         },
         {
@@ -141,7 +141,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '19 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'matches'
         },
         {
@@ -154,7 +154,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '23 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'matches'
         },
         // Shortlisted
@@ -168,7 +168,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '17 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'shortlisted'
         },
         {
@@ -181,7 +181,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '16 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'shortlisted'
         },
         // Interviewing
@@ -195,7 +195,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '15 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'interviewing'
         },
         {
@@ -208,7 +208,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '14 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'interviewing'
         },
         // Offered
@@ -222,7 +222,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '13 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'offered'
         },
         {
@@ -235,7 +235,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '12 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'offered'
         },
         // Hired
@@ -249,7 +249,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '18 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'hired'
         },
         {
@@ -262,7 +262,7 @@ function JobDetail({ onBack }) {
             compliance: 'Ready',
             complianceSubtext: '',
             applicationDate: '11 Apr 2024',
-            avatar: '/images/login-image.png',
+            avatar: '/images/login-image.webp',
             status: 'hired'
         }
     ];

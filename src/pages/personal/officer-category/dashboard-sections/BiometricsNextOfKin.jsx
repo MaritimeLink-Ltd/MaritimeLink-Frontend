@@ -6,7 +6,6 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     gender: 'Male',
     height: '',
     weight: '',
-    bmi: '',
     eyeColor: '',
     overallSize: '',
     shoeSize: ''
@@ -245,28 +244,8 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
               </div>
             </div>
 
-            {/* BMI and Eye Color */}
+            {/* Eye Color */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="bmi" className="block text-gray-700 font-medium mb-1 text-sm">
-                  BMI
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="bmi"
-                    name="bmi"
-                    placeholder="Enter BMI"
-                    value={biometricData.bmi}
-                    onChange={handleBiometricChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm pr-10 bg-white transition-colors"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-                    kg
-                  </span>
-                </div>
-              </div>
-
               <div>
                 <label htmlFor="eyeColor" className="block text-gray-700 font-medium mb-1 text-sm">
                   Eye Color

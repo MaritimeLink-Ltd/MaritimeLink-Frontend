@@ -4,7 +4,18 @@ import { Search, ChevronDown, UserCheck, AlertTriangle, Shield, RefreshCw, Downl
 
 function Accounts() {
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'Recruiters');
+    // Parse Query Params
+    const queryParams = new URLSearchParams(location.search);
+    const viewParam = queryParams.get('view');
+
+    const [activeTab, setActiveTab] = useState(
+        viewParam === 'expiring_compliance'
+            ? 'Professionals'
+            : (location.state?.activeTab || 'Recruiters')
+    );
+    const [statusFilter, setStatusFilter] = useState(
+        viewParam === 'expiring_compliance' ? 'Expiring Soon' : 'All'
+    );
     const [timeFilter, setTimeFilter] = useState('Today');
     const [searchQuery, setSearchQuery] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,7 +36,6 @@ function Accounts() {
     }, [location]);
 
     // Filter states
-    const [statusFilter, setStatusFilter] = useState('All');
     const [companyFilter, setCompanyFilter] = useState('All');
     const [domainFilter, setDomainFilter] = useState('All');
 
@@ -210,7 +220,7 @@ function Accounts() {
             country: 'USA',
             tier: 'Pro',
             lastActive: '2 hours ago',
-            status: 'Pending Verification',
+            status: 'Expiring Soon',
             statusColor: 'text-orange-500'
         },
         {
@@ -243,8 +253,8 @@ function Accounts() {
             country: ['USA', 'UK', 'Philippines', 'India', 'Greece', 'China'][i % 6],
             tier: i % 3 === 0 ? 'Pro' : 'Free',
             lastActive: `${i + 2} hours ago`,
-            status: ['Verified', 'Pending Verification', 'Flagged'][i % 3],
-            statusColor: ['text-green-500', 'text-orange-500', 'text-red-500'][i % 3]
+            status: ['Verified', 'Pending Verification', 'Flagged', 'Expiring Soon'][i % 4],
+            statusColor: ['text-green-500', 'text-orange-500', 'text-red-500', 'text-orange-500'][i % 4]
         }))
     ];
 
@@ -486,7 +496,7 @@ function Accounts() {
     const stats = getTabStats();
 
     // Get unique values for filters
-    const uniqueStatuses = ['All', ...new Set(accounts.map(acc => acc.status))];
+    const uniqueStatuses = ['All', 'Expiring Soon', ...new Set(accounts.map(acc => acc.status).filter(s => s !== 'Expiring Soon'))];
     const uniqueCompanies = ['All', ...new Set(accounts.map(acc => acc.company))];
     const uniqueDomains = ['All', ...new Set(accounts.map(acc => acc.domain))];
 
@@ -962,7 +972,13 @@ function Accounts() {
                                         </td>
                                         <td className="px-4 py-4">
                                             <Link
-                                                to={account.id.toString().startsWith('KYC') ? `/admin/accounts/compliance/${account.id}` : `/admin/accounts/${account.id}`}
+                                                to={
+                                                    account.id.toString().startsWith('PRO')
+                                                        ? `/admin/candidate/${account.id}`
+                                                        : account.id.toString().startsWith('KYC')
+                                                            ? `/admin/accounts/compliance/${account.id}`
+                                                            : `/admin/accounts/${account.id}`
+                                                }
                                                 className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                             >
                                                 View Details

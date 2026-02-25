@@ -179,7 +179,7 @@ const AdminProfile = () => {
                                     <div className="flex-shrink-0">
                                         <div className="relative">
                                             <img
-                                                src="/images/login-image.png"
+                                                src="/images/login-image.webp"
                                                 alt="Profile"
                                                 className="w-24 h-24 rounded-full object-cover border-4 border-gray-50"
                                             />

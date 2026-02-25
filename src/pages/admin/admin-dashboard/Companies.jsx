@@ -62,6 +62,7 @@ function Companies() {
             website: 'oceanhire.com',
             country: 'UK',
             countryFlag: '🇬🇧',
+            claimed: true,
             tier: 'Pro',
             profile: 'Complete',
             profileColor: 'text-green-600',
@@ -75,6 +76,7 @@ function Companies() {
             website: 'bluewavecrew.com',
             country: 'Canada',
             countryFlag: '🇨🇦',
+            claimed: true,
             tier: 'Pro',
             profile: 'Complete',
             profileColor: 'text-green-600',
@@ -88,6 +90,7 @@ function Companies() {
             website: 'managitalent.com',
             country: 'Italy',
             countryFlag: '🇮🇹',
+            claimed: false,
             tier: 'Free',
             profile: 'Complete',
             profileColor: 'text-green-600',
@@ -101,6 +104,7 @@ function Companies() {
             website: 'managitalent.com',
             country: 'Sweden',
             countryFlag: '🇸🇪',
+            claimed: false,
             tier: 'Free',
             profile: 'Incomplete',
             profileColor: 'text-orange-600',
@@ -114,6 +118,7 @@ function Companies() {
             website: 'managitalent.com',
             country: 'Japan',
             countryFlag: '🇯🇵',
+            claimed: true,
             tier: 'Pro',
             profile: 'Complete',
             profileColor: 'text-green-600',
@@ -127,6 +132,7 @@ function Companies() {
             website: 'managitalent.com',
             country: 'Philippines',
             countryFlag: '🇵🇭',
+            claimed: true,
             tier: 'Pro',
             profile: 'Complete',
             profileColor: 'text-green-600',
@@ -149,7 +155,7 @@ function Companies() {
     const [openDropdown, setOpenDropdown] = useState(''); // 'status', 'type', 'country' or ''
 
     // Get unique values for filters
-    const uniqueTypes = [...new Set(companies.map(c => c.type))];
+    const uniqueTypes = ['Claimed', 'Unclaimed'];
     const uniqueCountries = [...new Set(companies.map(c => c.country))];
     const uniqueStatuses = ['Complete', 'Incomplete']; // Based on profile field
 
@@ -175,7 +181,9 @@ function Companies() {
             company.country.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesStatus = statusFilter ? company.profile === statusFilter : true;
-        const matchesType = typeFilter ? company.type === typeFilter : true;
+        const matchesType = typeFilter
+            ? (typeFilter === 'Claimed' ? company.claimed === true : company.claimed === false)
+            : true;
         const matchesCountry = countryFilter ? company.country === countryFilter : true;
 
         return matchesTab && matchesSearch && matchesStatus && matchesType && matchesCountry;

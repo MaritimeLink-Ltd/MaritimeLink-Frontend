@@ -46,8 +46,11 @@ function UploadProfilePhoto() {
       if (!validateFile(file)) return;
       setSelectedFile(file);
       setError('');
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -69,8 +72,11 @@ function UploadProfilePhoto() {
       if (!validateFile(file)) return;
       setSelectedFile(file);
       setError('');
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -87,7 +93,6 @@ function UploadProfilePhoto() {
 
     try {
       await authService.uploadProfilePhoto(selectedFile);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       const professionType = sessionStorage.getItem('professionType') || 'officer';
       const nextRoute = PROFESSION_ROUTES[professionType] || PROFESSION_ROUTES.officer;
       navigate(nextRoute, { replace: true });
@@ -100,9 +105,9 @@ function UploadProfilePhoto() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden w-full max-w-full min-w-0">
+    <div className="h-screen flex overflow-hidden">
       {/* Left Side - Form */}
-      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
+      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
           <div className="mb-2 sm:mb-3 -ml-2">
@@ -120,7 +125,7 @@ function UploadProfilePhoto() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Profile Photo</h1>
 
           {/* Subtitle */}
-          <p className="text-sm text-gray-700 mb-4">Upload a clear photo of your face for your profile</p>
+          <p className="text-sm text-gray-700 mb-4">Upload a clear professional photo of your face.</p>
 
           {/* Error Message */}
           {error && (
@@ -141,9 +146,8 @@ function UploadProfilePhoto() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors min-h-[200px] flex flex-col items-center justify-center ${
-                isDragging ? 'border-[#003971] bg-blue-50' : 'border-gray-300 bg-gray-50'
-              }`}
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors min-h-[200px] flex flex-col items-center justify-center ${isDragging ? 'border-[#003971] bg-blue-50' : 'border-gray-300 bg-gray-50'
+                }`}
             >
               <input
                 type="file"
@@ -169,9 +173,10 @@ function UploadProfilePhoto() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-3">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3 overflow-hidden border-2 border-gray-200">
+                    <img src="/images/demo-profile.webp" alt="Demo professional profile" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
                     <svg
-                      className="w-8 h-8 text-gray-400"
+                      className="w-8 h-8 text-gray-400 hidden"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -215,12 +220,11 @@ function UploadProfilePhoto() {
         </div>
       </div>
 
-      {/* Right Side - Image */}
-      <div className="hidden lg:block lg:w-3/5 min-w-0 relative py-5 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 flex items-center justify-center">
+      <div className="hidden lg:flex lg:w-3/5 relative min-w-0 py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 items-start justify-center bg-gray-50">
         <img
-          src="/images/signup-image.png"
+          src="/images/signup-image.webp"
           alt="Maritime Professional"
-          className="w-full max-h-full object-contain rounded-2xl"
+          className="w-[735px] max-h-full object-cover rounded-[15px]"
         />
       </div>
     </div>

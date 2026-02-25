@@ -22,7 +22,7 @@ import { countryCodes } from '../../../../utils/countryCodes';
 
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
-    const [profileImage, setProfileImage] = useState('/images/login-image.png');
+    const [profileImage, setProfileImage] = useState('/images/login-image.webp');
     const [profileData, setProfileData] = useState({
         firstName: 'James',
         lastName: 'Anderson',

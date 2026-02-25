@@ -152,7 +152,7 @@ function AdminLayout() {
                                 >
                                     <img
                                         className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src="/images/login-image.png"
+                                        src="/images/login-image.webp"
                                         alt="User avatar"
                                     />
                                     <div className="flex items-center">

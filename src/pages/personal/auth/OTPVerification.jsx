@@ -121,9 +121,9 @@ function OTPVerification() {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden w-full max-w-full min-w-0">
+    <div className="h-screen flex overflow-hidden">
       {/* Left Side - Form */}
-      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
+      <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
           <div className="mb-2 sm:mb-3 -ml-2">
@@ -213,12 +213,11 @@ function OTPVerification() {
         </div>
       </div>
 
-      {/* Right Side - Image */}
-      <div className="hidden lg:block lg:w-3/5 min-w-0 relative py-5 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 flex items-center justify-center">
+      <div className="hidden lg:flex lg:w-3/5 relative min-w-0 py-8 lg:py-12 xl:py-16 pl-4 lg:pl-6 xl:pl-8 pr-8 lg:pr-12 xl:pr-16 items-start justify-center bg-gray-50">
         <img
-          src="/images/otp-verf.png"
+          src="/images/otp-verf.webp"
           alt="OTP Verification"
-          className="w-full max-h-full object-contain rounded-2xl"
+          className="w-[735px] max-h-full object-cover rounded-[15px]"
         />
       </div>
     </div>

@@ -14,7 +14,8 @@ import {
     ChevronDown,
     User,
     Building,
-    GraduationCap
+    GraduationCap,
+    ShieldAlert
 } from 'lucide-react';
 
 function FlaggedAccounts() {
@@ -216,6 +217,11 @@ function FlaggedAccounts() {
         { value: 'LOW', label: 'Low' }
     ];
 
+    // Metrics calculations
+    const criticalCount = filteredAccounts.filter(a => a.severity === 'CRITICAL' && a.status !== 'Resolved').length;
+    const warningsCount = filteredAccounts.filter(a => (a.severity === 'MEDIUM' || a.severity === 'LOW') && a.status !== 'Resolved').length;
+    const resolvedCount = flaggedAccounts.filter(a => a.status === 'Resolved').length;
+
     return (
         <div className="max-w-7xl">
             {/* Header */}
@@ -233,7 +239,7 @@ function FlaggedAccounts() {
                         <div className="flex items-center gap-3 mb-1">
                             <h1 className="text-[28px] font-bold text-gray-900">Flagged Accounts</h1>
                             <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                                {flaggedAccounts.filter(a => !a.resolved).length} Active Issues
+                                {filteredAccounts.filter(a => !a.resolved).length} Active Issues
                             </span>
                         </div>
                         <p className="text-gray-500 text-sm">Review and resolve account alerts and compliance issues</p>
@@ -311,6 +317,48 @@ function FlaggedAccounts() {
                                 Clear Filters
                             </button>
                         )}
+
+                        {/* Resolve All Button (Mock from Figma) */}
+                        <button className="flex items-center gap-2 px-4 py-2.5 bg-[#003971] text-white rounded-xl text-sm font-semibold hover:bg-[#002855] transition-colors ml-2">
+                            <CheckCircle className="h-4 w-4" />
+                            Resolve All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {/* Critical Issues */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 flex items-center gap-5 shadow-sm">
+                    <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <ShieldAlert className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-gray-900 leading-none mb-1">{criticalCount}</h3>
+                        <p className="text-sm font-medium text-gray-500">Critical Issues</p>
+                    </div>
+                </div>
+
+                {/* Warnings */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 flex items-center gap-5 shadow-sm">
+                    <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="h-6 w-6 text-orange-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-gray-900 leading-none mb-1">{warningsCount}</h3>
+                        <p className="text-sm font-medium text-gray-500">Warnings</p>
+                    </div>
+                </div>
+
+                {/* Resolved */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 flex items-center gap-5 shadow-sm">
+                    <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-2xl font-bold text-gray-900 leading-none mb-1">{resolvedCount}</h3>
+                        <p className="text-sm font-medium text-gray-500">Resolved this week</p>
                     </div>
                 </div>
             </div>
