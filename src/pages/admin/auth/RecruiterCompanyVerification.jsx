@@ -31,7 +31,9 @@ function RecruiterCompanyVerification() {
 
     const handleDecline = () => {
         // Navigate back to company details to enter new company info
-        navigate('/agent/company-details');
+        navigate('/agent/company-details', {
+            state: { formData: companyData }
+        });
     };
 
     return (

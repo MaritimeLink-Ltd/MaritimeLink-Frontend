@@ -101,7 +101,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
     const chats = baseChats;
 
     // Filter chats based on search query
-    const filteredChats = chats.filter(chat => 
+    const filteredChats = chats.filter(chat =>
         chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -188,36 +188,36 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                         >
                             {filteredChats.length > 0 ? (
                                 filteredChats.map((chat) => (
-                                <button
-                                    key={chat.id}
-                                    onClick={() => setSelectedChat(chat.id)}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors ${selectedChat === chat.id ? 'bg-gray-50' : ''
-                                        }`}
-                                >
-                                    <div className="relative flex-shrink-0">
-                                        <div className="w-12 h-12 bg-[#003971] rounded-xl flex items-center justify-center">
-                                            <Building2 className="h-6 w-6 text-white" />
-                                        </div>
-                                        {chat.online && (
-                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 text-left min-w-0">
-                                        <div className="flex items-center justify-between mb-0.5">
-                                            <span className="font-bold text-gray-900 text-sm">{chat.name}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-gray-500">{chat.time}</span>
-                                                {chat.unread > 0 && (
-                                                    <div className="bg-[#003971] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                                        {chat.unread}
-                                                    </div>
-                                                )}
+                                    <button
+                                        key={chat.id}
+                                        onClick={() => setSelectedChat(chat.id)}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors ${selectedChat === chat.id ? 'bg-gray-50' : ''
+                                            }`}
+                                    >
+                                        <div className="relative flex-shrink-0">
+                                            <div className="w-12 h-12 bg-[#003971] rounded-xl flex items-center justify-center">
+                                                <Building2 className="h-6 w-6 text-white" />
                                             </div>
+                                            {chat.online && (
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                            )}
                                         </div>
-                                        <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
-                                    </div>
-                                </button>
-                            ))
+                                        <div className="flex-1 text-left min-w-0">
+                                            <div className="flex items-center justify-between mb-0.5">
+                                                <span className="font-bold text-gray-900 text-sm">{chat.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500">{chat.time}</span>
+                                                    {chat.unread > 0 && (
+                                                        <div className="bg-[#003971] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                                            {chat.unread}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
+                                        </div>
+                                    </button>
+                                ))
                             ) : (
                                 <div className="text-center py-8 text-gray-500 text-sm">
                                     No chats found
@@ -253,15 +253,15 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <button 
+                                <button
                                     onClick={() => setShowReportModal(true)}
                                     className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm"
                                 >
                                     <FileText className="h-4 w-4" />
                                     Report
                                 </button>
-                                <button 
-                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(`/admin/candidate/${selectedChat}`)}
+                                <button
+                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(`/recruiter/candidate/${selectedChat}`)}
                                     className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
                                 >
                                     <FileText className="h-4 w-4" />
@@ -271,7 +271,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                         </div>
 
                         {/* Messages - Scrollable */}
-                        <div 
+                        <div
                             className="flex-1 overflow-y-auto p-5 space-y-4"
                             style={{
                                 scrollbarWidth: 'thin',
@@ -316,7 +316,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                     onKeyPress={handleKeyPress}
                                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
                                 />
-                                <button 
+                                <button
                                     onClick={handleSendMessage}
                                     className="bg-[#003971] text-white p-3 rounded-full hover:bg-[#002855] transition-colors"
                                 >
@@ -337,7 +337,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                 <AlertTriangle className="h-5 w-5 text-red-600" />
                                 <h2 className="text-xl font-bold text-gray-900">Report User</h2>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setShowReportModal(false);
                                     setSelectedReason('');
@@ -354,13 +354,12 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
 
                         <div className="space-y-2 mb-6">
                             {reportReasons.map((reason) => (
-                                <label 
+                                <label
                                     key={reason.id}
-                                    className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${
-                                        selectedReason === reason.id 
-                                            ? 'border-red-600 bg-red-50' 
+                                    className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${selectedReason === reason.id
+                                            ? 'border-red-600 bg-red-50'
                                             : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     <input
                                         type="radio"
@@ -388,11 +387,10 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                             <button
                                 onClick={handleReport}
                                 disabled={!selectedReason}
-                                className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                                    selectedReason
+                                className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${selectedReason
                                         ? 'bg-red-600 text-white hover:bg-red-700'
                                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
+                                    }`}
                             >
                                 Submit Report
                             </button>

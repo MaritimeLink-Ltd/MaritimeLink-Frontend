@@ -7,10 +7,9 @@ import {
     AlertTriangle,
     XCircle,
     Edit,
-    Pause,
-    Upload,
-    X as XIcon
+    ChevronDown
 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 function JobDetail({ onBack }) {
     const navigate = useNavigate();
@@ -18,16 +17,27 @@ function JobDetail({ onBack }) {
     const location = useLocation();
     const jobData = location.state?.jobData;
 
-    const [isPublished, setIsPublished] = useState(jobData?.status === 'Active' || false);
-    const [showPublishModal, setShowPublishModal] = useState(false);
-    const [showPauseModal, setShowPauseModal] = useState(false);
-    const [showCloseModal, setShowCloseModal] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
-    const [isClosed, setIsClosed] = useState(jobData?.status === 'Closed' || false);
-    const [activeTab, setActiveTab] = useState('new');
+    const isPublished = jobData?.status === 'Active' || false;
+    const [activeTab, setActiveTab] = useState('matches');
+    const [isATSDropdownOpen, setIsATSDropdownOpen] = useState(false);
+    const atsDropdownRef = useRef(null);
     const [sortBy, setSortBy] = useState('name');
     const [sortOrder, setSortOrder] = useState('asc');
     const [invitedApplicants, setInvitedApplicants] = useState([]);
+    const [scheduledInterviews, setScheduledInterviews] = useState([]);
+    const [timeFilter, setTimeFilter] = useState('7days');
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (atsDropdownRef.current && !atsDropdownRef.current.contains(event.target)) {
+                setIsATSDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Mock job data - in real app, fetch based on jobId
     const job = jobData || {
@@ -44,7 +54,7 @@ function JobDetail({ onBack }) {
     const stats = [
         {
             icon: Users,
-            label: 'Total Applicants',
+            label: activeTab === 'matches' ? 'Total Candidates' : 'Total Applicants',
             value: '45',
             subtitle: 'Since 20 Apr 2024',
             color: 'bg-blue-50',
@@ -87,7 +97,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Master',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '20 Apr 2024',
+            applicationDate: '26 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'new'
         },
@@ -100,7 +110,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '2nd Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '21 Apr 2024',
+            applicationDate: '22 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'new'
         },
@@ -113,7 +123,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '3rd Engineer',
             compliance: 'Expiring Soon',
             complianceSubtext: 'Ends in 45 days',
-            applicationDate: '22 Apr 2024',
+            applicationDate: '5 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'new'
         },
@@ -127,7 +137,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '3rd Officer',
             compliance: 'Expiring Soon',
             complianceSubtext: 'Ends in 2 days',
-            applicationDate: '20 Apr 2024',
+            applicationDate: '24 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -140,7 +150,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '19 Apr 2024',
+            applicationDate: '10 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -153,7 +163,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '2nd Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '23 Apr 2024',
+            applicationDate: '26 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -167,7 +177,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '17 Apr 2024',
+            applicationDate: '25 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'shortlisted'
         },
@@ -180,7 +190,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '16 Apr 2024',
+            applicationDate: '3 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'shortlisted'
         },
@@ -194,7 +204,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '15 Apr 2024',
+            applicationDate: '26 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'interviewing'
         },
@@ -207,7 +217,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '2nd Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '14 Apr 2024',
+            applicationDate: '15 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'interviewing'
         },
@@ -221,7 +231,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '13 Apr 2024',
+            applicationDate: '20 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'offered'
         },
@@ -234,7 +244,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '12 Apr 2024',
+            applicationDate: '1 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'offered'
         },
@@ -248,7 +258,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '18 Apr 2024',
+            applicationDate: '23 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'hired'
         },
@@ -261,14 +271,35 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '11 Apr 2024',
+            applicationDate: '8 Feb 2026',
             avatar: '/images/login-image.webp',
             status: 'hired'
         }
     ];
 
-    // Filter applicants by active tab
-    const filteredApplicants = allApplicants.filter(applicant => applicant.status === activeTab);
+    // Get the cutoff date based on selected time filter
+    const getTimeFilterDate = () => {
+        const now = new Date();
+        switch (timeFilter) {
+            case 'today':
+                return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            case '7days':
+                return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            case '30days':
+                return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            default:
+                return new Date(0); // show all
+        }
+    };
+
+    // Filter applicants by active tab and time filter
+    const filteredApplicants = allApplicants.filter(applicant => {
+        const matchesTab = applicant.status === activeTab;
+        const applicationDate = new Date(applicant.applicationDate);
+        const cutoffDate = getTimeFilterDate();
+        const matchesTime = applicationDate >= cutoffDate;
+        return matchesTab && matchesTime;
+    });
 
     // Sort applicants
     const sortedApplicants = [...filteredApplicants].sort((a, b) => {
@@ -306,19 +337,9 @@ function JobDetail({ onBack }) {
         // In real app, this would send an API request
     };
 
-    const handlePublishToggle = () => {
-        setShowPublishModal(true);
-    };
-
-    const confirmPublishToggle = () => {
-        setIsPublished(!isPublished);
-        setShowPublishModal(false);
-        // Navigate based on source
-        if (location.pathname.includes('/marketplace')) {
-            navigate('/admin/marketplace');
-        } else {
-            navigate('/admin/jobs');
-        }
+    const handleScheduleInterview = (applicantId) => {
+        setScheduledInterviews([...scheduledInterviews, applicantId]);
+        // In real app, this would send an API request
     };
 
     const handleEditJob = () => {
@@ -336,34 +357,8 @@ function JobDetail({ onBack }) {
         });
     };
 
-    const handlePauseToggle = () => {
-        setShowPauseModal(true);
-    };
-
-    const confirmPauseToggle = () => {
-        setIsPaused(!isPaused);
-        setShowPauseModal(false);
-    };
-
-    const handleCloseJob = () => {
-        setShowCloseModal(true);
-    };
-
-    const confirmCloseJob = () => {
-        setIsClosed(true);
-        setShowCloseModal(false);
-        // Navigate back to jobs page after closing
-        if (onBack) {
-            onBack();
-        } else if (location.pathname.includes('/marketplace')) {
-            navigate('/admin/marketplace');
-        } else {
-            navigate('/recruiter-dashboard', { state: { activeTab: 'jobs' } });
-        }
-    };
-
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="h-full flex flex-col bg-gray-50 overflow-y-auto">
             {/* Fixed Header Section */}
             <div className="flex-shrink-0 px-6 pt-6">
                 {/* Back Icon */}
@@ -394,39 +389,38 @@ function JobDetail({ onBack }) {
                         </div>
                     </div>
 
-                    {/* Action Buttons - Hide for Admin Marketplace */}
-                    {!location.pathname.includes('/marketplace/') && (
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handlePauseToggle}
-                                className={`flex items-center gap-2 px-5 py-2.5 border rounded-lg font-semibold transition-colors ${isPaused
-                                    ? 'border-green-300 text-green-600 hover:bg-green-50'
-                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Pause className="h-4 w-4" />
-                                {isPaused ? 'Resume' : 'Pause'}
-                            </button>
-                            {!isPublished && (
+                    <div className="flex items-center gap-3">
+                        {/* Time Period Filters */}
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            {[
+                                { id: 'today', label: 'Today' },
+                                { id: '7days', label: '7 Days' },
+                                { id: '30days', label: '30 Days' }
+                            ].map((filter) => (
                                 <button
-                                    onClick={handlePublishToggle}
-                                    className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                                    key={filter.id}
+                                    onClick={() => setTimeFilter(filter.id)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${timeFilter === filter.id
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                        }`}
                                 >
-                                    <Upload className="h-4 w-4" />
-                                    Publish
+                                    {filter.label}
                                 </button>
-                            )}
-                            {!isClosed && (
-                                <button
-                                    onClick={handleCloseJob}
-                                    className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
-                                >
-                                    <XIcon className="h-4 w-4" />
-                                    Close Job
-                                </button>
-                            )}
+                            ))}
                         </div>
-                    )}
+
+                        {/* Edit Job Button - Hide for Admin Marketplace */}
+                        {!location.pathname.includes('/marketplace/') && (
+                            <button
+                                onClick={handleEditJob}
+                                className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                <Edit className="h-4 w-4" />
+                                Edit Job
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -457,42 +451,59 @@ function JobDetail({ onBack }) {
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div className="border-b border-gray-100 p-4">
                         <div className="flex items-center gap-4">
+                            {/* Matches Tab */}
                             <button
-                                onClick={() => setActiveTab('new')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'new' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                New ({allApplicants.filter(a => a.status === 'new').length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('matches')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'matches' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                                onClick={() => {
+                                    setActiveTab('matches');
+                                    setIsATSDropdownOpen(false);
+                                }}
+                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'matches' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 Matches ({allApplicants.filter(a => a.status === 'matches').length})
                             </button>
-                            <button
-                                onClick={() => setActiveTab('shortlisted')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'shortlisted' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Shortlisted ({allApplicants.filter(a => a.status === 'shortlisted').length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('interviewing')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'interviewing' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Interviewing ({allApplicants.filter(a => a.status === 'interviewing').length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('offered')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'offered' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Offered ({allApplicants.filter(a => a.status === 'offered').length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('hired')}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm ${activeTab === 'hired' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Hired ({allApplicants.filter(a => a.status === 'hired').length})
-                            </button>
+
+                            {/* ATS Dropdown */}
+                            <div className="relative" ref={atsDropdownRef}>
+                                <button
+                                    onClick={() => setIsATSDropdownOpen(!isATSDropdownOpen)}
+                                    className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${['new', 'shortlisted', 'interviewing', 'offered', 'hired'].includes(activeTab)
+                                        ? 'bg-[#003971] text-white'
+                                        : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {activeTab === 'matches' ? 'ATS' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                                    <ChevronDown className={`h-4 w-4 transition-transform ${isATSDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isATSDropdownOpen && (
+                                    <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {[
+                                            { id: 'new', label: 'New' },
+                                            { id: 'shortlisted', label: 'Shortlisted' },
+                                            { id: 'interviewing', label: 'Interviewing' },
+                                            { id: 'offered', label: 'Offered' },
+                                            { id: 'hired', label: 'Hired' }
+                                        ].map((stage) => (
+                                            <button
+                                                key={stage.id}
+                                                onClick={() => {
+                                                    setActiveTab(stage.id);
+                                                    setIsATSDropdownOpen(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors flex items-center justify-between ${activeTab === stage.id
+                                                    ? 'bg-blue-50 text-[#003971]'
+                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <span>{stage.label}</span>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === stage.id ? 'bg-[#003971] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                                    {allApplicants.filter(a => a.status === stage.id).length}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -505,7 +516,7 @@ function JobDetail({ onBack }) {
                                         onClick={() => handleSort('name')}
                                         className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase cursor-pointer hover:bg-gray-100"
                                     >
-                                        Applicants {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                                        {activeTab === 'matches' ? 'Candidates' : 'Applicants'} {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th
                                         onClick={() => handleSort('rank')}
@@ -539,7 +550,7 @@ function JobDetail({ onBack }) {
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
                                                                 ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/admin/candidate/${applicant.id}`;
+                                                                : `/recruiter/candidate/${applicant.id}`;
                                                             navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
                                                         }}
                                                         className="font-semibold text-gray-900 hover:text-blue-600 text-left"
@@ -580,7 +591,7 @@ function JobDetail({ onBack }) {
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
                                                                 ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/admin/candidate/${applicant.id}`;
+                                                                : `/recruiter/candidate/${applicant.id}`;
                                                             navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
                                                         }}
                                                         className="text-blue-600 font-semibold hover:underline text-sm"
@@ -589,18 +600,17 @@ function JobDetail({ onBack }) {
                                                     </button>
                                                 )}
                                                 {activeTab === 'matches' && (
-                                                    invitedApplicants.includes(applicant.id) ? (
-                                                        <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-semibold">
-                                                            Invited
-                                                        </span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleInviteToApply(applicant.id)}
-                                                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
-                                                        >
-                                                            Invite to Apply
-                                                        </button>
-                                                    )
+                                                    <button
+                                                        onClick={() => {
+                                                            const candidateRoute = location.pathname.includes('/marketplace')
+                                                                ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                : `/recruiter/candidate/${applicant.id}`;
+                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                        }}
+                                                        className="text-blue-600 font-semibold hover:underline text-sm"
+                                                    >
+                                                        View Profile
+                                                    </button>
                                                 )}
                                                 {activeTab === 'shortlisted' && (
                                                     <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
@@ -608,9 +618,18 @@ function JobDetail({ onBack }) {
                                                     </span>
                                                 )}
                                                 {activeTab === 'interviewing' && (
-                                                    <button className="px-3 py-1.5 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors">
-                                                        Schedule Interview
-                                                    </button>
+                                                    scheduledInterviews.includes(applicant.id) ? (
+                                                        <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold">
+                                                            Scheduled
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleScheduleInterview(applicant.id)}
+                                                            className="px-3 py-1.5 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors"
+                                                        >
+                                                            Schedule Interview
+                                                        </button>
+                                                    )
                                                 )}
                                                 {activeTab === 'offered' && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
@@ -630,100 +649,6 @@ function JobDetail({ onBack }) {
                         </table>
                     </div>
                 </div>
-
-                {/* Publish/Unpublish Modal */}
-                {showPublishModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4">
-                                {isPublished ? 'Unpublish Job?' : 'Publish Job?'}
-                            </h3>
-                            <p className="text-gray-600 mb-6">
-                                {isPublished
-                                    ? 'Are you sure you want to unpublish this job? It will no longer be visible to candidates.'
-                                    : 'Are you sure you want to publish this job? It will be visible to all candidates on the platform.'}
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowPublishModal(false)}
-                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmPublishToggle}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPublished
-                                        ? 'bg-gray-700 text-white hover:bg-gray-800'
-                                        : 'bg-[#003971] text-white hover:bg-[#002855]'
-                                        }`}
-                                >
-                                    {isPublished ? 'Unpublish' : 'Publish'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Pause/Resume Modal */}
-                {showPauseModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4">
-                                {isPaused ? 'Resume Job?' : 'Pause Job?'}
-                            </h3>
-                            <p className="text-gray-600 mb-6">
-                                {isPaused
-                                    ? 'Are you sure you want to resume this job? It will start accepting new applications again.'
-                                    : 'Are you sure you want to pause this job? New applications will not be accepted until you resume it.'}
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowPauseModal(false)}
-                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmPauseToggle}
-                                    className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPaused
-                                        ? 'bg-green-600 text-white hover:bg-green-700'
-                                        : 'bg-orange-600 text-white hover:bg-orange-700'
-                                        }`}
-                                >
-                                    {isPaused ? 'Resume' : 'Pause'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Close Job Modal */}
-                {showCloseModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4">
-                                Close Job?
-                            </h3>
-                            <p className="text-gray-600 mb-6">
-                                Are you sure you want to close this job? This action cannot be undone. The job will be archived and will no longer accept applications.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowCloseModal(false)}
-                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmCloseJob}
-                                    className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                                >
-                                    Close Job
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

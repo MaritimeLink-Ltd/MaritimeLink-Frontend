@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 function RecruiterCompanyDetails() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({
+    const location = useLocation();
+    const [formData, setFormData] = useState(location.state?.formData || {
         companyName: '',
         address: '',
         city: '',
@@ -42,7 +43,7 @@ function RecruiterCompanyDetails() {
             console.log('Company details submitted:', formData);
 
             // Navigate to company verification
-            navigate('/agent/company-verification');
+            navigate('/agent/company-verification', { state: { companyData: formData } });
         } catch (err) {
             console.error('Company details error:', err);
             setError(err.message || 'Failed to save company details. Please try again.');
@@ -231,10 +232,10 @@ function RecruiterCompanyDetails() {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Updating...
+                                    Adding...
                                 </>
                             ) : (
-                                'Update Company'
+                                'Add Company Details'
                             )}
                         </button>
                     </form>

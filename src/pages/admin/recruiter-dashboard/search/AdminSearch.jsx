@@ -174,19 +174,19 @@ function AdminSearch({ onViewCandidate }) {
 
     const totalCandidates = sortedCandidates.length;
     const totalPages = Math.ceil(totalCandidates / itemsPerPage);
-    
+
     // Calculate pagination
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentCandidates = sortedCandidates.slice(indexOfFirstItem, indexOfLastItem);
-    
+
     // Handle page change
     const handlePageChange = (pageNumber) => {
         if (pageNumber >= 1 && pageNumber <= totalPages) {
             setCurrentPage(pageNumber);
         }
     };
-    
+
     // Generate page numbers for pagination
     const getPageNumbers = () => {
         const pages = [];
@@ -281,22 +281,22 @@ function AdminSearch({ onViewCandidate }) {
                                 {currentCandidates.map((candidate) => (
                                     <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-3 hover:shadow-md transition-shadow">
                                         <div className="flex items-center justify-between gap-4">
-                                        {/* Left: Avatar & Info */}
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="relative flex-shrink-0">
-                                                <img
-                                                    src={candidate.image}
-                                                    alt={candidate.name}
-                                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
-                                                />
-                                                {candidate.verified && (
-                                                    <div className="absolute -bottom-1 -right-1 bg-[#003971] rounded-full p-1">
-                                                        <svg className="h-3 w-3 text-white fill-current" viewBox="0 0 20 20">
-                                                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                                                        </svg>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {/* Left: Avatar & Info */}
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="relative flex-shrink-0">
+                                                    <img
+                                                        src={candidate.image}
+                                                        alt={candidate.name}
+                                                        className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
+                                                    />
+                                                    {candidate.verified && (
+                                                        <div className="absolute -bottom-1 -right-1 bg-[#003971] rounded-full p-1">
+                                                            <svg className="h-3 w-3 text-white fill-current" viewBox="0 0 20 20">
+                                                                <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                                            </svg>
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-0.5">
@@ -328,7 +328,7 @@ function AdminSearch({ onViewCandidate }) {
                                                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Match</div>
                                                 </div>
                                                 <button
-                                                    onClick={() => onViewCandidate ? onViewCandidate(candidate.id) : navigate(`/admin/candidate/${candidate.id}`)}
+                                                    onClick={() => onViewCandidate ? onViewCandidate(candidate.id) : navigate(`/recruiter/candidate/${candidate.id}`)}
                                                     className="bg-[#003971] text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2 whitespace-nowrap"
                                                 >
                                                     <FileText className="h-4 w-4" />
@@ -344,66 +344,66 @@ function AdminSearch({ onViewCandidate }) {
                         {/* Candidate Cards - Grid View */}
                         {viewMode === 'grid' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 flex-1 overflow-y-auto">
-                            {currentCandidates.map((candidate) => (
-                                <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow">
-                                    <div className="flex flex-col items-center text-center">
-                                        {/* Avatar */}
-                                        <div className="relative mb-4">
-                                            <img
-                                                src={candidate.image}
-                                                alt={candidate.name}
-                                                className="h-16 w-16 rounded-full object-cover border-2 border-gray-100"
-                                            />
-                                            {candidate.verified && (
-                                                <div className="absolute -bottom-1 -right-1 bg-[#003971] rounded-full p-1.5">
-                                                    <svg className="h-3 w-3 text-white fill-current" viewBox="0 0 20 20">
-                                                        <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                {currentCandidates.map((candidate) => (
+                                    <div key={candidate.id} className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex flex-col items-center text-center">
+                                            {/* Avatar */}
+                                            <div className="relative mb-4">
+                                                <img
+                                                    src={candidate.image}
+                                                    alt={candidate.name}
+                                                    className="h-16 w-16 rounded-full object-cover border-2 border-gray-100"
+                                                />
+                                                {candidate.verified && (
+                                                    <div className="absolute -bottom-1 -right-1 bg-[#003971] rounded-full p-1.5">
+                                                        <svg className="h-3 w-3 text-white fill-current" viewBox="0 0 20 20">
+                                                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Name */}
+                                            <div className="flex items-center justify-center gap-1.5 mb-1">
+                                                <h3 className="text-base font-bold text-gray-900">{candidate.name}</h3>
+                                                {candidate.verified && (
+                                                    <svg className="h-4 w-4 text-[#1DA1F2] fill-current flex-shrink-0" viewBox="0 0 20 20">
+                                                        <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
                                                     </svg>
+                                                )}
+                                            </div>
+
+                                            {/* Rank */}
+                                            <p className="text-sm text-gray-600 font-semibold mb-4">{candidate.rank}</p>
+
+                                            {/* Match Percentage */}
+                                            <div className="text-2xl font-extrabold text-[#003971] mb-1">{candidate.matchPercentage}%</div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">Match</div>
+
+                                            {/* Experience & Location */}
+                                            <div className="grid grid-cols-2 gap-4 w-full mb-4 py-3 border-t border-b border-gray-100">
+                                                <div className="text-center">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">EXP</div>
+                                                    <div className="text-sm font-bold text-gray-900">{candidate.experience.replace(' years', ' Yrs')}</div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                                        {/* Name */}
-                                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                                            <h3 className="text-base font-bold text-gray-900">{candidate.name}</h3>
-                                            {candidate.verified && (
-                                                <svg className="h-4 w-4 text-[#1DA1F2] fill-current flex-shrink-0" viewBox="0 0 20 20">
-                                                    <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                                                </svg>
-                                            )}
-                                        </div>
-
-                                        {/* Rank */}
-                                        <p className="text-sm text-gray-600 font-semibold mb-4">{candidate.rank}</p>
-
-                                        {/* Match Percentage */}
-                                        <div className="text-2xl font-extrabold text-[#003971] mb-1">{candidate.matchPercentage}%</div>
-                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">Match</div>
-
-                                        {/* Experience & Location */}
-                                        <div className="grid grid-cols-2 gap-4 w-full mb-4 py-3 border-t border-b border-gray-100">
-                                            <div className="text-center">
-                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">EXP</div>
-                                                <div className="text-sm font-bold text-gray-900">{candidate.experience.replace(' years', ' Yrs')}</div>
+                                                <div className="text-center">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Location</div>
+                                                    <div className="text-sm font-bold text-gray-900">{candidate.location}</div>
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Location</div>
-                                                <div className="text-sm font-bold text-gray-900">{candidate.location}</div>
-                                            </div>
-                                        </div>
 
-                                        {/* Button */}
-                                        <button
-                                            onClick={() => onViewCandidate ? onViewCandidate(candidate.id) : navigate(`/admin/candidate/${candidate.id}`)}
-                                            className="w-full bg-[#003971] text-white py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            View Profile
-                                        </button>
+                                            {/* Button */}
+                                            <button
+                                                onClick={() => onViewCandidate ? onViewCandidate(candidate.id) : navigate(`/recruiter/candidate/${candidate.id}`)}
+                                                className="w-full bg-[#003971] text-white py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                                View Profile
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
                         )}
 
                         {/* Pagination */}
@@ -412,9 +412,9 @@ function AdminSearch({ onViewCandidate }) {
                                 Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalCandidates)} of {totalCandidates} results
                             </p>
                             <div className="flex items-center gap-2">
-                                <button 
+                                <button
                                     onClick={() => handlePageChange(currentPage - 1)}
-                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors" 
+                                    className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                     disabled={currentPage === 1}
                                 >
                                     <ChevronLeft className="h-4 w-4" />
@@ -434,7 +434,7 @@ function AdminSearch({ onViewCandidate }) {
                                         {page}
                                     </button>
                                 ))}
-                                <button 
+                                <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     className="p-2.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                     disabled={currentPage === totalPages}
@@ -466,83 +466,83 @@ function AdminSearch({ onViewCandidate }) {
                             {/* Scrollable Filters Content */}
                             <div className="overflow-y-auto flex-1 p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
-                            {/* Rank/Position Filter */}
-                            <div className="space-y-2">
-                                <button className="flex items-center justify-between w-full text-left">
-                                    <h4 className="font-bold text-sm text-gray-900">Rank / Position</h4>
-                                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                                </button>
-                                <div className="space-y-2 pl-1">
-                                    {rankPositions.map((rank) => (
-                                        <label key={rank} className="flex items-center gap-3 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
-                                                checked={filters.rankPosition.includes(rank)}
-                                                onChange={(e) => {
-                                                    const newRanks = e.target.checked
-                                                        ? [...filters.rankPosition, rank]
-                                                        : filters.rankPosition.filter(r => r !== rank);
-                                                    setFilters({ ...filters, rankPosition: newRanks });
-                                                }}
-                                            />
-                                            <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{rank}</span>
-                                        </label>
-                                    ))}
+                                {/* Rank/Position Filter */}
+                                <div className="space-y-2">
+                                    <button className="flex items-center justify-between w-full text-left">
+                                        <h4 className="font-bold text-sm text-gray-900">Rank / Position</h4>
+                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                    </button>
+                                    <div className="space-y-2 pl-1">
+                                        {rankPositions.map((rank) => (
+                                            <label key={rank} className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
+                                                    checked={filters.rankPosition.includes(rank)}
+                                                    onChange={(e) => {
+                                                        const newRanks = e.target.checked
+                                                            ? [...filters.rankPosition, rank]
+                                                            : filters.rankPosition.filter(r => r !== rank);
+                                                        setFilters({ ...filters, rankPosition: newRanks });
+                                                    }}
+                                                />
+                                                <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{rank}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Experience Level Filter */}
-                            <div className="space-y-2">
-                                <button className="flex items-center justify-between w-full text-left">
-                                    <h4 className="font-bold text-sm text-gray-900">Experience Level</h4>
-                                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                                </button>
-                                <div className="space-y-2 pl-1">
-                                    {experienceLevels.map((level) => (
-                                        <label key={level} className="flex items-center gap-3 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
-                                                checked={filters.experienceLevel.includes(level)}
-                                                onChange={(e) => {
-                                                    const newLevels = e.target.checked
-                                                        ? [...filters.experienceLevel, level]
-                                                        : filters.experienceLevel.filter(l => l !== level);
-                                                    setFilters({ ...filters, experienceLevel: newLevels });
-                                                }}
-                                            />
-                                            <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{level}</span>
-                                        </label>
-                                    ))}
+                                {/* Experience Level Filter */}
+                                <div className="space-y-2">
+                                    <button className="flex items-center justify-between w-full text-left">
+                                        <h4 className="font-bold text-sm text-gray-900">Experience Level</h4>
+                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                    </button>
+                                    <div className="space-y-2 pl-1">
+                                        {experienceLevels.map((level) => (
+                                            <label key={level} className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
+                                                    checked={filters.experienceLevel.includes(level)}
+                                                    onChange={(e) => {
+                                                        const newLevels = e.target.checked
+                                                            ? [...filters.experienceLevel, level]
+                                                            : filters.experienceLevel.filter(l => l !== level);
+                                                        setFilters({ ...filters, experienceLevel: newLevels });
+                                                    }}
+                                                />
+                                                <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{level}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Vessel Type Experience Filter */}
-                            <div className="space-y-2">
-                                <button className="flex items-center justify-between w-full text-left">
-                                    <h4 className="font-bold text-sm text-gray-900">Vessel Type Experience</h4>
-                                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                                </button>
-                                <div className="space-y-2 pl-1">
-                                    {vesselTypes.map((vessel) => (
-                                        <label key={vessel} className="flex items-center gap-3 cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
-                                                checked={filters.vesselType.includes(vessel)}
-                                                onChange={(e) => {
-                                                    const newVessels = e.target.checked
-                                                        ? [...filters.vesselType, vessel]
-                                                        : filters.vesselType.filter(v => v !== vessel);
-                                                    setFilters({ ...filters, vesselType: newVessels });
-                                                }}
-                                            />
-                                            <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{vessel}</span>
-                                        </label>
-                                    ))}
+                                {/* Vessel Type Experience Filter */}
+                                <div className="space-y-2">
+                                    <button className="flex items-center justify-between w-full text-left">
+                                        <h4 className="font-bold text-sm text-gray-900">Vessel Type Experience</h4>
+                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                    </button>
+                                    <div className="space-y-2 pl-1">
+                                        {vesselTypes.map((vessel) => (
+                                            <label key={vessel} className="flex items-center gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
+                                                    checked={filters.vesselType.includes(vessel)}
+                                                    onChange={(e) => {
+                                                        const newVessels = e.target.checked
+                                                            ? [...filters.vesselType, vessel]
+                                                            : filters.vesselType.filter(v => v !== vessel);
+                                                        setFilters({ ...filters, vesselType: newVessels });
+                                                    }}
+                                                />
+                                                <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{vessel}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
                             </div>
 
                             {/* Show Results Button - Fixed at bottom */}

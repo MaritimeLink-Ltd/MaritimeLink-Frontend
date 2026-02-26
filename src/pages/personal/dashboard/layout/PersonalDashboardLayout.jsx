@@ -25,8 +25,8 @@ function PersonalDashboardLayout() {
 
     const isActive = (path) => location.pathname === path;
 
-    // Check if current page is my-jobs page
-    const isMyJobsPage = location.pathname === '/personal/my-jobs';
+    // Check if current page is my-jobs or saved-courses page
+    const isFullScreenPage = location.pathname === '/personal/my-jobs' || location.pathname === '/personal/saved-courses';
 
     const handleLogout = () => {
         // Clear any stored user data
@@ -52,7 +52,7 @@ function PersonalDashboardLayout() {
     return (
         <div className="h-screen bg-white flex overflow-hidden">
             {/* Mobile Sidebar Overlay */}
-            {!isMyJobsPage && sidebarOpen && (
+            {!isFullScreenPage && sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
@@ -60,7 +60,7 @@ function PersonalDashboardLayout() {
             )}
 
             {/* Sidebar - Hidden on my-jobs page */}
-            {!isMyJobsPage && (
+            {!isFullScreenPage && (
                 <aside
                     className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                         }`}
@@ -175,8 +175,10 @@ function PersonalDashboardLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto bg-white">
-                    <Outlet />
+                <main className="flex-1 overflow-hidden bg-white">
+                    <div className="h-full overflow-y-auto scrollbar-hide">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
 

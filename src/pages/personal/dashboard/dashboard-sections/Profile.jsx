@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Profile = () => {
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [profileImage, setProfileImage] = useState('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+    const [isAvailable, setIsAvailable] = useState(false);
 
     const handleLogout = () => {
         // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
@@ -103,7 +104,12 @@ const Profile = () => {
                                 </label>
                             </div>
                             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">Ali Shahzaib</h3>
-                            <p className="text-xs sm:text-sm text-gray-500 mb-3">www.alishahzaib23@gmail.com</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-2">www.alishahzaib23@gmail.com</p>
+                            {/* Availability Badge */}
+                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-3 ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                {isAvailable ? 'Available Now' : 'Not Available'}
+                            </div>
                             <div className="flex items-center gap-3">
                                 <label
                                     htmlFor="profile-photo-upload"
@@ -137,6 +143,26 @@ const Profile = () => {
 
                     {/* Right Column - Settings Options */}
                     <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
+                        {/* Availability Section */}
+                        <div className="mb-8">
+                            <p className="text-xs text-gray-400 mb-3">Availability</p>
+                            <div className="flex items-center justify-between p-3 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <CircleDot size={16} className={isAvailable ? 'text-green-500' : 'text-gray-400'} />
+                                    <div>
+                                        <span className="text-gray-800 text-sm">Available for work</span>
+                                        <p className="text-xs text-gray-400 mt-0.5">Let recruiters know you're open to opportunities</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsAvailable(!isAvailable)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm ${isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Password Section */}
                         <div className="mb-8">
                             <p className="text-xs text-gray-400 mb-3">Password</p>

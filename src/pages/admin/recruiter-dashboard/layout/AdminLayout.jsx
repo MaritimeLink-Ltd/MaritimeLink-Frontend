@@ -186,7 +186,9 @@ function AdminLayout() {
 
                 {/* Main Page Content */}
                 <main className="flex-1 overflow-hidden bg-white px-8 py-6">
-                    <Outlet />
+                    <div className="h-full overflow-y-auto scrollbar-hide">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
 

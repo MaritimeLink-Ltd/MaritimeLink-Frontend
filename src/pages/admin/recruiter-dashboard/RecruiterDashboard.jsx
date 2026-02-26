@@ -138,7 +138,7 @@ function RecruiterDashboard({ onNavigate }) {
             icon: Briefcase,
             iconColor: 'text-[#003971]',
             iconBg: 'bg-[#EBF3FF]',
-            actionText: 'View Applicants',
+            actionText: 'View Detail',
             section: 'jobs',
             jobId: '000001',
             targetTab: 'new'
@@ -269,8 +269,7 @@ function RecruiterDashboard({ onNavigate }) {
                 {stats.map((stat) => (
                     <div
                         key={stat.id}
-                        onClick={() => handleNavigate(stat.section)}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden`}
                     >
                         <div className="relative z-10 flex flex-col h-full">
                             {/* Top Row: Icon + Optional Calendar */}

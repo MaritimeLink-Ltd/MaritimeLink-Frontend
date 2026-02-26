@@ -282,7 +282,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         if (onEdit) {
             onEdit();
         } else {
-            navigate(-1); // Go back one step in history if onEdit not provided
+            navigate('/officer-dashboard'); // Go to CV resume create/edit page
         }
     };
 

@@ -7,6 +7,9 @@ function RecruiterSignup() {
     const isTrainingProvider = location.pathname.includes('training-provider');
 
     const [formData, setFormData] = useState({
+        firstName: '',
+        middleName: '',
+        lastName: '',
         email: '',
         password: '',
         confirmPassword: '',
@@ -79,8 +82,8 @@ function RecruiterSignup() {
     return (
         <div className="h-screen flex overflow-hidden">
             {/* Left Side - Form */}
-            <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
-                <div className="max-w-md w-full mx-auto lg:mx-0">
+            <div className="w-full lg:w-2/5 flex flex-col py-8 px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
+                <div className="max-w-md w-full mx-auto lg:mx-0 my-auto">
                     {/* Logo */}
                     <div className="mb-4 sm:mb-6 -ml-2">
                         <img
@@ -143,6 +146,76 @@ function RecruiterSignup() {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* First Name Field */}
+                        <div>
+                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                                First Name
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="firstName"
+                                    name="firstName"
+                                    type="text"
+                                    required
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                                    placeholder="Enter your first name"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Middle Name Field */}
+                        <div>
+                            <label htmlFor="middleName" className="block text-sm font-medium text-gray-700 mb-1">
+                                Middle Name (Optional)
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="middleName"
+                                    name="middleName"
+                                    type="text"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                                    placeholder="Enter your middle name"
+                                    value={formData.middleName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Last Name Field */}
+                        <div>
+                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                                Last Name
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="lastName"
+                                    name="lastName"
+                                    type="text"
+                                    required
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                                    placeholder="Enter your last name"
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
                         {/* Email Field */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">

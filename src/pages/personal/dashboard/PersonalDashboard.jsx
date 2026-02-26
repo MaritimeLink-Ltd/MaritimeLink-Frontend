@@ -67,7 +67,7 @@ const PersonalDashboard = () => {
   };
 
   return (
-    <div className="h-full bg-white">
+    <div className="min-h-screen bg-white">
       {!showOldDashboard && (
         <Dashboard />
       )}

@@ -140,18 +140,18 @@ function RecruiterCompliance() {
                             </div>
                         </div>
 
-                        {/* How do you hear about us */}
+                        {/* How did you hear about us */}
                         <div>
                             <label className="block text-sm font-medium text-gray-900 mb-3">
-                                How do you hear about us
+                                How did you hear about us
                             </label>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="flex flex-wrap gap-2">
                                 {hearOptions.map((option) => (
                                     <button
                                         key={option}
                                         type="button"
                                         onClick={() => handleOptionSelect(option)}
-                                        className={`py-3 px-4 rounded-full font-medium transition-all duration-200 min-h-[44px] text-sm ${formData.hearAboutUs === option
+                                        className={`py-2 px-4 rounded-full font-medium transition-all duration-200 text-xs ${formData.hearAboutUs === option
                                             ? 'bg-[#003971] text-white'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}

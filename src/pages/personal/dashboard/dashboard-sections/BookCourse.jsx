@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, CheckCircle2, Check } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const BookCourse = () => {
     const navigate = useNavigate();
     const { courseId } = useParams();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [selectedDocuments, setSelectedDocuments] = useState([]);
 
     // Sample course data
     const courses = {
@@ -59,7 +60,22 @@ const BookCourse = () => {
 
     const course = courses[courseId] || courses['1'];
 
+    // Sample document wallet data
+    const documentWalletItems = [
+        { id: 'doc1', title: 'Passport', expiry: '12 Dec 2030', type: 'Travel' },
+        { id: 'doc2', title: 'Seaman Book', expiry: '15 Aug 2028', type: 'Travel' },
+        { id: 'doc3', title: 'Medical Certificate (ENG1)', expiry: '20 Jan 2026', type: 'Medical' },
+        { id: 'doc4', title: 'Basic Safety Training', expiry: '05 Nov 2027', type: 'STCW' },
+        { id: 'doc5', title: 'Certificate of Competency', expiry: '10 Mar 2029', type: 'License' }
+    ];
+
+
     const handlePayNow = () => {
+        const bookingData = {
+            courseId,
+            selectedDocuments
+        };
+        console.log('Booking with data:', bookingData);
         setShowSuccessModal(true);
         setTimeout(() => {
             setShowSuccessModal(false);
@@ -68,65 +84,91 @@ const BookCourse = () => {
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-8">
-            {/* Logo in top-left corner */}
-            <div className="absolute top-6 left-6">
-                <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
-            </div>
-
+        <div className="w-full min-h-screen flex justify-center py-10 px-4 sm:px-8 bg-white lg:bg-gray-50 overflow-y-auto">
             {/* Main Form Container - matching officer dashboard sizing */}
-            <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8 h-[80vh] flex flex-col">
-                {/* Content Area - scrollable if needed */}
-                <div className="flex-1 overflow-y-auto">
-                    {/* Back Button and Title */}
-                    <button
-                        onClick={() => navigate('/personal/training')}
-                        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 transition-colors"
-                    >
-                        <ArrowLeft size={20} />
-                        <span className="text-lg font-medium">Book Course</span>
-                    </button>
+            <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col mb-10">
+                {/* Back Button and Title */}
+                <button
+                    onClick={() => navigate('/personal/training')}
+                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 transition-colors min-h-[44px]"
+                >
+                    <ArrowLeft size={20} />
+                    <span className="text-lg font-medium">Book Course</span>
+                </button>
 
-                    {/* Course Title */}
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                        {course.title}
-                    </h2>
+                {/* Course Title */}
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                    {course.title}
+                </h2>
 
-                    {/* Company and Location */}
-                    <div className="space-y-2 mb-6">
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <Building2 size={16} />
-                            <span>{course.provider}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                            <MapPin size={16} />
-                            <span>{course.location}</span>
-                        </div>
+                {/* Company and Location */}
+                <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <Building2 size={16} />
+                        <span>{course.provider}</span>
                     </div>
-
-                    {/* Category and Duration Grid */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm text-gray-500 mb-1">Category</p>
-                            <p className="font-semibold text-gray-800">{course.category}</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm text-gray-500 mb-1">Course Duration</p>
-                            <p className="font-semibold text-gray-800">{course.duration}</p>
-                        </div>
-                    </div>
-
-                    {/* Price */}
-                    <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
-                        <p className="text-sm text-gray-500">Price</p>
-                        <p className="font-semibold text-gray-800">{course.price}</p>
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin size={16} />
+                        <span>{course.location}</span>
                     </div>
                 </div>
 
-                {/* Pay Now Button - stays at bottom */}
+                {/* Category and Duration Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-500 mb-1">Category</p>
+                        <p className="font-semibold text-gray-800">{course.category}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-500 mb-1">Course Duration</p>
+                        <p className="font-semibold text-gray-800">{course.duration}</p>
+                    </div>
+                </div>
+
+                {/* Price */}
+                <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between mb-6">
+                    <p className="text-sm text-gray-500">Price</p>
+                    <p className="font-semibold text-gray-800">{course.price}</p>
+                </div>
+
+
+                {/* Select From Document Wallet Section */}
+                <div className="mb-6">
+                    <h3 className="text-base font-semibold text-gray-800 mb-2">Select From Document Wallet <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
+                    <p className="text-sm text-gray-500 mb-4">Choose any additional documents or certificates you'd like to include with this booking.</p>
+
+                    <div className="space-y-3">
+                        {documentWalletItems.map((doc) => (
+                            <div
+                                key={doc.id}
+                                onClick={() => {
+                                    if (selectedDocuments.includes(doc.id)) {
+                                        setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
+                                    } else {
+                                        setSelectedDocuments([...selectedDocuments, doc.id]);
+                                    }
+                                }}
+                                className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                            >
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${selectedDocuments.includes(doc.id) ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                    {selectedDocuments.includes(doc.id) && <Check size={14} className="text-white" strokeWidth={3} />}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-sm font-semibold text-gray-800">{doc.title}</h4>
+                                    <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                        <span className="bg-gray-100 px-2 rounded">{doc.type}</span>
+                                        <span>Expires: {doc.expiry}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Pay Now Button */}
                 <button
                     onClick={handlePayNow}
-                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors mt-6"
+                    className="w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 bg-[#003971] hover:bg-[#003971]/90"
                 >
                     Pay Now
                 </button>

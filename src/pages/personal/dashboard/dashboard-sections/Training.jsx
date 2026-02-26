@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, SlidersHorizontal, Award, ArrowLeft, X, Search } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search } from 'lucide-react';
 
 const Training = () => {
     const navigate = useNavigate();
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [savedCourses, setSavedCourses] = useState(new Set());
     const [showFilter, setShowFilter] = useState(false);
     const [filters, setFilters] = useState({
         category: null,
@@ -118,7 +119,7 @@ This training is suitable for new entrants to the maritime industry as well as e
                 <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Training Courses</h1>
-                        <p className="text-gray-500 mt-1 text-base sm:text-lg">Find and book maritime and offshore training</p>
+                        <p className="text-gray-500 mt-1 text-base sm:text-lg">Find and book maritime training</p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1 max-w-2xl justify-end">
                         {/* Search Bar */}
@@ -133,24 +134,33 @@ This training is suitable for new entrants to the maritime industry as well as e
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                         </div>
 
-                        <button
-                            onClick={() => {
-                                if (isFilterActive) {
-                                    setFilters({ category: null, priceRange: null, duration: null });
-                                    setTempFilters({ category: null, priceRange: null, duration: null });
-                                    setIsFilterActive(false);
-                                } else {
-                                    setShowFilter(true);
-                                }
-                            }}
-                            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] w-full sm:w-auto flex-1 sm:flex-initial ${isFilterActive
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                                onClick={() => navigate('/personal/saved-courses')}
+                                className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                            >
+                                <Bookmark size={18} />
+                                Saved Courses
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (isFilterActive) {
+                                        setFilters({ category: null, priceRange: null, duration: null });
+                                        setTempFilters({ category: null, priceRange: null, duration: null });
+                                        setIsFilterActive(false);
+                                    } else {
+                                        setShowFilter(true);
+                                    }
+                                }}
+                                className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${isFilterActive
                                     ? 'bg-gray-800 text-white hover:bg-gray-700'
                                     : 'bg-[#003971] text-white hover:bg-[#003971]/90'
-                                }`}
-                        >
-                            {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
-                            {isFilterActive ? 'Remove Filter' : 'Filter'}
-                        </button>
+                                    }`}
+                            >
+                                {isFilterActive ? <X size={18} /> : <SlidersHorizontal size={18} />}
+                                {isFilterActive ? 'Remove Filter' : 'Filter'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,12 +203,34 @@ This training is suitable for new entrants to the maritime industry as well as e
                                     </button>
                                     <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{selectedCourse.title}</h2>
                                 </div>
-                                <button
-                                    onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
-                                    className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] w-full sm:w-auto"
-                                >
-                                    Book now
-                                </button>
+                                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
+                                        className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                                    >
+                                        Book now
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setSavedCourses(prev => {
+                                                const newSaved = new Set(prev);
+                                                if (newSaved.has(selectedCourse.id)) {
+                                                    newSaved.delete(selectedCourse.id);
+                                                } else {
+                                                    newSaved.add(selectedCourse.id);
+                                                }
+                                                return newSaved;
+                                            });
+                                        }}
+                                        className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${savedCourses.has(selectedCourse.id)
+                                            ? 'bg-[#003971] border-[#003971] text-white'
+                                            : 'border-[#003971] text-[#003971] hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        <Bookmark size={16} fill={savedCourses.has(selectedCourse.id) ? 'white' : 'none'} />
+                                        {savedCourses.has(selectedCourse.id) ? 'Saved' : 'Save'}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Course Info */}
@@ -250,118 +282,120 @@ This training is suitable for new entrants to the maritime industry as well as e
             </div>
 
             {/* Filter Modal */}
-            {showFilter && (
-                <>
-                    {/* Backdrop */}
-                    <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
-                        onClick={() => {
-                            setShowFilter(false);
-                            setTempFilters({ ...filters });
-                        }}
-                    />
+            {
+                showFilter && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                            onClick={() => {
+                                setShowFilter(false);
+                                setTempFilters({ ...filters });
+                            }}
+                        />
 
-                    {/* Filter Panel */}
-                    <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 overflow-y-auto">
-                        <div className="p-6">
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-semibold text-gray-800">Filter Courses</h2>
+                        {/* Filter Panel */}
+                        <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 overflow-y-auto">
+                            <div className="p-6">
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-xl font-semibold text-gray-800">Filter Courses</h2>
+                                    <button
+                                        onClick={() => {
+                                            setShowFilter(false);
+                                            setTempFilters({ ...filters });
+                                        }}
+                                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                    >
+                                        <X size={24} className="text-gray-600" />
+                                    </button>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div className="mb-6">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-3">Category</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['STCW', 'Safety', 'Medical', 'Navigation'].map((cat) => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setTempFilters({
+                                                    ...tempFilters,
+                                                    category: tempFilters.category === cat ? null : cat
+                                                })}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.category === cat
+                                                    ? 'bg-gray-800 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Price Range Filter */}
+                                <div className="mb-6">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-3">Price Range</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Under GBP 500', 'GBP 500 - 1000', 'Over GBP 1000'].map((price) => (
+                                            <button
+                                                key={price}
+                                                onClick={() => setTempFilters({
+                                                    ...tempFilters,
+                                                    priceRange: tempFilters.priceRange === price ? null : price
+                                                })}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.priceRange === price
+                                                    ? 'bg-gray-800 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {price}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Duration Filter */}
+                                <div className="mb-8">
+                                    <h3 className="text-base font-semibold text-gray-800 mb-3">Duration</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['1-3 Days', '4-7 Days', 'Over 7 Days'].map((dur) => (
+                                            <button
+                                                key={dur}
+                                                onClick={() => setTempFilters({
+                                                    ...tempFilters,
+                                                    duration: tempFilters.duration === dur ? null : dur
+                                                })}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.duration === dur
+                                                    ? 'bg-gray-800 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {dur}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Apply Filter Button */}
                                 <button
                                     onClick={() => {
+                                        setFilters({ ...tempFilters });
+                                        setIsFilterActive(
+                                            tempFilters.category || tempFilters.priceRange || tempFilters.duration
+                                        );
                                         setShowFilter(false);
-                                        setTempFilters({ ...filters });
                                     }}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
                                 >
-                                    <X size={24} className="text-gray-600" />
+                                    Apply Filter
                                 </button>
                             </div>
-
-                            {/* Category Filter */}
-                            <div className="mb-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-3">Category</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {['STCW', 'Safety', 'Medical', 'Navigation'].map((cat) => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setTempFilters({
-                                                ...tempFilters,
-                                                category: tempFilters.category === cat ? null : cat
-                                            })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.category === cat
-                                                    ? 'bg-gray-800 text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Price Range Filter */}
-                            <div className="mb-6">
-                                <h3 className="text-base font-semibold text-gray-800 mb-3">Price Range</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {['Under GBP 500', 'GBP 500 - 1000', 'Over GBP 1000'].map((price) => (
-                                        <button
-                                            key={price}
-                                            onClick={() => setTempFilters({
-                                                ...tempFilters,
-                                                priceRange: tempFilters.priceRange === price ? null : price
-                                            })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.priceRange === price
-                                                    ? 'bg-gray-800 text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {price}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Duration Filter */}
-                            <div className="mb-8">
-                                <h3 className="text-base font-semibold text-gray-800 mb-3">Duration</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {['1-3 Days', '4-7 Days', 'Over 7 Days'].map((dur) => (
-                                        <button
-                                            key={dur}
-                                            onClick={() => setTempFilters({
-                                                ...tempFilters,
-                                                duration: tempFilters.duration === dur ? null : dur
-                                            })}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tempFilters.duration === dur
-                                                    ? 'bg-gray-800 text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {dur}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Apply Filter Button */}
-                            <button
-                                onClick={() => {
-                                    setFilters({ ...tempFilters });
-                                    setIsFilterActive(
-                                        tempFilters.category || tempFilters.priceRange || tempFilters.duration
-                                    );
-                                    setShowFilter(false);
-                                }}
-                                className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
-                            >
-                                Apply Filter
-                            </button>
                         </div>
-                    </div>
-                </>
-            )}
-        </div>
+                    </>
+                )
+            }
+        </div >
     );
 };
 

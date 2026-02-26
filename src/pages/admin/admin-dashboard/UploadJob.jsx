@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar } from 'lucide-react';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
@@ -13,12 +13,19 @@ function UploadJob({ onBack: onBackProp }) {
 
     const [step, setStep] = useState(1);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [isPublished, setIsPublished] = useState(editData?.status === 'Active' || false);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showPauseModal, setShowPauseModal] = useState(false);
+    const [showCloseModal, setShowCloseModal] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isClosed, setIsClosed] = useState(editData?.status === 'Closed' || false);
     const [formData, setFormData] = useState({
         jobTitle: '',
-        location: '',
+        region: 'Global',
         category: 'Officer',
         contractType: 'Temporary',
         salary: '',
+        closingDate: '',
         description: ''
     });
 
@@ -26,10 +33,11 @@ function UploadJob({ onBack: onBackProp }) {
         if (isEditMode && editData) {
             setFormData({
                 jobTitle: editData.jobTitle || editData.title || '',
-                location: editData.location || '',
+                region: editData.region || editData.location || 'Global',
                 category: editData.category || 'Officer',
                 contractType: editData.contractType || editData.type || 'Temporary',
                 salary: editData.salary || '',
+                closingDate: editData.closingDate || '',
                 description: editData.description || ''
             });
         }
@@ -37,9 +45,42 @@ function UploadJob({ onBack: onBackProp }) {
 
     const categories = ['Officer', 'Ratings & Crew', 'Catering & Medical'];
     const contractTypes = ['Temporary', 'Contract', 'Permanent'];
+    const regions = ['Global', 'UK', 'India', 'Singapore', 'Middle East', 'Europe', 'Southeast Asia', 'Africa'];
 
     const handleNext = () => {
         setStep(2);
+    };
+
+    const handlePublishToggle = () => {
+        setShowPublishModal(true);
+    };
+
+    const confirmPublishToggle = () => {
+        setIsPublished(!isPublished);
+        setShowPublishModal(false);
+    };
+
+    const handlePauseToggle = () => {
+        setShowPauseModal(true);
+    };
+
+    const confirmPauseToggle = () => {
+        setIsPaused(!isPaused);
+        setShowPauseModal(false);
+    };
+
+    const handleCloseJob = () => {
+        setShowCloseModal(true);
+    };
+
+    const confirmCloseJob = () => {
+        setIsClosed(true);
+        setShowCloseModal(false);
+        if (returnPath) {
+            navigate(returnPath);
+        } else {
+            navigate(-1);
+        }
     };
 
     const handleBack = () => {
@@ -79,9 +120,54 @@ function UploadJob({ onBack: onBackProp }) {
                 Back
             </button>
 
-            <div className="mb-4">
-                <h1 className="text-[24px] font-bold text-gray-900 mb-1">{isEditMode ? 'Edit Job' : 'Create a Job'}</h1>
-                <p className="text-gray-500 text-sm">{isEditMode ? 'Update your job listing details' : 'Post a new job listing to the marketplace'}</p>
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-[24px] font-bold text-gray-900">{isEditMode ? 'Edit Job' : 'Create a Job'}</h1>
+                        {isEditMode && (
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isPublished
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                {isPublished ? 'Published' : 'Unpublished'}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-gray-500 text-sm">{isEditMode ? 'Update your job listing details' : 'Post a new job listing to the marketplace'}</p>
+                </div>
+
+                {isEditMode && (
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handlePauseToggle}
+                            className={`flex items-center gap-2 px-5 py-2.5 border rounded-lg font-semibold transition-colors text-sm ${isPaused
+                                ? 'border-green-300 text-green-600 hover:bg-green-50'
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                        >
+                            <Pause className="h-4 w-4" />
+                            {isPaused ? 'Resume' : 'Pause'}
+                        </button>
+                        {!isPublished && (
+                            <button
+                                onClick={handlePublishToggle}
+                                className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors text-sm"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Publish
+                            </button>
+                        )}
+                        {!isClosed && (
+                            <button
+                                onClick={handleCloseJob}
+                                className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors text-sm"
+                            >
+                                <X className="h-4 w-4" />
+                                Close Job
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Form Card */}
@@ -103,18 +189,39 @@ function UploadJob({ onBack: onBackProp }) {
                                 />
                             </div>
 
-                            {/* Location */}
+                            {/* Region */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                                    Location
+                                    Region
                                 </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter your location"
-                                    value={formData.location}
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
-                                />
+                                <div className="relative">
+                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <select
+                                        value={formData.region}
+                                        onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] appearance-none bg-white cursor-pointer"
+                                    >
+                                        {regions.map((region) => (
+                                            <option key={region} value={region}>{region}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Closing Date (Optional) */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                                    Closing Date <span className="text-gray-400 font-normal">(Optional)</span>
+                                </label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <input
+                                        type="date"
+                                        value={formData.closingDate}
+                                        onChange={(e) => setFormData({ ...formData, closingDate: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] cursor-pointer"
+                                    />
+                                </div>
                             </div>
 
                             {/* Category */}
@@ -188,8 +295,18 @@ function UploadJob({ onBack: onBackProp }) {
                                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">
                                     Enter job description
                                 </label>
+                                <p className="text-xs text-gray-500 mb-2">
+                                    Include as much detail as possible to attract the right candidates. We recommend covering:
+                                </p>
+                                <ul className="text-xs text-gray-500 mb-3 space-y-1 pl-4 list-disc">
+                                    <li>Role responsibilities and duties</li>
+                                    <li>Candidate specifications (experience, rank, sea time)</li>
+                                    <li>Required certifications (CoC, STCW, medical certificates)</li>
+                                    <li>Required documents (passport, visa, seaman's book)</li>
+                                    <li>Vessel type and trade area details</li>
+                                </ul>
                                 <textarea
-                                    placeholder="Enter your job title"
+                                    placeholder="e.g. We are seeking an experienced Chief Engineer for our LNG Tanker fleet. The ideal candidate should hold a valid Chief Engineer CoC, STCW certificates, medical fitness certificate, and have a minimum of 5 years sea time on LNG vessels..."
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     rows={10}
@@ -235,6 +352,100 @@ function UploadJob({ onBack: onBackProp }) {
                                 className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors"
                             >
                                 Go to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Publish/Unpublish Modal */}
+            {showPublishModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">
+                            {isPublished ? 'Unpublish Job?' : 'Publish Job?'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {isPublished
+                                ? 'Are you sure you want to unpublish this job? It will no longer be visible to candidates.'
+                                : 'Are you sure you want to publish this job? It will be visible to all candidates on the platform.'}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowPublishModal(false)}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmPublishToggle}
+                                className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPublished
+                                    ? 'bg-gray-700 text-white hover:bg-gray-800'
+                                    : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                    }`}
+                            >
+                                {isPublished ? 'Unpublish' : 'Publish'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Pause/Resume Modal */}
+            {showPauseModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">
+                            {isPaused ? 'Resume Job?' : 'Pause Job?'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {isPaused
+                                ? 'Are you sure you want to resume this job? It will start accepting new applications again.'
+                                : 'Are you sure you want to pause this job? New applications will not be accepted until you resume it.'}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowPauseModal(false)}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmPauseToggle}
+                                className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPaused
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                                    }`}
+                            >
+                                {isPaused ? 'Resume' : 'Pause'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Close Job Modal */}
+            {showCloseModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">
+                            Close Job?
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to close this job? This action cannot be undone. The job will be archived and will no longer accept applications.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowCloseModal(false)}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmCloseJob}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                            >
+                                Close Job
                             </button>
                         </div>
                     </div>

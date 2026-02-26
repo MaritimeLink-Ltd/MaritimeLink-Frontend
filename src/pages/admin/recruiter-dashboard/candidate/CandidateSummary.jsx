@@ -17,7 +17,8 @@ import {
     AlertCircle,
     CheckCircle2,
     Eye,
-    Download
+    Download,
+    Send
 } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
@@ -53,6 +54,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [showDocumentWallet, setShowDocumentWallet] = useState(false);
     const [showRequestSuccess, setShowRequestSuccess] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
+    const [inviteSent, setInviteSent] = useState(false);
 
     // Show application status if coming from job detail or explicitly passed as prop
     // But NOT for matches (candidates who haven't applied yet)
@@ -282,13 +284,33 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 View Resume
                             </button>
                         )}
-                        <button
-                            onClick={() => setShowDocumentWallet(true)}
-                            className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors"
-                        >
-                            <Wallet className="h-5 w-5" />
-                            View Document Wallet
-                        </button>
+                        {/* Show View Document Wallet for non-matches OR admin+matches */}
+                        {(applicantStatus !== 'matches' || isAdmin) && (
+                            <button
+                                onClick={() => setShowDocumentWallet(true)}
+                                className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors"
+                            >
+                                <Wallet className="h-5 w-5" />
+                                View Document Wallet
+                            </button>
+                        )}
+                        {/* Show Invite to Apply for matches tab */}
+                        {applicantStatus === 'matches' && (
+                            inviteSent ? (
+                                <span className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+                                    <Check className="h-5 w-5" />
+                                    Invited
+                                </span>
+                            ) : (
+                                <button
+                                    onClick={() => setInviteSent(true)}
+                                    className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-orange-600 transition-colors"
+                                >
+                                    <Send className="h-5 w-5" />
+                                    Invite to Apply
+                                </button>
+                            )
+                        )}
                         {/* Hide Message button for Training Provider dashboard and Admin routes */}
                         {!location.pathname.includes('/trainingprovider/') && !isAdmin && (
                             <button

@@ -5,7 +5,9 @@ import { countryCodes } from '../../../utils/countryCodes';
 function RecruiterProfileCompletion() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        fullName: '',
+        firstName: '',
+        middleName: '',
+        lastName: '',
         phoneNumber: '',
         countryCode: '+44',
         role: '',
@@ -57,8 +59,13 @@ function RecruiterProfileCompletion() {
         setError('');
 
         // Validation
-        if (!formData.fullName.trim()) {
-            setError('Please enter your full name');
+        if (!formData.firstName.trim()) {
+            setError('Please enter your first name');
+            return;
+        }
+
+        if (!formData.lastName.trim()) {
+            setError('Please enter your last name');
             return;
         }
 
@@ -78,7 +85,9 @@ function RecruiterProfileCompletion() {
             // TODO: Implement profile completion API call
             const finalRole = formData.role || formData.otherRole;
             console.log('Profile submitted:', {
-                ...formData,
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                lastName: formData.lastName,
                 phone: `${formData.countryCode} ${formData.phoneNumber}`,
                 finalRole
             });
@@ -129,10 +138,10 @@ function RecruiterProfileCompletion() {
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Full Name Field */}
+                        {/* First Name Field */}
                         <div>
-                            <label htmlFor="fullName" className="block text-sm font-medium text-gray-900 mb-2">
-                                Full Name
+                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-900 mb-2">
+                                First Name
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -141,13 +150,60 @@ function RecruiterProfileCompletion() {
                                     </svg>
                                 </div>
                                 <input
-                                    id="fullName"
-                                    name="fullName"
+                                    id="firstName"
+                                    name="firstName"
                                     type="text"
                                     required
                                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
-                                    placeholder="Enter your full name"
-                                    value={formData.fullName}
+                                    placeholder="Enter your first name"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Middle Name Field */}
+                        <div>
+                            <label htmlFor="middleName" className="block text-sm font-medium text-gray-900 mb-2">
+                                Middle Name
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="middleName"
+                                    name="middleName"
+                                    type="text"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                                    placeholder="Enter your middle name (optional)"
+                                    value={formData.middleName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Last Name Field */}
+                        <div>
+                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-900 mb-2">
+                                Last Name
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    id="lastName"
+                                    name="lastName"
+                                    type="text"
+                                    required
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                                    placeholder="Enter your last name"
+                                    value={formData.lastName}
                                     onChange={handleChange}
                                 />
                             </div>

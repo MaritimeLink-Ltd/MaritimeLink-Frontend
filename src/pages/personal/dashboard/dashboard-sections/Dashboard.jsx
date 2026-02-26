@@ -113,9 +113,10 @@ const Dashboard = () => {
     ];
 
     return (
-        <div className="w-full h-full flex flex-col bg-white overflow-y-auto lg:overflow-hidden">
-            {/* Sticky Header Section */}
-            <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 bg-white lg:sticky lg:top-0 lg:z-10">
+        // outer container should grow with its content; scrolling is handled by the layout's <main>
+        <div className="w-full flex flex-col bg-white">
+            {/* Top Section (Header + Alerts + Quick Access) */}
+            <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 bg-white">
                 {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
                     <div>

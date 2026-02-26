@@ -23,7 +23,8 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     const [filters, setFilters] = useState({
         status: 'Status',
         jobType: 'Job Type',
-        vessel: 'Vessel'
+        vessel: 'Vessel',
+        postedTime: '' // '' means all
     });
     const [showExportNotification, setShowExportNotification] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -39,7 +40,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
     const handleExportCSV = () => {
         // Prepare CSV data
-        const headers = ['Job ID', 'Title', 'Vessel/Type', 'Location', 'Badge', 'Posted', 'Status', 'Type'];
+        const headers = ['Job ID', 'Title', 'Vessel/Type', 'Location', 'Applicants', 'Posted', 'Status', 'Type'];
         const csvRows = [headers.join(',')];
 
         // Add job data
@@ -49,7 +50,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                 `"${job.title}"`,
                 `"${job.vessel}"`,
                 `"${job.location}"`,
-                job.badge,
+                job.applicants,
                 `"${job.posted}"`,
                 job.status,
                 job.type
@@ -85,7 +86,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'LNG Tanker',
             domain: 'lngtanker.com',
             location: 'Global',
-            badge: 'Pro',
+            applicants: 12,
             posted: '2 hours ago',
             status: 'Active',
             type: 'Permanent'
@@ -96,7 +97,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'DP Vessel',
             domain: 'lngtanker.com',
             location: 'Singapore',
-            badge: 'Free',
+            applicants: 45,
             posted: '5 hours ago',
             status: 'Active',
             type: 'Permanent'
@@ -107,7 +108,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Container Ship',
             domain: 'containership.com',
             location: 'Italy',
-            badge: 'Pro',
+            applicants: 8,
             posted: '1 day ago',
             status: 'Active',
             type: 'Contract'
@@ -118,7 +119,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Bulk Carrier',
             domain: 'bulkcarrier.com',
             location: 'India',
-            badge: 'Free',
+            applicants: 0,
             posted: '2 days ago',
             status: 'Draft',
             type: 'Permanent'
@@ -129,7 +130,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Offshore Supply',
             domain: 'offshoresupply.com',
             location: 'USA',
-            badge: 'Pro',
+            applicants: 156,
             posted: '3 days ago',
             status: 'Closed',
             type: 'Contract'
@@ -140,7 +141,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Cruise Ship',
             domain: 'cruiseship.com',
             location: 'USA',
-            badge: 'Pro',
+            applicants: 0,
             posted: '3 days ago',
             status: 'Draft',
             type: 'Permanent'
@@ -151,7 +152,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'VLCC Tanker',
             domain: 'vlcctanker.com',
             location: 'UK',
-            badge: 'Pro',
+            applicants: 34,
             posted: '4 days ago',
             status: 'Active',
             type: 'Permanent'
@@ -162,7 +163,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Container Ship',
             domain: 'containership.com',
             location: 'Netherlands',
-            badge: 'Free',
+            applicants: 21,
             posted: '5 days ago',
             status: 'Active',
             type: 'Contract'
@@ -173,7 +174,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'RoRo Vessel',
             domain: 'roro.com',
             location: 'Germany',
-            badge: 'Pro',
+            applicants: 67,
             posted: '6 days ago',
             status: 'Active',
             type: 'Permanent'
@@ -184,7 +185,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Offshore Platform',
             domain: 'offshore.com',
             location: 'Norway',
-            badge: 'Pro',
+            applicants: 89,
             posted: '1 week ago',
             status: 'Active',
             type: 'Contract'
@@ -195,7 +196,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'General Cargo',
             domain: 'cargo.com',
             location: 'Philippines',
-            badge: 'Free',
+            applicants: 124,
             posted: '1 week ago',
             status: 'Active',
             type: 'Permanent'
@@ -206,7 +207,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Bulk Carrier',
             domain: 'bulkcarrier.com',
             location: 'India',
-            badge: 'Free',
+            applicants: 0,
             posted: '1 week ago',
             status: 'Draft',
             type: 'Contract'
@@ -217,7 +218,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Chemical Tanker',
             domain: 'chemtanker.com',
             location: 'UAE',
-            badge: 'Pro',
+            applicants: 42,
             posted: '2 weeks ago',
             status: 'Active',
             type: 'Permanent'
@@ -228,7 +229,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'LNG Tanker',
             domain: 'lngtanker.com',
             location: 'Qatar',
-            badge: 'Free',
+            applicants: 215,
             posted: '2 weeks ago',
             status: 'Active',
             type: 'Permanent'
@@ -239,7 +240,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             vessel: 'Offshore Supply',
             domain: 'offshoresupply.com',
             location: 'Australia',
-            badge: 'Pro',
+            applicants: 88,
             posted: '2 weeks ago',
             status: 'Closed',
             type: 'Contract'
@@ -316,6 +317,28 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         // Using includes for vessel because 'vessel' field might be 'LNG Tanker' and filter might be 'LNG Tanker'
         if (filters.vessel !== 'Vessel' && !job.vessel.includes(filters.vessel)) return false;
 
+        // Posted Time Filter
+        if (filters.postedTime !== '') {
+            const postedString = job.posted.toLowerCase();
+            let postedDaysAgo = 0;
+
+            if (postedString.includes('hour') || postedString.includes('minute')) {
+                postedDaysAgo = 0;
+            } else if (postedString.includes('day')) {
+                postedDaysAgo = parseInt(postedString) || 1;
+            } else if (postedString.includes('week')) {
+                postedDaysAgo = (parseInt(postedString) || 1) * 7;
+            } else if (postedString.includes('month')) {
+                postedDaysAgo = (parseInt(postedString) || 1) * 30;
+            } else if (postedString.includes('year')) {
+                postedDaysAgo = (parseInt(postedString) || 1) * 365;
+            }
+
+            if (filters.postedTime === 'Today' && postedDaysAgo > 0) return false;
+            if (filters.postedTime === '7 Days' && postedDaysAgo > 7) return false;
+            if (filters.postedTime === '30 Days' && postedDaysAgo > 30) return false;
+        }
+
         return true;
     });
 
@@ -361,18 +384,38 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
                         <p className="text-gray-600 mt-1 text-sm font-medium">Manage your job listings and applications</p>
                     </div>
-                    <button
-                        onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job', {
-                            state: {
-                                dashboardType: 'recruiter',
-                                returnPath: '/admin/jobs'
-                            }
-                        })}
-                        className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Create Job
-                    </button>
+                    <div className="flex items-center gap-4">
+                        {/* Segmented Control for Posted Time */}
+                        <div className="flex bg-[#F8F9FA] p-1 rounded-xl border border-gray-200">
+                            {['Today', '7 Days', '30 Days'].map((period) => (
+                                <button
+                                    key={period}
+                                    onClick={() => setFilters({
+                                        ...filters,
+                                        postedTime: filters.postedTime === period ? '' : period
+                                    })}
+                                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${filters.postedTime === period
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                        }`}
+                                >
+                                    {period}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job', {
+                                state: {
+                                    dashboardType: 'recruiter',
+                                    returnPath: '/admin/jobs'
+                                }
+                            })}
+                            className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Create Job
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -452,6 +495,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                     <option>Container Ship</option>
                                     <option>Bulk Carrier</option>
                                     <option>Offshore Supply</option>
+                                    <option>DP Vessel</option>
                                 </select>
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                             </div>
@@ -483,7 +527,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Job Title</th>
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Vessel / Type</th>
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Location</th>
-                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Badge</th>
+                                        <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Applicants</th>
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Posted</th>
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Status</th>
                                         <th className="text-left px-6 py-3 text-xs font-bold text-gray-700 uppercase tracking-wide">Action</th>
@@ -507,8 +551,8 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                 <span className="text-gray-700">{job.location}</span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`text-sm font-bold ${job.badge === 'Pro' ? 'text-blue-600' : 'text-gray-500'}`}>
-                                                    {job.badge}
+                                                <span className={`text-sm font-bold text-gray-900`}>
+                                                    {job.applicants}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
@@ -536,7 +580,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                         }}
                                                         className="text-[#003971] font-bold hover:underline text-sm"
                                                     >
-                                                        View Applicants
+                                                        View Detail
                                                     </button>
                                                 ) : (
                                                     <button

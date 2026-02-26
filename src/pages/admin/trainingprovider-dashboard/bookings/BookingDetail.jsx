@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronDown, Calendar, MapPin, Search, Download, Printer, Mail, Plus, X, AlertTriangle } from 'lucide-react';
+import { ChevronDown, Calendar, MapPin, Search, Download, Printer, Mail, X, AlertTriangle } from 'lucide-react';
 
 export default function BookingDetail() {
     const navigate = useNavigate();
@@ -9,10 +9,11 @@ export default function BookingDetail() {
     const [statusFilter, setStatusFilter] = useState('');
     const [paymentFilter, setPaymentFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(6);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const [showExportNotification, setShowExportNotification] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const printRef = useRef(null);
+    const minVisibleRows = 10;
 
     // Mock data
     const sessionInfo = {
@@ -73,6 +74,10 @@ export default function BookingDetail() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentTrainees = filteredTrainees.slice(startIndex, endIndex);
+    const emptyRows = useMemo(() => {
+        if (itemsPerPage < minVisibleRows) return 0;
+        return Math.max(0, minVisibleRows - currentTrainees.length);
+    }, [currentTrainees.length, itemsPerPage]);
 
     const handlePreviousPage = () => {
         if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -197,7 +202,7 @@ export default function BookingDetail() {
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="flex flex-col">
             {/* Export Notification Toast */}
             {showExportNotification && (
                 <div className="fixed top-4 left-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-left duration-300">
@@ -266,7 +271,7 @@ export default function BookingDetail() {
             </div>
 
             {/* Trainees Table Card */}
-            <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden">
                 {/* Filters Row */}
                 <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="relative flex-1 max-w-sm">
@@ -329,7 +334,7 @@ export default function BookingDetail() {
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 overflow-auto" ref={printRef}>
+                <div className="overflow-x-auto" ref={printRef}>
                     <table className="w-full">
                         <thead className="bg-gray-50 sticky top-0">
                             <tr>
@@ -394,6 +399,16 @@ export default function BookingDetail() {
                                     </td>
                                 </tr>
                             ))}
+                            {Array.from({ length: emptyRows }).map((_, idx) => (
+                                <tr key={`empty-${currentPage}-${idx}`} className="bg-white" aria-hidden="true">
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                    <td className="px-6 py-4">&nbsp;</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -410,8 +425,6 @@ export default function BookingDetail() {
                             }}
                             className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-200"
                         >
-                            <option value={5}>5</option>
-                            <option value={6}>6</option>
                             <option value={10}>10</option>
                             <option value={25}>25</option>
                         </select>
