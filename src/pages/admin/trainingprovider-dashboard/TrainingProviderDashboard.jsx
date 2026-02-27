@@ -85,8 +85,8 @@ function TrainingProviderDashboard() {
         ],
         '7 Days': [
             { id: 1, title: 'Active Courses', value: '5', subtitle: 'Active Courses', icon: BookOpen, bgGradient: 'from-[#1E4976] to-[#2E6BA8]', iconBg: 'bg-white/20', path: '/trainingprovider/courses' },
-            { id: 2, title: 'New Bookings', value: '18', subtitle: 'This Week', icon: Calendar, bgGradient: 'from-[#0FA968] to-[#1BC47D]', iconBg: 'bg-white/20', path: '/trainingprovider/bookings' },
-            { id: 3, title: 'Demand Signals', value: '4', subtitle: 'This Week', icon: TrendingUp, bgGradient: 'from-[#E86C5F] to-[#F28B7D]', iconBg: 'bg-white/20', path: '/trainingprovider/demand' }
+            { id: 2, title: 'New Bookings', value: '18', subtitle: 'New Bookings', icon: Calendar, bgGradient: 'from-[#0FA968] to-[#1BC47D]', iconBg: 'bg-white/20', path: '/trainingprovider/bookings' },
+            { id: 3, title: 'Demand Signals', value: '4', subtitle: 'Demand Signals', icon: TrendingUp, bgGradient: 'from-[#E86C5F] to-[#F28B7D]', iconBg: 'bg-white/20', path: '/trainingprovider/demand' }
         ],
         '30 Days': [
             { id: 1, title: 'Active Courses', value: '5', subtitle: 'Active Courses', icon: BookOpen, bgGradient: 'from-[#1E4976] to-[#2E6BA8]', iconBg: 'bg-white/20', path: '/trainingprovider/courses' },
