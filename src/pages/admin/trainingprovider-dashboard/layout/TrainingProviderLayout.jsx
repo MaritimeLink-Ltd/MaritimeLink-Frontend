@@ -9,7 +9,8 @@ import {
     Bell,
     ChevronDown,
     Menu,
-    LogOut
+    LogOut,
+    MessageSquare
 } from 'lucide-react';
 
 function TrainingProviderLayout() {
@@ -19,7 +20,7 @@ function TrainingProviderLayout() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    const isActive = (path) => location.pathname === path;
+    const isActive = (path) => location.pathname === path || (path === '/trainingprovider/demand' && location.pathname === '/trainingprovider/expiries');
 
     const handleLogoutClick = () => {
         setDropdownOpen(false);
@@ -44,6 +45,7 @@ function TrainingProviderLayout() {
         { name: 'Demand & Planning', path: '/trainingprovider/demand', icon: TrendingUp },
         { name: 'Courses', path: '/trainingprovider/courses', icon: BookOpen },
         { name: 'Bookings', path: '/trainingprovider/bookings', icon: Calendar },
+        { name: 'Chats', path: '/trainingprovider/chats', icon: MessageSquare },
         { name: 'Profile', path: '/trainingprovider/profile', icon: UserCircle },
     ];
 
@@ -166,8 +168,8 @@ function TrainingProviderLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 overflow-hidden bg-[#F5F7FA] px-8 py-6">
-                    <div className="h-full overflow-y-auto scrollbar-hide">
+                <main className="flex-1 min-h-0 flex flex-col bg-[#F5F7FA] px-8 py-6">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
                         <Outlet />
                     </div>
                 </main>

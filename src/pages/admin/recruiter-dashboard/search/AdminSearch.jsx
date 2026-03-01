@@ -321,12 +321,8 @@ function AdminSearch({ onViewCandidate }) {
                                                 </div>
                                             </div>
 
-                                            {/* Right: Match & Button */}
-                                            <div className="flex items-center gap-5">
-                                                <div className="text-right">
-                                                    <div className="text-2xl font-extrabold text-[#003971]">{candidate.matchPercentage}%</div>
-                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Match</div>
-                                                </div>
+                                            {/* Right: Button */}
+                                            <div className="flex items-center">
                                                 <button
                                                     onClick={() => onViewCandidate ? onViewCandidate(candidate.id) : navigate(`/recruiter/candidate/${candidate.id}`)}
                                                     className="bg-[#003971] text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2 whitespace-nowrap"
@@ -375,10 +371,6 @@ function AdminSearch({ onViewCandidate }) {
 
                                             {/* Rank */}
                                             <p className="text-sm text-gray-600 font-semibold mb-4">{candidate.rank}</p>
-
-                                            {/* Match Percentage */}
-                                            <div className="text-2xl font-extrabold text-[#003971] mb-1">{candidate.matchPercentage}%</div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">Match</div>
 
                                             {/* Experience & Location */}
                                             <div className="grid grid-cols-2 gap-4 w-full mb-4 py-3 border-t border-b border-gray-100">

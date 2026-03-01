@@ -56,6 +56,13 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [inviteSent, setInviteSent] = useState(false);
 
+    // Training provider attendance actions (only when coming from attendance flow)
+    const [attendanceStatus, setAttendanceStatus] = useState('pending'); // 'pending' | 'approved' | 'rejected'
+    const [showAttendanceApproveModal, setShowAttendanceApproveModal] = useState(false);
+    const [showAttendanceRejectModal, setShowAttendanceRejectModal] = useState(false);
+
+    const fromAttendance = location.state?.fromAttendance === true;
+
     // Show application status if coming from job detail or explicitly passed as prop
     // But NOT for matches (candidates who haven't applied yet)
     const applicantStatus = location.state?.applicantStatus;
@@ -273,7 +280,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         {/* Hide View Resume button for Admin Routes */}
                         {!isAdmin && (
                             <button
@@ -310,6 +317,43 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     Invite to Apply
                                 </button>
                             )
+                        )}
+                        {/* Training provider: Approve/Reject attendance — ONLY when coming from attendance flow */}
+                        {location.pathname.includes('/trainingprovider/') && fromAttendance && (
+                            <>
+                                {attendanceStatus === 'pending' && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAttendanceApproveModal(true)}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-5 py-3 text-sm font-bold text-white hover:bg-[#002855] transition-colors"
+                                        >
+                                            <CheckCircle2 className="h-5 w-5" />
+                                            Approve
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAttendanceRejectModal(true)}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600 transition-colors"
+                                        >
+                                            <X className="h-5 w-5" />
+                                            Reject
+                                        </button>
+                                    </>
+                                )}
+                                {attendanceStatus === 'approved' && (
+                                    <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 border border-emerald-100">
+                                        <CheckCircle2 className="h-5 w-5" />
+                                        Approved
+                                    </span>
+                                )}
+                                {attendanceStatus === 'rejected' && (
+                                    <span className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-5 py-3 text-sm font-bold text-red-700 border border-red-100">
+                                        <X className="h-5 w-5" />
+                                        Rejected
+                                    </span>
+                                )}
+                            </>
                         )}
                         {/* Hide Message button for Training Provider dashboard and Admin routes */}
                         {!location.pathname.includes('/trainingprovider/') && !isAdmin && (
@@ -477,6 +521,82 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
                                 >
                                     Reject Candidate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Training Provider - Approve Attendance Modal */}
+                {showAttendanceApproveModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+                            <button
+                                onClick={() => setShowAttendanceApproveModal(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                Approve attendee?
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                                This will mark the attendee as approved for this session. You can
+                                change the status later if needed.
+                            </p>
+                            <div className="flex items-center justify-end gap-3">
+                                <button
+                                    onClick={() => setShowAttendanceApproveModal(false)}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setAttendanceStatus('approved');
+                                        setShowAttendanceApproveModal(false);
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl font-bold bg-[#003971] text-white hover:bg-[#002855] transition-colors"
+                                >
+                                    Approve
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Training Provider - Reject Attendance Modal */}
+                {showAttendanceRejectModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+                            <button
+                                onClick={() => setShowAttendanceRejectModal(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                Reject attendee?
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                                This will mark the attendee as rejected for this session. You can
+                                always re-approve them later if required.
+                            </p>
+                            <div className="flex items-center justify-end gap-3">
+                                <button
+                                    onClick={() => setShowAttendanceRejectModal(false)}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setAttendanceStatus('rejected');
+                                        setShowAttendanceRejectModal(false);
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                >
+                                    Reject
                                 </button>
                             </div>
                         </div>

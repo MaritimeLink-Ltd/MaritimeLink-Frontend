@@ -50,16 +50,19 @@ import RecruiterLayout from './pages/admin/recruiter-dashboard/layout/AdminLayou
 import TrainingProviderLayout from './pages/admin/trainingprovider-dashboard/layout/TrainingProviderLayout';
 import TrainingProviderDashboard from './pages/admin/trainingprovider-dashboard/TrainingProviderDashboard';
 import DemandPlanning from './pages/admin/trainingprovider-dashboard/demand/DemandPlanning';
+import AllExpiries from './pages/admin/trainingprovider-dashboard/demand/AllExpiries';
 import TrainingProviderCourses from './pages/admin/trainingprovider-dashboard/courses/TrainingProviderCourses';
 import CourseDetail from './pages/admin/trainingprovider-dashboard/courses/CourseDetail';
 import ManageSessions from './pages/admin/trainingprovider-dashboard/courses/ManageSessions';
 import ScheduleSession from './pages/admin/trainingprovider-dashboard/courses/ScheduleSession';
 import TrainingProviderCreateCourse from './pages/admin/trainingprovider-dashboard/courses/CreateCourse';
 import EditCourse from './pages/admin/trainingprovider-dashboard/courses/EditCourse';
+import SessionAttendance from './pages/admin/trainingprovider-dashboard/courses/SessionAttendance';
 import Bookings from './pages/admin/trainingprovider-dashboard/bookings/Bookings';
 import BookingDetail from './pages/admin/trainingprovider-dashboard/bookings/BookingDetail';
 import TrainingProviderNotifications from './pages/admin/trainingprovider-dashboard/TrainingProviderNotifications';
 import TrainingProviderProfile from './pages/admin/trainingprovider-dashboard/TrainingProviderProfile';
+import TrainingProviderChats from './pages/admin/trainingprovider-dashboard/chats/TrainingProviderChats';
 
 import SuperAdminLayout from './pages/admin/admin-dashboard/layout/AdminLayout';
 import AdminDashboard from './pages/admin/admin-dashboard/AdminDashboard';
@@ -69,7 +72,6 @@ import TransactionHistory from './pages/admin/admin-dashboard/TransactionHistory
 import FlaggedAccounts from './pages/admin/admin-dashboard/FlaggedAccounts';
 import UploadJob from './pages/admin/admin-dashboard/UploadJob';
 import JobCreatedSuccess from './pages/admin/admin-dashboard/JobCreatedSuccess';
-import CreateCourse from './pages/admin/admin-dashboard/CreateCourse';
 import Accounts from './pages/admin/admin-dashboard/Accounts';
 import AccountProfile from './pages/admin/admin-dashboard/AccountProfile';
 import Companies from './pages/admin/admin-dashboard/Companies';
@@ -165,11 +167,13 @@ function App() {
           <Route element={<TrainingProviderLayout />}>
             <Route path="/trainingprovider-dashboard" element={<TrainingProviderDashboard />} />
             <Route path="/trainingprovider/demand" element={<DemandPlanning />} />
+            <Route path="/trainingprovider/expiries" element={<AllExpiries />} />
             <Route path="/trainingprovider/courses" element={<TrainingProviderCourses />} />
             <Route path="/trainingprovider/courses/:courseId" element={<CourseDetail />} />
             <Route path="/trainingprovider/courses/:courseId/sessions" element={<ManageSessions />} />
             <Route path="/trainingprovider/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
             <Route path="/trainingprovider/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
+            <Route path="/trainingprovider/sessions/attendance" element={<SessionAttendance />} />
             <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
             <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
             <Route path="/trainingprovider/bookings" element={<Bookings />} />
@@ -178,17 +182,19 @@ function App() {
             <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
             <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
+            <Route path="/trainingprovider/chats" element={<TrainingProviderChats />} />
           </Route>
 
           {/* Super Admin Protected Routes (With Layout) */}
           <Route element={<SuperAdminLayout />}>
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/notifications" element={<Notifications />} />
             <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
             <Route path="/admin/transaction-history" element={<TransactionHistory />} />
             <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
             <Route path="/admin/marketplace/create-job" element={<UploadJob />} />
-            <Route path="/admin/create-course" element={<CreateCourse />} />
+            <Route path="/admin/create-course" element={<TrainingProviderCreateCourse />} />
             <Route path="/admin/accounts" element={<Accounts />} />
             <Route path="/admin/accounts/:id" element={<AccountProfile />} />
             <Route path="/admin/accounts/compliance/:id" element={<ComplianceProfile />} />

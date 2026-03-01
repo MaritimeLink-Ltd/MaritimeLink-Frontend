@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Users, User, ChevronDown, Download, Plus, X, AlertTriangle } from 'lucide-react';
+import { Calendar, MapPin, Users, User, ChevronDown, Download, Plus, X, AlertTriangle, DollarSign } from 'lucide-react';
 
 const sessionsData = [
   {
@@ -57,6 +57,37 @@ const sessionsData = [
     total: 16,
     status: 'Filling Fast',
     statusColor: 'text-orange-500',
+  },
+];
+
+const overviewCards = [
+  {
+    id: 1,
+    label: 'Upcoming Sessions',
+    value: '16',
+    icon: Calendar,
+    accent: 'bg-orange-50 text-orange-600',
+  },
+  {
+    id: 2,
+    label: 'Pending Approvals',
+    value: '184',
+    icon: AlertTriangle,
+    accent: 'bg-amber-50 text-amber-700',
+  },
+  {
+    id: 3,
+    label: 'Seats Filled',
+    value: '297',
+    icon: Users,
+    accent: 'bg-blue-50 text-blue-600',
+  },
+  {
+    id: 4,
+    label: 'Revenue',
+    value: '$14,300',
+    icon: DollarSign,
+    accent: 'bg-emerald-50 text-emerald-600',
   },
 ];
 
@@ -186,7 +217,7 @@ export default function ManageSessions() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col min-h-full">
       {/* Export Notification Toast */}
       {showExportNotification && (
         <div className="fixed top-4 left-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-left duration-300">
@@ -206,17 +237,39 @@ export default function ManageSessions() {
       </button>
 
       {/* Heading */}
-      <div className="mb-2">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Manage Sessions</h1>
-        <div className="text-gray-500 text-sm flex items-center gap-2">
-          <span>STCW Basic Safety Training</span>
-          <span className="mx-2">•</span>
-          <span>ID: STCW-BST-001</span>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900 mb-1">
+          Session Management
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Manage course bookings and respond to schedule needs
+        </p>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+        {overviewCards.map((card) => (
+          <div
+            key={card.id}
+            className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 px-5 py-4 shadow-sm"
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.accent}`}
+            >
+              <card.icon className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {card.label}
+              </p>
+              <p className="mt-1 text-xl font-bold text-gray-900">{card.value}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Card */}
-      <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col overflow-hidden mt-4">
+      <div className="bg-white rounded-2xl border border-gray-100 flex-1 flex flex-col overflow-hidden">
         {/* Filters Row */}
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="relative flex-1 max-w-sm">
@@ -328,11 +381,12 @@ export default function ManageSessions() {
                   </td>
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => handleEditSession(session)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700 mr-3">Edit</button>
-                    <button
-                      onClick={() => handleCancelSession(session)}
-                      className="text-sm font-medium text-red-500 hover:text-red-700">Cancel</button>
+                      type="button"
+                      onClick={() => navigate('/trainingprovider/sessions/attendance')}
+                      className="inline-flex items-center justify-center rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002855]"
+                    >
+                      View Attendance
+                    </button>
                   </td>
                 </tr>
               ))}

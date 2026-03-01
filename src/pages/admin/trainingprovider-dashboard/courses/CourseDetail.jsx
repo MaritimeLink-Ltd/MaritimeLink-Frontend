@@ -1,497 +1,537 @@
-import { useState, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Calendar, MapPin, User, Users, Edit, MoreVertical, Download, Printer, Plus, ChevronDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  BookOpen,
+  Calendar,
+  MapPin,
+  User,
+  Users,
+  DollarSign,
+  ChevronRight,
+  CheckCircle
+} from 'lucide-react';
 
-const applicantsData = [
+const courseSummary = {
+  id: 'STCW-BST-001',
+  title: 'STCW Basic Safety',
+  categoryTag: 'STCW Basic Safety',
+  totalSeats: 160,
+  sessions: 10,
+  bookings: 123,
+  revenue: '$18,450',
+  description:
+    'Comprehensive entry-level safety training essential for all seafarers. Covers basic firefighting, personal survival techniques, elementary first aid, and personal safety and social responsibilities as per IMO standards. Duration per session: 3 days.'
+};
+
+const courseHighlights = [
+  'Firefighting',
+  'Personal Survival',
+  'First Aid',
+  'Social Responsibilities',
+  'Duration: 3 Days',
+  'Summary Included'
+];
+
+const sessionData = [
   {
-    initials: 'JW',
-    name: 'James Wilson',
-    email: 'james.wilson@example.com',
-    company: 'Maersk Line',
-    position: 'Chief Officer',
-    date: 'Apr 24, 2024',
-    status: 'Confirmed',
-    payment: 'Paid',
-    paymentStatus: 'paid',
-    statusColor: 'text-green-600',
-    paymentDot: 'bg-green-400',
-    profile: '#'
+    id: 'S1',
+    dates: '15–17 May',
+    location: 'Liverpool',
+    seats: '14 / 16',
+    status: 'Filling Fast',
+    statusVariant: 'warning'
   },
   {
-    initials: 'SC',
-    name: 'Sarah Chen',
-    email: 'sarah.chen@example.com',
-    company: 'Evergreen Marine',
-    position: 'Second Engineer',
-    date: 'Apr 25, 2024',
-    status: 'Pending Approval',
-    payment: 'Invoice Sent',
-    paymentStatus: 'invoice',
-    statusColor: 'text-orange-500',
-    paymentDot: 'bg-gray-300',
-    profile: '#'
+    id: 'S2',
+    dates: '30 May – 1 Jun',
+    location: 'Aberdeen',
+    seats: '12 / 16',
+    status: 'Filling Fast',
+    statusVariant: 'warning'
   },
   {
-    initials: 'MR',
-    name: 'Michael Ross',
-    email: 'michael.ross@example.com',
-    company: 'Independent',
-    position: 'Deck Cadet',
-    date: 'Apr 22, 2024',
-    status: 'Confirmed',
-    payment: 'Paid',
-    paymentStatus: 'paid',
-    statusColor: 'text-green-600',
-    paymentDot: 'bg-green-400',
-    profile: '#'
+    id: 'S3',
+    dates: '10–12 Jun',
+    location: 'Aberdeen',
+    seats: '12 / 16',
+    status: 'Moderate',
+    statusVariant: 'info'
   },
   {
-    initials: 'DM',
-    name: 'David Miller',
-    email: 'david.miller@example.com',
-    company: 'CMA CGM',
-    position: 'Master',
-    date: 'Apr 26, 2024',
-    status: 'Waitlist',
-    payment: '',
-    paymentStatus: '',
-    statusColor: 'text-blue-600',
-    paymentDot: 'bg-gray-300',
-    profile: '#'
-  },
-  {
-    initials: 'ET',
-    name: 'Emma Thompson',
-    email: 'emma.thompson@example.com',
-    company: 'BP Shipping',
-    position: 'Chief Engineer',
-    date: 'Apr 20, 2024',
-    status: 'Cancelled',
-    payment: '',
-    paymentStatus: '',
-    statusColor: 'text-red-500',
-    paymentDot: 'bg-gray-300',
-    profile: '#'
+    id: 'S4',
+    dates: '24–26 Jun',
+    location: 'Newcastle',
+    seats: '8 / 16',
+    status: 'Open',
+    statusVariant: 'success'
   }
 ];
 
+const statusPillStyles = {
+  warning: 'bg-amber-50 text-amber-700',
+  success: 'bg-emerald-50 text-emerald-700',
+  info: 'bg-sky-50 text-sky-700',
+  default: 'bg-gray-100 text-gray-600'
+};
+
+const PAGE_SIZE = 4;
+
 export default function CourseDetail() {
-  const [statusFilter, setStatusFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showExportNotification, setShowExportNotification] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const { courseId } = useParams();
-  const printRef = useRef(null);
+  const resolvedCourseId = courseId || courseSummary.id;
 
-  // Filter applicants based on search and status
-  const filteredApplicants = applicantsData.filter(app => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesName = app.name.toLowerCase().includes(query);
-      const matchesEmail = app.email.toLowerCase().includes(query);
-      const matchesCompany = app.company.toLowerCase().includes(query);
-      if (!matchesName && !matchesEmail && !matchesCompany) return false;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('details');
+  const [status, setStatus] = useState('Published');
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+
+  const statusConfig = {
+    Published: {
+      badgeLabel: 'Published',
+      badgeClass:
+        'inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-0.5 text-xs font-semibold text-emerald-700',
+      actionLabel: 'Unpublish',
+      actionButtonClass:
+        'inline-flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-200',
+      nextStatus: 'Draft',
+      modalTitle: 'Unpublish course?',
+      modalDescription:
+        'This will move the course to Draft. Learners will no longer be able to book new sessions for this course.'
+    },
+    Draft: {
+      badgeLabel: 'Draft',
+      badgeClass:
+        'inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-3 py-0.5 text-xs font-semibold text-gray-700',
+      actionLabel: 'Publish',
+      actionButtonClass:
+        'inline-flex items-center gap-2 rounded-xl bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-200',
+      nextStatus: 'Published',
+      modalTitle: 'Publish course?',
+      modalDescription:
+        'This will publish the course so it becomes visible in the marketplace and available for bookings.'
+    },
+    Archived: {
+      badgeLabel: 'Archived',
+      badgeClass:
+        'inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-0.5 text-xs font-semibold text-gray-500',
+      actionLabel: 'Restore',
+      actionButtonClass:
+        'inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50',
+      nextStatus: 'Draft',
+      modalTitle: 'Restore course?',
+      modalDescription:
+        'This will restore the course to Draft so you can review and publish it again.'
+    }
+  };
+
+  const currentStatusConfig = statusConfig[status];
+
+  const pageCount = Math.max(1, Math.ceil(sessionData.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, pageCount);
+
+  const { visibleSessions, startIndex, endIndex } = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return {
+      visibleSessions: sessionData.slice(start, end),
+      startIndex: start,
+      endIndex: end
+    };
+  }, [safeCurrentPage]);
+
+  const handleChangePage = (page) => {
+    if (page < 1 || page > pageCount || page === safeCurrentPage) return;
+    setCurrentPage(page);
+  };
+
+  const paginationItems = useMemo(() => {
+    if (pageCount <= 5) {
+      return Array.from({ length: pageCount }, (_, idx) => idx + 1);
     }
 
-    // Status filter
-    if (statusFilter) {
-      if (statusFilter === 'confirmed' && app.status !== 'Confirmed') return false;
-      if (statusFilter === 'pending' && app.status !== 'Pending Approval') return false;
-      if (statusFilter === 'waitlist' && app.status !== 'Waitlist') return false;
-      if (statusFilter === 'cancelled' && app.status !== 'Cancelled') return false;
-    }
+    return [1, 2, 'ellipsis', pageCount];
+  }, [pageCount]);
 
-    return true;
-  });
-
-  const totalPages = Math.ceil(filteredApplicants.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentApplicants = filteredApplicants.slice(startIndex, endIndex);
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  // Export to CSV handler
-  const handleExportCSV = () => {
-    const headers = ['Name', 'Email', 'Company', 'Position', 'Date Booked', 'Status', 'Payment'];
-    const csvData = filteredApplicants.map(app => [
-      app.name,
-      app.email,
-      app.company,
-      app.position,
-      app.date,
-      app.status,
-      app.payment || 'N/A'
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `stcw_basic_safety_applicants_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Show export notification
-    setShowExportNotification(true);
-    setTimeout(() => setShowExportNotification(false), 3000);
-  };
-
-  // Print handler - prints only the table data
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>STCW Basic Safety Training - Applicants List</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { font-size: 18px; margin-bottom: 10px; }
-            h2 { font-size: 14px; color: #666; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f5f5f5; font-weight: 600; }
-            .status-confirmed { color: green; }
-            .status-pending { color: orange; }
-            .status-waitlist { color: blue; }
-            .status-cancelled { color: red; }
-          </style>
-        </head>
-        <body>
-          <h1>STCW Basic Safety Training - Applicants List</h1>
-          <h2>Printed on: ${new Date().toLocaleDateString()}</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Applicant Name</th>
-                <th>Email</th>
-                <th>Company</th>
-                <th>Position</th>
-                <th>Date Booked</th>
-                <th>Status</th>
-                <th>Payment</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredApplicants.map(app => `
-                <tr>
-                  <td>${app.name}</td>
-                  <td>${app.email}</td>
-                  <td>${app.company}</td>
-                  <td>${app.position}</td>
-                  <td>${app.date}</td>
-                  <td class="status-${app.status.toLowerCase().replace(' ', '-')}">${app.status}</td>
-                  <td>${app.payment || 'N/A'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  // Edit Course handler
   const handleEditCourse = () => {
-    navigate(`/trainingprovider/courses/${courseId || 'STCW-BST-001'}/edit`);
+    navigate(`/trainingprovider/courses/${resolvedCourseId}/edit`);
   };
 
-  // Add Applicant handler
-  const handleAddApplicant = () => {
-    alert('Add Applicant functionality - Opens a modal/form to manually add an applicant');
+  const handleAddSession = () => {
+    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions/schedule`);
   };
 
-  // View Profile handler
-  const handleViewProfile = (applicant) => {
-    // Navigate to candidate profile page - using applicant id or a default id
-    // Check if we are in the admin dashboard context (Marketplace)
-    const isAdminMarketplace = location.pathname.includes('/admin/marketplace');
+  const handleManageSessionList = () => {
+    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions`);
+  };
 
-    if (isAdminMarketplace) {
-      navigate(`/admin/marketplace/candidate/${applicant.id || '1'}`);
-    } else {
-      navigate(`/trainingprovider/candidate/${applicant.id || '1'}`);
+  const handleStatusActionClick = () => {
+    setStatusDialogOpen(true);
+  };
+
+  const handleConfirmStatusChange = () => {
+    const nextStatus = currentStatusConfig?.nextStatus;
+    if (nextStatus) {
+      setStatus(nextStatus);
     }
+    setStatusDialogOpen(false);
   };
 
-
+  const handleCancelStatusChange = () => {
+    setStatusDialogOpen(false);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Export Notification Toast */}
-      {showExportNotification && (
-        <div className="fixed top-4 left-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-left duration-300">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="font-medium">CSV Exported Successfully!</span>
-        </div>
-      )}
+    <div className="flex flex-col min-h-full">
+      {/* Breadcrumb */}
+      <div className="flex items-center text-xs text-gray-500 mb-3">
+        <button
+          type="button"
+          onClick={() => navigate('/trainingprovider/courses')}
+          className="hover:text-[#003971] font-medium"
+        >
+          Course Management
+        </button>
+        <span className="mx-2">/</span>
+        <span className="font-medium text-gray-700">{courseSummary.title}</span>
+      </div>
 
-      {/* Back Link */}
-      <button
-        className="flex items-center text-sm text-gray-500 hover:text-blue-700 mb-4"
-        onClick={() => navigate(-1)}
-      >
-        <span className="mr-2">&larr;</span> Back to Courses
-      </button>
-
-      {/* Heading */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">STCW Basic Safety Training</h1>
-          <div className="text-gray-500 text-sm mt-1 flex items-center gap-2">
-            <span>ID: STCW-BST-001</span>
-            <span className="mx-2">•</span>
-            <span>Last updated 2 days ago</span>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+        <div className="flex items-center gap-4">
+          <div className="h-11 w-11 rounded-full bg-orange-50 flex items-center justify-center">
+            <BookOpen className="h-5 w-5 text-orange-500" />
+          </div>
+          <div>
+            <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900">
+              Manage Course
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-semibold text-gray-900">
+                {courseSummary.title}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-0.5 text-xs font-semibold text-[#003971]">
+                {courseSummary.categoryTag}
+              </span>
+              {currentStatusConfig && (
+                <span className={currentStatusConfig.badgeClass}>
+                  {currentStatusConfig.badgeLabel}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {!location.pathname.includes('/marketplace') && (
-            <>
-              <button
-                onClick={handleEditCourse}
-                className="px-5 py-2 text-sm font-medium rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 flex items-center gap-2">
-                <Edit className="h-4 w-4" /> Edit Course
-              </button>
-              <button
-                className="px-5 py-2 text-sm font-medium rounded-md bg-[#003971] text-white hover:bg-[#002855] flex items-center gap-2"
-                onClick={() => navigate(`/trainingprovider/courses/STCW-BST-001/sessions`)}
-              >
-                <Calendar className="h-4 w-4" /> Manage Session
-              </button>
-            </>
+          <button
+            type="button"
+            onClick={handleEditCourse}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <span>Edit Course</span>
+          </button>
+          {currentStatusConfig && (
+            <button
+              type="button"
+              onClick={handleStatusActionClick}
+              className={currentStatusConfig.actionButtonClass}
+            >
+              <span>{currentStatusConfig.actionLabel}</span>
+            </button>
           )}
         </div>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {/* Total Seats */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-2 shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">Total Seats</div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-gray-900">14</span>
-            <span className="text-gray-400">/ 16</span>
-            <span className="ml-2 text-sm font-medium text-orange-500">Filling Fast</span>
+      {/* Tabs */}
+      <div className="mb-5 border-b border-gray-100">
+        <nav className="flex flex-wrap gap-4 text-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab('details')}
+            className={`relative pb-3 font-medium ${
+              activeTab === 'details'
+                ? 'text-[#003971]'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            Course Details
+            {activeTab === 'details' && (
+              <span className="absolute inset-x-0 -bottom-[1px] h-0.5 rounded-full bg-[#003971]" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sessions')}
+            className={`pb-3 font-medium ${
+              activeTab === 'sessions'
+                ? 'text-[#003971]'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            Sessions
+          </button>
+          <button
+            type="button"
+            className="pb-3 text-gray-400 font-medium cursor-default"
+          >
+            Analytics
+          </button>
+          <button
+            type="button"
+            className="pb-3 text-gray-400 font-medium cursor-default"
+          >
+            Pricing
+          </button>
+        </nav>
+      </div>
+
+      {/* Top Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+        <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+            <Users className="h-5 w-5 text-blue-600" />
           </div>
-          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-            <div className="h-full bg-orange-500 rounded-full" style={{ width: '87.5%' }} />
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Total Seats
+            </p>
+            <p className="mt-1 text-xl font-bold text-gray-900">
+              {courseSummary.totalSeats}
+            </p>
           </div>
         </div>
-        {/* Upcoming Session */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-2 shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">Upcoming Session</div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-blue-500" />
-            <span className="font-medium text-gray-900">May 15 - 17, 2024</span>
+        <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+            <Calendar className="h-5 w-5 text-emerald-600" />
           </div>
-          <div className="text-xs text-gray-500 mt-1">09:00 AM - 05:00 PM</div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Sessions
+            </p>
+            <p className="mt-1 text-xl font-bold text-gray-900">
+              {courseSummary.sessions}
+            </p>
+          </div>
         </div>
-        {/* Location */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-2 shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">Location</div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-purple-500" />
-            <span className="font-medium text-gray-900">Training Center A</span>
+        <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50">
+            <Users className="h-5 w-5 text-sky-600" />
           </div>
-          <div className="text-xs text-gray-500 mt-1">Aberdeen, UK</div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Bookings
+            </p>
+            <p className="mt-1 text-xl font-bold text-gray-900">
+              {courseSummary.bookings}
+            </p>
+          </div>
         </div>
-        {/* Instructor */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-2 shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">Instructor</div>
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5 text-green-500" />
-            <span className="font-medium text-gray-900">Capt. Robert Fox</span>
+        <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+            <DollarSign className="h-5 w-5 text-emerald-600" />
           </div>
-          <div className="text-xs text-gray-500 mt-1">Senior Instructor</div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Revenue
+            </p>
+            <p className="mt-1 text-xl font-bold text-gray-900">
+              {courseSummary.revenue}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Applicants Table Card */}
-      <div className="bg-white rounded-xl border border-gray-200 flex flex-col mb-6">
-        {/* Filters Row */}
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <input
-              type="text"
-              placeholder="Search applicants..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-            />
-            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={e => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer"
-              >
-                <option value="">Status</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="pending">Pending Approval</option>
-                <option value="waitlist">Waitlist</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      {/* Description + Sessions */}
+      <div className="flex-1 flex flex-col gap-5 overflow-y-auto">
+        {/* Description + Session List */}
+        <div className="flex flex-col gap-5 overflow-hidden">
+          {/* Description Card (only on Course Details tab) */}
+          {activeTab === 'details' && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="mb-4">
+                <h2 className="text-base font-bold text-gray-900 mb-1">
+                  Description
+                </h2>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {courseSummary.description}
+                </p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {courseHighlights.map((item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Printer className="h-4 w-4 text-gray-500" /> Print List
-            </button>
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Download className="h-4 w-4 text-gray-500" /> Export CSV
-            </button>
-          </div>
-        </div>
-        {/* Table */}
-        <div className="overflow-x-auto" ref={printRef}>
-          <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0">
-              <tr>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicant Name</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Booked</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {currentApplicants.map((app, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                  {/* Applicant Name */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-base">
-                        {app.initials}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{app.name}</p>
-                        <p className="text-xs text-gray-400">{app.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  {/* Company */}
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-gray-900 text-sm font-medium">{app.company}</p>
-                      <p className="text-xs text-gray-400">{app.position}</p>
-                    </div>
-                  </td>
-                  {/* Date Booked */}
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">{app.date}</span>
-                  </td>
-                  {/* Status */}
-                  <td className="px-6 py-4">
-                    <span className={`text-sm font-medium ${app.statusColor}`}>{app.status}</span>
-                  </td>
-                  {/* Payment */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {app.payment && (
-                        <>
-                          <span className={`h-2 w-2 rounded-full ${app.paymentDot}`}></span>
-                          <span className="text-sm text-gray-600">{app.payment}</span>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  {/* Actions */}
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleViewProfile(app)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                      View Profile
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Showing</span>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-200"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-            </select>
-            <span>of {filteredApplicants.length} applicants</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1}
-            >
-              <ChevronDown className="h-4 w-4 rotate-90" />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          )}
+
+          {/* Session List (visible for both tabs) */}
+          <div className="flex-1 rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col overflow-auto">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">
+                Session List
+              </h2>
               <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${currentPage === page
-                  ? 'bg-white border-gray-300 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
+                type="button"
+                onClick={handleAddSession}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002455]"
               >
-                {page}
+                <span>Add Session</span>
               </button>
-            ))}
-            <button
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronDown className="h-4 w-4 -rotate-90" />
-            </button>
+            </div>
+
+            <div className="flex-1 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-5 py-3 text-left">Session Dates</th>
+                    <th className="px-4 py-3 text-left">Location</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">
+                      Seat Enrolled
+                    </th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-5 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleSessions.map((session, index) => {
+                    const isLast = index === visibleSessions.length - 1;
+                    const pillClass =
+                      statusPillStyles[session.statusVariant] ||
+                      statusPillStyles.default;
+
+                    return (
+                      <tr
+                        key={session.id}
+                        className={`text-sm ${
+                          !isLast ? 'border-b border-gray-50' : ''
+                        } hover:bg-gray-50/60 transition-colors`}
+                      >
+                        <td className="px-5 py-3 align-middle text-gray-900">
+                          {session.dates}
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <span className="flex items-center gap-1.5 text-gray-800">
+                            <MapPin className="h-4 w-4 text-purple-500" />
+                            {session.location}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-center font-semibold text-gray-800">
+                          {session.seats}
+                        </td>
+                        <td className="px-4 py-3 align-middle text-center">
+                          <span
+                            className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold ${pillClass}`}
+                          >
+                            {session.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 align-middle text-right">
+                          <button
+                            type="button"
+                            onClick={handleManageSessionList}
+                            className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff]"
+                          >
+                            Manage
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 text-xs text-gray-500">
+              <p>
+                Showing{' '}
+                <span className="font-semibold">
+                  {sessionData.length ? startIndex + 1 : 0}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold">
+                  {Math.min(sessionData.length, endIndex)}
+                </span>{' '}
+                of{' '}
+                <span className="font-semibold">{sessionData.length}</span>{' '}
+                sessions
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 disabled:opacity-50 disabled:cursor-default"
+                  disabled={safeCurrentPage === 1}
+                  onClick={() => handleChangePage(safeCurrentPage - 1)}
+                >
+                  Prev
+                </button>
+                {paginationItems.map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <span key={`ellipsis-${idx}`} className="px-1">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => handleChangePage(item)}
+                      className={`h-8 px-3 rounded-lg text-xs font-semibold ${
+                        item === safeCurrentPage
+                          ? 'bg-[#003971] text-white'
+                          : 'border border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-600 disabled:opacity-50 disabled:cursor-default"
+                  disabled={safeCurrentPage === pageCount}
+                  onClick={() => handleChangePage(safeCurrentPage + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {statusDialogOpen && currentStatusConfig && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {currentStatusConfig.modalTitle}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {currentStatusConfig.modalDescription}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCancelStatusChange}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusChange}
+                className="px-4 py-2.5 rounded-xl bg-[#003971] text-sm font-semibold text-white hover:bg-[#002455]"
+              >
+                {currentStatusConfig.actionLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
