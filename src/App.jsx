@@ -176,7 +176,7 @@ function App() {
             <Route path="/trainingprovider/sessions/attendance" element={<SessionAttendance />} />
             <Route path="/trainingprovider/courses/create" element={<TrainingProviderCreateCourse />} />
             <Route path="/trainingprovider/courses/:courseId/edit" element={<EditCourse />} />
-            <Route path="/trainingprovider/bookings" element={<Bookings />} />
+            <Route path="/trainingprovider/bookings" element={<ManageSessions />} />
             <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
             <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
             <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
@@ -214,6 +214,8 @@ function App() {
             <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
             <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
+            <Route path="/admin/admin-chats" element={<AdminChats isAdmin={true} />} />
+            <Route path="/admin/admin-cv-resume" element={<CVResume isReadOnly={true} />} />
           </Route>
 
           {/* Personal Dashboard Protected Routes (With Layout) */}

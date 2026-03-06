@@ -4,7 +4,7 @@ import { Search, ChevronDown, FileText, CheckCircle, XCircle, AlertTriangle, Ref
 
 function Compliance() {
     const [activeTab, setActiveTab] = useState('All');
-    const [timeFilter, setTimeFilter] = useState('Today');
+    const [timeFilter, setTimeFilter] = useState('30 Days');
 
     const tabs = ['All', 'Professionals', 'Recruiters', 'Training Providers'];
     const timeFilters = ['Today', '7 Days', '30 Days'];
@@ -153,7 +153,7 @@ function Compliance() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const itemsPerPage = 10;
 
     // Filter Logic
     const filteredRecords = complianceRecords.filter(record => {

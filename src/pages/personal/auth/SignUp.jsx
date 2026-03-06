@@ -15,7 +15,9 @@ function isPasswordStrong(password) {
 function SignUp() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -53,9 +55,17 @@ function SignUp() {
     setLoading(true);
 
     try {
+      const fullName = [formData.firstName, formData.middleName, formData.lastName]
+        .map((namePart) => namePart.trim())
+        .filter(Boolean)
+        .join(' ');
+
       // Call registration API
       const response = await authService.register({
-        fullName: formData.fullName,
+        firstName: formData.firstName.trim(),
+        middleName: formData.middleName.trim(),
+        lastName: formData.lastName.trim(),
+        fullName,
         email: formData.email,
         password: formData.password,
       });
@@ -80,7 +90,7 @@ function SignUp() {
   return (
     <div className="h-screen flex overflow-hidden w-full max-w-full min-w-0">
       {/* Left Side - Form */}
-      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
+      <div className="w-full min-w-0 lg:w-2/5 flex flex-col justify-start px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
           {/* Logo */}
           <div className="mb-2 sm:mb-3 -ml-2">
@@ -111,10 +121,10 @@ function SignUp() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name Field */}
+            {/* First Name Field */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                First Name
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -123,13 +133,60 @@ function SignUp() {
                   </svg>
                 </div>
                 <input
-                  id="fullName"
-                  name="fullName"
+                  id="firstName"
+                  name="firstName"
                   type="text"
                   required
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
-                  placeholder="Enter your full name"
-                  value={formData.fullName}
+                  placeholder="Enter your first name"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            {/* Middle Name Field */}
+            <div>
+              <label htmlFor="middleName" className="block text-sm font-medium text-gray-700 mb-1">
+                Middle Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  id="middleName"
+                  name="middleName"
+                  type="text"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                  placeholder="Enter your middle name"
+                  value={formData.middleName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            {/* Last Name Field */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm min-h-[44px]"
+                  placeholder="Enter your last name"
+                  value={formData.lastName}
                   onChange={handleChange}
                 />
               </div>

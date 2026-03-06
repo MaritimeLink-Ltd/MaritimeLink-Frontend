@@ -165,6 +165,7 @@ const CVResume = ({ isReadOnly = false }) => {
             gender: 'Male',
             height: '160cm',
             weight: '89kg',
+            bmi: '24.5',
             eyeColor: 'Brown',
             overallSize: 'Medium',
             shoeSize: '9'
@@ -714,6 +715,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">Gender</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Height</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Weight</th>
+                                                <th className="px-5 py-3.5 text-left text-sm font-semibold">BMI</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Eye Color</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Overall Size</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Shoe Size</th>
@@ -724,6 +726,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.gender}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.height}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.weight}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.bmi}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.eyeColor}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.overallSize}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.shoeSize}</td>

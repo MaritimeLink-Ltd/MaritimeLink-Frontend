@@ -9,7 +9,7 @@ export default function Bookings() {
     const [regionFilter, setRegionFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(9);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Mock data for bookings
     const bookings = [
@@ -381,60 +381,27 @@ export default function Bookings() {
                 </div>
 
                 {/* Pagination */}
-                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>Showing</span>
-                        <select
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                setItemsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-200"
-                        >
-                            <option value={5}>5</option>
-                            <option value={9}>9</option>
-                            <option value={25}>25</option>
-                        </select>
-                        <span>of {filteredBookings.length} bookings</span>
+                <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-white">
+                    <div className="text-sm text-gray-600">
+                        Showing <span className="font-semibold">{filteredBookings.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, filteredBookings.length)}</span> of <span className="font-semibold">{filteredBookings.length}</span> entries
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={handlePreviousPage}
                             disabled={currentPage === 1}
-                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronLeft className="h-4 w-4" />
+                            className="h-11 w-12 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                        >
+                            ←
                         </button>
-                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
-                            <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${page === currentPage
-                                    ? 'bg-[#003971] border-[#003971] text-white'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                                    }`}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        {totalPages > 5 && (
-                            <>
-                                <span className="px-2 text-gray-400">...</span>
-                                <button
-                                    onClick={() => setCurrentPage(totalPages)}
-                                    className={`min-w-[32px] h-8 text-sm font-medium rounded border transition-colors ${totalPages === currentPage
-                                        ? 'bg-[#003971] border-[#003971] text-white'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                        }`}>
-                                    {totalPages}
-                                </button>
-                            </>
-                        )}
+                        <button className="h-11 w-11 rounded-xl bg-[#1e5a8f] text-white font-semibold">
+                            {currentPage}
+                        </button>
                         <button
                             onClick={handleNextPage}
-                            disabled={currentPage === totalPages}
-                            className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <ChevronRight className="h-4 w-4" />
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className="h-11 w-12 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                        >
+                            →
                         </button>
                     </div>
                 </div>

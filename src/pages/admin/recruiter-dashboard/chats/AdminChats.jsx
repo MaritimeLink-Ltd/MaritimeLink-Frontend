@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Search,
     Building2,
@@ -9,8 +9,14 @@ import {
     AlertTriangle
 } from 'lucide-react';
 
-function AdminChats({ candidateId, candidateName, onViewProfile }) {
+function AdminChats({ candidateId: propCandidateId, candidateName: propCandidateName, onViewProfile, isAdmin }) {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Support both props (if mounted as component) and location.state (if navigated via route)
+    const candidateId = propCandidateId || location.state?.candidateId;
+    const candidateName = propCandidateName || location.state?.candidateName;
+
     const [selectedChat, setSelectedChat] = useState(candidateId || 1);
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -261,7 +267,7 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                     Report
                                 </button>
                                 <button
-                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(`/recruiter/candidate/${selectedChat}`)}
+                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(isAdmin ? `/admin/candidate/${selectedChat}` : `/recruiter/candidate/${selectedChat}`)}
                                     className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
                                 >
                                     <FileText className="h-4 w-4" />
@@ -357,8 +363,8 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                 <label
                                     key={reason.id}
                                     className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${selectedReason === reason.id
-                                            ? 'border-red-600 bg-red-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-red-600 bg-red-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <input
@@ -388,8 +394,8 @@ function AdminChats({ candidateId, candidateName, onViewProfile }) {
                                 onClick={handleReport}
                                 disabled={!selectedReason}
                                 className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${selectedReason
-                                        ? 'bg-red-600 text-white hover:bg-red-700'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    ? 'bg-red-600 text-white hover:bg-red-700'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 Submit Report

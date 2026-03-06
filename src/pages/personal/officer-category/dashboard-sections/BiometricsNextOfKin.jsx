@@ -6,6 +6,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     gender: 'Male',
     height: '',
     weight: '',
+    bmi: '',
     eyeColor: '',
     overallSize: '',
     shoeSize: ''
@@ -22,6 +23,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   const [currentReferee, setCurrentReferee] = useState({
     name: '',
     position: '',
+    company: '',
     countryCode: '+44',
     phone: '',
     email: ''
@@ -105,6 +107,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
       setCurrentReferee({
         name: '',
         position: '',
+        company: '',
         countryCode: '+44',
         phone: '',
         email: ''
@@ -244,8 +247,23 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
               </div>
             </div>
 
-            {/* Eye Color */}
+            {/* BMI and Eye Color */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="bmi" className="block text-gray-700 font-medium mb-1 text-sm">
+                  BMI
+                </label>
+                <input
+                  type="text"
+                  id="bmi"
+                  name="bmi"
+                  placeholder="Enter BMI"
+                  value={biometricData.bmi}
+                  onChange={handleBiometricChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                />
+              </div>
+
               <div>
                 <label htmlFor="eyeColor" className="block text-gray-700 font-medium mb-1 text-sm">
                   Eye Color
@@ -429,7 +447,12 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{referee.name}</p>
-                    <p className="text-xs text-gray-600">{referee.email}</p>
+                    {(referee.position || referee.company) && (
+                      <p className="text-xs font-medium text-gray-700">
+                        {referee.position}{referee.position && referee.company ? ' at ' : ''}{referee.company}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">{referee.email}</p>
                   </div>
                 ))}
               </div>
@@ -462,6 +485,21 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                   name="position"
                   placeholder="Enter referee position"
                   value={currentReferee.position}
+                  onChange={handleRefereeChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="refereeCompany" className="block text-gray-700 font-medium mb-1 text-sm">
+                  Company Name
+                </label>
+                <input
+                  type="text"
+                  id="refereeCompany"
+                  name="company"
+                  placeholder="Enter company name"
+                  value={currentReferee.company}
                   onChange={handleRefereeChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />

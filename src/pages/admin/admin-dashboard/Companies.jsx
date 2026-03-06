@@ -149,7 +149,7 @@ function Companies() {
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5; // Low number for demo purposes since we have few mock items
+    const itemsPerPage = 10;
 
     // Dropdown visibility states
     const [openDropdown, setOpenDropdown] = useState(''); // 'status', 'type', 'country' or ''
@@ -227,7 +227,7 @@ function Companies() {
     };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="flex flex-col">
             {/* Header */}
             <div className="flex-shrink-0 mb-6">
                 <h1 className="text-[28px] font-bold text-gray-900 mb-2">Companies Overview</h1>
@@ -287,7 +287,7 @@ function Companies() {
             </div>
 
             {/* Companies Table Card - Scrollable */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
                 {/* Search and Filters */}
                 <div className="flex-shrink-0 p-4 border-b border-gray-100">
                     <div className="flex items-center justify-between gap-4">
@@ -432,7 +432,7 @@ function Companies() {
                 </div>
 
                 {/* Table - Scrollable Content */}
-                <div className="flex-1 overflow-auto">
+                <div className="overflow-auto">
                     <table className="w-full">
                         <thead className="bg-white border-b border-gray-100 sticky top-0 z-10">
                             <tr>

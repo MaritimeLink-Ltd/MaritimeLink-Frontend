@@ -8,51 +8,56 @@ const sessionsData = [
     date: 'May 15 - 17, 2024',
     time: '09:00 - 17:00',
     location: 'Training Center A',
-    instructor: 'Capt. Robert Fox',
+    courseType: 'STCW',
+    pendingApprovals: 3,
     booked: 14,
     total: 16,
     status: 'Filling Fast',
     statusColor: 'text-orange-500',
   },
   {
-    id: 'STCW-BST-001',
-    date: 'May 15 - 17, 2024',
+    id: 'STCW-BST-002',
+    date: 'May 18 - 20, 2024',
     time: '09:00 - 17:00',
     location: 'Training Center A',
-    instructor: 'Capt. Robert Fox',
+    courseType: 'Safety & Security',
+    pendingApprovals: 5,
     booked: 14,
     total: 16,
     status: 'Filling Fast',
     statusColor: 'text-orange-500',
   },
   {
-    id: 'STCW-BST-001',
-    date: 'May 15 - 17, 2024',
+    id: 'STCW-BST-003',
+    date: 'May 21 - 23, 2024',
     time: '09:00 - 17:00',
     location: 'Training Center A',
-    instructor: 'Capt. Robert Fox',
+    courseType: 'Navigation',
+    pendingApprovals: 1,
     booked: 14,
     total: 16,
     status: 'Filling Fast',
     statusColor: 'text-orange-500',
   },
   {
-    id: 'STCW-BST-001',
-    date: 'May 15 - 17, 2024',
+    id: 'STCW-BST-004',
+    date: 'May 24 - 26, 2024',
     time: '09:00 - 17:00',
     location: 'Training Center A',
-    instructor: 'Capt. Robert Fox',
+    courseType: 'Engineering',
+    pendingApprovals: 8,
     booked: 14,
     total: 16,
     status: 'Filling Fast',
     statusColor: 'text-orange-500',
   },
   {
-    id: 'STCW-BST-001',
-    date: 'May 15 - 17, 2024',
+    id: 'STCW-BST-005',
+    date: 'May 27 - 29, 2024',
     time: '09:00 - 17:00',
     location: 'Training Center A',
-    instructor: 'Capt. Robert Fox',
+    courseType: 'STCW',
+    pendingApprovals: 2,
     booked: 14,
     total: 16,
     status: 'Filling Fast',
@@ -94,7 +99,7 @@ const overviewCards = [
 export default function ManageSessions() {
   const [statusFilter, setStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [instructorFilter, setInstructorFilter] = useState('');
+  const [courseTypeFilter, setCourseTypeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -111,9 +116,9 @@ export default function ManageSessions() {
       const query = searchQuery.toLowerCase();
       const matchesId = session.id.toLowerCase().includes(query);
       const matchesLocation = session.location.toLowerCase().includes(query);
-      const matchesInstructor = session.instructor.toLowerCase().includes(query);
       const matchesDate = session.date.toLowerCase().includes(query);
-      if (!matchesId && !matchesLocation && !matchesInstructor && !matchesDate) return false;
+      const matchesCourseType = session.courseType.toLowerCase().includes(query);
+      if (!matchesId && !matchesLocation && !matchesDate && !matchesCourseType) return false;
     }
 
     // Status filter
@@ -128,9 +133,9 @@ export default function ManageSessions() {
       if (locationFilter === 'training-center-a' && session.location !== 'Training Center A') return false;
     }
 
-    // Instructor filter
-    if (instructorFilter) {
-      if (instructorFilter === 'robert-fox' && session.instructor !== 'Capt. Robert Fox') return false;
+    // Course Type filter
+    if (courseTypeFilter) {
+      if (courseTypeFilter !== session.courseType) return false;
     }
 
     return true;
@@ -151,13 +156,14 @@ export default function ManageSessions() {
 
   // Export to CSV handler
   const handleExportCSV = () => {
-    const headers = ['Session ID', 'Date', 'Time', 'Location', 'Instructor', 'Booked', 'Total', 'Status'];
+    const headers = ['Session ID', 'Date', 'Time', 'Location', 'Pending Approvals', 'Course Type', 'Booked', 'Total', 'Status'];
     const csvData = filteredSessions.map(session => [
       session.id,
       session.date,
       session.time,
       session.location,
-      session.instructor,
+      session.pendingApprovals,
+      session.courseType,
       session.booked,
       session.total,
       session.status
@@ -195,7 +201,7 @@ export default function ManageSessions() {
           startTime: session.time.split(' - ')[0],
           endTime: session.time.split(' - ')[1],
           location: session.location,
-          instructor: session.instructor,
+          courseType: session.courseType,
           totalSeats: session.total
         }
       }
@@ -228,13 +234,7 @@ export default function ManageSessions() {
         </div>
       )}
 
-      {/* Back Link */}
-      <button
-        className="flex items-center text-sm text-gray-500 hover:text-blue-700 mb-4"
-        onClick={() => navigate(-1)}
-      >
-        <span className="mr-2">&larr;</span> Back to Course Details
-      </button>
+
 
       {/* Heading */}
       <div className="mb-4">
@@ -318,15 +318,18 @@ export default function ManageSessions() {
             </div>
             <div className="relative">
               <select
-                value={instructorFilter}
+                value={courseTypeFilter}
                 onChange={e => {
-                  setInstructorFilter(e.target.value);
+                  setCourseTypeFilter(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="appearance-none pl-4 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 cursor-pointer"
               >
-                <option value="">Instructor</option>
-                <option value="robert-fox">Capt. Robert Fox</option>
+                <option value="">Course Type</option>
+                <option value="STCW">STCW</option>
+                <option value="Safety & Security">Safety & Security</option>
+                <option value="Navigation">Navigation</option>
+                <option value="Engineering">Engineering</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
@@ -351,7 +354,8 @@ export default function ManageSessions() {
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Session ID</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Instructor</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Course Type</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Approvals</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Booked</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -371,7 +375,12 @@ export default function ManageSessions() {
                     <span className="flex items-center gap-1 text-gray-900 text-sm font-medium"><MapPin className="h-4 w-4 inline-block mr-1 text-purple-500" />{session.location}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="flex items-center gap-1 text-gray-900 text-sm font-medium"><User className="h-4 w-4 inline-block mr-1 text-green-500" />{session.instructor}</span>
+                    <span className="flex items-center gap-1 text-gray-900 text-sm font-medium">{session.courseType}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      {session.pendingApprovals} Pending
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-gray-900 text-sm font-medium">{session.booked} / {session.total}</span>
@@ -385,7 +394,7 @@ export default function ManageSessions() {
                       onClick={() => navigate('/trainingprovider/sessions/attendance')}
                       className="inline-flex items-center justify-center rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002855]"
                     >
-                      View Attendance
+                      View Attendees
                     </button>
                   </td>
                 </tr>

@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { countryCodes } from '../../../utils/countryCodes';
+
+const courseTitleOptions = [
+    'STCW Basic Safety Training',
+    'Advanced Firefighting',
+    'Medical First Aid',
+    'Bridge Resource Management',
+    'STCW Refresher Course',
+    'Other'
+];
 
 function CreateCourse() {
     const navigate = useNavigate();
@@ -11,15 +21,17 @@ function CreateCourse() {
     // Initialize state with default values or edit data if available
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
-        courseTitle: editData?.courseName || '',
+        courseTitle: editData?.courseName || 'STCW Basic Safety Training',
+        otherCourseTitle: '',
         location: editData?.location || '',
         category: editData?.type || 'STCW',
-        certificationType: 'Mandatory', // Default as it might not be in the mock data
+        courseType: 'Initial',
+        issuingAuthority: 'United Kingdom',
         description: ''
     });
 
-    const categories = ['STCW', 'Option 2', 'Option 3'];
-    const certificationTypes = ['Mandatory', 'Optional'];
+    const categories = ['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'];
+    const courseTypes = ['Refresher', 'Upgrade', 'Initial', 'Other'];
 
     const handleNext = () => {
         setStep(2);
@@ -66,13 +78,26 @@ function CreateCourse() {
                                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                                     Course Title
                                 </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter your job title"
+                                <select
                                     value={formData.courseTitle}
                                     onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
-                                />
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] bg-white"
+                                >
+                                    {courseTitleOptions.map((title) => (
+                                        <option key={title} value={title}>
+                                            {title}
+                                        </option>
+                                    ))}
+                                </select>
+                                {formData.courseTitle === 'Other' && (
+                                    <input
+                                        type="text"
+                                        placeholder="Enter course title"
+                                        value={formData.otherCourseTitle}
+                                        onChange={(e) => setFormData({ ...formData, otherCourseTitle: e.target.value })}
+                                        className="w-full mt-3 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                    />
+                                )}
                             </div>
 
                             {/* Location */}
@@ -110,17 +135,17 @@ function CreateCourse() {
                                 </div>
                             </div>
 
-                            {/* Certification Type */}
+                            {/* Course Type */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                    Certification Type
+                                    Course Type
                                 </label>
                                 <div className="flex flex-wrap gap-2">
-                                    {certificationTypes.map((type) => (
+                                    {courseTypes.map((type) => (
                                         <button
                                             key={type}
-                                            onClick={() => setFormData({ ...formData, certificationType: type })}
-                                            className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${formData.certificationType === type
+                                            onClick={() => setFormData({ ...formData, courseType: type })}
+                                            className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${formData.courseType === type
                                                 ? 'bg-[#1e5a8f] text-white'
                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                 }`}
@@ -129,6 +154,24 @@ function CreateCourse() {
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+
+                            {/* Issuing Authority */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                    Issuing Authority
+                                </label>
+                                <select
+                                    value={formData.issuingAuthority}
+                                    onChange={(e) => setFormData({ ...formData, issuingAuthority: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] bg-white"
+                                >
+                                    {countryCodes.map((item) => (
+                                        <option key={item.country} value={item.country}>
+                                            {item.country}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Next Button */}

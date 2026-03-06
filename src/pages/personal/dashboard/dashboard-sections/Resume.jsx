@@ -164,6 +164,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
             gender: 'Male',
             height: '160cm',
             weight: '89kg',
+            bmi: '24.5',
             eyeColor: 'Brown',
             overallSize: 'Medium',
             shoeSize: '9'
@@ -180,6 +181,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
             {
                 name: 'Omar, Azrol Amir',
                 position: 'Second Engineer',
+                company: 'Maersk',
                 phoneNumber: '+60178348297',
                 email: 'amioq@yahoo.com'
             }
@@ -259,6 +261,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     gender: bio.biometricData?.gender || '',
                     height: bio.biometricData?.height ? `${bio.biometricData?.height}cm` : '',
                     weight: bio.biometricData?.weight ? `${bio.biometricData?.weight}kg` : '',
+                    bmi: bio.biometricData?.bmi || '',
                     eyeColor: bio.biometricData?.eyeColor || '',
                     shoeSize: bio.biometricData?.shoeSize || '',
                     overallSize: bio.biometricData?.overallSize || '',
@@ -866,6 +869,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">Gender</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Height</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Weight</th>
+                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">BMI</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Eye Color</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Overall Size</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Shoe Size</th>
@@ -876,6 +880,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.gender}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.height}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.weight}</td>
+                                            <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.bmi}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.eyeColor}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.overallSize}</td>
                                             <td className="px-5 py-4 text-sm text-gray-700">{userData.biometricInfo.shoeSize}</td>
@@ -931,6 +936,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                         <tr className="bg-[#1E3A5F] text-white">
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">Name</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Position</th>
+                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">Company</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Phone Number</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Email</th>
                                         </tr>
@@ -940,6 +946,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                 <td className="px-5 py-4 text-sm text-gray-700">{ref.name}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{ref.position}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{ref.company}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{ref.phoneNumber}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{ref.email}</td>
                                             </tr>

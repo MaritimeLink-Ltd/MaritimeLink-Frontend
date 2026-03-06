@@ -9,15 +9,15 @@ import {
     MapPin,
     Users
 } from 'lucide-react';
+import { countryCodes } from '../../../../utils/countryCodes';
 
-const certificateTypes = [
-    'STCW Basic Safety',
+const courseTitleOptions = [
+    'STCW Basic Safety Training',
     'Advanced Firefighting',
-    'Fast Rescue Boat',
-    'GWO Sea Survival',
-    'Medical Care Onboard',
-    'ECDIS',
-    'Confined Space'
+    'Medical First Aid',
+    'Bridge Resource Management',
+    'STCW Refresher Course',
+    'Other'
 ];
 
 export default function CreateCourse() {
@@ -30,10 +30,11 @@ export default function CreateCourse() {
     const [successConfig, setSuccessConfig] = useState({ mode: 'published', title: '' });
 
     const [form, setForm] = useState({
-        title: '',
-        certificateType: 'STCW Basic Safety',
+        title: 'STCW Basic Safety Training',
+        otherCourseTitle: '',
         category: 'STCW',
-        certification: 'Mandatory',
+        courseType: 'Initial',
+        issuingAuthority: 'United Kingdom',
         defaultDuration: '3 Days',
         price: '',
         description: ''
@@ -183,36 +184,31 @@ export default function CreateCourse() {
                                     <label className="block text-gray-900 font-medium mb-2 text-base">
                                         Course Title
                                     </label>
-                                    <input
-                                        type="text"
-                                        name="title"
-                                        placeholder="Enter course title"
-                                        value={form.title}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
-                                    />
-                                </div>
-
-                                {/* Certificate Type */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-2 text-base">
-                                        Certificate Type
-                                    </label>
                                     <div className="relative">
                                         <select
-                                            name="certificateType"
-                                            value={form.certificateType}
+                                            name="title"
+                                            value={form.title}
                                             onChange={handleChange}
                                             className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
                                         >
-                                            {certificateTypes.map((ct) => (
-                                                <option key={ct} value={ct}>
-                                                    {ct}
+                                            {courseTitleOptions.map((title) => (
+                                                <option key={title} value={title}>
+                                                    {title}
                                                 </option>
                                             ))}
                                         </select>
                                         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     </div>
+                                    {form.title === 'Other' && (
+                                        <input
+                                            type="text"
+                                            name="otherCourseTitle"
+                                            placeholder="Enter course title"
+                                            value={form.otherCourseTitle}
+                                            onChange={handleChange}
+                                            className="w-full mt-3 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Category */}
@@ -221,15 +217,14 @@ export default function CreateCourse() {
                                         Category
                                     </label>
                                     <div className="flex flex-wrap gap-3">
-                                        {['STCW', 'Option 2', 'Option 3'].map((cat) => (
+                                        {['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'].map((cat) => (
                                             <button
                                                 type="button"
                                                 key={cat}
-                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${
-                                                    form.category === cat
+                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.category === cat
                                                         ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
                                                         : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                                 onClick={() =>
                                                     setForm((prev) => ({ ...prev, category: cat }))
                                                 }
@@ -240,23 +235,22 @@ export default function CreateCourse() {
                                     </div>
                                 </div>
 
-                                {/* Certification Type */}
+                                {/* Course Type */}
                                 <div>
                                     <label className="block text-gray-900 font-medium mb-3 text-base">
-                                        Certification Type
+                                        Course Type
                                     </label>
                                     <div className="flex flex-wrap gap-3">
-                                        {['Mandatory', 'Optional'].map((type) => (
+                                        {['Refresher', 'Upgrade', 'Initial', 'Other'].map((type) => (
                                             <button
                                                 type="button"
                                                 key={type}
-                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${
-                                                    form.certification === type
+                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.courseType === type
                                                         ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
                                                         : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
-                                                }`}
+                                                    }`}
                                                 onClick={() =>
-                                                    setForm((prev) => ({ ...prev, certification: type }))
+                                                    setForm((prev) => ({ ...prev, courseType: type }))
                                                 }
                                             >
                                                 {type}
@@ -265,11 +259,33 @@ export default function CreateCourse() {
                                     </div>
                                 </div>
 
-                                {/* Default Duration & Course Price */}
+                                {/* Issuing Authority */}
+                                <div>
+                                    <label className="block text-gray-900 font-medium mb-2 text-base">
+                                        Issuing Authority
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            name="issuingAuthority"
+                                            value={form.issuingAuthority}
+                                            onChange={handleChange}
+                                            className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
+                                        >
+                                            {countryCodes.map((item) => (
+                                                <option key={item.country} value={item.country}>
+                                                    {item.country}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    </div>
+                                </div>
+
+                                {/* Duration & Course Price */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-gray-900 font-medium mb-2 text-base">
-                                            Default Duration (Optional)
+                                            Duration
                                         </label>
                                         <input
                                             type="text"
@@ -350,11 +366,10 @@ export default function CreateCourse() {
                                     <button
                                         type="button"
                                         onClick={() => setAddSessionChoice('add')}
-                                        className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all ${
-                                            addSessionChoice === 'add'
+                                        className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all ${addSessionChoice === 'add'
                                                 ? 'bg-[#003971] text-white shadow-sm'
                                                 : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         Add Session Now
                                     </button>
@@ -364,11 +379,10 @@ export default function CreateCourse() {
                                             setAddSessionChoice('skip');
                                             handleSkipToDashboard();
                                         }}
-                                        className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all ${
-                                            addSessionChoice === 'skip'
+                                        className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all ${addSessionChoice === 'skip'
                                                 ? 'bg-[#003971] text-white shadow-sm'
                                                 : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         Skip to Dashboard
                                     </button>
@@ -502,40 +516,40 @@ export default function CreateCourse() {
                                     Back
                                 </button>
                                 <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleCancel}
-                                    className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                {addSessionChoice === 'skip' && (
                                     <button
                                         type="button"
-                                        onClick={handleSkipToDashboard}
-                                        className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
+                                        onClick={handleCancel}
+                                        className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
                                     >
-                                        Save Draft & Go to Dashboard
+                                        Cancel
                                     </button>
-                                )}
-                                {addSessionChoice === 'add' && (
-                                    <>
+                                    {addSessionChoice === 'skip' && (
                                         <button
                                             type="button"
-                                            onClick={handleSaveSession}
-                                            className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleSavePublish}
+                                            onClick={handleSkipToDashboard}
                                             className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
                                         >
-                                            Save & Publish
+                                            Save Draft & Go to Dashboard
                                         </button>
-                                    </>
-                                )}
+                                    )}
+                                    {addSessionChoice === 'add' && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveSession}
+                                                className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSavePublish}
+                                                className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
+                                            >
+                                                Save & Publish
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </>

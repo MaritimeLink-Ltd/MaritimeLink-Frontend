@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
     ChevronDown,
@@ -46,11 +46,21 @@ const mockExpiries = getMockExpiries();
 
 function AllExpiries() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [period, setPeriod] = useState('all');
     const [region, setRegion] = useState('my-region');
     const [year, setYear] = useState('all');
     const [city, setCity] = useState('all');
-    const [certificateType, setCertificateType] = useState('all');
+    const [certificateType, setCertificateType] = useState(() => {
+        if (location.state?.certificate) {
+            const c = location.state.certificate.toLowerCase();
+            if (c.includes('stcw')) return 'stcw';
+            if (c.includes('firefighting')) return 'firefighting';
+            if (c.includes('gwo')) return 'gwo';
+            if (c.includes('medical')) return 'medical';
+        }
+        return 'all';
+    });
     const [rank, setRank] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);

@@ -41,7 +41,7 @@ function AdminDashboard() {
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '24', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
-                { icon: PlayCircle, label: 'Courses', value: '12', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: PlayCircle, label: 'Course Management', value: '12', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
                 { icon: FileText, label: 'Applications', value: '156', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
                 { icon: Calendar, label: 'Bookings', value: '8', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
             ],
@@ -70,7 +70,7 @@ function AdminDashboard() {
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '156', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
-                { icon: PlayCircle, label: 'Courses', value: '48', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: PlayCircle, label: 'Course Management', value: '48', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
                 { icon: FileText, label: 'Applications', value: '892', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
                 { icon: Calendar, label: 'Bookings', value: '67', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
             ],
@@ -99,7 +99,7 @@ function AdminDashboard() {
             ],
             activityStats: [
                 { icon: Briefcase, label: 'Jobs Posted', value: '567', iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
-                { icon: PlayCircle, label: 'Courses', value: '145', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
+                { icon: PlayCircle, label: 'Course Management', value: '145', iconColor: 'text-purple-500', iconBg: 'bg-purple-50' },
                 { icon: FileText, label: 'Applications', value: '3,245', iconColor: 'text-green-500', iconBg: 'bg-green-50', badge: 'NEW' },
                 { icon: Calendar, label: 'Bookings', value: '234', iconColor: 'text-orange-500', iconBg: 'bg-orange-50' }
             ],

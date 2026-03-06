@@ -44,7 +44,7 @@ function AdminLayout() {
     ];
 
     return (
-        <div className="h-screen bg-gray-50/50 flex overflow-hidden">
+        <div className="min-h-screen bg-gray-50/50 flex">
             {/* Sidebar */}
             <aside className={`fixed left-0 top-0 z-40 h-screen w-64 bg-white border-r border-gray-100 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <div className="flex h-full flex-col">
@@ -127,7 +127,7 @@ function AdminLayout() {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:pl-64">
+            <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
                 {/* Top Header */}
                 <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4">
                     <div className="flex items-center justify-between gap-4">
@@ -189,10 +189,8 @@ function AdminLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-hidden p-6 lg:p-8">
-                    <div className="h-full overflow-y-auto scrollbar-hide">
-                        <Outlet />
-                    </div>
+                <main className="flex-1 p-6 lg:p-8">
+                    <Outlet />
                 </main>
             </div>
         </div>

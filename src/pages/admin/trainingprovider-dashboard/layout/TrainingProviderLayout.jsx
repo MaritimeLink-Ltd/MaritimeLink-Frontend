@@ -43,7 +43,7 @@ function TrainingProviderLayout() {
     const navItems = [
         { name: 'Home', path: '/trainingprovider-dashboard', icon: LayoutGrid },
         { name: 'Demand & Planning', path: '/trainingprovider/demand', icon: TrendingUp },
-        { name: 'Courses', path: '/trainingprovider/courses', icon: BookOpen },
+        { name: 'Course Management', path: '/trainingprovider/courses', icon: BookOpen },
         { name: 'Bookings', path: '/trainingprovider/bookings', icon: Calendar },
         { name: 'Chats', path: '/trainingprovider/chats', icon: MessageSquare },
         { name: 'Profile', path: '/trainingprovider/profile', icon: UserCircle },
@@ -63,16 +63,16 @@ function TrainingProviderLayout() {
 
             {/* Sidebar */}
             <aside
-                className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-100 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`flex-shrink-0 fixed lg:static inset-y-0 left-0 z-30 w-64 h-full bg-white border-r border-gray-100 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 <div className="h-full flex flex-col">
                     {/* Logo */}
-                    <div className="p-6 flex">
+                    <div className="p-6 flex items-center justify-center">
                         <img
                             src="/images/logo.png"
                             alt="MaritimeLink"
-                            className="h-20 w-auto"
+                            className="h-16 w-auto"
                         />
                     </div>
 
@@ -104,7 +104,7 @@ function TrainingProviderLayout() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Header */}
-                <header className="bg-white border-b border-gray-100">
+                <header className="flex-shrink-0 bg-white border-b border-gray-100 z-20">
                     <div className="flex items-center justify-between px-8 py-4">
                         {/* Mobile Menu Button */}
                         <div className="flex items-center">
@@ -168,10 +168,8 @@ function TrainingProviderLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 min-h-0 flex flex-col bg-[#F5F7FA] px-8 py-6">
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
-                        <Outlet />
-                    </div>
+                <main className="flex-1 overflow-y-auto bg-[#F5F7FA] p-4 md:p-6 lg:p-8">
+                    <Outlet />
                 </main>
             </div>
 

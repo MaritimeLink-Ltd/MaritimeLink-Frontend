@@ -16,7 +16,7 @@ function Accounts() {
     const [statusFilter, setStatusFilter] = useState(
         viewParam === 'expiring_compliance' ? 'Expiring Soon' : 'All'
     );
-    const [timeFilter, setTimeFilter] = useState('Today');
+    const [timeFilter, setTimeFilter] = useState('30 Days');
     const [searchQuery, setSearchQuery] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showExportNotification, setShowExportNotification] = useState(false);
@@ -49,6 +49,7 @@ function Accounts() {
     const itemsPerPage = 10;
 
     const tabs = ['Recruiters', 'Training Providers', 'Professionals', 'KYC Status'];
+    const isProfessionalTab = activeTab === 'Professionals';
 
     // Tab-specific data
     const recruitersData = [
@@ -514,18 +515,18 @@ function Accounts() {
             // Search filter
             const matchesSearch = !searchQuery.trim() ||
                 account.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                account.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                account.domain?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (!isProfessionalTab && account.company?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (!isProfessionalTab && account.domain?.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 account.country?.toLowerCase().includes(searchQuery.toLowerCase());
 
             // Status filter
             const matchesStatus = statusFilter === 'All' || account.status === statusFilter;
 
             // Company filter
-            const matchesCompany = companyFilter === 'All' || account.company === companyFilter;
+            const matchesCompany = isProfessionalTab || companyFilter === 'All' || account.company === companyFilter;
 
             // Domain filter
-            const matchesDomain = domainFilter === 'All' || account.domain === domainFilter;
+            const matchesDomain = isProfessionalTab || domainFilter === 'All' || account.domain === domainFilter;
 
             // Time filter - parse lastActive to determine days ago
             let matchesTime = true;
@@ -559,20 +560,31 @@ function Accounts() {
     // Export CSV handler
     const handleExportCSV = () => {
         const currentData = getFilteredAccounts();
-        const headers = ['ID', 'Name', 'Company', 'Domain', 'Country', 'Tier', 'Last Active', 'Status'];
+        const headers = isProfessionalTab
+            ? ['ID', 'Name', 'Country', 'Tier', 'Last Active', 'Status']
+            : ['ID', 'Name', 'Company', 'Domain', 'Country', 'Tier', 'Last Active', 'Status'];
         const csvRows = [headers.join(',')];
 
         currentData.forEach(account => {
-            const row = [
-                account.id,
-                `"${account.name}"`,
-                `"${account.company}"`,
-                `"${account.domain}"`,
-                account.country,
-                account.tier,
-                `"${account.lastActive}"`,
-                account.status
-            ];
+            const row = isProfessionalTab
+                ? [
+                    account.id,
+                    `"${account.name}"`,
+                    account.country,
+                    account.tier,
+                    `"${account.lastActive}"`,
+                    account.status
+                ]
+                : [
+                    account.id,
+                    `"${account.name}"`,
+                    `"${account.company}"`,
+                    `"${account.domain}"`,
+                    account.country,
+                    account.tier,
+                    `"${account.lastActive}"`,
+                    account.status
+                ];
             csvRows.push(row.join(','));
         });
 
@@ -658,7 +670,7 @@ function Accounts() {
     };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="h-full min-h-0 flex flex-col overflow-y-auto">
             {/* Header */}
             <div className="flex-shrink-0 mb-6">
                 <h1 className="text-[28px] font-bold text-gray-900 mb-6">Accounts Overview</h1>
@@ -736,7 +748,7 @@ function Accounts() {
             </div>
 
             {/* Accounts Table Card - Scrollable */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
                 {/* Export Success Notification */}
                 {showExportNotification && (
                     <div className="absolute top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -812,83 +824,87 @@ function Accounts() {
                                 )}
                             </div>
 
-                            {/* Company Filter */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => {
-                                        setShowCompanyDropdown(!showCompanyDropdown);
-                                        setShowStatusDropdown(false);
-                                        setShowDomainDropdown(false);
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Company {companyFilter !== 'All' && `(${companyFilter})`}
-                                    <ChevronDown className="h-4 w-4" />
-                                </button>
-                                {showCompanyDropdown && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setShowCompanyDropdown(false)}
-                                        />
-                                        <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
-                                            {uniqueCompanies.map((company) => (
-                                                <button
-                                                    key={company}
-                                                    onClick={() => {
-                                                        setCompanyFilter(company);
-                                                        setShowCompanyDropdown(false);
-                                                        handleFilterChange();
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${companyFilter === company ? 'bg-blue-50 text-[#1e5a8f] font-semibold' : 'text-gray-700'
-                                                        }`}
-                                                >
-                                                    {company}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            {!isProfessionalTab && (
+                                <>
+                                    {/* Company Filter */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => {
+                                                setShowCompanyDropdown(!showCompanyDropdown);
+                                                setShowStatusDropdown(false);
+                                                setShowDomainDropdown(false);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Company {companyFilter !== 'All' && `(${companyFilter})`}
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                        {showCompanyDropdown && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-10"
+                                                    onClick={() => setShowCompanyDropdown(false)}
+                                                />
+                                                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
+                                                    {uniqueCompanies.map((company) => (
+                                                        <button
+                                                            key={company}
+                                                            onClick={() => {
+                                                                setCompanyFilter(company);
+                                                                setShowCompanyDropdown(false);
+                                                                handleFilterChange();
+                                                            }}
+                                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${companyFilter === company ? 'bg-blue-50 text-[#1e5a8f] font-semibold' : 'text-gray-700'
+                                                                }`}
+                                                        >
+                                                            {company}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
-                            {/* Domain Filter */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => {
-                                        setShowDomainDropdown(!showDomainDropdown);
-                                        setShowStatusDropdown(false);
-                                        setShowCompanyDropdown(false);
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Domain {domainFilter !== 'All' && `(${domainFilter})`}
-                                    <ChevronDown className="h-4 w-4" />
-                                </button>
-                                {showDomainDropdown && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setShowDomainDropdown(false)}
-                                        />
-                                        <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
-                                            {uniqueDomains.map((domain) => (
-                                                <button
-                                                    key={domain}
-                                                    onClick={() => {
-                                                        setDomainFilter(domain);
-                                                        setShowDomainDropdown(false);
-                                                        handleFilterChange();
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${domainFilter === domain ? 'bg-blue-50 text-[#1e5a8f] font-semibold' : 'text-gray-700'
-                                                        }`}
-                                                >
-                                                    {domain}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                                    {/* Domain Filter */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => {
+                                                setShowDomainDropdown(!showDomainDropdown);
+                                                setShowStatusDropdown(false);
+                                                setShowCompanyDropdown(false);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Domain {domainFilter !== 'All' && `(${domainFilter})`}
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                        {showDomainDropdown && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-10"
+                                                    onClick={() => setShowDomainDropdown(false)}
+                                                />
+                                                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
+                                                    {uniqueDomains.map((domain) => (
+                                                        <button
+                                                            key={domain}
+                                                            onClick={() => {
+                                                                setDomainFilter(domain);
+                                                                setShowDomainDropdown(false);
+                                                                handleFilterChange();
+                                                            }}
+                                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${domainFilter === domain ? 'bg-blue-50 text-[#1e5a8f] font-semibold' : 'text-gray-700'
+                                                                }`}
+                                                        >
+                                                            {domain}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Refresh Button */}
                             <button
@@ -912,16 +928,18 @@ function Accounts() {
                 </div>
 
                 {/* Table - Scrollable Content */}
-                <div className="flex-1 overflow-auto">
+                <div className="overflow-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Name
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                    Company Domain
-                                </th>
+                                {!isProfessionalTab && (
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Company Domain
+                                    </th>
+                                )}
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Country
                                 </th>
@@ -947,10 +965,12 @@ function Accounts() {
                                             <div className="text-sm font-semibold text-gray-900">{account.name}</div>
                                             <div className="text-xs text-gray-500">ID: {account.id}</div>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div className="text-sm font-medium text-gray-900">{account.company}</div>
-                                            <div className="text-xs text-gray-500">{account.domain}</div>
-                                        </td>
+                                        {!isProfessionalTab && (
+                                            <td className="px-4 py-4">
+                                                <div className="text-sm font-medium text-gray-900">{account.company}</div>
+                                                <div className="text-xs text-gray-500">{account.domain}</div>
+                                            </td>
+                                        )}
                                         <td className="px-4 py-4">
                                             <span className="text-sm text-gray-700">{account.country}</span>
                                         </td>
@@ -971,24 +991,31 @@ function Accounts() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">
-                                            <Link
-                                                to={
-                                                    account.id.toString().startsWith('PRO')
-                                                        ? `/admin/candidate/${account.id}`
-                                                        : account.id.toString().startsWith('KYC')
+                                            {account.id.toString().startsWith('PRO') ? (
+                                                <Link
+                                                    to={`/admin/candidate/${account.id}`}
+                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                >
+                                                    View Profile
+                                                </Link>
+                                            ) : (
+                                                <Link
+                                                    to={
+                                                        account.id.toString().startsWith('KYC')
                                                             ? `/admin/accounts/compliance/${account.id}`
                                                             : `/admin/accounts/${account.id}`
-                                                }
-                                                className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                            >
-                                                View Details
-                                            </Link>
+                                                    }
+                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                >
+                                                    View Details
+                                                </Link>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
                                         No accounts found matching your filters.
                                     </td>
                                 </tr>

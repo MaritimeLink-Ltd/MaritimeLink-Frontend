@@ -50,7 +50,7 @@ function AdminLayout() {
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     return (
-        <div className="h-screen bg-gray-50 flex overflow-hidden">
+        <div className="min-h-screen bg-gray-50 flex">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
@@ -118,7 +118,7 @@ function AdminLayout() {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0">
                 {/* Header */}
                 <header className="bg-white">
                     <div className="flex items-center justify-between px-8 py-4">
@@ -185,10 +185,8 @@ function AdminLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 overflow-hidden bg-white px-8 py-6">
-                    <div className="h-full overflow-y-auto scrollbar-hide">
-                        <Outlet />
-                    </div>
+                <main className="flex-1 bg-white px-8 py-6">
+                    <Outlet />
                 </main>
             </div>
 

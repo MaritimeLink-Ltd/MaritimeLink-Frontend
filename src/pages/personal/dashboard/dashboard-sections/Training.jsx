@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, MessageCircle } from 'lucide-react';
+import { getAvailableSpaces, getSessionsForCourse } from '../../../../utils/trainingSessionsStore';
 
 const Training = () => {
     const navigate = useNavigate();
@@ -112,6 +113,10 @@ This training is suitable for new entrants to the maritime industry as well as e
         return true;
     });
 
+    const selectedCourseSessions = selectedCourse
+        ? getSessionsForCourse(selectedCourse.id, selectedCourse.title)
+        : [];
+
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
             {/* Header */}
@@ -211,6 +216,18 @@ This training is suitable for new entrants to the maritime industry as well as e
                                         Book now
                                     </button>
                                     <button
+                                        onClick={() => navigate('/personal/chats', {
+                                            state: {
+                                                provider: selectedCourse.provider,
+                                                courseTitle: selectedCourse.title
+                                            }
+                                        })}
+                                        className="flex items-center justify-center gap-2 px-5 py-2.5 border-2 border-[#003971] text-[#003971] rounded-full text-sm font-medium hover:bg-blue-50 transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                                    >
+                                        <MessageCircle size={16} />
+                                        Chat
+                                    </button>
+                                    <button
                                         onClick={() => {
                                             setSavedCourses(prev => {
                                                 const newSaved = new Set(prev);
@@ -267,6 +284,39 @@ This training is suitable for new entrants to the maritime industry as well as e
                                 <div className="text-gray-600 leading-relaxed whitespace-pre-line">
                                     {selectedCourse.description}
                                 </div>
+                            </div>
+
+                            {/* Sessions */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-3">Sessions</h3>
+                                {selectedCourseSessions.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {selectedCourseSessions.map((session) => (
+                                            <div
+                                                key={session.id}
+                                                className="border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                            >
+                                                <div>
+                                                    <p className="text-sm text-gray-500">Event Date</p>
+                                                    <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
+                                                    <p className="text-sm text-gray-500 mt-1">
+                                                        Available Spaces: <span className="font-semibold text-gray-700">{getAvailableSpaces(session)}</span>
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
+                                                    className="px-5 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px]"
+                                                >
+                                                    Book now
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="border border-dashed border-gray-200 rounded-xl p-4 text-sm text-gray-500">
+                                        No sessions published yet.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (

@@ -702,7 +702,7 @@ function Marketplace() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50 p-6">
+        <div className="flex flex-col bg-gray-50 p-6">
             {/* Header */}
             <div className="flex-shrink-0 mb-6">
                 <div className="flex items-start justify-between mb-6">

@@ -162,7 +162,7 @@ export default function CourseDetail() {
   };
 
   const handleManageSessionList = () => {
-    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions`);
+    navigate(`/trainingprovider/sessions/attendance`);
   };
 
   const handleStatusActionClick = () => {
@@ -247,11 +247,10 @@ export default function CourseDetail() {
           <button
             type="button"
             onClick={() => setActiveTab('details')}
-            className={`relative pb-3 font-medium ${
-              activeTab === 'details'
-                ? 'text-[#003971]'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`relative pb-3 font-medium ${activeTab === 'details'
+              ? 'text-[#003971]'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
           >
             Course Details
             {activeTab === 'details' && (
@@ -261,26 +260,14 @@ export default function CourseDetail() {
           <button
             type="button"
             onClick={() => setActiveTab('sessions')}
-            className={`pb-3 font-medium ${
-              activeTab === 'sessions'
-                ? 'text-[#003971]'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`pb-3 font-medium ${activeTab === 'sessions'
+              ? 'text-[#003971]'
+              : 'text-gray-500 hover:text-gray-800'
+              }`}
           >
             Sessions
           </button>
-          <button
-            type="button"
-            className="pb-3 text-gray-400 font-medium cursor-default"
-          >
-            Analytics
-          </button>
-          <button
-            type="button"
-            className="pb-3 text-gray-400 font-medium cursor-default"
-          >
-            Pricing
-          </button>
+
         </nav>
       </div>
 
@@ -341,9 +328,9 @@ export default function CourseDetail() {
       </div>
 
       {/* Description + Sessions */}
-      <div className="flex-1 flex flex-col gap-5 overflow-y-auto">
+      <div className="flex flex-col gap-5">
         {/* Description + Session List */}
-        <div className="flex flex-col gap-5 overflow-hidden">
+        <div className="flex flex-col gap-5">
           {/* Description Card (only on Course Details tab) */}
           {activeTab === 'details' && (
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -370,7 +357,7 @@ export default function CourseDetail() {
           )}
 
           {/* Session List (visible for both tabs) */}
-          <div className="flex-1 rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col overflow-auto">
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">
                 Session List
@@ -384,7 +371,7 @@ export default function CourseDetail() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -407,9 +394,8 @@ export default function CourseDetail() {
                     return (
                       <tr
                         key={session.id}
-                        className={`text-sm ${
-                          !isLast ? 'border-b border-gray-50' : ''
-                        } hover:bg-gray-50/60 transition-colors`}
+                        className={`text-sm ${!isLast ? 'border-b border-gray-50' : ''
+                          } hover:bg-gray-50/60 transition-colors`}
                       >
                         <td className="px-5 py-3 align-middle text-gray-900">
                           {session.dates}
@@ -436,7 +422,7 @@ export default function CourseDetail() {
                             onClick={handleManageSessionList}
                             className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff]"
                           >
-                            Manage
+                            View Attendees
                           </button>
                         </td>
                       </tr>
@@ -480,11 +466,10 @@ export default function CourseDetail() {
                       key={item}
                       type="button"
                       onClick={() => handleChangePage(item)}
-                      className={`h-8 px-3 rounded-lg text-xs font-semibold ${
-                        item === safeCurrentPage
-                          ? 'bg-[#003971] text-white'
-                          : 'border border-gray-200 bg-white text-gray-600'
-                      }`}
+                      className={`h-8 px-3 rounded-lg text-xs font-semibold ${item === safeCurrentPage
+                        ? 'bg-[#003971] text-white'
+                        : 'border border-gray-200 bg-white text-gray-600'
+                        }`}
                     >
                       {item}
                     </button>

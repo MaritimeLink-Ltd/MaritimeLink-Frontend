@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star, Folder, ChevronRight } from 'lucide-react';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = () => {
@@ -17,6 +17,7 @@ const ApplyToJob = () => {
 
     const [step, setStep] = useState(1);
     const [selectedDocuments, setSelectedDocuments] = useState([]);
+    const [selectedFolder, setSelectedFolder] = useState(null);
 
     // Sample job data
     const jobs = {
@@ -76,12 +77,27 @@ const ApplyToJob = () => {
 
     // Sample document wallet data
     const documentWalletItems = [
-        { id: 'doc1', title: 'Passport', expiry: '12 Dec 2030', type: 'Travel' },
-        { id: 'doc2', title: 'Seaman Book', expiry: '15 Aug 2028', type: 'Travel' },
-        { id: 'doc3', title: 'Medical Certificate (ENG1)', expiry: '20 Jan 2026', type: 'Medical' },
-        { id: 'doc4', title: 'Basic Safety Training', expiry: '05 Nov 2027', type: 'STCW' },
-        { id: 'doc5', title: 'Certificate of Competency', expiry: '10 Mar 2029', type: 'License' }
+        { id: 'doc1', title: 'Certificate of Competency', expiry: '31 Dec 2026', type: 'License Certificate' },
+        { id: 'doc2', title: 'Basic Safety Training', expiry: '31 Dec 2026', type: 'STCW Certificate' },
+        { id: 'doc3', title: 'Medical Fitness Certificate', expiry: '31 Dec 2026', type: 'Medical Certificate' },
+        { id: 'doc4', title: 'Passport', expiry: '31 Dec 2026', type: 'Travel Document' },
+        { id: 'doc5', title: 'Seaman Book', expiry: '31 Dec 2026', type: 'Seaman Document' },
+        { id: 'doc6', title: 'Engineering Degree', expiry: '31 Dec 2026', type: 'Academic Certificate' }
     ];
+
+    const documentFolders = Object.entries(
+        documentWalletItems.reduce((folders, document) => {
+            if (!folders[document.type]) {
+                folders[document.type] = [];
+            }
+            folders[document.type].push(document);
+            return folders;
+        }, {})
+    ).map(([name, documents]) => ({
+        id: name.toLowerCase().replace(/\s+/g, '-'),
+        name,
+        documents
+    }));
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -328,32 +344,66 @@ const ApplyToJob = () => {
                             <h3 className="text-base font-semibold text-gray-800 mb-2">Select From Document Wallet <span className="text-gray-400 font-normal text-sm">(Optional)</span></h3>
                             <p className="text-sm text-gray-500 mb-4">Choose any additional documents or certificates you'd like to include with this application.</p>
 
-                            <div className="space-y-3">
-                                {documentWalletItems.map((doc) => (
-                                    <div
-                                        key={doc.id}
-                                        onClick={() => {
-                                            if (selectedDocuments.includes(doc.id)) {
-                                                setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
-                                            } else {
-                                                setSelectedDocuments([...selectedDocuments, doc.id]);
-                                            }
-                                        }}
-                                        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${selectedDocuments.includes(doc.id) ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
-                                            {selectedDocuments.includes(doc.id) && <Check size={14} className="text-white" strokeWidth={3} />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-semibold text-gray-800">{doc.title}</h4>
-                                            <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                <span className="bg-gray-100 px-2 rounded">{doc.type}</span>
-                                                <span>Expires: {doc.expiry}</span>
+                            {!selectedFolder ? (
+                                <div className="space-y-3">
+                                    {documentFolders.map((folder) => (
+                                        <div
+                                            key={folder.id}
+                                            onClick={() => setSelectedFolder(folder)}
+                                            className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-[#003971]/10 text-[#003971] flex items-center justify-center">
+                                                    <Folder size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-gray-800">{folder.name}</h4>
+                                                    <p className="text-xs text-gray-500">{folder.documents.length} document(s)</p>
+                                                </div>
                                             </div>
+                                            <ChevronRight size={18} className="text-gray-400" />
                                         </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedFolder(null)}
+                                        className="flex items-center gap-2 text-sm text-[#003971] hover:text-[#002855] mb-3"
+                                    >
+                                        <ArrowLeft size={16} />
+                                        Back to Folders
+                                    </button>
+
+                                    <div className="space-y-3">
+                                        {selectedFolder.documents.map((doc) => (
+                                            <div
+                                                key={doc.id}
+                                                onClick={() => {
+                                                    if (selectedDocuments.includes(doc.id)) {
+                                                        setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
+                                                    } else {
+                                                        setSelectedDocuments([...selectedDocuments, doc.id]);
+                                                    }
+                                                }}
+                                                className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                            >
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${selectedDocuments.includes(doc.id) ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                                    {selectedDocuments.includes(doc.id) && <Check size={14} className="text-white" strokeWidth={3} />}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-semibold text-gray-800">{doc.title}</h4>
+                                                    <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                        <span className="bg-gray-100 px-2 rounded">{doc.type}</span>
+                                                        <span>Expires: {doc.expiry}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Apply Button */}

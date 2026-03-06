@@ -149,7 +149,7 @@ const statusStyles = {
 const overviewCards = [
     {
         id: 1,
-        label: 'Courses',
+        label: 'Course Management',
         value: '12',
         icon: BookOpen,
         accent: 'bg-blue-50 text-blue-600'

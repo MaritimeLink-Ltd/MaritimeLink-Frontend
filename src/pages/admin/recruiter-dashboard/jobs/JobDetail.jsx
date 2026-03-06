@@ -6,8 +6,8 @@ import {
     CheckCircle,
     AlertTriangle,
     XCircle,
-    Edit,
-    ChevronDown
+    ChevronDown,
+    Edit2
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
@@ -16,8 +16,10 @@ function JobDetail({ onBack }) {
     const { jobId } = useParams();
     const location = useLocation();
     const jobData = location.state?.jobData;
-
-    const isPublished = jobData?.status === 'Active' || false;
+    const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
+    const [jobStatus, setJobStatus] = useState(jobData?.status || 'Active');
+    const isPublished = jobStatus === 'Active';
+    const isClosed = jobStatus === 'Closed';
     const [activeTab, setActiveTab] = useState('matches');
     const [isATSDropdownOpen, setIsATSDropdownOpen] = useState(false);
     const atsDropdownRef = useRef(null);
@@ -26,6 +28,8 @@ function JobDetail({ onBack }) {
     const [invitedApplicants, setInvitedApplicants] = useState([]);
     const [scheduledInterviews, setScheduledInterviews] = useState([]);
     const [timeFilter, setTimeFilter] = useState('7days');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -137,7 +141,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '3rd Officer',
             compliance: 'Expiring Soon',
             complianceSubtext: 'Ends in 2 days',
-            applicationDate: '24 Feb 2026',
+            applicationDate: '2 Mar 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -150,7 +154,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: 'Chief Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '10 Feb 2026',
+            applicationDate: '3 Mar 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -163,7 +167,7 @@ function JobDetail({ onBack }) {
             availabilitySubtext: '2nd Engineer',
             compliance: 'Ready',
             complianceSubtext: '',
-            applicationDate: '26 Feb 2026',
+            applicationDate: '4 Mar 2026',
             avatar: '/images/login-image.webp',
             status: 'matches'
         },
@@ -294,7 +298,7 @@ function JobDetail({ onBack }) {
 
     // Filter applicants by active tab and time filter
     const filteredApplicants = allApplicants.filter(applicant => {
-        const matchesTab = applicant.status === activeTab;
+        const matchesTab = activeTab === 'all' || applicant.status === activeTab;
         const applicationDate = new Date(applicant.applicationDate);
         const cutoffDate = getTimeFilterDate();
         const matchesTime = applicationDate >= cutoffDate;
@@ -323,6 +327,17 @@ function JobDetail({ onBack }) {
         return sortOrder === 'asc' ? comparison : -comparison;
     });
 
+    const totalItems = sortedApplicants.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedApplicants = sortedApplicants.slice(startIndex, endIndex);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, timeFilter]);
+
     const handleSort = (field) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -342,23 +357,8 @@ function JobDetail({ onBack }) {
         // In real app, this would send an API request
     };
 
-    const handleEditJob = () => {
-        const isMarketplace = location.pathname.includes('/marketplace');
-        const type = isMarketplace ? 'admin' : 'recruiter';
-        const returnPath = isMarketplace ? '/admin/marketplace' : '/admin/jobs';
-
-        navigate('/admin/upload-job', {
-            state: {
-                jobData: job,
-                isEdit: true,
-                dashboardType: type,
-                returnPath: returnPath
-            }
-        });
-    };
-
     return (
-        <div className="h-full flex flex-col bg-gray-50 overflow-y-auto">
+        <div className="flex flex-col bg-gray-50">
             {/* Fixed Header Section */}
             <div className="flex-shrink-0 px-6 pt-6">
                 {/* Back Icon */}
@@ -375,11 +375,13 @@ function JobDetail({ onBack }) {
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-bold text-gray-900">{job.title}</h1>
                             {/* Published/Unpublished Badge */}
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isPublished
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isClosed
+                                ? 'bg-red-100 text-red-700'
+                                : isPublished
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-gray-100 text-gray-700'
                                 }`}>
-                                {isPublished ? 'Published' : 'Unpublished'}
+                                {isClosed ? 'Closed' : isPublished ? 'Published' : 'Unpublished'}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
@@ -399,7 +401,10 @@ function JobDetail({ onBack }) {
                             ].map((filter) => (
                                 <button
                                     key={filter.id}
-                                    onClick={() => setTimeFilter(filter.id)}
+                                    onClick={() => {
+                                        setTimeFilter(filter.id);
+                                        setCurrentPage(1);
+                                    }}
                                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${timeFilter === filter.id
                                         ? 'bg-white text-gray-900 shadow-sm'
                                         : 'text-gray-500 hover:text-gray-700'
@@ -410,22 +415,32 @@ function JobDetail({ onBack }) {
                             ))}
                         </div>
 
-                        {/* Edit Job Button - Hide for Admin Marketplace */}
-                        {!location.pathname.includes('/marketplace/') && (
-                            <button
-                                onClick={handleEditJob}
-                                className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                            >
-                                <Edit className="h-4 w-4" />
-                                Edit Job
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const editPath = location.pathname.includes('/admin/marketplace')
+                                    ? '/admin/marketplace/create-job'
+                                    : '/admin/upload-job'; // Same for recruiter and default admin
+                                navigate(editPath, { state: { jobData: job, isEdit: true } });
+                            }}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
+                        >
+                            <Edit2 className="h-4 w-4" />
+                            Edit Job
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowJobDetailsModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                            View Job Details
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Scrollable Content Area */}
-            <div className="flex-1 px-6 pb-6">
+            <div className="px-6 pb-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 mb-6">
                     {stats.map((stat, index) => (
@@ -456,10 +471,23 @@ function JobDetail({ onBack }) {
                                 onClick={() => {
                                     setActiveTab('matches');
                                     setIsATSDropdownOpen(false);
+                                    setCurrentPage(1);
                                 }}
                                 className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'matches' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
                                 Matches ({allApplicants.filter(a => a.status === 'matches').length})
+                            </button>
+
+                            {/* All Tab */}
+                            <button
+                                onClick={() => {
+                                    setActiveTab('all');
+                                    setIsATSDropdownOpen(false);
+                                    setCurrentPage(1);
+                                }}
+                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'all' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                All ({allApplicants.length})
                             </button>
 
                             {/* ATS Dropdown */}
@@ -489,6 +517,7 @@ function JobDetail({ onBack }) {
                                                 onClick={() => {
                                                     setActiveTab(stage.id);
                                                     setIsATSDropdownOpen(false);
+                                                    setCurrentPage(1);
                                                 }}
                                                 className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors flex items-center justify-between ${activeTab === stage.id
                                                     ? 'bg-blue-50 text-[#003971]'
@@ -536,7 +565,7 @@ function JobDetail({ onBack }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {sortedApplicants.map((applicant, idx) => (
+                                {paginatedApplicants.map((applicant, idx) => (
                                     <tr key={applicant.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -648,8 +677,91 @@ function JobDetail({ onBack }) {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-white">
+                        <div className="text-sm text-gray-600">
+                            Showing <span className="font-semibold">{totalItems === 0 ? 0 : startIndex + 1}</span> to <span className="font-semibold">{Math.min(endIndex, totalItems)}</span> of <span className="font-semibold">{totalItems}</span> entries
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+                                disabled={safeCurrentPage === 1}
+                                className="h-11 w-12 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ←
+                            </button>
+                            <button className="h-11 w-11 rounded-xl bg-[#1e5a8f] text-white font-semibold">
+                                {safeCurrentPage}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+                                disabled={safeCurrentPage === totalPages}
+                                className="h-11 w-12 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                →
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {showJobDetailsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Job Details</h3>
+                        <p className="text-sm text-gray-600 mb-1">{job.title} • {job.vessel}</p>
+                        <p className="text-sm text-gray-600 mb-5">Posted {job.posted}</p>
+
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
+                            <p className="text-sm font-semibold text-gray-700 mb-1">Description</p>
+                            <p className="text-sm text-gray-700 leading-6">{job.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setShowJobDetailsModal(false)}
+                                className="px-5 py-2.5 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            {!isClosed && (
+                                <button
+                                    onClick={() => {
+                                        setJobStatus(isPublished ? 'Unpublished' : 'Active');
+                                        setShowJobDetailsModal(false);
+                                    }}
+                                    className={`px-5 py-2.5 rounded-xl font-semibold text-white transition-colors ${isPublished
+                                        ? 'bg-orange-500 hover:bg-orange-600'
+                                        : 'bg-[#003971] hover:bg-[#002855]'
+                                        }`}
+                                >
+                                    {isPublished ? 'Unpublish' : 'Publish'}
+                                </button>
+                            )}
+                            {!isClosed ? (
+                                <button
+                                    onClick={() => {
+                                        setJobStatus('Closed');
+                                        setShowJobDetailsModal(false);
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                >
+                                    Close Job
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    disabled
+                                    className="px-5 py-2.5 rounded-xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                                >
+                                    Job Closed
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

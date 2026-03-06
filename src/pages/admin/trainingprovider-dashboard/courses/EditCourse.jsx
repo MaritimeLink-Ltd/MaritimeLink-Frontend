@@ -138,7 +138,7 @@ export default function EditCourse() {
                                 <div>
                                     <label className="block text-gray-900 font-medium mb-3 text-base">Category</label>
                                     <div className="flex flex-wrap gap-3">
-                                        {['STCW', 'Option 2', 'Option 3'].map((cat) => (
+                                        {['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'].map((cat) => (
                                             <button
                                                 type="button"
                                                 key={cat}

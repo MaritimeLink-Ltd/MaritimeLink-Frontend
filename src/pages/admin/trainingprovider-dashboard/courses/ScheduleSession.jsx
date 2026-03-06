@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, ChevronLeft, CheckCircle } from 'lucide-react';
+import { saveOrUpdateSession } from '../../../../utils/trainingSessionsStore';
 
 export default function ScheduleSession() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { courseId } = useParams();
   const isEdit = location.state?.isEdit || false;
   const sessionData = location.state?.sessionData || null;
 
@@ -26,12 +28,31 @@ export default function ScheduleSession() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const eventDate = [form.startDate, form.endDate].filter(Boolean).join(' - ');
+
+    saveOrUpdateSession(
+      courseId,
+      {
+        eventDate,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        location: form.location,
+        instructor: form.instructor,
+        totalSeats: form.totalSeats,
+        bookedSeats: sessionData?.bookedSeats || 0
+      },
+      {
+        sessionId: isEdit ? sessionData?.id : null
+      }
+    );
+
     setShowSuccessModal(true);
   };
 
   const handleCloseModal = () => {
     setShowSuccessModal(false);
-    navigate('/trainingprovider/courses/STCW-BST-001/sessions');
+    navigate(`/trainingprovider/courses/${courseId || '1'}/sessions`);
   };
 
   return (

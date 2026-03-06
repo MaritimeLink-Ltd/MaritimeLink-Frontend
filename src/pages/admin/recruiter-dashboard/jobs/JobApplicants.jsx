@@ -2,10 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ChevronLeft,
-    Edit,
-    Pause,
-    Upload,
-    XCircle,
     Users,
     CheckCircle,
     AlertTriangle,
@@ -17,6 +13,7 @@ import {
 
 function JobApplicants({ jobId, onBack, onViewCandidate }) {
     const navigate = useNavigate();
+    const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
     const [activeTab, setActiveTab] = useState('new');
     const [currentPage, setCurrentPage] = useState(1);
     const [filters, setFilters] = useState({
@@ -37,7 +34,25 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
     const jobDetails = {
         title: 'Chief Engineer',
         vessel: 'LNG Tanker',
-        posted: 'Posted 2 days ago'
+        posted: 'Posted 2 days ago',
+        description: 'We are looking for an experienced Chief Engineer for LNG tanker operations. The candidate should have strong vessel management, safety compliance, and crew leadership experience.'
+    };
+
+    const handleOpenJobDetailsPage = () => {
+        setShowJobDetailsModal(false);
+        navigate(`/admin/jobs/${jobId || '000001'}`, {
+            state: {
+                jobData: {
+                    id: jobId || '000001',
+                    title: jobDetails.title,
+                    vessel: jobDetails.vessel,
+                    posted: jobDetails.posted.replace('Posted ', ''),
+                    status: 'Active',
+                    description: jobDetails.description
+                },
+                readOnly: true
+            }
+        });
     };
 
     const stats = [
@@ -385,21 +400,11 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
-                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
-                            <Edit className="h-4 w-4" />
-                            Edit Job
-                        </button>
-                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
-                            <Pause className="h-4 w-4" />
-                            Pause
-                        </button>
-                        <button className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center gap-2">
-                            <Upload className="h-4 w-4" />
-                            Publish
-                        </button>
-                        <button className="px-5 py-2.5 border border-red-200 text-red-600 rounded-xl font-medium text-sm hover:bg-red-50 transition-colors flex items-center gap-2">
-                            <XCircle className="h-4 w-4" />
-                            Close Job
+                        <button
+                            onClick={() => setShowJobDetailsModal(true)}
+                            className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors"
+                        >
+                            View Job Details
                         </button>
                     </div>
                 </div>
@@ -581,6 +586,38 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
                     </div>
                 </div>
             </div>
+
+            {showJobDetailsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Job Details</h3>
+                        <p className="text-sm text-gray-600 mb-1">
+                            {jobDetails.title} • {jobDetails.vessel}
+                        </p>
+                        <p className="text-sm text-gray-600 mb-5">{jobDetails.posted}</p>
+
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
+                            <p className="text-sm font-semibold text-gray-700 mb-1">Description</p>
+                            <p className="text-sm text-gray-700 leading-6">{jobDetails.description}</p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setShowJobDetailsModal(false)}
+                                className="px-5 py-2.5 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleOpenJobDetailsPage}
+                                className="px-5 py-2.5 rounded-xl font-semibold bg-[#003971] text-white hover:bg-[#002855] transition-colors"
+                            >
+                                Open Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>    
     );
 }

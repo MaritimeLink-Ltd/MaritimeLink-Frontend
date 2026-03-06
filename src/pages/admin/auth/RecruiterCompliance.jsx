@@ -6,7 +6,8 @@ function RecruiterCompliance() {
     const [formData, setFormData] = useState({
         authorizedToRecruit: false,
         agreeToTerms: false,
-        hearAboutUs: ''
+        hearAboutUs: '',
+        otherHearAboutUs: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -19,7 +20,7 @@ function RecruiterCompliance() {
         }
     }, []);
 
-    const hearOptions = ['Referral', 'Search Engine', 'Social / Online Platform', 'Company / Partner'];
+    const hearOptions = ['Referral', 'Search Engine', 'Social / Online Platform', 'Company / Partner', 'Other'];
 
     const handleCheckboxChange = (e) => {
         const { name, checked } = e.target;
@@ -33,7 +34,8 @@ function RecruiterCompliance() {
     const handleOptionSelect = (option) => {
         setFormData({
             ...formData,
-            hearAboutUs: option
+            hearAboutUs: option,
+            otherHearAboutUs: option === 'Other' ? formData.otherHearAboutUs : ''
         });
     };
 
@@ -54,6 +56,11 @@ function RecruiterCompliance() {
 
         if (!formData.hearAboutUs) {
             setError('Please select how you heard about us');
+            return;
+        }
+
+        if (formData.hearAboutUs === 'Other' && !formData.otherHearAboutUs.trim()) {
+            setError('Please enter details for Other');
             return;
         }
 
@@ -160,6 +167,22 @@ function RecruiterCompliance() {
                                     </button>
                                 ))}
                             </div>
+
+                            {formData.hearAboutUs === 'Other' && (
+                                <input
+                                    type="text"
+                                    placeholder="Please specify"
+                                    value={formData.otherHearAboutUs}
+                                    onChange={(e) => {
+                                        setFormData({
+                                            ...formData,
+                                            otherHearAboutUs: e.target.value
+                                        });
+                                        if (error) setError('');
+                                    }}
+                                    className="mt-3 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                />
+                            )}
                         </div>
 
                         {/* Submit Button */}

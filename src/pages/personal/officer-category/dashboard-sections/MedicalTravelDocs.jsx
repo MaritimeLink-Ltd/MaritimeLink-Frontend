@@ -6,6 +6,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     certificateName: '',
     certificateNumber: '',
     issuingCountry: '',
+    city: '',
     institutionCountry: '',
     dateOfIssue: '',
     validTill: ''
@@ -70,6 +71,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         certificateName: '',
         certificateNumber: '',
         issuingCountry: '',
+        city: '',
         institutionCountry: '',
         dateOfIssue: '',
         validTill: ''
@@ -194,7 +196,9 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{doc.certificateName}</p>
                     <p className="text-xs text-gray-600">
-                      {doc.issuingCountry} {doc.institutionCountry ? `(${doc.institutionCountry})` : ''}
+                      {doc.issuingCountry}
+                      {doc.city ? `, ${doc.city}` : ''}
+                      {doc.institutionCountry ? ` (${doc.institutionCountry})` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
                       {doc.dateOfIssue && doc.validTill ?
@@ -242,7 +246,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                 <label htmlFor="medicalIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
                   <input
                     type="text"
                     id="medicalIssuingCountry"
@@ -254,9 +258,18 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                   />
                   <input
                     type="text"
+                    id="medicalInstitutionCity"
+                    name="city"
+                    placeholder="City"
+                    value={currentMedical.city}
+                    onChange={handleMedicalChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                  />
+                  <input
+                    type="text"
                     id="medicalInstitutionCountry"
                     name="institutionCountry"
-                    placeholder="Institution Country (Optional)"
+                    placeholder="Institution Country"
                     value={currentMedical.institutionCountry}
                     onChange={handleMedicalChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"

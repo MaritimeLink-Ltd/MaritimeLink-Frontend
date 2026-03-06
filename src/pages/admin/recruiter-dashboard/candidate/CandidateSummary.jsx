@@ -51,6 +51,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
     const [applicationStage, setApplicationStage] = useState(getInitialStage());
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
     const [showDocumentWallet, setShowDocumentWallet] = useState(false);
     const [showRequestSuccess, setShowRequestSuccess] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
@@ -60,6 +61,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [attendanceStatus, setAttendanceStatus] = useState('pending'); // 'pending' | 'approved' | 'rejected'
     const [showAttendanceApproveModal, setShowAttendanceApproveModal] = useState(false);
     const [showAttendanceRejectModal, setShowAttendanceRejectModal] = useState(false);
+    const [attendanceRejectReason, setAttendanceRejectReason] = useState('');
 
     const fromAttendance = location.state?.fromAttendance === true;
 
@@ -281,10 +283,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        {/* Hide View Resume button for Admin Routes */}
-                        {!isAdmin && (
+                        {/* Show View Resume for recruiter/admin profile pages (hide for training provider) */}
+                        {!location.pathname.includes('/trainingprovider/') && (
                             <button
-                                onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : '/admin/cv-resume')}
+                                onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : isAdmin ? '/admin/admin-cv-resume' : '/admin/cv-resume')}
                                 className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                             >
                                 <FileText className="h-5 w-5" />
@@ -355,16 +357,18 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 )}
                             </>
                         )}
-                        {/* Hide Message button for Training Provider dashboard and Admin routes */}
-                        {!location.pathname.includes('/trainingprovider/') && !isAdmin && (
-                            <button
-                                onClick={() => onMessage ? onMessage(candidateId, candidate.name) : navigate('/admin/chats')}
-                                className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
-                            >
-                                <MessageSquare className="h-5 w-5" />
-                                Message {candidate.name}
-                            </button>
-                        )}
+                        {/* Show Message */}
+                        <button
+                            onClick={() => onMessage ? onMessage(candidateId, candidate.name) : navigate(
+                                location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' :
+                                    isAdmin ? '/admin/admin-chats' : '/admin/chats',
+                                { state: { candidateId, candidateName: candidate.name } }
+                            )}
+                            className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
+                        >
+                            <MessageSquare className="h-5 w-5" />
+                            Message {candidate.name}
+                        </button>
                     </div>
                 </div>
 
@@ -413,7 +417,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 </div>
 
                 {/* Application Status - Hide for Admin routes */}
-                {shouldShowApplicationStatus && !isAdmin && (
+                {shouldShowApplicationStatus && (
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-[#003971]">Application Status</h2>
@@ -491,7 +495,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                         <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
                             {/* Close Button */}
                             <button
-                                onClick={() => setShowRejectModal(false)}
+                                onClick={() => {
+                                    setShowRejectModal(false);
+                                    setRejectReason('');
+                                }}
                                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
                             >
                                 <X className="h-5 w-5" />
@@ -505,20 +512,39 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 Are you sure you want to reject this candidate? This action cannot be undone.
                             </p>
 
+                            <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Reason for rejection <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="Please provide a reason"
+                                    rows={3}
+                                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none"
+                                />
+                            </div>
+
                             {/* Buttons */}
                             <div className="flex items-center justify-end gap-3">
                                 <button
-                                    onClick={() => setShowRejectModal(false)}
+                                    onClick={() => {
+                                        setShowRejectModal(false);
+                                        setRejectReason('');
+                                    }}
                                     className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={() => {
+                                        if (!rejectReason.trim()) return;
                                         setShowRejectModal(false);
+                                        setRejectReason('');
                                         navigate(-1);
                                     }}
-                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                    disabled={!rejectReason.trim()}
+                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Reject Candidate
                                 </button>
@@ -570,7 +596,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
                             <button
-                                onClick={() => setShowAttendanceRejectModal(false)}
+                                onClick={() => {
+                                    setShowAttendanceRejectModal(false);
+                                    setAttendanceRejectReason('');
+                                }}
                                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
                             >
                                 <X className="h-5 w-5" />
@@ -582,19 +611,37 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 This will mark the attendee as rejected for this session. You can
                                 always re-approve them later if required.
                             </p>
+                            <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Reason for rejection <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={attendanceRejectReason}
+                                    onChange={(e) => setAttendanceRejectReason(e.target.value)}
+                                    placeholder="Please provide a reason"
+                                    rows={3}
+                                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none"
+                                />
+                            </div>
                             <div className="flex items-center justify-end gap-3">
                                 <button
-                                    onClick={() => setShowAttendanceRejectModal(false)}
+                                    onClick={() => {
+                                        setShowAttendanceRejectModal(false);
+                                        setAttendanceRejectReason('');
+                                    }}
                                     className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={() => {
+                                        if (!attendanceRejectReason.trim()) return;
                                         setAttendanceStatus('rejected');
                                         setShowAttendanceRejectModal(false);
+                                        setAttendanceRejectReason('');
                                     }}
-                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                    disabled={!attendanceRejectReason.trim()}
+                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Reject
                                 </button>

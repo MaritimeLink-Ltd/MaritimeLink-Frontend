@@ -92,29 +92,7 @@ const engagementCourses = [
     }
 ];
 
-const recentEnquiries = [
-    {
-        course: 'STCW Basic Safety',
-        snippet: 'Enquiring about renewal options for crew joining in May...',
-        time: '12 mins ago',
-        meta: '12 expiring • Aberdeen',
-        tag: 'Expiring soon'
-    },
-    {
-        course: 'Advanced Firefighting',
-        snippet: 'Need additional seats for upcoming crew change window...',
-        time: '45 mins ago',
-        meta: '6 enquiries • Liverpool',
-        tag: 'Capacity review'
-    },
-    {
-        course: 'Medical Care Onboard',
-        snippet: 'Looking for weekend sessions for offshore rotation...',
-        time: '2 hours ago',
-        meta: '3 enquiries • Aberdeen',
-        tag: 'Scheduling'
-    }
-];
+
 
 const statusStyles = {
     warning: 'bg-amber-50 text-amber-700',
@@ -173,13 +151,7 @@ function DemandPlanning() {
         });
     }, [searchLower, course]);
 
-    const filteredRecentEnquiries = useMemo(() => {
-        return recentEnquiries.filter((e) => {
-            const matchSearch = !searchLower || e.course.toLowerCase().includes(searchLower) || e.snippet.toLowerCase().includes(searchLower) || e.tag.toLowerCase().includes(searchLower);
-            const matchCourse = courseFilterMatch(e.course);
-            return matchSearch && matchCourse;
-        });
-    }, [searchLower, course]);
+
 
     const filteredRenewalDemand = useMemo(() => {
         const rows = renewalDemandByTab[rangeTab] || [];
@@ -560,7 +532,7 @@ function DemandPlanning() {
                                             <td className="px-4 py-3 text-right">
                                                 <button
                                                     type="button"
-                                                    onClick={() => navigate('/trainingprovider/expiries')}
+                                                    onClick={() => navigate('/trainingprovider/expiries', { state: { certificate: row.course } })}
                                                     className="text-xs font-bold text-[#003971] hover:text-[#002455]"
                                                 >
                                                     View Professionals
@@ -585,7 +557,7 @@ function DemandPlanning() {
                             onClick={() => navigate('/trainingprovider/expiries')}
                             className="text-sm font-bold text-[#003971] hover:text-[#002455]"
                         >
-                            View All Expiring Professionals
+                            View All Expiries.
                         </button>
                     </div>
                 </div>
@@ -651,55 +623,7 @@ function DemandPlanning() {
                         </div>
                     </div>
 
-                    {/* Recent Enquiries */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-gray-900">Recent Enquiries</h2>
-                            <button
-                                type="button"
-                                onClick={() => navigate('/trainingprovider/chats')}
-                                className="text-xs font-bold text-[#003971] hover:text-[#002455]"
-                            >
-                                View All
-                            </button>
-                        </div>
 
-                        <div className="space-y-3">
-                            {filteredRecentEnquiries.length === 0 && (
-                                <p className="py-4 text-sm text-gray-500 text-center">
-                                    No enquiries match your filters.
-                                </p>
-                            )}
-                            {filteredRecentEnquiries.map((enquiry, idx) => {
-                                const isLast = idx === filteredRecentEnquiries.length - 1;
-
-                                return (
-                                    <div
-                                        key={enquiry.course + enquiry.time}
-                                        className={`flex items-start justify-between gap-3 py-3 ${!isLast ? 'border-b border-gray-100' : ''
-                                            }`}
-                                    >
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900">
-                                                {enquiry.course}
-                                            </p>
-                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                                                {enquiry.snippet}
-                                            </p>
-                                            <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
-                                                <span>{enquiry.time}</span>
-                                                <span className="h-1 w-1 rounded-full bg-gray-300" />
-                                                <span>{enquiry.meta}</span>
-                                            </div>
-                                        </div>
-                                        <span className="px-3 py-1 rounded-full bg-blue-50 text-[11px] font-semibold text-blue-700 whitespace-nowrap">
-                                            {enquiry.tag}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

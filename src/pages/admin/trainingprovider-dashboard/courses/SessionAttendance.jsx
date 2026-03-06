@@ -86,6 +86,9 @@ export default function SessionAttendance() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [selectedAttendee, setSelectedAttendee] = useState(null);
 
   const pendingCount = attendeesMock.filter((a) => a.status === 'Pending').length;
   const approvedCount = attendeesMock.filter((a) => a.status === 'Approved').length;
@@ -156,8 +159,8 @@ export default function SessionAttendance() {
               type="button"
               onClick={() => setActiveTab('all')}
               className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'all'
-                  ? 'bg-[#003971] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-[#003971] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               All
@@ -166,8 +169,8 @@ export default function SessionAttendance() {
               type="button"
               onClick={() => setActiveTab('pending')}
               className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'pending'
-                  ? 'bg-[#003971] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-[#003971] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               Pending ({pendingCount})
@@ -176,8 +179,8 @@ export default function SessionAttendance() {
               type="button"
               onClick={() => setActiveTab('approved')}
               className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'approved'
-                  ? 'bg-[#003971] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-[#003971] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               Approved ({approvedCount})
@@ -186,8 +189,8 @@ export default function SessionAttendance() {
               type="button"
               onClick={() => setActiveTab('cancelled')}
               className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'cancelled'
-                  ? 'bg-[#003971] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-[#003971] text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               Cancelled ({cancelledCount})
@@ -320,6 +323,66 @@ export default function SessionAttendance() {
           </p>
         </div>
       </div>
+
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+            <button
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectReason('');
+                setSelectedAttendee(null);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              Reject Attendee?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              This will mark the attendee as rejected for this session.
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Reason for rejection <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Please provide a reason"
+                rows={3}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setSelectedAttendee(null);
+                }}
+                className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!rejectReason.trim()) return;
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setSelectedAttendee(null);
+                  // Action to reject the attendee would go here
+                }}
+                disabled={!rejectReason.trim()}
+                className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

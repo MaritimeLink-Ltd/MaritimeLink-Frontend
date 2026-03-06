@@ -30,9 +30,9 @@ function RecruiterCompanyVerification() {
     };
 
     const handleDecline = () => {
-        // Navigate back to company details to enter new company info
-        navigate('/agent/company-details', {
-            state: { formData: companyData }
+        // Navigate to compliance declaration using manual details
+        navigate('/agent/compliance-declaration', {
+            state: { useManualDetails: true, companyData: location.state?.formData || companyData }
         });
     };
 
@@ -101,7 +101,7 @@ function RecruiterCompanyVerification() {
                         disabled={loading}
                         className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-200 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                     >
-                        No
+                        NO this is not my organization use my manual details
                     </button>
                 </div>
             </div>

@@ -5,6 +5,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   const [currentAcademic, setCurrentAcademic] = useState({
     qualificationName: '',
     institution: '',
+    city: '',
     institutionCountry: '',
     grade: '',
     startDate: '',
@@ -48,6 +49,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
       setCurrentAcademic({
         qualificationName: '',
         institution: '',
+        city: '',
         institutionCountry: '',
         grade: '',
         startDate: '',
@@ -155,7 +157,9 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{academic.qualificationName}</p>
                     <p className="text-xs text-gray-600">
-                      {academic.institution} {academic.institutionCountry ? `- ${academic.institutionCountry}` : ''}
+                      {academic.institution}
+                      {academic.city ? `, ${academic.city}` : ''}
+                      {academic.institutionCountry ? ` - ${academic.institutionCountry}` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
                       {academic.startDate && academic.endDate ?
@@ -188,7 +192,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                 <label htmlFor="institution" className="block text-gray-700 font-medium mb-1 text-sm">
                   Institution
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
                   <input
                     type="text"
                     id="institution"
@@ -200,9 +204,18 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                   />
                   <input
                     type="text"
+                    id="institutionCity"
+                    name="city"
+                    placeholder="City"
+                    value={currentAcademic.city}
+                    onChange={handleAcademicChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+                  />
+                  <input
+                    type="text"
                     id="institutionCountry"
                     name="institutionCountry"
-                    placeholder="Institution Country (Optional)"
+                    placeholder="Institution Country"
                     value={currentAcademic.institutionCountry}
                     onChange={handleAcademicChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
