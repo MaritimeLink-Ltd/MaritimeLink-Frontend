@@ -44,7 +44,7 @@ function TrainingProviderLayout() {
         { name: 'Home', path: '/trainingprovider-dashboard', icon: LayoutGrid },
         { name: 'Demand & Planning', path: '/trainingprovider/demand', icon: TrendingUp },
         { name: 'Course Management', path: '/trainingprovider/courses', icon: BookOpen },
-        { name: 'Bookings', path: '/trainingprovider/bookings', icon: Calendar },
+        { name: 'Session Management', path: '/trainingprovider/bookings', icon: Calendar },
         { name: 'Chats', path: '/trainingprovider/chats', icon: MessageSquare },
         { name: 'Profile', path: '/trainingprovider/profile', icon: UserCircle },
     ];

@@ -141,9 +141,9 @@ function TrainingProviderDashboard() {
             title: 'High demand detected in Aberdeen',
             subtitle: '67 professionals need renewal in 30 days',
             hasButton: true,
-            buttonText: 'View Bookings',
+            buttonText: 'View Demand',
             buttonStyle: 'bg-[#003971] text-white hover:bg-[#002455]',
-            path: '/trainingprovider/bookings'
+            path: '/trainingprovider/demand'
         }
     ];
 
@@ -181,8 +181,8 @@ function TrainingProviderDashboard() {
     ];
 
     return (
-        <div className="overflow-y-auto lg:overflow-hidden h-full">
-            <div className="lg:sticky lg:top-0 lg:z-10 bg-[#F5F7FA] pb-4">
+        <div className="h-full">
+            <div className="bg-[#F5F7FA] pb-4">
                 {/* Welcome Section */}
                 <div className="mb-6">
                     <div className="flex items-start justify-between">
@@ -220,7 +220,7 @@ function TrainingProviderDashboard() {
                 </div>
             </div>
 
-            <div className="overflow-y-auto lg:h-[calc(100vh-220px)] scrollbar-hide">
+            <div>
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                     {statsCards.map((card) => (
