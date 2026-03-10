@@ -181,7 +181,7 @@ function TrainingProviderDashboard() {
     ];
 
     return (
-        <div className="h-full">
+        <div className="h-full pb-6">
             <div className="bg-[#F5F7FA] pb-4">
                 {/* Welcome Section */}
                 <div className="mb-6">
@@ -220,7 +220,7 @@ function TrainingProviderDashboard() {
                 </div>
             </div>
 
-            <div>
+            <div className="pb-8">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                     {statsCards.map((card) => (
