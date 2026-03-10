@@ -301,7 +301,7 @@ function JobDetail({ onBack }) {
         const matchesTab = activeTab === 'all' || applicant.status === activeTab;
         const applicationDate = new Date(applicant.applicationDate);
         const cutoffDate = getTimeFilterDate();
-        const matchesTime = applicationDate >= cutoffDate;
+        const matchesTime = activeTab === 'all' ? true : applicationDate >= cutoffDate;
         return matchesTab && matchesTime;
     });
 
@@ -393,27 +393,29 @@ function JobDetail({ onBack }) {
 
                     <div className="flex items-center gap-3">
                         {/* Time Period Filters */}
-                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                            {[
-                                { id: 'today', label: 'Today' },
-                                { id: '7days', label: '7 Days' },
-                                { id: '30days', label: '30 Days' }
-                            ].map((filter) => (
-                                <button
-                                    key={filter.id}
-                                    onClick={() => {
-                                        setTimeFilter(filter.id);
-                                        setCurrentPage(1);
-                                    }}
-                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${timeFilter === filter.id
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    {filter.label}
-                                </button>
-                            ))}
-                        </div>
+                        {activeTab !== 'all' && (
+                            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                                {[
+                                    { id: 'today', label: 'Today' },
+                                    { id: '7days', label: '7 Days' },
+                                    { id: '30days', label: '30 Days' }
+                                ].map((filter) => (
+                                    <button
+                                        key={filter.id}
+                                        onClick={() => {
+                                            setTimeFilter(filter.id);
+                                            setCurrentPage(1);
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${timeFilter === filter.id
+                                            ? 'bg-white text-gray-900 shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                    >
+                                        {filter.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         <button
                             type="button"
@@ -499,7 +501,7 @@ function JobDetail({ onBack }) {
                                         : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
-                                    {activeTab === 'matches' ? 'ATS' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                                    {(activeTab === 'matches' || activeTab === 'all') ? 'ATS' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                                     <ChevronDown className={`h-4 w-4 transition-transform ${isATSDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
@@ -615,7 +617,7 @@ function JobDetail({ onBack }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                {activeTab === 'new' && (
+                                                    {(activeTab === 'new' || (activeTab === 'all' && applicant.status === 'new')) && (
                                                     <button
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
@@ -628,7 +630,7 @@ function JobDetail({ onBack }) {
                                                         View Profile
                                                     </button>
                                                 )}
-                                                {activeTab === 'matches' && (
+                                                    {(activeTab === 'matches' || (activeTab === 'all' && applicant.status === 'matches')) && (
                                                     <button
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
@@ -641,12 +643,12 @@ function JobDetail({ onBack }) {
                                                         View Profile
                                                     </button>
                                                 )}
-                                                {activeTab === 'shortlisted' && (
+                                                    {(activeTab === 'shortlisted' || (activeTab === 'all' && applicant.status === 'shortlisted')) && (
                                                     <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
                                                         Shortlisted
                                                     </span>
                                                 )}
-                                                {activeTab === 'interviewing' && (
+                                                    {(activeTab === 'interviewing' || (activeTab === 'all' && applicant.status === 'interviewing')) && (
                                                     scheduledInterviews.includes(applicant.id) ? (
                                                         <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold">
                                                             Scheduled
@@ -660,12 +662,12 @@ function JobDetail({ onBack }) {
                                                         </button>
                                                     )
                                                 )}
-                                                {activeTab === 'offered' && (
+                                                    {(activeTab === 'offered' || (activeTab === 'all' && applicant.status === 'offered')) && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
                                                         Offer Sent
                                                     </span>
                                                 )}
-                                                {activeTab === 'hired' && (
+                                                    {(activeTab === 'hired' || (activeTab === 'all' && applicant.status === 'hired')) && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
                                                         Hired
                                                     </span>

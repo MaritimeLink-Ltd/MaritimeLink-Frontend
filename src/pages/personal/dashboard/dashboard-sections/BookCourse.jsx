@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, CheckCircle2, Check, Folder, ChevronRight } from 'lucide-react';
+import { getAvailableSpaces, getSessionsForCourse } from '../../../../utils/trainingSessionsStore';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const BookCourse = () => {
@@ -9,6 +10,7 @@ const BookCourse = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [selectedFolder, setSelectedFolder] = useState(null);
+    const [selectedSessions, setSelectedSessions] = useState([]);
 
     // Sample course data
     const courses = {
@@ -17,6 +19,7 @@ const BookCourse = () => {
             title: 'STCW Basic Safety Training',
             provider: 'Ocean Maritime Training Centre',
             price: 'GBP 850',
+            priceValue: 850,
             location: 'London, United Kingdom',
             category: 'STCW',
             duration: '5 Days'
@@ -26,6 +29,7 @@ const BookCourse = () => {
             title: 'Advanced Firefighting',
             provider: 'Maritime Safety Institute',
             price: 'GBP 1200',
+            priceValue: 1200,
             location: 'Southampton, United Kingdom',
             category: 'Safety',
             duration: '3 Days'
@@ -35,6 +39,7 @@ const BookCourse = () => {
             title: 'Medical First Aid',
             provider: 'Ocean Maritime Training Centre',
             price: 'GBP 450',
+            priceValue: 450,
             location: 'London, United Kingdom',
             category: 'Medical',
             duration: '2 Days'
@@ -44,6 +49,7 @@ const BookCourse = () => {
             title: 'Bridge Resource Management',
             provider: 'Navigation Training Academy',
             price: 'GBP 1500',
+            priceValue: 1500,
             location: 'Liverpool, United Kingdom',
             category: 'Navigation',
             duration: '7 Days'
@@ -53,6 +59,7 @@ const BookCourse = () => {
             title: 'STCW Refresher Course',
             provider: 'Ocean Maritime Training Centre',
             price: 'GBP 650',
+            priceValue: 650,
             location: 'London, United Kingdom',
             category: 'STCW',
             duration: '3 Days'
@@ -60,6 +67,9 @@ const BookCourse = () => {
     };
 
     const course = courses[courseId] || courses['1'];
+    const availableSessions = getSessionsForCourse(course.id, course.title);
+    const selectedSessionCount = selectedSessions.length;
+    const totalAmount = selectedSessionCount * (course.priceValue || 0);
 
     // Sample document wallet data
     const documentWalletItems = [
@@ -87,8 +97,14 @@ const BookCourse = () => {
 
 
     const handlePayNow = () => {
+        if (!selectedSessionCount) {
+            return;
+        }
+
         const bookingData = {
             courseId,
+            selectedSessions,
+            totalAmount,
             selectedDocuments
         };
         console.log('Booking with data:', bookingData);
@@ -141,10 +157,50 @@ const BookCourse = () => {
                     </div>
                 </div>
 
+                {/* Sessions Selection */}
+                <div className="mb-6">
+                    <h3 className="text-base font-semibold text-gray-800 mb-2">Choose Session(s)</h3>
+                    <p className="text-sm text-gray-500 mb-4">Select one or multiple sessions. Payment will be calculated based on your selection.</p>
+
+                    {availableSessions.length > 0 ? (
+                        <div className="space-y-3">
+                            {availableSessions.map((session) => {
+                                const isSelected = selectedSessions.includes(session.id);
+
+                                return (
+                                    <div
+                                        key={session.id}
+                                        onClick={() => {
+                                            setSelectedSessions((prev) => (
+                                                prev.includes(session.id)
+                                                    ? prev.filter((id) => id !== session.id)
+                                                    : [...prev, session.id]
+                                            ));
+                                        }}
+                                        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${isSelected ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${isSelected ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
+                                            {isSelected && <Check size={14} className="text-white" strokeWidth={3} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
+                                            <p className="text-xs text-gray-500 mt-1">Available Spaces: {getAvailableSpaces(session)}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="border border-dashed border-gray-200 rounded-xl p-4 text-sm text-gray-500">
+                            No sessions are available for this course yet.
+                        </div>
+                    )}
+                </div>
+
                 {/* Price */}
                 <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between mb-6">
-                    <p className="text-sm text-gray-500">Price</p>
-                    <p className="font-semibold text-gray-800">{course.price}</p>
+                    <p className="text-sm text-gray-500">Total ({selectedSessionCount || 0} session{selectedSessionCount === 1 ? '' : 's'})</p>
+                    <p className="font-semibold text-gray-800">GBP {totalAmount}</p>
                 </div>
 
 
@@ -159,10 +215,16 @@ const BookCourse = () => {
                                 <div
                                     key={folder.id}
                                     onClick={() => setSelectedFolder(folder)}
-                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 transition-colors"
+                                    className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
+                                        ? 'border-[#003971] bg-[#003971]/5'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-[#003971]/10 text-[#003971] flex items-center justify-center">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
+                                            ? 'bg-[#003971] text-white'
+                                            : 'bg-[#003971]/10 text-[#003971]'
+                                            }`}>
                                             <Folder size={20} />
                                         </div>
                                         <div>
@@ -170,7 +232,14 @@ const BookCourse = () => {
                                             <p className="text-xs text-gray-500">{folder.documents.length} document(s)</p>
                                         </div>
                                     </div>
-                                    <ChevronRight size={18} className="text-gray-400" />
+                                    <div className="flex items-center gap-2">
+                                        {folder.documents.some((doc) => selectedDocuments.includes(doc.id)) && (
+                                            <span className="text-xs font-semibold text-[#003971]">
+                                                {folder.documents.filter((doc) => selectedDocuments.includes(doc.id)).length} selected
+                                            </span>
+                                        )}
+                                        <ChevronRight size={18} className="text-gray-400" />
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -218,9 +287,10 @@ const BookCourse = () => {
                 {/* Pay Now Button */}
                 <button
                     onClick={handlePayNow}
-                    className="w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 bg-[#003971] hover:bg-[#003971]/90"
+                    disabled={!selectedSessionCount}
+                    className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 ${selectedSessionCount ? 'bg-[#003971] hover:bg-[#003971]/90' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
-                    Pay Now
+                    {selectedSessionCount ? 'Pay Now' : 'Select Session(s) to Continue'}
                 </button>
             </div>
 

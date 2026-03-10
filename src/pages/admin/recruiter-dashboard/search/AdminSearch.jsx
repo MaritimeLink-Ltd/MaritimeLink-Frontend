@@ -328,7 +328,7 @@ function AdminSearch({ onViewCandidate }) {
                                                     className="bg-[#003971] text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2 whitespace-nowrap"
                                                 >
                                                     <FileText className="h-4 w-4" />
-                                                    View Summary
+                                                    View Profile
                                                 </button>
                                             </div>
                                         </div>

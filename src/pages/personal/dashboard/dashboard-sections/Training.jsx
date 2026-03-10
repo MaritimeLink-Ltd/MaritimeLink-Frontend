@@ -294,7 +294,7 @@ This training is suitable for new entrants to the maritime industry as well as e
                                         {selectedCourseSessions.map((session) => (
                                             <div
                                                 key={session.id}
-                                                className="border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                                                className="border border-gray-200 rounded-xl p-4"
                                             >
                                                 <div>
                                                     <p className="text-sm text-gray-500">Event Date</p>
@@ -303,12 +303,6 @@ This training is suitable for new entrants to the maritime industry as well as e
                                                         Available Spaces: <span className="font-semibold text-gray-700">{getAvailableSpaces(session)}</span>
                                                     </p>
                                                 </div>
-                                                <button
-                                                    onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
-                                                    className="px-5 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px]"
-                                                >
-                                                    Book now
-                                                </button>
                                             </div>
                                         ))}
                                     </div>

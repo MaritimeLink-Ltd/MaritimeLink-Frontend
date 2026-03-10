@@ -4,16 +4,9 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
     ChevronDown,
     Search,
-    Download,
-    ChevronsUpDown
+    ArrowUpRight,
+    Download
 } from 'lucide-react';
-
-const periodOptions = [
-    { value: 'all', label: 'All' },
-    { value: '30', label: '30 Days' },
-    { value: '60', label: '60 Days' },
-    { value: '90', label: '90 Days' }
-];
 
 // Generate mock data with relative dates (days from today)
 function getMockExpiries() {
@@ -47,11 +40,9 @@ const mockExpiries = getMockExpiries();
 function AllExpiries() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [period, setPeriod] = useState('all');
     const [region, setRegion] = useState('my-region');
-    const [year, setYear] = useState('all');
-    const [city, setCity] = useState('all');
-    const [certificateType, setCertificateType] = useState(() => {
+    const [year, setYear] = useState(() => new Date().getFullYear().toString());
+    const [course, setCourse] = useState(() => {
         if (location.state?.certificate) {
             const c = location.state.certificate.toLowerCase();
             if (c.includes('stcw')) return 'stcw';
@@ -61,10 +52,7 @@ function AllExpiries() {
         }
         return 'all';
     });
-    const [rank, setRank] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 12;
 
     const filteredExpiries = useMemo(() => {
         const today = new Date();
@@ -73,12 +61,9 @@ function AllExpiries() {
             const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
             const expiryYear = expiryDate.getFullYear().toString();
 
-            if (period === '30' && daysUntilExpiry > 30) return false;
-            if (period === '60' && daysUntilExpiry > 60) return false;
-            if (period === '90' && daysUntilExpiry > 90) return false;
             if (daysUntilExpiry < 0) return false;
 
-            if (year !== 'all' && expiryYear !== year) return false;
+            if (year !== expiryYear) return false;
 
             const loc = row.location.toLowerCase();
             if (region === 'north-sea' && !['aberdeen', 'hull'].includes(loc)) return false;
@@ -92,34 +77,44 @@ function AllExpiries() {
                 if (!match) return false;
             }
 
-            if (certificateType !== 'all' && !row.certificateType.toLowerCase().includes(certificateType)) return false;
-            if (rank !== 'all' && row.rank.toLowerCase() !== rank) return false;
-            if (city !== 'all' && row.location.toLowerCase() !== city) return false;
+            if (course !== 'all' && !row.certificateType.toLowerCase().includes(course)) return false;
             return true;
         });
-    }, [period, year, region, searchTerm, certificateType, rank, city]);
+    }, [year, region, searchTerm, course]);
 
-    const paginatedExpiries = useMemo(() => {
-        const start = (currentPage - 1) * pageSize;
-        return filteredExpiries.slice(start, start + pageSize);
-    }, [filteredExpiries, currentPage]);
+    const renewalDemandRows = useMemo(() => {
+        const grouped = new Map();
 
-    const totalPages = Math.ceil(filteredExpiries.length / pageSize);
+        filteredExpiries.forEach((row) => {
+            const key = row.certificateType;
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    course: row.certificateType,
+                    expiring: 0,
+                    locations: new Set(),
+                    candidateId: row.id
+                });
+            }
 
-    const formatDate = (dateStr) => {
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
+            const entry = grouped.get(key);
+            entry.expiring += 1;
+            entry.locations.add(row.location);
         });
-    };
+
+        return Array.from(grouped.values())
+            .map((row) => ({
+                course: row.course,
+                expiring: row.expiring,
+                trend: Math.max(1, Math.round(row.expiring * 0.8)),
+                locations: Array.from(row.locations).join(' • '),
+                candidateId: row.candidateId
+            }))
+            .sort((a, b) => b.expiring - a.expiring);
+    }, [filteredExpiries]);
 
     const handleExportCSV = () => {
-        const headers = ['Certificate Type', 'Expiry Date', 'Days Left', 'Location', 'Rank'];
-        const rows = filteredExpiries.map((r) => {
-            const daysLeft = Math.max(0, Math.ceil((new Date(r.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)));
-            return [r.certificateType, formatDate(r.expiryDate), `${daysLeft} days`, r.location, r.rank];
-        });
+        const headers = ['Course', 'Expiring', 'Trend', 'Primary Locations'];
+        const rows = renewalDemandRows.map((r) => [r.course, r.expiring, r.trend, r.locations]);
         const csv = [headers.join(','), ...rows.map((row) => row.map((c) => `"${c}"`).join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -143,10 +138,10 @@ function AllExpiries() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900">
-                            All Expiries
+                            Demand &amp; Planning
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            View and manage expiring certificates for upcoming renewals.
+                            Monitor training demand, watch capacity, and plan renewal demands.
                         </p>
                     </div>
 
@@ -157,7 +152,7 @@ function AllExpiries() {
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search certificates, locations..."
+                                placeholder="Search courses, enquiries..."
                                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971]"
                             />
                         </div>
@@ -168,12 +163,6 @@ function AllExpiries() {
             {/* Filters */}
             <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 md:px-5 md:py-4">
                 <div className="flex flex-wrap items-center gap-3">
-                    <FilterSelect
-                        label="Period"
-                        value={period}
-                        onChange={(v) => { setPeriod(v); setCurrentPage(1); }}
-                        options={periodOptions}
-                    />
                     <FilterSelect
                         label="Region"
                         value={region}
@@ -189,43 +178,20 @@ function AllExpiries() {
                         value={year}
                         onChange={setYear}
                         options={[
-                            { value: 'all', label: 'All Years' },
                             { value: '2025', label: '2025' },
                             { value: '2026', label: '2026' }
                         ]}
                     />
                     <FilterSelect
-                        label="City"
-                        value={city}
-                        onChange={setCity}
+                        label="Course"
+                        value={course}
+                        onChange={setCourse}
                         options={[
-                            { value: 'all', label: 'All Cities' },
-                            { value: 'liverpool', label: 'Liverpool' },
-                            { value: 'aberdeen', label: 'Aberdeen' },
-                            { value: 'hull', label: 'Hull' }
-                        ]}
-                    />
-                    <FilterSelect
-                        label="Certificate"
-                        value={certificateType}
-                        onChange={setCertificateType}
-                        options={[
-                            { value: 'all', label: 'All Certificates' },
+                            { value: 'all', label: 'All Courses' },
                             { value: 'stcw', label: 'STCW Basic Safety' },
                             { value: 'firefighting', label: 'Advanced Firefighting' },
                             { value: 'gwo', label: 'GWO Sea Survival' },
                             { value: 'medical', label: 'Medical Care Onboard' }
-                        ]}
-                    />
-                    <FilterSelect
-                        label="Rank"
-                        value={rank}
-                        onChange={setRank}
-                        options={[
-                            { value: 'all', label: 'All Ranks' },
-                            { value: 'able seaman', label: 'Able Seaman' },
-                            { value: 'officer', label: 'Officer' },
-                            { value: 'master', label: 'Master' }
                         ]}
                     />
                 </div>
@@ -258,62 +224,56 @@ function AllExpiries() {
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                                <th className="px-4 py-3 text-left">
-                                    <span className="flex items-center gap-1">
-                                        Certificate Type <ChevronsUpDown className="h-3.5 w-3.5" />
-                                    </span>
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                    <span className="flex items-center gap-1">
-                                        Expiry Date <ChevronsUpDown className="h-3.5 w-3.5" />
-                                    </span>
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                    <span className="flex items-center gap-1">
-                                        Days Left <ChevronsUpDown className="h-3.5 w-3.5" />
-                                    </span>
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                    <span className="flex items-center gap-1">
-                                        Location <ChevronsUpDown className="h-3.5 w-3.5" />
-                                    </span>
-                                </th>
-                                <th className="px-4 py-3 text-left">
-                                    <span className="flex items-center gap-1">
-                                        Rank <ChevronsUpDown className="h-3.5 w-3.5" />
-                                    </span>
-                                </th>
-                                <th className="px-4 py-3 text-left">Action</th>
+                                <th className="px-4 py-3 text-left">Course</th>
+                                <th className="px-4 py-3 text-right whitespace-nowrap">Expiring</th>
+                                <th className="px-4 py-3 text-right whitespace-nowrap">Trend</th>
+                                <th className="px-4 py-3 text-left whitespace-nowrap">Primary Locations</th>
+                                <th className="px-4 py-3 text-right" />
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedExpiries.map((row, idx) => {
-                                const isLast = idx === paginatedExpiries.length - 1;
+                            {renewalDemandRows.map((row, idx) => {
+                                const isLast = idx === renewalDemandRows.length - 1;
+                                const trendUp = row.trend >= row.expiring;
+
                                 return (
                                     <tr
-                                        key={row.id}
+                                        key={`${row.course}-${idx}`}
                                         className={`hover:bg-gray-50/60 transition-colors ${!isLast ? 'border-b border-gray-50' : ''}`}
                                     >
-                                        <td className="px-4 py-3 font-semibold text-gray-900">{row.certificateType}</td>
-                                        <td className="px-4 py-3 text-gray-700">{formatDate(row.expiryDate)}</td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                                                {Math.max(0, Math.ceil((new Date(row.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)))} days
+                                            <div className="flex items-center gap-2">
+                                                <span className="inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
+                                                <span className="font-semibold text-gray-900">
+                                                    {row.course}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                                            {row.expiring}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <span
+                                                className={`inline-flex items-center gap-1 text-xs font-semibold ${trendUp
+                                                    ? 'text-emerald-600'
+                                                    : 'text-amber-600'
+                                                    }`}
+                                            >
+                                                <ArrowUpRight className="h-3 w-3" />
+                                                {row.trend}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700">{row.location}</td>
-                                        <td className="px-4 py-3 text-gray-700">{row.rank}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 text-sm text-gray-600">{row.locations}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="inline-flex items-center gap-3">
                                             <button
                                                 type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigate(`/trainingprovider/candidate/${row.id}`);
-                                                }}
-                                                className="px-3 py-1.5 rounded-lg bg-[#EBF3FF] text-[#003971] text-xs font-semibold hover:bg-[#d7e6ff] transition-colors cursor-pointer"
+                                                onClick={() => navigate(`/trainingprovider/candidate/${row.candidateId}`, { state: { certificate: row.course } })}
+                                                className="text-xs font-bold text-[#003971] hover:text-[#002455]"
                                             >
-                                                View Profile
+                                                View Professionals
                                             </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -322,54 +282,11 @@ function AllExpiries() {
                     </table>
                 </div>
 
-                {paginatedExpiries.length === 0 && (
+                {renewalDemandRows.length === 0 && (
                     <div className="flex-1 flex items-center justify-center py-12 text-gray-500 text-sm">
-                        No expiries match your filters. Try adjusting period or filters.
+                        No results match your filters. Try adjusting region or course.
                     </div>
                 )}
-
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500">
-                        Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                        {Math.min(currentPage * pageSize, filteredExpiries.length)} of {filteredExpiries.length} expiries
-                    </p>
-                    <div className="flex items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                            Prev
-                        </button>
-                        {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                            const p = totalPages <= 3 ? i + 1 : Math.min(currentPage, totalPages - 2) + i;
-                            if (p < 1 || p > totalPages) return null;
-                            return (
-                                <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() => setCurrentPage(p)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${currentPage === p
-                                        ? 'bg-[#003971] text-white'
-                                        : 'text-gray-600 hover:bg-gray-100'
-                                        }`}
-                                >
-                                    {p}
-                                </button>
-                            );
-                        })}
-                        <button
-                            type="button"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     );
