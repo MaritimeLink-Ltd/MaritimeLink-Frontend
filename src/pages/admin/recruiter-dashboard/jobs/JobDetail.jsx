@@ -617,7 +617,7 @@ function JobDetail({ onBack }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                    {(activeTab === 'new' || (activeTab === 'all' && applicant.status === 'new')) && (
+                                                {activeTab === 'all' && (
                                                     <button
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
@@ -630,7 +630,7 @@ function JobDetail({ onBack }) {
                                                         View Profile
                                                     </button>
                                                 )}
-                                                    {(activeTab === 'matches' || (activeTab === 'all' && applicant.status === 'matches')) && (
+                                                {activeTab === 'new' && (
                                                     <button
                                                         onClick={() => {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
@@ -643,12 +643,25 @@ function JobDetail({ onBack }) {
                                                         View Profile
                                                     </button>
                                                 )}
-                                                    {(activeTab === 'shortlisted' || (activeTab === 'all' && applicant.status === 'shortlisted')) && (
+                                                {activeTab === 'matches' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const candidateRoute = location.pathname.includes('/marketplace')
+                                                                ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                : `/recruiter/candidate/${applicant.id}`;
+                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                        }}
+                                                        className="text-blue-600 font-semibold hover:underline text-sm"
+                                                    >
+                                                        View Profile
+                                                    </button>
+                                                )}
+                                                {activeTab === 'shortlisted' && (
                                                     <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
                                                         Shortlisted
                                                     </span>
                                                 )}
-                                                    {(activeTab === 'interviewing' || (activeTab === 'all' && applicant.status === 'interviewing')) && (
+                                                {activeTab === 'interviewing' && (
                                                     scheduledInterviews.includes(applicant.id) ? (
                                                         <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold">
                                                             Scheduled
@@ -662,12 +675,12 @@ function JobDetail({ onBack }) {
                                                         </button>
                                                     )
                                                 )}
-                                                    {(activeTab === 'offered' || (activeTab === 'all' && applicant.status === 'offered')) && (
+                                                {activeTab === 'offered' && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
                                                         Offer Sent
                                                     </span>
                                                 )}
-                                                    {(activeTab === 'hired' || (activeTab === 'all' && applicant.status === 'hired')) && (
+                                                {activeTab === 'hired' && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
                                                         Hired
                                                     </span>

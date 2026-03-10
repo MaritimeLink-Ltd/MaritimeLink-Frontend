@@ -20,7 +20,7 @@ function TrainingProviderLayout() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    const isActive = (path) => location.pathname === path || (path === '/trainingprovider/demand' && location.pathname === '/trainingprovider/expiries');
+    const isActive = (path) => location.pathname === path || (path === '/trainingprovider/demand' && ['/trainingprovider/expiries-overview', '/trainingprovider/expiries'].includes(location.pathname));
 
     const handleLogoutClick = () => {
         setDropdownOpen(false);

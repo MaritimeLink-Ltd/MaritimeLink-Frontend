@@ -195,6 +195,12 @@ function DemandPlanning() {
             <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 md:px-5 md:py-4">
                 <div className="flex flex-wrap items-center gap-3">
                     <FilterSelect
+                        label="Period"
+                        value={rangeTab}
+                        onChange={setRangeTab}
+                        options={renewalTabs.map((tab) => ({ value: tab, label: tab }))}
+                    />
+                    <FilterSelect
                         label="Region"
                         value={region}
                         onChange={setRegion}
@@ -554,7 +560,7 @@ function DemandPlanning() {
                     <div className="mt-4 pt-3 border-t border-gray-100">
                         <button
                             type="button"
-                            onClick={() => navigate('/trainingprovider/expiries')}
+                            onClick={() => navigate('/trainingprovider/expiries-overview')}
                             className="text-sm font-bold text-[#003971] hover:text-[#002455]"
                         >
                             View All Expiries.

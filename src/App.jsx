@@ -50,6 +50,7 @@ import RecruiterLayout from './pages/admin/recruiter-dashboard/layout/AdminLayou
 import TrainingProviderLayout from './pages/admin/trainingprovider-dashboard/layout/TrainingProviderLayout';
 import TrainingProviderDashboard from './pages/admin/trainingprovider-dashboard/TrainingProviderDashboard';
 import DemandPlanning from './pages/admin/trainingprovider-dashboard/demand/DemandPlanning';
+import ExpiringCertificatesOverview from './pages/admin/trainingprovider-dashboard/demand/ExpiringCertificatesOverview';
 import AllExpiries from './pages/admin/trainingprovider-dashboard/demand/AllExpiries';
 import TrainingProviderCourses from './pages/admin/trainingprovider-dashboard/courses/TrainingProviderCourses';
 import CourseDetail from './pages/admin/trainingprovider-dashboard/courses/CourseDetail';
@@ -167,6 +168,7 @@ function App() {
           <Route element={<TrainingProviderLayout />}>
             <Route path="/trainingprovider-dashboard" element={<TrainingProviderDashboard />} />
             <Route path="/trainingprovider/demand" element={<DemandPlanning />} />
+            <Route path="/trainingprovider/expiries-overview" element={<ExpiringCertificatesOverview />} />
             <Route path="/trainingprovider/expiries" element={<AllExpiries />} />
             <Route path="/trainingprovider/courses" element={<TrainingProviderCourses />} />
             <Route path="/trainingprovider/courses/:courseId" element={<CourseDetail />} />
