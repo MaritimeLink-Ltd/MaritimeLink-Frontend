@@ -350,10 +350,16 @@ const ApplyToJob = () => {
                                         <div
                                             key={folder.id}
                                             onClick={() => setSelectedFolder(folder)}
-                                            className="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-gray-300 transition-colors"
+                                            className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
+                                                ? 'border-[#003971] bg-[#003971]/5'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                                }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-[#003971]/10 text-[#003971] flex items-center justify-center">
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
+                                                    ? 'bg-[#003971] text-white'
+                                                    : 'bg-[#003971]/10 text-[#003971]'
+                                                    }`}>
                                                     <Folder size={20} />
                                                 </div>
                                                 <div>
@@ -361,7 +367,14 @@ const ApplyToJob = () => {
                                                     <p className="text-xs text-gray-500">{folder.documents.length} document(s)</p>
                                                 </div>
                                             </div>
-                                            <ChevronRight size={18} className="text-gray-400" />
+                                            <div className="flex items-center gap-2">
+                                                {folder.documents.some((doc) => selectedDocuments.includes(doc.id)) && (
+                                                    <span className="text-xs font-semibold text-[#003971]">
+                                                        {folder.documents.filter((doc) => selectedDocuments.includes(doc.id)).length} selected
+                                                    </span>
+                                                )}
+                                                <ChevronRight size={18} className="text-gray-400" />
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

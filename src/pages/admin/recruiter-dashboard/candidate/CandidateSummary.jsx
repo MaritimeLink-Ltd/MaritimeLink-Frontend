@@ -33,20 +33,20 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const getInitialStage = () => {
         const status = location.state?.applicantStatus;
 
-        // If no status provided, don't show any stage as current
-        if (!status) return null;
+        // Default to Applied as the base stage
+        if (!status) return 'applied';
 
         // Map status to current stage
         const stageMap = {
-            'new': null, // No stage completed yet
-            'matches': null, // No stage completed yet
+            'new': 'applied',
+            'matches': 'applied',
             'shortlisted': 'shortlisted',
             'interviewing': 'interviewing',
             'offered': 'offer-sent',
             'hired': 'hired'
         };
 
-        return stageMap[status] !== undefined ? stageMap[status] : null;
+        return stageMap[status] !== undefined ? stageMap[status] : 'applied';
     };
 
     const [applicationStage, setApplicationStage] = useState(getInitialStage());
@@ -72,18 +72,15 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
     // Get next stage and button text
     const getNextStageInfo = () => {
-        if (!applicationStage) {
-            return { nextStage: 'shortlisted', buttonText: 'Move to Shortlisted' };
-        }
-
         const stageProgression = {
+            'applied': { nextStage: 'shortlisted', buttonText: 'Move to Shortlisted' },
             'shortlisted': { nextStage: 'interviewing', buttonText: 'Move to Interviewing' },
             'interviewing': { nextStage: 'offer-sent', buttonText: 'Move to Offer Sent' },
             'offer-sent': { nextStage: 'hired', buttonText: 'Move to Hired' },
             'hired': { nextStage: null, buttonText: 'Hired' }
         };
 
-        return stageProgression[applicationStage] || { nextStage: 'hired', buttonText: 'Move to Hired' };
+        return stageProgression[applicationStage] || { nextStage: 'shortlisted', buttonText: 'Move to Shortlisted' };
     };
 
     const nextStageInfo = getNextStageInfo();
@@ -217,6 +214,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     };
 
     const stages = [
+        { id: 'applied', label: 'Applied' },
         { id: 'shortlisted', label: 'Shortlisted' },
         { id: 'interviewing', label: 'Interviewing' },
         { id: 'offer-sent', label: 'Offer Sent' },
