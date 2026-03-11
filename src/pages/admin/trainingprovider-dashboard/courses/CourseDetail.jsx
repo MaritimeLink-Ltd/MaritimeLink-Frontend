@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  ArrowLeft,
   BookOpen,
   Calendar,
   MapPin,
@@ -183,18 +184,15 @@ export default function CourseDetail() {
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Breadcrumb */}
-      <div className="flex items-center text-xs text-gray-500 mb-3">
-        <button
-          type="button"
-          onClick={() => navigate('/trainingprovider/courses')}
-          className="hover:text-[#003971] font-medium"
-        >
-          Course Management
-        </button>
-        <span className="mx-2">/</span>
-        <span className="font-medium text-gray-700">{courseSummary.title}</span>
-      </div>
+      {/* Back Button */}
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#003971] font-medium mb-3 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </button>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">

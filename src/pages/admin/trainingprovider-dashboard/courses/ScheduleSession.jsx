@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Calendar, MapPin, Users, ChevronLeft } from 'lucide-react';
+import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search } from 'lucide-react';
 import { saveOrUpdateSession } from '../../../../utils/trainingSessionsStore';
+import { publishedCourses } from '../../../../data/publishedCoursesData';
 
 export default function ScheduleSession() {
   const navigate = useNavigate();
@@ -9,6 +10,12 @@ export default function ScheduleSession() {
   const { courseId } = useParams();
   const isEdit = location.state?.isEdit || false;
   const sessionData = location.state?.sessionData || null;
+
+  const [selectedCourse, setSelectedCourse] = useState(sessionData?.courseId || '');
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const [courseSearch, setCourseSearch] = useState('');
+  const courseDropdownRef = useRef(null);
+  const courseSearchRef = useRef(null);
 
   const [form, setForm] = useState({
     startDate: sessionData?.startDate || '',
@@ -18,6 +25,37 @@ export default function ScheduleSession() {
     enrollmentDeadline: ''
   });
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target)) {
+        setCourseDropdownOpen(false);
+        setCourseSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Auto-focus the search input when dropdown opens
+  useEffect(() => {
+    if (courseDropdownOpen && courseSearchRef.current) {
+      courseSearchRef.current.focus();
+    }
+  }, [courseDropdownOpen]);
+
+  const filteredCourses = publishedCourses.filter((c) =>
+    c.name.toLowerCase().includes(courseSearch.toLowerCase())
+  );
+
+  const selectedCourseName = publishedCourses.find((c) => String(c.id) === String(selectedCourse))?.name || '';
+
+  const handleSelectCourse = (course) => {
+    setSelectedCourse(course.id);
+    setCourseDropdownOpen(false);
+    setCourseSearch('');
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -25,9 +63,10 @@ export default function ScheduleSession() {
 
   const handleSave = () => {
     const eventDate = [form.startDate, form.endDate].filter(Boolean).join(' - ');
+    const targetCourseId = selectedCourse || courseId;
 
     saveOrUpdateSession(
-      courseId,
+      targetCourseId,
       {
         eventDate,
         location: form.location,
@@ -39,7 +78,7 @@ export default function ScheduleSession() {
       }
     );
 
-    navigate(`/trainingprovider/courses/${courseId || '1'}/sessions`);
+    navigate(`/trainingprovider/courses/${targetCourseId || '1'}/sessions`);
   };
 
   return (
@@ -64,6 +103,64 @@ export default function ScheduleSession() {
 
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 min-h-[400px] flex flex-col">
           <div className="space-y-6 flex-1">
+            {/* Select Course — Searchable Dropdown */}
+            <div ref={courseDropdownRef} className="relative">
+              <label className="block text-gray-900 font-medium mb-2 text-base">Select Course</label>
+              {/* Trigger */}
+              <button
+                type="button"
+                id="select-course"
+                onClick={() => setCourseDropdownOpen((prev) => !prev)}
+                className={`w-full flex items-center border rounded-xl pl-10 pr-10 py-3 text-sm text-left bg-white cursor-pointer transition-all ${courseDropdownOpen
+                    ? 'border-[#003971] ring-2 ring-[#003971]/15'
+                    : 'border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <BookOpen className="absolute left-3 top-[46px] h-4 w-4 text-gray-400" />
+                <span className={selectedCourseName ? 'text-gray-900' : 'text-gray-400'}>
+                  {selectedCourseName || '-- Select a Course --'}
+                </span>
+                <ChevronDown className={`absolute right-3 top-[46px] h-4 w-4 text-gray-400 transition-transform ${courseDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Panel */}
+              {courseDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  {/* Search Input */}
+                  <div className="relative px-3 pt-3 pb-2">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      ref={courseSearchRef}
+                      type="text"
+                      placeholder="Search courses..."
+                      value={courseSearch}
+                      onChange={(e) => setCourseSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                    />
+                  </div>
+                  {/* Options */}
+                  <ul className="max-h-48 overflow-y-auto py-1">
+                    {filteredCourses.length > 0 ? (
+                      filteredCourses.map((course) => (
+                        <li
+                          key={course.id}
+                          onClick={() => handleSelectCourse(course)}
+                          className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${String(course.id) === String(selectedCourse)
+                              ? 'bg-[#EBF3FF] text-[#003971] font-medium'
+                              : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                          {course.name}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-4 py-3 text-sm text-gray-400 text-center">No courses found</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             <h3 className="text-base font-semibold text-gray-900">Session Details</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
