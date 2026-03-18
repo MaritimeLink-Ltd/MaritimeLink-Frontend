@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { countryCodes } from '../../../utils/countryCodes';
+import authService from '../../../services/authService';
 
 function RecruiterProfileCompletion() {
     const navigate = useNavigate();
@@ -82,23 +83,32 @@ function RecruiterProfileCompletion() {
         setLoading(true);
 
         try {
-            // TODO: Implement profile completion API call
+            const recruiterId = localStorage.getItem('recruiterId');
+            if (!recruiterId) {
+                setError('Session expired. Please register again.');
+                setLoading(false);
+                return;
+            }
+
             const finalRole = formData.role || formData.otherRole;
-            console.log('Profile submitted:', {
-                firstName: formData.firstName,
-                middleName: formData.middleName,
-                lastName: formData.lastName,
-                phone: `${formData.countryCode} ${formData.phoneNumber}`,
-                finalRole
+            
+            await authService.setRecruiterPersonalInfo({
+                recruiterId,
+                firstName: formData.firstName.trim(),
+                middleName: formData.middleName.trim(),
+                lastName: formData.lastName.trim(),
+                phoneCode: formData.countryCode,
+                phoneNumber: formData.phoneNumber.trim(),
+                personalRole: finalRole
             });
 
             // Navigate to phone verification
             navigate('/agent/phone-verification', {
-                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber}` }
+                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}` }
             });
         } catch (err) {
             console.error('Profile completion error:', err);
-            setError(err.message || 'Failed to complete profile. Please try again.');
+            setError(err.data?.message || err.message || 'Failed to complete profile. Please try again.');
         } finally {
             setLoading(false);
         }

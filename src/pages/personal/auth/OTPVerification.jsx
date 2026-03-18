@@ -93,8 +93,8 @@ function OTPVerification() {
   };
 
   const handleResend = async () => {
-    if (!storedProfessionalId) {
-      setError('Professional ID not found. Please register again.');
+    if (!email) {
+      setError('Email not found. Please register again.');
       return;
     }
 
@@ -102,7 +102,7 @@ function OTPVerification() {
     setError('');
 
     try {
-      await authService.resendOTP(storedProfessionalId);
+      await authService.resendOTP(email);
       setTimer(60);
       setOtp(['', '', '', '', '', '']);
       console.log('OTP resent successfully');

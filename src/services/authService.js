@@ -16,18 +16,19 @@ class AuthService {
      * @returns {Promise<Object>} Registration response with professionalId
      */
     async register(userData) {
-        console.log('MOCK API: register called', userData);
-        /*
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.REGISTER, {
-                fullname: userData.fullName,  // Backend expects lowercase 'fullname'
+                firstName: userData.firstName,
+                middleName: userData.middleName || '',
+                lastName: userData.lastName,
                 email: userData.email,
                 password: userData.password,
             });
 
-            // Store professionalId for OTP verification
-            if (response.data && response.data.professionalId) {
-                localStorage.setItem('professionalId', response.data.professionalId);
+            // Response shape: { status, message, data: { professionalId } }
+            const professionalId = response?.data?.professionalId;
+            if (professionalId) {
+                localStorage.setItem('professionalId', professionalId);
             }
 
             return response;
@@ -35,19 +36,37 @@ class AuthService {
             console.error('Registration error:', error);
             throw error;
         }
-        */
+    }
 
-        // MOCK RESPONSE
-        const mockProfessionalId = 'mock-prof-id-' + Date.now();
-        localStorage.setItem('professionalId', mockProfessionalId);
+    /**
+     * Register Recruiter / Training Agent (Step 1)
+     * @param {Object} recruiterData 
+     * @param {string} recruiterData.email
+     * @param {string} recruiterData.password
+     * @param {string} recruiterData.confirmPassword
+     * @param {string} recruiterData.role - e.g. "TRAINING_AGENT" or "RECRUITMENT_AGENT"
+     * @returns {Promise<Object>} Response shape: { status, message, data: { recruiterId } }
+     */
+    async registerRecruiter(recruiterData) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.REGISTER, {
+                email: recruiterData.email,
+                password: recruiterData.password,
+                confirmPassword: recruiterData.confirmPassword,
+                role: recruiterData.role,
+            });
 
-        return {
-            status: 200,
-            data: {
-                professionalId: mockProfessionalId,
-                message: 'Registration successful (MOCKED)'
+            // Store temporary recruiterId
+            const recruiterId = response?.data?.recruiterId;
+            if (recruiterId) {
+                localStorage.setItem('recruiterId', recruiterId);
             }
-        };
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter Registration error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -58,29 +77,306 @@ class AuthService {
      * @returns {Promise<Object>} Verification response
      */
     async verifyOTP(otpData) {
-        console.log('MOCK API: verifyOTP called', otpData);
-        /*
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
                 professionalId: otpData.professionalId,
                 code: otpData.code,
             });
 
+            // Response shape: { status, message, data: { registrationStep } }
             return response;
         } catch (error) {
             console.error('OTP verification error:', error);
             throw error;
         }
-        */
-
-        // MOCK RESPONSE
-        return {
-            status: 200,
-            data: {
-                message: 'OTP Verified (MOCKED)'
-            }
-        };
     }
+
+    /**
+     * Verify Recruiter OTP (Step 2)
+     * @param {Object} otpData
+     * @param {string} otpData.recruiterId - Recruiter ID
+     * @param {string} otpData.code - 6-digit OTP code
+     * @returns {Promise<Object>} Response shape: { status, data: { registrationStep } }
+     */
+    async verifyRecruiterOTP(otpData) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.VERIFY_OTP, {
+                recruiterId: otpData.recruiterId,
+                code: otpData.code,
+            });
+
+            // Expected response shape: { status, data: { registrationStep } }
+            return response;
+        } catch (error) {
+            console.error('Recruiter OTP Verification error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Resend Recruiter OTP
+     * @param {string} email - Recruiter's email address
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async resendRecruiterOTP(email) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.RESEND_OTP, {
+                email,
+            });
+            return response;
+        } catch (error) {
+            console.error('Recruiter Resend OTP error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Set Recruiter Personal Info (Step 3)
+     * @param {Object} infoData
+     * @param {string} infoData.recruiterId
+     * @param {string} infoData.firstName
+     * @param {string} infoData.middleName
+     * @param {string} infoData.lastName
+     * @param {string} infoData.phoneCode
+     * @param {string} infoData.phoneNumber
+     * @param {string} infoData.personalRole
+     * @param {string} [infoData.otherRole]
+     * @returns {Promise<Object>} Response shape: { status, data: { registrationStep } }
+     */
+    async setRecruiterPersonalInfo(infoData) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.PERSONAL_INFO, infoData);
+            return response;
+        } catch (error) {
+            console.error('Recruiter Personal Info error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Verify Recruiter Phone OTP (Step 4)
+     * @param {Object} otpData
+     * @param {string} otpData.recruiterId
+     * @param {string} otpData.code - 6-digit OTP code
+     * @returns {Promise<Object>} Response shape: { status, data: { registrationStep } }
+     */
+    async verifyRecruiterPhoneOTP(otpData) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.VERIFY_PHONE, {
+                recruiterId: otpData.recruiterId,
+                code: otpData.code,
+            });
+            return response;
+        } catch (error) {
+            console.error('Recruiter Phone Verification error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get Company Preview (Step 5a)
+     * @param {string} url - The company website URL
+     * @returns {Promise<Object>} Response shape: { status, data: { name, logo } }
+     */
+    async getCompanyPreview(url) {
+        try {
+            const response = await httpClient.get(`${API_ENDPOINTS.RECRUITER.COMPANY_PREVIEW}?url=${encodeURIComponent(url)}`);
+            return response;
+        } catch (error) {
+            console.error('Get Company Preview error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Set Recruiter Company Details (Step 5)
+     * @param {Object} detailsData
+     * @param {string} detailsData.recruiterId
+     * @param {string} detailsData.organizationName
+     * @param {string} detailsData.address
+     * @param {string} detailsData.companyCity
+     * @param {string} detailsData.companyState
+     * @param {string} detailsData.companyZip
+     * @param {string} detailsData.companyCountry
+     * @param {string} detailsData.website
+     * @param {string} detailsData.companyLinkedIn
+     * @returns {Promise<Object>} Response shape: { status, data: { registrationStep } }
+     */
+    async setRecruiterCompanyDetails(detailsData) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPANY_DETAILS, detailsData);
+            return response;
+        } catch (error) {
+            console.error('Recruiter Company Details error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Submit Recruiter Compliance & Trust Declaration (Step 6 - Final)
+     * @param {Object} complianceData
+     * @param {string} complianceData.recruiterId
+     * @param {boolean} complianceData.isAuthorized
+     * @param {boolean} complianceData.agreedToTerms
+     * @param {string} complianceData.howDidYouHear
+     * @returns {Promise<Object>} Response shape: { status, token, data: { registrationStep } }
+     */
+    async setRecruiterCompliance(complianceData) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPLIANCE, complianceData);
+            
+            // On successful final step, backend optionally returns a token
+            const token = response?.token || response?.data?.token;
+            if (token) {
+                localStorage.setItem('authToken', token);
+                const userProfile = response?.data?.userProfile || response?.data;
+                if (userProfile) {
+                    localStorage.setItem('userProfile', JSON.stringify(userProfile));
+                }
+                // Cleanup temp registration id
+                localStorage.removeItem('recruiterId');
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter Compliance error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Login Recruiter
+     * @param {Object} credentials
+     * @param {string} credentials.email
+     * @param {string} credentials.password
+     * @returns {Promise<Object>} Response shape: { status, token, data: { recruiter: {...} } }
+     */
+    async loginRecruiter(credentials) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.LOGIN, credentials);
+
+            if (response.token || response.data?.token) {
+                const token = response.token || response.data.token;
+                localStorage.setItem('authToken', token);
+                
+                // Store user profile info for frontend use
+                const profile = response.data?.recruiter || response.data;
+                if (profile) {
+                    localStorage.setItem('userProfile', JSON.stringify(profile));
+                    localStorage.setItem('userRole', profile.role);
+                }
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter Login error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Request Password Reset for Recruiter
+     * @param {string} email
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async forgotRecruiterPassword(email) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.FORGOT_PASSWORD, { email });
+            return response;
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Reset Recruiter Password using token
+     * @param {string} token 
+     * @param {string} password - New password
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async resetRecruiterPassword(token, password) {
+        try {
+            // Token is passed in URL path for this endpoint
+            const response = await httpClient.patch(`${API_ENDPOINTS.RECRUITER.RESET_PASSWORD}/${token}`, { password });
+            return response;
+        } catch (error) {
+            console.error('Reset password error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update Recruiter Password (Authenticated)
+     * @param {Object} data 
+     * @param {string} data.currentPassword
+     * @param {string} data.newPassword
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async updateRecruiterPassword(currentPassword, newPassword) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.UPDATE_PASSWORD, { 
+                currentPassword, 
+                newPassword 
+            });
+            return response;
+        } catch (error) {
+            console.error('Update password error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Select Profession - Step 3
+     * @param {Object} data - Profession selection data
+     * @param {string} data.professionalId - Professional ID
+     * @param {string} data.profession - e.g. "OFFICER", "RATINGS_AND_CREW", etc.
+     * @returns {Promise<Object>} Response with registrationStep: 3
+     */
+    async selectProfession(data) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.SELECT_PROFESSION, {
+                professionalId: data.professionalId,
+                profession: data.profession,
+            });
+
+            // Response shape: { status, data: { registrationStep } }
+            return response;
+        } catch (error) {
+            console.error('Select profession error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Select Role (Subcategory) - Step 5 (Final Registration Step)
+     * @param {Object} data - Role selection data
+     * @param {string} data.professionalId - Professional ID
+     * @param {string} data.subcategory - e.g. "Deck Officer"
+     * @returns {Promise<Object>} Response with JWT token and full user profile
+     *   Shape: { status, token, data: { user: { id, fullname, email, profession, ... }, registrationStep: 5 } }
+     */
+    async selectRole(data) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.SELECT_ROLE, {
+                professionalId: data.professionalId,
+                subcategory: data.subcategory,
+            });
+
+            // Registration complete — store JWT and clear temp professionalId
+            if (response?.token) {
+                localStorage.setItem('authToken', response.token);
+                localStorage.removeItem('professionalId');
+            }
+
+            // Response shape: { status, token, data: { user, registrationStep: 5 } }
+            return response;
+        } catch (error) {
+            console.error('Select role error:', error);
+            throw error;
+        }
+    }
+
 
     /**
      * Upload ID/Passport document
@@ -88,8 +384,6 @@ class AuthService {
      * @returns {Promise<Object>} Upload response with URL
      */
     async uploadID(file) {
-        console.log('MOCK API: uploadID called', file);
-        /*
         try {
             const formData = new FormData();
             formData.append('id_passport', file);
@@ -104,46 +398,31 @@ class AuthService {
             console.error('ID upload error:', error);
             throw error;
         }
-        */
-
-        // MOCK RESPONSE
-        return {
-            status: 200,
-            data: {
-                url: 'https://via.placeholder.com/150',
-                message: 'ID Uploaded (MOCKED)'
-            }
-        };
     }
 
     /**
-     * Upload profile picture/photo
-     * @param {File} file - Profile photo image file
-     * @returns {Promise<Object>} Upload response with URL
+     * Upload profile photo - Step 4
+     * @param {string} professionalId - Professional ID
+     * @param {File} file - Profile photo image file (binary)
+     * @returns {Promise<Object>} Response with { status, data: { url, registrationStep: 4 } }
      */
-    async uploadProfilePhoto(file) {
-        console.log('MOCK API: uploadProfilePhoto called', file);
-        /*
+    async uploadProfilePhoto(professionalId, file) {
         try {
             const formData = new FormData();
-            formData.append('profile_photo', file);
-            const response = await httpClient.request('/api/professional/upload-profile-photo', {
+            formData.append('professionalId', professionalId);
+            formData.append('photo', file);
+
+            const response = await httpClient.request(API_ENDPOINTS.PROFESSIONAL.UPLOAD_PHOTO, {
                 method: 'POST',
                 body: formData,
             });
+
+            // Response shape: { status, data: { url, registrationStep } }
             return response;
         } catch (error) {
             console.error('Profile photo upload error:', error);
             throw error;
         }
-        */
-        return {
-            status: 200,
-            data: {
-                url: URL.createObjectURL ? URL.createObjectURL(file) : 'https://via.placeholder.com/150',
-                message: 'Profile photo uploaded (MOCKED)'
-            }
-        };
     }
 
     /**
@@ -155,8 +434,6 @@ class AuthService {
      * @returns {Promise<Object>} Profile completion response with JWT token
      */
     async completeProfile(profileData) {
-        console.log('MOCK API: completeProfile called', profileData);
-        /*
         try {
             const response = await httpClient.post(API_ENDPOINTS.PROFESSIONAL.COMPLETE_PROFILE, {
                 professionalId: profileData.professionalId,
@@ -175,65 +452,49 @@ class AuthService {
             console.error('Complete profile error:', error);
             throw error;
         }
-        */
-
-        // MOCK RESPONSE
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        localStorage.setItem('authToken', mockToken);
-        localStorage.removeItem('professionalId');
-
-        return {
-            status: 200,
-            token: mockToken,
-            data: {
-                message: 'Profile completed (MOCKED)'
-            }
-        };
     }
 
     /**
      * Resend OTP
-     * @param {string} professionalId - Professional ID
-     * @returns {Promise<Object>} Resend OTP response
+     * @param {string} email - Professional's email address
+     * @returns {Promise<Object>} Response shape: { status, message }
+     *   Errors: 400 = Validation failed, 404 = Professional not found
      */
-    async resendOTP(professionalId) {
-        console.log('MOCK API: resendOTP called', professionalId);
-        /*
+    async resendOTP(email) {
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.RESEND_OTP, {
-                professionalId,
+                email,
             });
             return response;
         } catch (error) {
             console.error('Resend OTP error:', error);
             throw error;
         }
-        */
-        return {
-            status: 200,
-            data: { message: 'OTP Resent (MOCKED)' }
-        };
     }
 
     /**
-     * Login
+     * Login - Professional Login
      * @param {Object} credentials - Login credentials
      * @param {string} credentials.email - User's email
      * @param {string} credentials.password - User's password
-     * @returns {Promise<Object>} Login response with token
+     * @returns {Promise<Object>} Response shape: { status, token, data: { user } }
+     *   Errors: 401 = Invalid credentials or unverified account
      */
     async login(credentials) {
-        console.log('MOCK API: login called', credentials);
-        /*
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.LOGIN, {
                 email: credentials.email,
                 password: credentials.password,
             });
 
-            // Store auth token
-            if (response.token) {
+            // Response shape: { status, token, data: { user } }
+            if (response?.token) {
                 localStorage.setItem('authToken', response.token);
+            }
+
+            // Persist user profile for use across the app
+            if (response?.data?.user) {
+                localStorage.setItem('userProfile', JSON.stringify(response.data.user));
             }
 
             return response;
@@ -241,33 +502,16 @@ class AuthService {
             console.error('Login error:', error);
             throw error;
         }
-        */
-
-        // MOCK RESPONSE
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        localStorage.setItem('authToken', mockToken);
-
-        return {
-            status: 200,
-            token: mockToken,
-            data: {
-                message: 'Login successful (MOCKED)',
-                user: {
-                    email: credentials.email,
-                    fullName: 'Mock User'
-                }
-            }
-        };
     }
 
     /**
-     * Forgot Password - Request password reset link
+     * Forgot Password - Request a password reset link
      * @param {string} email - User's email
-     * @returns {Promise<Object>} Response confirming reset link sent
+     * @returns {Promise<Object>} Response shape: { status, message }
+     *   200: "Password reset link sent to your email."
+     *   404: Professional not found
      */
     async forgotPassword(email) {
-        console.log('MOCK API: forgotPassword called', email);
-        /*
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
                 email,
@@ -277,22 +521,18 @@ class AuthService {
             console.error('Forgot password error:', error);
             throw error;
         }
-        */
-        return {
-            status: 200,
-            data: { message: 'Reset link sent (MOCKED)' }
-        };
     }
 
     /**
-     * Reset Password - Reset password using token
-     * @param {string} token - Reset token from email
+     * Reset Password - Reset password using token (path param)
+     * PATCH /api/professional/reset-password/{token}
+     * @param {string} token - Reset token received via email (path param)
      * @param {string} newPassword - New password
-     * @returns {Promise<Object>} Response confirming password reset
+     * @returns {Promise<Object>} Response shape: { status, message }
+     *   200: "Your password has been reset successfully."
+     *   400: Validation failed
      */
     async resetPassword(token, newPassword) {
-        console.log('MOCK API: resetPassword called', token);
-        /*
         try {
             const response = await httpClient.patch(`${API_ENDPOINTS.AUTH.RESET_PASSWORD}/${token}`, {
                 password: newPassword,
@@ -302,11 +542,6 @@ class AuthService {
             console.error('Reset password error:', error);
             throw error;
         }
-        */
-        return {
-            status: 200,
-            data: { message: 'Password reset successful (MOCKED)' }
-        };
     }
 
     /**

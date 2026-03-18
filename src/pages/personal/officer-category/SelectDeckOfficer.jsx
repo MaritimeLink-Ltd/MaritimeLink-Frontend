@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 const SelectDeckOfficer = () => {
   const navigate = useNavigate();
   const [selectedOfficer, setSelectedOfficer] = useState('Master');
   const [otherRole, setOtherRole] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const officers = [
     'Master',
@@ -14,16 +17,32 @@ const SelectDeckOfficer = () => {
     'Deck Cadet'
   ];
 
-  const handleNext = () => {
-    if (selectedOfficer || otherRole.trim()) {
-      console.log('Selected officer:', selectedOfficer || otherRole.trim());
+  const handleNext = async () => {
+    const subcategory = otherRole.trim() || selectedOfficer;
+    if (!subcategory) return;
+
+    const professionalId = localStorage.getItem('professionalId');
+    if (!professionalId) {
+      setError('Session expired. Please start registration again.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await authService.selectRole({ professionalId, subcategory });
       navigate('/officer-dashboard', { replace: true });
+    } catch (err) {
+      setError(err.data?.message || err.message || 'Failed to set role. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoBack = () => {
     navigate(-1);
   };
+
 
   return (
     <div className="h-screen flex overflow-hidden">
@@ -75,11 +94,15 @@ const SelectDeckOfficer = () => {
             </div>
 
             {/* Buttons */}
+            {error && (
+              <p className="text-sm text-red-600 mb-3">{error}</p>
+            )}
             <button
               onClick={handleNext}
-              className="w-full bg-[#003971] text-white py-3 px-4 rounded-md hover:bg-[#002855] transition-colors duration-200 font-medium"
+              disabled={loading}
+              className="w-full bg-[#003971] text-white py-3 px-4 rounded-md hover:bg-[#002855] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next
+              {loading ? 'Saving...' : 'Next'}
             </button>
 
             <button

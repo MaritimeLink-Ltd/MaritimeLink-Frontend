@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function RecruiterSignup() {
     const navigate = useNavigate();
@@ -40,23 +41,40 @@ function RecruiterSignup() {
         e.preventDefault();
         setError('');
 
-        // Validate passwords match
         if (formData.password !== formData.confirmPassword) {
             setError('Passwords do not match!');
             return;
         }
 
-        // Validate password strength
         if (formData.password.length < 8) {
             setError('Password must be at least 8 characters long');
             return;
         }
 
-        // Validate terms
+        // Validate work email
+        const emailLower = formData.email.toLowerCase();
+        const personalDomains = [
+            '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
+            '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
+        ];
+        
+        const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
+        if (isPersonalEmail) {
+            setError('Please use a valid work email address');
+            return;
+        }
+
         if (!formData.agreeToTerms) {
             setError('You must agree to the Terms & Conditions');
             return;
         }
+
+        const roleMapping = {
+            'training-provider': 'TRAINING_AGENT',
+            'recruiter': 'RECRUITMENT_AGENT'
+        };
+
+        const apiRole = roleMapping[formData.userType];
 
         setLoading(true);
 
@@ -64,13 +82,18 @@ function RecruiterSignup() {
             // Save user type for next steps
             localStorage.setItem('adminUserType', formData.userType);
 
-            // TODO: Implement signup API call
-            console.log('Form submitted:', formData);
+            await authService.registerRecruiter({
+                email: formData.email,
+                password: formData.password,
+                confirmPassword: formData.confirmPassword,
+                role: apiRole
+            });
+            
             // Navigate to OTP verification
             navigate('/agent/otp-verification', { state: { email: formData.email } });
         } catch (err) {
             console.error('Registration error:', err);
-            setError(err.message || 'Registration failed. Please try again.');
+            setError(err.data?.message || err.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }

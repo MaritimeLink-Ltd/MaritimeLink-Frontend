@@ -35,7 +35,12 @@ function ForgotPassword({ userType }) {
         setSuccess(false);
 
         try {
-            await authService.forgotPassword(email);
+            if (userType === 'recruiter') {
+                await authService.forgotRecruiterPassword(email);
+            } else {
+                // Default to professional (or training provider if they use the same endpoint, we'll fix later if needed)
+                await authService.forgotPassword(email);
+            }
             setSuccess(true);
         } catch (err) {
             if (err.status === 404) {

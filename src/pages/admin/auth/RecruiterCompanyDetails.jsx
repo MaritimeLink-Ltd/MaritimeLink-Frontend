@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function RecruiterCompanyDetails() {
     const navigate = useNavigate();
@@ -16,6 +17,8 @@ function RecruiterCompanyDetails() {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -24,6 +27,27 @@ function RecruiterCompanyDetails() {
             [name]: value
         });
         if (error) setError('');
+    };
+
+    const handleWebsiteBlur = async () => {
+        if (!formData.website.trim()) return;
+
+        setPreviewLoading(true);
+        try {
+            const response = await authService.getCompanyPreview(formData.website);
+            if (response.data) {
+                setPreviewData(response.data);
+                // Auto-fill company name if it's currently empty and the API returned a name
+                if (!formData.companyName && response.data.name) {
+                    setFormData(prev => ({ ...prev, companyName: response.data.name }));
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch company preview:', err);
+            // Non-blocking error, so we don't necessarily need to set main error state
+        } finally {
+            setPreviewLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -36,17 +60,32 @@ function RecruiterCompanyDetails() {
             return;
         }
 
+        const recruiterId = localStorage.getItem('recruiterId');
+        if (!recruiterId) {
+            setError('Session expired. Please restart registration.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            // TODO: Implement company details API call
-            console.log('Company details submitted:', formData);
+            await authService.setRecruiterCompanyDetails({
+                recruiterId: recruiterId,
+                organizationName: formData.companyName.trim(),
+                address: formData.address.trim(),
+                companyCity: formData.city.trim(),
+                companyState: formData.stateProvince.trim(),
+                companyZip: formData.postcode.trim(),
+                companyCountry: formData.country.trim(),
+                website: formData.website.trim(),
+                companyLinkedIn: formData.linkedIn.trim()
+            });
 
-            // Navigate to company verification
+            // Navigate to next steps (compliance/document upload)
             navigate('/agent/company-verification', { state: { companyData: formData } });
         } catch (err) {
             console.error('Company details error:', err);
-            setError(err.message || 'Failed to save company details. Please try again.');
+            setError(err.data?.message || err.message || 'Failed to save company details. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -71,6 +110,18 @@ function RecruiterCompanyDetails() {
 
                     {/* Heading */}
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Company Details</h1>
+
+                    {/* Company Preview (Logo) */}
+                    {previewData?.logo && (
+                        <div className="mb-4">
+                            <img src={previewData.logo} alt="Company Logo" className="h-12 object-contain rounded" />
+                        </div>
+                    )}
+                    {previewLoading && (
+                        <div className="mb-4 text-sm text-[#003971] animate-pulse">
+                            Fetching company details...
+                        </div>
+                    )}
 
                     {/* Error Message */}
                     {error && (
@@ -193,6 +244,7 @@ function RecruiterCompanyDetails() {
                                     placeholder="Enter your website"
                                     value={formData.website}
                                     onChange={handleChange}
+                                    onBlur={handleWebsiteBlur}
                                 />
                             </div>
                         </div>

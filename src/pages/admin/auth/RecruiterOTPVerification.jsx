@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function RecruiterOTPVerification() {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -12,6 +13,7 @@ function RecruiterOTPVerification() {
 
     // Get email from navigation state
     const email = location.state?.email || '';
+    const storedRecruiterId = localStorage.getItem('recruiterId');
 
     useEffect(() => {
         if (timer > 0) {
@@ -64,35 +66,46 @@ function RecruiterOTPVerification() {
             return;
         }
 
+        if (!storedRecruiterId) {
+            setError('Session expired. Please register again.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
-            // TODO: Implement OTP verification API call
-            console.log('OTP verified:', otpValue);
+            await authService.verifyRecruiterOTP({
+                recruiterId: storedRecruiterId,
+                code: otpValue
+            });
 
             // Navigate to next step (e.g., dashboard or profile setup)
             navigate('/agent/profile-completion');
         } catch (err) {
             console.error('OTP verification error:', err);
-            setError(err.message || 'Invalid or expired OTP. Please try again.');
+            setError(err.data?.message || err.message || 'Invalid or expired OTP. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const handleResend = async () => {
+        if (!email) {
+            setError('Email not found. Please register again.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
-            // TODO: Implement resend OTP API call
-            console.log('Resending OTP to:', email);
+            await authService.resendRecruiterOTP(email);
             setTimer(60);
             setOtp(['', '', '', '', '', '']);
         } catch (err) {
             console.error('Resend OTP error:', err);
-            setError(err.message || 'Failed to resend OTP. Please try again.');
+            setError(err.data?.message || err.message || 'Failed to resend OTP. Please try again.');
         } finally {
             setLoading(false);
         }

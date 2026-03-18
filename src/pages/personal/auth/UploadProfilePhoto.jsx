@@ -88,11 +88,18 @@ function UploadProfilePhoto() {
       return;
     }
 
+    const professionalId = localStorage.getItem('professionalId');
+    if (!professionalId) {
+      setError('Session expired. Please start registration again.');
+      navigate('/signup', { replace: true });
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      await authService.uploadProfilePhoto(selectedFile);
+      await authService.uploadProfilePhoto(professionalId, selectedFile);
       const professionType = sessionStorage.getItem('professionType') || 'officer';
       const nextRoute = PROFESSION_ROUTES[professionType] || PROFESSION_ROUTES.officer;
       navigate(nextRoute, { replace: true });

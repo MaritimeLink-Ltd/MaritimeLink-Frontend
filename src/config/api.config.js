@@ -26,8 +26,26 @@ export const API_ENDPOINTS = {
   // Professional Endpoints
   PROFESSIONAL: {
     UPLOAD_ID: '/api/professional/upload-id',
-    // COMPLETE_PROFILE: '/api/professional/complete-profile',
+    UPLOAD_PHOTO: '/api/professional/upload-photo',
+    COMPLETE_PROFILE: '/api/professional/complete-profile',
+    SELECT_PROFESSION: '/api/professional/profession',
+    SELECT_ROLE: '/api/professional/role',
   },
+  // Recruiter/Enterprise Endpoints
+  RECRUITER: {
+    REGISTER: '/api/recruiter/register',
+    VERIFY_OTP: '/api/recruiter/verify-otp',
+    RESEND_OTP: '/api/recruiter/resend-otp',
+    PERSONAL_INFO: '/api/recruiter/personal-info',
+    VERIFY_PHONE: '/api/recruiter/verify-phone',
+    COMPANY_PREVIEW: '/api/recruiter/company-preview',
+    COMPANY_DETAILS: '/api/recruiter/company-details',
+    COMPLIANCE: '/api/recruiter/compliance',
+    LOGIN: '/api/recruiter/login',
+    FORGOT_PASSWORD: '/api/recruiter/forgot-password',
+    RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
+    UPDATE_PASSWORD: '/api/recruiter/update-password',
+  }
 };
 
 export default API_CONFIG;

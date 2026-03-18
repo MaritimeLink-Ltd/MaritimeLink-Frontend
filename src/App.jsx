@@ -137,7 +137,9 @@ function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
           <Route path="/agent/forgot-password" element={<ForgotPassword userType="recruiter" />} />
+          <Route path="/agent/reset-password/:token" element={<ResetPassword userType="recruiter" />} />
           <Route path="/training-provider/forgot-password" element={<ForgotPassword userType="training-provider" />} />
+          <Route path="/training-provider/reset-password/:token" element={<ResetPassword userType="training-provider" />} />
           <Route path="/recruiter/login" element={<RecruiterLogin />} />
           <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
           <Route path="/agent/signup" element={<RecruiterSignup />} />

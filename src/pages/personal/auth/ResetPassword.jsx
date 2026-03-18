@@ -12,7 +12,7 @@ function isPasswordStrong(password) {
     );
 }
 
-function ResetPassword() {
+function ResetPassword({ userType }) {
     const { token } = useParams(); // Get token from URL
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -56,13 +56,25 @@ function ResetPassword() {
         setError('');
 
         try {
-            await authService.resetPassword(token, formData.password);
+            if (userType === 'recruiter') {
+                await authService.resetRecruiterPassword(token, formData.password);
+            } else {
+                // Default to professional
+                await authService.resetPassword(token, formData.password);
+            }
+
             console.log('Password reset successful');
             setSuccess(true);
 
             // Redirect to login after 2 seconds
             setTimeout(() => {
-                navigate('/signin');
+                if (userType === 'recruiter') {
+                    navigate('/recruiter/login');
+                } else if (userType === 'training-provider') {
+                    navigate('/training-provider/login');
+                } else {
+                    navigate('/signin');
+                }
             }, 2000);
         } catch (err) {
             console.error('Reset password error:', err);

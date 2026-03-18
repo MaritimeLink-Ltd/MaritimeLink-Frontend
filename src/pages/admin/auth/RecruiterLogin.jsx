@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function RecruiterLogin() {
     const navigate = useNavigate();
@@ -32,18 +33,13 @@ function RecruiterLogin() {
         setLoading(true);
 
         try {
-            // TODO: Implement login API call
-            console.log('Recruiter Login submitted:', formData);
-
-            // Store user type in localStorage
-            localStorage.setItem('userType', 'recruiter');
-            localStorage.setItem('userEmail', formData.email);
+            await authService.loginRecruiter(formData);
 
             // Navigate to recruiter dashboard
             navigate('/recruiter-dashboard');
         } catch (err) {
             console.error('Login error:', err);
-            setError(err.message || 'Login failed. Please check your credentials.');
+            setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }

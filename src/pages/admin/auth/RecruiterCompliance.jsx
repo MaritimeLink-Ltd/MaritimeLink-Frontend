@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function RecruiterCompliance() {
     const navigate = useNavigate();
@@ -64,17 +65,27 @@ function RecruiterCompliance() {
             return;
         }
 
+        const recruiterId = localStorage.getItem('recruiterId');
+        if (!recruiterId) {
+            setError('Session expired. Please restart registration.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            // TODO: Implement compliance submission API call
-            console.log('Compliance submitted:', formData);
+            await authService.setRecruiterCompliance({
+                recruiterId: recruiterId,
+                isAuthorized: formData.authorizedToRecruit,
+                agreedToTerms: formData.agreeToTerms,
+                howDidYouHear: formData.hearAboutUs === 'Other' ? formData.otherHearAboutUs : formData.hearAboutUs
+            });
 
             // Navigate to under review page
             navigate('/agent/under-review');
         } catch (err) {
             console.error('Compliance submission error:', err);
-            setError(err.message || 'Failed to submit compliance. Please try again.');
+            setError(err.data?.message || err.message || 'Failed to submit compliance. Please try again.');
         } finally {
             setLoading(false);
         }
