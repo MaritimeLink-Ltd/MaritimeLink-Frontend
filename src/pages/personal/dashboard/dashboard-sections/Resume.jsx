@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
+import resumeService from '../../../services/resumeService';
 
 const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
     const navigate = useNavigate();
@@ -188,95 +189,184 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         ]
     });
 
-    // Update userData based on formData from parent dashboards
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Update userData based on formData from parent dashboards OR from API fetch
     useEffect(() => {
-        if (!formData) return;
+        const processData = (data, isApiPayload = false) => {
+            setUserData((prevData) => {
+                const pi = isApiPayload ? (data.personalInfo || {}) : (data.personalInfo || {});
+                const ps = isApiPayload ? (data.summary || {}) : (data.professionalSummary || {});
+                const sk = isApiPayload ? (data.skills || []) : (data.skills || {});
+                const lic = isApiPayload ? (data.licenses || []) : (data.licensesEndorsements || {});
+                const profLic = isApiPayload ? [] : (data.professionalLicensesCertificates || {}); 
+                const sea = isApiPayload ? (data.seaService || []) : (data.seaServiceLog || {});
+                const aca = isApiPayload ? (data.education || []) : (data.academicQualifications || {});
+                const med = isApiPayload ? (data.medicalTravelDocuments || []) : (data.medicalTravelDocs || {});
+                const bio = isApiPayload ? (data.biometrics || {}) : (data.biometricsNextOfKin || {});
+                const stcwData = isApiPayload ? (data.stcwCertificates || []) : (aca.stcw || aca.stcwCertificates || []);
+                const kinList = isApiPayload ? (data.nextOfKin || []) : (bio.nextOfKinList || []);
+                const refList = isApiPayload ? (data.referees || []) : (bio.refereesList || []);
 
-        setUserData((prevData) => {
-            const pi = formData.personalInfo || {};
-            const ps = formData.professionalSummary || {};
-            const sk = formData.skills || {};
-            const lic = formData.licensesEndorsements || {};
-            const profLic = formData.professionalLicensesCertificates || {}; // For Catering/Medical
-            const sea = formData.seaServiceLog || {};
-            const aca = formData.academicQualifications || {};
-            const med = formData.medicalTravelDocs || {};
-            const bio = formData.biometricsNextOfKin || {}; // New mapping
+                // Helper to get array.
+                const getArray = (arr1, arr2) => {
+                    if (Array.isArray(arr1) && arr1.length > 0) return arr1;
+                    if (Array.isArray(arr2) && arr2.length > 0) return arr2;
+                    return [];
+                };
 
-            // Helper to get array. Since formData is present, do not fallback to mock data.
-            const getArray = (arr1, arr2) => {
-                if (Array.isArray(arr1) && arr1.length > 0) return arr1;
-                if (Array.isArray(arr2) && arr2.length > 0) return arr2;
-                return [];
+                const formatDateRange = (start, end) => {
+                    if (!start && !end) return '';
+                    const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+                    const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
+                    const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
+                    return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
+                };
+
+                return {
+                    ...prevData,
+                    userType: defaultUserType || prevData.userType,
+                    name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : prevData.name,
+                    phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : prevData.phone,
+                    email: pi.email || pi.emailAddress || prevData.email,
+                    address: [pi.streetAddress || pi.address, pi.city, pi.state, pi.zipCode || pi.postcode, pi.country].filter(Boolean).join(', ') || prevData.address,
+                    professionalSummary: ps.professionalSummary || ps.summary || prevData.professionalSummary,
+                    skills: isApiPayload 
+                        ? (Array.isArray(sk) ? sk : []).map(s => ({ name: s.skillName, rating: s.rating }))
+                        : getArray(sk.skills),
+
+                    licenses: isApiPayload 
+                        ? (Array.isArray(lic) ? lic : []).filter(l => !l.isEndorsement).map(l => ({
+                            license: l.name,
+                            licenseNumber: l.number,
+                            capacity: l.capacity || '',
+                            issuingCountry: l.country,
+                            dateOfIssue: l.issueDate,
+                            validTill: l.expiryDate
+                        }))
+                        : getArray(lic.licenses, profLic.licenses).map(l => ({
+                            ...l,
+                            license: l.license || l.licenseName || '',
+                            capacity: l.capacity || l.capacityRanking || l.rank || '',
+                        })),
+                    
+                    endorsements: isApiPayload
+                        ? (Array.isArray(lic) ? lic : []).filter(l => l.isEndorsement).map(e => ({
+                            endorsement: e.name,
+                            issuingCountry: e.country,
+                            dateOfIssue: e.issueDate,
+                            validTill: e.expiryDate
+                        }))
+                        : getArray(lic.endorsements, profLic.certificates).map(e => ({
+                            ...e,
+                            endorsement: e.endorsement || e.certificateName || e.licenseName || '',
+                        })),
+
+                    seaServiceLog: isApiPayload
+                        ? (Array.isArray(sea) ? sea : []).map(s => ({
+                            company: s.companyName,
+                            role: s.role,
+                            vesselName: s.vesselName,
+                            imoNo: s.imoNumber,
+                            flag: s.flag,
+                            type: s.vesselType,
+                            dwt: s.dwt,
+                            meType: s.meType,
+                            kw: s.kwType,
+                            duration: formatDateRange(s.joiningDate, s.tillDate),
+                        }))
+                        : getArray(sea.seaServiceLog || sea.seaServiceEntries).map(s => ({
+                            ...s,
+                            company: s.company || s.companyName || '',
+                            kw: s.kw || s.kwt || s.engineKw || '',
+                            duration: s.duration || formatDateRange(s.joiningDate || s.signOn, s.till || s.signOff),
+                        })),
+
+                    academicQualifications: isApiPayload
+                        ? (Array.isArray(aca) ? aca : []).map(a => ({
+                            dates: formatDateRange(a.startDate, a.endDate),
+                            qualificationName: a.qualificationName,
+                            institution: a.institution,
+                            grade: a.grade
+                        }))
+                        : getArray(aca.academic || aca.academicQualifications).map(a => ({
+                            ...a,
+                            dates: a.dates || formatDateRange(a.startDate, a.endDate),
+                        })),
+
+                    stcwCertificates: isApiPayload
+                        ? (Array.isArray(stcwData) ? stcwData : []).map(c => ({
+                            stcwQualification: c.qualification,
+                            certificateNumber: c.certificateNumber,
+                            issuingCountry: c.issuingCountry,
+                            dateOfIssue: c.issueDate,
+                            validTill: c.expiryDate
+                        }))
+                        : getArray(stcwData).map(c => ({
+                            ...c,
+                            stcwQualification: c.stcwQualification || c.qualificationName || c.certificateName || '',
+                        })),
+
+                    medicalCertificates: isApiPayload
+                        ? (Array.isArray(med) ? med : []).filter(m => m.type === 'MEDICAL').map(m => ({
+                            certificateName: m.name,
+                            certificateNumber: m.documentNumber,
+                            issuingCountry: m.issuingCountry,
+                            dateOfIssue: m.issueDate,
+                            validTill: m.expiryDate
+                        }))
+                        : getArray(med.medical || med.medicalDocuments),
+
+                    travelDocuments: isApiPayload
+                        ? (Array.isArray(med) ? med : []).filter(m => m.type === 'TRAVEL').map(m => ({
+                            documentName: m.name,
+                            documentNumber: m.documentNumber,
+                            issuingCountry: m.issuingCountry,
+                            dateOfIssue: m.issueDate,
+                            validTill: m.expiryDate
+                        }))
+                        : getArray(med.travel || med.travelDocuments),
+
+                    biometricInfo: {
+                        gender: (isApiPayload ? bio.gender : bio.biometricData?.gender) || '',
+                        height: (isApiPayload ? bio.height : bio.biometricData?.height) ? `${isApiPayload ? bio.height : bio.biometricData?.height}cm` : '',
+                        weight: (isApiPayload ? bio.weight : bio.biometricData?.weight) ? `${isApiPayload ? bio.weight : bio.biometricData?.weight}kg` : '',
+                        bmi: (isApiPayload ? bio.bmi : bio.biometricData?.bmi) || '',
+                        eyeColor: (isApiPayload ? bio.eyeColor : bio.biometricData?.eyeColor) || '',
+                        shoeSize: (isApiPayload ? bio.shoeSize : bio.biometricData?.shoeSize) || '',
+                        overallSize: (isApiPayload ? bio.overallSize : bio.biometricData?.overallSize) || '',
+                        boilerSuitSize: bio.biometricData?.boilerSuitSize || '',
+                    },
+
+                    nextOfKin: getArray(kinList).map(kin => ({
+                        ...kin,
+                        phoneNumber: kin.phoneNumber || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
+                    })),
+
+                    references: getArray(refList).map(ref => ({
+                        ...ref,
+                        phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
+                    }))
+                };
+            });
+        };
+
+        if (formData) {
+            processData(formData, false);
+        } else {
+            const fetchResume = async () => {
+                setIsLoading(true);
+                try {
+                    const data = await resumeService.getResume();
+                    if (data) processData(data, true);
+                } catch (error) {
+                    console.error("Failed to fetch formal resume", error);
+                } finally {
+                    setIsLoading(false);
+                }
             };
-
-            const formatDateRange = (start, end) => {
-                if (!start && !end) return '';
-                const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
-                const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
-                const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
-                return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
-            };
-
-            return {
-                ...prevData,
-                userType: defaultUserType || prevData.userType,
-                name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : '',
-                phone: pi.contactNumber ? `${pi.countryCode || '+44'} ${pi.contactNumber}` : '',
-                email: pi.email || '',
-                address: [pi.streetAddress, pi.city, pi.state, pi.zipCode, pi.country].filter(Boolean).join(', '),
-                professionalSummary: ps.professionalSummary || ps.summary || '',
-                skills: getArray(sk.skills),
-
-                // If standard structure is empty, fallback to Catering structure
-                licenses: getArray(lic.licenses, profLic.licenses).map(l => ({
-                    ...l,
-                    license: l.license || l.licenseName || '',
-                    capacity: l.capacity || l.capacityRanking || l.rank || '',
-                })),
-                endorsements: getArray(lic.endorsements, profLic.certificates).map(e => ({
-                    ...e,
-                    endorsement: e.endorsement || e.certificateName || e.licenseName || '',
-                })),
-
-                seaServiceLog: getArray(sea.seaServiceLog || sea.seaServiceEntries).map(s => ({
-                    ...s,
-                    company: s.company || s.companyName || '',
-                    kw: s.kw || s.kwt || s.engineKw || '',
-                    duration: s.duration || formatDateRange(s.joiningDate || s.signOn, s.till || s.signOff),
-                })),
-                academicQualifications: getArray(aca.academic || aca.academicQualifications).map(a => ({
-                    ...a,
-                    dates: a.dates || formatDateRange(a.startDate, a.endDate),
-                })),
-                stcwCertificates: getArray(aca.stcw || aca.stcwCertificates).map(c => ({
-                    ...c,
-                    stcwQualification: c.stcwQualification || c.qualificationName || c.certificateName || '',
-                })),
-                medicalCertificates: getArray(med.medical || med.medicalDocuments),
-                travelDocuments: getArray(med.travel || med.travelDocuments),
-
-                // Mappings for Biometrics, Kin, and References block
-                biometricInfo: {
-                    gender: bio.biometricData?.gender || '',
-                    height: bio.biometricData?.height ? `${bio.biometricData?.height}cm` : '',
-                    weight: bio.biometricData?.weight ? `${bio.biometricData?.weight}kg` : '',
-                    bmi: bio.biometricData?.bmi || '',
-                    eyeColor: bio.biometricData?.eyeColor || '',
-                    shoeSize: bio.biometricData?.shoeSize || '',
-                    overallSize: bio.biometricData?.overallSize || '',
-                    boilerSuitSize: bio.biometricData?.boilerSuitSize || '',
-                },
-                nextOfKin: getArray(bio.nextOfKinList).map(kin => ({
-                    ...kin,
-                    phoneNumber: kin.phoneNumber || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
-                })),
-                references: getArray(bio.refereesList).map(ref => ({
-                    ...ref,
-                    phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
-                }))
-            };
-        });
+            fetchResume();
+        }
     }, [formData, defaultUserType]);
 
     const cvRef = useRef(null);

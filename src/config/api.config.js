@@ -31,6 +31,21 @@ export const API_ENDPOINTS = {
     SELECT_PROFESSION: '/api/professional/profession',
     SELECT_ROLE: '/api/professional/role',
   },
+  // Resume Endpoints
+  RESUME: {
+    GET_RESUME: '/api/professional/resume',
+    PERSONAL_INFO: '/api/professional/resume/personal-info',
+    SUMMARY: '/api/professional/resume/summary',
+    SKILLS: '/api/professional/resume/skills',
+    LICENSES: '/api/professional/resume/licenses',
+    SEA_SERVICE: '/api/professional/resume/sea-service',
+    EDUCATION: '/api/professional/resume/education',
+    STCW: '/api/professional/resume/stcw-certificates',
+    MEDICAL_TRAVEL_DOCS: '/api/professional/resume/medical-travel-documents',
+    BIOMETRICS: '/api/professional/resume/biometrics',
+    NEXT_OF_KIN: '/api/professional/resume/next-of-kin',
+    REFEREES: '/api/professional/resume/referees',
+  },
   // Recruiter/Enterprise Endpoints
   RECRUITER: {
     REGISTER: '/api/recruiter/register',

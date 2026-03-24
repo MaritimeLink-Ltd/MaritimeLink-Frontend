@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import resumeService from '../../../services/resumeService';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -14,6 +15,8 @@ const CateringMedicalDashboard = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   // Centralized data storage
   const [allData, setAllData] = useState({
@@ -59,7 +62,7 @@ const CateringMedicalDashboard = () => {
     { id: 8, title: 'Biometrics, Next Of Kin & Referees' }
   ];
 
-  const handleNext = (sectionData) => {
+  const handleNext = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
     const currentTab = getCurrentTab();
 
@@ -70,7 +73,146 @@ const CateringMedicalDashboard = () => {
       return;
     }
 
-    // Save section data
+    setApiError(null);
+
+    // Section 1: Personal Info — call API
+    if (activeSection === 1) {
+      setIsLoading(true);
+      try {
+        await resumeService.updatePersonalInfo(sectionData);
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save personal info. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 2: Professional Summary — call API
+    if (activeSection === 2) {
+      setIsLoading(true);
+      try {
+        await resumeService.updateSummary(sectionData);
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save professional summary. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 3: Key Skills — call API
+    if (activeSection === 3 && sectionData.skills?.length > 0) {
+      setIsLoading(true);
+      try {
+        await Promise.all(
+          sectionData.skills.map((skill) =>
+            resumeService.addSkill({ skillName: skill.name, rating: skill.level })
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save skills. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 4: Licenses & Certificates — call API (Licenses only for now)
+    if (activeSection === 4) {
+      const promises = [];
+      if (sectionData.licenses?.length > 0) {
+        sectionData.licenses.forEach(lic => promises.push(resumeService.addLicense({ ...lic, isEndorsement: false })));
+      }
+
+      if (promises.length > 0) {
+        setIsLoading(true);
+        try {
+          await Promise.all(promises);
+        } catch (error) {
+          setApiError(error?.message || 'Failed to save licenses. Please try again.');
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
+        setIsLoading(false);
+      }
+    }
+
+    // Section 5: Sea Service Log — call API
+    if (activeSection === 5 && sectionData.seaServiceEntries?.length > 0) {
+      setIsLoading(true);
+      try {
+        await Promise.all(
+          sectionData.seaServiceEntries.map((entry) => 
+            resumeService.addSeaServiceEntry(entry)
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save sea service entries. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 6: Academic Qualifications — call API
+    if (activeSection === 6 && sectionData.academicQualifications?.length > 0) {
+      setIsLoading(true);
+      try {
+        await Promise.all(
+          sectionData.academicQualifications.map((edu) => 
+            resumeService.addEducation(edu)
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save academic qualifications. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 6: STCW Certificates — call API
+    if (activeSection === 6 && sectionData.stcwCertificates?.length > 0) {
+      setIsLoading(true);
+      try {
+        await Promise.all(
+          sectionData.stcwCertificates.map((cert) => 
+            resumeService.addStcwCertificate(cert)
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save STCW certificates. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+      setIsLoading(false);
+    }
+
+    // Section 7: Medical & Travel Documents — call API
+    if (activeSection === 7) {
+      const promises = [];
+      if (sectionData.medicalDocuments?.length > 0) {
+        sectionData.medicalDocuments.forEach(doc => promises.push(resumeService.addMedicalTravelDocument({ ...doc, type: 'MEDICAL' })));
+      }
+      if (sectionData.travelDocuments?.length > 0) {
+        sectionData.travelDocuments.forEach(doc => promises.push(resumeService.addMedicalTravelDocument({ ...doc, type: 'TRAVEL' })));
+      }
+
+      if (promises.length > 0) {
+        setIsLoading(true);
+        try {
+          await Promise.all(promises);
+        } catch (error) {
+          setApiError(error?.message || 'Failed to save medical/travel documents. Please try again.');
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
+        setIsLoading(false);
+      }
+    }
+
+    // Save section data locally
     const sectionKey = Object.keys(allData)[activeSection - 1];
     setAllData({
       ...allData,
@@ -89,7 +231,7 @@ const CateringMedicalDashboard = () => {
     }
   };
 
-  const handleCompleteResume = (sectionData) => {
+  const handleCompleteResume = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
     const currentTab = getCurrentTab();
 
@@ -99,6 +241,52 @@ const CateringMedicalDashboard = () => {
       setCurrentTab(tabs[nextTabIndex]);
       return;
     }
+
+    setApiError(null);
+    setIsLoading(true);
+
+    // Section 8a: Biometrics — call API
+    if (sectionData.biometricData) {
+      try {
+        await resumeService.updateBiometrics(sectionData.biometricData);
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save biometrics. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+    }
+
+    // Section 8b: Next Of Kin — call API
+    if (sectionData.nextOfKinList?.length > 0) {
+      try {
+        await Promise.all(
+          sectionData.nextOfKinList.map((kin) => 
+            resumeService.addNextOfKin(kin)
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save next of kin. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+    }
+
+    // Section 8c: Referees — call API
+    if (sectionData.refereesList?.length > 0) {
+      try {
+        await Promise.all(
+          sectionData.refereesList.map((referee) => 
+            resumeService.addReferee(referee)
+          )
+        );
+      } catch (error) {
+        setApiError(error?.message || 'Failed to save referees. Please try again.');
+        setIsLoading(false);
+        return; // Do not advance on error
+      }
+    }
+
+    setIsLoading(false);
 
     // Save final section data
     setAllData({
@@ -123,6 +311,8 @@ const CateringMedicalDashboard = () => {
           <PersonalInfo
             onNext={handleNext}
             initialData={allData.personalInfo}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 2:
@@ -131,6 +321,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.professionalSummary}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 3:
@@ -139,6 +331,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.skills}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 4:
@@ -149,6 +343,8 @@ const CateringMedicalDashboard = () => {
             initialData={allData.professionalLicensesCertificates}
             activeTab={getCurrentTab() || 'licenses'}
             setActiveTab={setCurrentTab}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 5:
@@ -157,6 +353,8 @@ const CateringMedicalDashboard = () => {
             onNext={handleNext}
             onBack={handleGoBack}
             initialData={allData.seaServiceLog}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 6:
@@ -167,6 +365,8 @@ const CateringMedicalDashboard = () => {
             initialData={allData.academicQualifications}
             activeTab={getCurrentTab() || 'academic'}
             setActiveTab={setCurrentTab}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 7:
@@ -177,6 +377,8 @@ const CateringMedicalDashboard = () => {
             initialData={allData.medicalTravelDocs}
             activeTab={getCurrentTab() || 'medical'}
             setActiveTab={setCurrentTab}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 8:
@@ -187,6 +389,8 @@ const CateringMedicalDashboard = () => {
             initialData={allData.biometricsNextOfKin}
             activeTab={getCurrentTab() || 'biometric'}
             setActiveTab={setCurrentTab}
+            isLoading={isLoading}
+            apiError={apiError}
           />
         );
       case 9:
