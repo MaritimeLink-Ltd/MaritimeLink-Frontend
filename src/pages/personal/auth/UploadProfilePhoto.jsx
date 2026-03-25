@@ -99,7 +99,13 @@ function UploadProfilePhoto() {
     setError('');
 
     try {
-      await authService.uploadProfilePhoto(professionalId, selectedFile);
+      const response = await authService.uploadProfilePhoto(professionalId, selectedFile);
+      
+      // Save the uploaded photo URL to localStorage for the dashboard layout to show it immediately
+      if (response?.data?.url) {
+        localStorage.setItem('profileImage', response.data.url);
+      }
+
       const professionType = sessionStorage.getItem('professionType') || 'officer';
       const nextRoute = PROFESSION_ROUTES[professionType] || PROFESSION_ROUTES.officer;
       navigate(nextRoute, { replace: true });

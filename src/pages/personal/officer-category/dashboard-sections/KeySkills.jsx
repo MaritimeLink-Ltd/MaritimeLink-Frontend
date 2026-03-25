@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [skills, setSkills] = useState(initialData.skills || []);
   const [currentSkill, setCurrentSkill] = useState({ name: '', level: 0 });
 
-  const handleAddSkill = () => {
-    if (currentSkill.name && currentSkill.level > 0) {
-      setSkills([...skills, { ...currentSkill, id: Date.now() }]);
-      setCurrentSkill({ name: '', level: 0 });
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.skills) && initialData.skills.length > 0) {
+      setSkills(initialData.skills);
     }
+  }, [initialData]);
+
+  const validateSkill = (entry) => {
+    if (!entry.name || entry.level === 0) {
+      return 'Please enter a skill name and select a star rating.';
+    }
+    return null;
+  };
+
+  const handleAddSkill = () => {
+    const errorMsg = validateSkill(currentSkill);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
+    }
+    setSkills([...skills, { ...currentSkill, id: Date.now() }]);
+    setCurrentSkill({ name: '', level: 0 });
   };
 
   const handleRemoveSkill = (id) => {
@@ -21,7 +37,13 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
 
   const handleNext = () => {
     let finalSkills = [...skills];
-    if (currentSkill.name && currentSkill.level > 0) {
+    const isPartial = currentSkill.name !== '' || currentSkill.level > 0;
+    if (isPartial) {
+      const errorMsg = validateSkill(currentSkill);
+      if (errorMsg) {
+        alert("Please complete or clear active Skill entry: " + errorMsg);
+        return;
+      }
       finalSkills.push({ ...currentSkill, id: Date.now() });
     }
     onNext({ skills: finalSkills });

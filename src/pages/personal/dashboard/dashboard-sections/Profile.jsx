@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot } from 'lucide-react';
+import resumeService from '../../../../services/resumeService';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -10,8 +11,65 @@ const Profile = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-    const [profileImage, setProfileImage] = useState('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+    const [profileImage, setProfileImage] = useState(() => {
+        return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
+    });
     const [isAvailable, setIsAvailable] = useState(false);
+
+    // Get user data from localStorage
+    const [userName, setUserName] = useState('User');
+    const [userEmail, setUserEmail] = useState('');
+
+    // Fetch user data from Resume API
+    React.useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                // Try to get data from API first
+                const resumeData = await resumeService.getResume();
+                if (resumeData && resumeData.personalInfo) {
+                    const pi = resumeData.personalInfo;
+                    const name = (pi.firstName || pi.lastName) 
+                        ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() 
+                        : 'User';
+                    setUserName(name);
+                    setUserEmail(pi.emailAddress || '');
+
+                    // Update profile photo if available in resume
+                    if (pi.profilePhoto) {
+                        setProfileImage(pi.profilePhoto);
+                        localStorage.setItem('profileImage', pi.profilePhoto);
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.error('Error fetching resume for profile:', error);
+            }
+
+            // Fallback to userProfile from localStorage
+            const savedProfile = localStorage.getItem('userProfile');
+            if (savedProfile) {
+                try {
+                    const userData = JSON.parse(savedProfile);
+                    const name = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.fullName || 'User' : 'User';
+                    setUserName(name);
+                    setUserEmail(userData?.email || localStorage.getItem('userEmail') || '');
+                    
+                    // Update profile photo from userProfile if resume fetch failed
+                    if (userData?.profilePhoto || userData?.photo) {
+                        const photoUrl = userData.profilePhoto || userData.photo;
+                        setProfileImage(photoUrl);
+                        localStorage.setItem('profileImage', photoUrl);
+                    }
+                } catch (e) {
+                    console.error('Error parsing userProfile:', e);
+                }
+            } else {
+                setUserEmail(localStorage.getItem('userEmail') || '');
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     const handleLogout = () => {
         // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
@@ -59,6 +117,7 @@ const Profile = () => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setProfileImage(reader.result);
+                localStorage.setItem('profileImage', reader.result);
             };
             reader.readAsDataURL(file);
         }
@@ -66,7 +125,9 @@ const Profile = () => {
 
     // Handle profile image removal
     const handleImageRemove = () => {
-        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+        const defaultImage = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
+        setProfileImage(defaultImage);
+        localStorage.setItem('profileImage', defaultImage);
     };
 
     return (
@@ -103,8 +164,8 @@ const Profile = () => {
                                     <Camera className="h-4 w-4 text-gray-600" />
                                 </label>
                             </div>
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">Ali Shahzaib</h3>
-                            <p className="text-xs sm:text-sm text-gray-500 mb-2">www.alishahzaib23@gmail.com</p>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">{userName}</h3>
+                            <p className="text-xs sm:text-sm text-gray-500 mb-2">{userEmail}</p>
                             {/* Availability Badge */}
                             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-3 ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                 <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></span>

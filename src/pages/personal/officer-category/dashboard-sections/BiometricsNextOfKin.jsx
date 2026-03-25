@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
 
 const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biometricTab, setActiveTab: setBiometricTab, isLoading = false, apiError = null }) => {
@@ -11,6 +11,18 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     overallSize: '',
     shoeSize: ''
   });
+
+  useEffect(() => {
+    if (initialData && initialData.biometricData && initialData.biometricData.height) {
+      setBiometricData(initialData.biometricData);
+    }
+    if (initialData && Array.isArray(initialData.nextOfKinList) && initialData.nextOfKinList.length > 0) {
+      setNextOfKinList(initialData.nextOfKinList);
+    }
+    if (initialData && Array.isArray(initialData.refereesList) && initialData.refereesList.length > 0) {
+      setRefereesList(initialData.refereesList);
+    }
+  }, [initialData]);
   const [nextOfKinList, setNextOfKinList] = useState(initialData.nextOfKinList || []);
   const [currentNextOfKin, setCurrentNextOfKin] = useState({
     name: '',
@@ -84,17 +96,34 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     });
   };
 
-  const handleAddNextOfKin = () => {
-    if (currentNextOfKin.name && currentNextOfKin.relationship) {
-      setNextOfKinList([...nextOfKinList, { ...currentNextOfKin, id: Date.now() }]);
-      setCurrentNextOfKin({
-        name: '',
-        relationship: '',
-        countryCode: '+44',
-        phone: '',
-        email: ''
-      });
+  const validateNextOfKin = (entry) => {
+    if (!entry.name || !entry.relationship || !entry.phone) {
+      return 'Please fill in all mandatory Next of Kin fields (Name, Relationship, Phone) before adding.';
     }
+    return null;
+  };
+
+  const validateReferee = (entry) => {
+    if (!entry.name || !entry.phone) {
+      return 'Please fill in all mandatory Referee fields (Name, Phone) before adding.';
+    }
+    return null;
+  };
+
+  const handleAddNextOfKin = () => {
+    const errorMsg = validateNextOfKin(currentNextOfKin);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
+    }
+    setNextOfKinList([...nextOfKinList, { ...currentNextOfKin, id: Date.now() }]);
+    setCurrentNextOfKin({
+      name: '',
+      relationship: '',
+      countryCode: '+44',
+      phone: '',
+      email: ''
+    });
   };
 
   const handleRemoveNextOfKin = (id) => {
@@ -102,17 +131,20 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   };
 
   const handleAddReferee = () => {
-    if (currentReferee.name && currentReferee.email) {
-      setRefereesList([...refereesList, { ...currentReferee, id: Date.now() }]);
-      setCurrentReferee({
-        name: '',
-        position: '',
-        company: '',
-        countryCode: '+44',
-        phone: '',
-        email: ''
-      });
+    const errorMsg = validateReferee(currentReferee);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
     }
+    setRefereesList([...refereesList, { ...currentReferee, id: Date.now() }]);
+    setCurrentReferee({
+      name: '',
+      position: '',
+      company: '',
+      countryCode: '+44',
+      phone: '',
+      email: ''
+    });
   };
 
   const handleRemoveReferee = (id) => {
@@ -123,11 +155,23 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     let finalKin = [...nextOfKinList];
     let finalReferees = [...refereesList];
 
-    if (currentNextOfKin.name && currentNextOfKin.relationship) {
+    const isPartialKin = Object.values(currentNextOfKin).some(val => val !== '' && val !== '+44');
+    if (isPartialKin) {
+      const errorMsg = validateNextOfKin(currentNextOfKin);
+      if (errorMsg) {
+        alert("Please complete or clear active Next of Kin entry: " + errorMsg);
+        return;
+      }
       finalKin.push({ ...currentNextOfKin, id: Date.now() });
     }
 
-    if (currentReferee.name && currentReferee.email) {
+    const isPartialReferee = Object.values(currentReferee).some(val => val !== '' && val !== '+44');
+    if (isPartialReferee) {
+      const errorMsg = validateReferee(currentReferee);
+      if (errorMsg) {
+        alert("Please complete or clear active Referee entry: " + errorMsg);
+        return;
+      }
       finalReferees.push({ ...currentReferee, id: Date.now() + 1 });
     }
 

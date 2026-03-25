@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   // Resume Endpoints
   RESUME: {
     GET_RESUME: '/api/professional/resume',
+    BULK: '/api/professional/resume', // Supports POST and PUT
     PERSONAL_INFO: '/api/professional/resume/personal-info',
     SUMMARY: '/api/professional/resume/summary',
     SKILLS: '/api/professional/resume/skills',

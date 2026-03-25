@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.licenses) && initialData.licenses.length > 0) {
+      setLicenses(initialData.licenses);
+    }
+    if (initialData && Array.isArray(initialData.certificates) && initialData.certificates.length > 0) {
+      setCertificates(initialData.certificates);
+    }
+  }, [initialData]);
   const [currentLicense, setCurrentLicense] = useState({
     licenseName: '',
     licenseNumber: '',
@@ -42,38 +51,45 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
     }
   };
 
-  const handleAddLicense = () => {
-    if (currentLicense.licenseName && currentLicense.licenseNumber) {
-      // Validate date of issue is not in the future
-      if (currentLicense.dateOfIssue) {
-        const issueDate = new Date(currentLicense.dateOfIssue);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (issueDate > today) {
-          setLicenseDateError('Please enter valid date');
-          return;
-        }
-      }
-      // Validate dates if both are provided
-      if (currentLicense.dateOfIssue && currentLicense.validTill) {
-        const issueDate = new Date(currentLicense.dateOfIssue);
-        const validDate = new Date(currentLicense.validTill);
-        if (issueDate >= validDate) {
-          setLicenseDateError('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setLicenseDateError('');
-      setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
-      setCurrentLicense({
-        licenseName: '',
-        licenseNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
-      setLicenseDateError('');
+  const validateLicense = (entry) => {
+    if (!entry.licenseName || !entry.licenseNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory License fields before adding.';
     }
+    const issueDate = new Date(entry.dateOfIssue);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (issueDate > today) return 'Please enter valid issue date.';
+    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    return null;
+  };
+
+  const validateCertificate = (entry) => {
+    if (!entry.licenseName || !entry.licenseNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory Certificate fields before adding.';
+    }
+    const issueDate = new Date(entry.dateOfIssue);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (issueDate > today) return 'Please enter valid issue date.';
+    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    return null;
+  };
+
+  const handleAddLicense = () => {
+    const errorMsg = validateLicense(currentLicense);
+    if (errorMsg) {
+      setLicenseDateError(errorMsg);
+      return;
+    }
+    setLicenseDateError('');
+    setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
+    setCurrentLicense({
+      licenseName: '',
+      licenseNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveLicense = (id) => {
@@ -81,37 +97,20 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
   };
 
   const handleAddCertificate = () => {
-    if (currentCertificate.licenseName && currentCertificate.licenseNumber) {
-      // Validate date of issue is not in the future
-      if (currentCertificate.dateOfIssue) {
-        const issueDate = new Date(currentCertificate.dateOfIssue);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (issueDate > today) {
-          setCertificateDateError('Please enter valid date');
-          return;
-        }
-      }
-      // Validate dates if both are provided
-      if (currentCertificate.dateOfIssue && currentCertificate.validTill) {
-        const issueDate = new Date(currentCertificate.dateOfIssue);
-        const validDate = new Date(currentCertificate.validTill);
-        if (issueDate >= validDate) {
-          setCertificateDateError('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setCertificateDateError('');
-      setCertificates([...certificates, { ...currentCertificate, id: Date.now() }]);
-      setCurrentCertificate({
-        licenseName: '',
-        licenseNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
-      setCertificateDateError('');
+    const errorMsg = validateCertificate(currentCertificate);
+    if (errorMsg) {
+      setCertificateDateError(errorMsg);
+      return;
     }
+    setCertificateDateError('');
+    setCertificates([...certificates, { ...currentCertificate, id: Date.now() }]);
+    setCurrentCertificate({
+      licenseName: '',
+      licenseNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveCertificate = (id) => {
@@ -122,21 +121,24 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
     let finalLicenses = [...licenses];
     let finalCertificates = [...certificates];
 
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    if (currentLicense.licenseName && currentLicense.licenseNumber) {
-      let valid = true;
-      if (currentLicense.dateOfIssue && new Date(currentLicense.dateOfIssue) > todayDate) valid = false;
-      if (currentLicense.dateOfIssue && currentLicense.validTill && new Date(currentLicense.dateOfIssue) >= new Date(currentLicense.validTill)) valid = false;
-      if (valid) finalLicenses.push({ ...currentLicense, id: Date.now() });
+    const isPartialLicense = Object.values(currentLicense).some(val => val !== '');
+    if (isPartialLicense) {
+      const errorMsg = validateLicense(currentLicense);
+      if (errorMsg) {
+        setLicenseDateError("Please complete or clear active License entry: " + errorMsg);
+        return;
+      }
+      finalLicenses.push({ ...currentLicense, id: Date.now() });
     }
 
-    if (currentCertificate.licenseName && currentCertificate.licenseNumber) {
-      let valid = true;
-      if (currentCertificate.dateOfIssue && new Date(currentCertificate.dateOfIssue) > todayDate) valid = false;
-      if (currentCertificate.dateOfIssue && currentCertificate.validTill && new Date(currentCertificate.dateOfIssue) >= new Date(currentCertificate.validTill)) valid = false;
-      if (valid) finalCertificates.push({ ...currentCertificate, id: Date.now() + 1 });
+    const isPartialCertificate = Object.values(currentCertificate).some(val => val !== '');
+    if (isPartialCertificate) {
+      const errorMsg = validateCertificate(currentCertificate);
+      if (errorMsg) {
+        setCertificateDateError("Please complete or clear active Certificate entry: " + errorMsg);
+        return;
+      }
+      finalCertificates.push({ ...currentCertificate, id: Date.now() + 1 });
     }
 
     onNext({ licenses: finalLicenses, certificates: finalCertificates });

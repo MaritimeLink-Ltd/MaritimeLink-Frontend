@@ -1,197 +1,184 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
+import resumeService from '../../services/resumeService';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const CVResume = ({ isReadOnly = false }) => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({
-        name: 'Ali Shahzaib',
-        category: 'Deck Officer',
-        userType: 'officer', // 'officer', 'rating', or 'medical'
-        phone: '+1235662 89632',
-        email: 'pambeasly@gmail.com',
-        address: 'House #1 Street 43 California, USA',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-        professionalSummary: 'A highly disciplined Seafarer Officer with a passion for ensuring efficient, safe, and regulated maritime operations. With a strong foundation in nautical science/ marine engineering and critical problem-solving. Pam brings years of experience working across various vessel types and challenging sea conditions. Her expertise spans from meticulously designing and executing watchkeeping procedures and navigation plans (or maintaining clean, operable engine room machinery) to leading cross-functional maritime teams in executing complex maneuvers and port operation',
-        skills: [
-            { name: 'Cargo Operations', rating: 5 },
-            { name: 'Seamanship', rating: 5 },
-        ],
-        licenses: [
-            {
-                license: 'EOOW Certificate Of Competence',
-                licenseNumber: 'COC98293020',
-                capacity: 'Class 3 III/I Unlimited Motor & Steam',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                license: 'EOOW Certificate Of Competence',
-                licenseNumber: 'COC98293020',
-                capacity: 'Class 3 III/I Unlimited Motor & Steam',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        seaServiceLog: [
-            {
-                company: 'CalMac Ferries UK',
-                role: 'Third Engineer',
-                vesselName: 'Glen Sannox',
-                imoNo: '9875637',
-                flag: 'United Kingdom',
-                type: 'LNG (Motor)',
-                dwt: '900t',
-                meType: 'Dual Fuel Wartlisa 342i20df',
-                kw: '12000',
-                duration: '12-01-2026 To Till Date'
-            },
-            {
-                company: 'CalMac Ferries UK',
-                role: 'Third Engineer',
-                vesselName: 'Glen Sannox',
-                imoNo: '9875637',
-                flag: 'United Kingdom',
-                type: 'LNG (Motor)',
-                dwt: '900t',
-                meType: 'Dual Fuel Wartlisa 342i20df',
-                kw: '12000',
-                duration: '12-01-2026 To Till Date'
-            }
-        ],
-        endorsements: [
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        academicQualifications: [
-            {
-                dates: '09.2022 - 09/2024',
-                qualificationName: 'Master Of Science, Energy Engineering',
-                institution: 'University of Hull, UK',
-                grade: 'Distinction'
-            },
-            {
-                dates: '09.2022 - 09/2024',
-                qualificationName: 'Bachelors of Engineering with Honours, Marine Engineering',
-                institution: 'South Shields Marine School Northumbria University Newcastle, UK',
-                grade: '2.1, Top 6% of class'
-            }
-        ],
-        stcwCertificates: [
-            {
-                stcwQualification: 'Basic Safety Training',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Designated Security Duties',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Advanced Fire Fighting',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Proficiency in Survival Craft & RB',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        medicalCertificates: [
-            {
-                certificateName: 'MCA ENG 1',
-                certificateNumber: '243373',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                certificateName: 'Yellow Fever Vaccination',
-                certificateNumber: 'A2156457',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        travelDocuments: [
-            {
-                documentName: 'Passport',
-                documentNumber: '243373',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                documentName: 'Visa Document',
-                documentNumber: 'A2156457',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
+        name: '',
+        category: '',
+        userType: sessionStorage.getItem('professionType') === 'ratings' ? 'rating' : sessionStorage.getItem('professionType') === 'catering' ? 'medical' : sessionStorage.getItem('professionType') || 'officer', // 'officer', 'rating', or 'medical'
+        phone: '',
+        email: '',
+        address: '',
+        image: localStorage.getItem('profileImage') || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        professionalSummary: '',
+        skills: [],
+        licenses: [],
+        seaServiceLog: [],
+        endorsements: [],
+        academicQualifications: [],
+        stcwCertificates: [],
+        medicalCertificates: [],
+        travelDocuments: [],
         biometricInfo: {
-            gender: 'Male',
-            height: '160cm',
-            weight: '89kg',
-            bmi: '24.5',
-            eyeColor: 'Brown',
-            overallSize: 'Medium',
-            shoeSize: '9'
+            gender: '',
+            height: '',
+            weight: '',
+            bmi: '',
+            eyeColor: '',
+            overallSize: '',
+            shoeSize: ''
         },
-        nextOfKin: [
-            {
-                name: 'Osifo, Wisdom Ikiyobotei',
-                relationship: 'Brother',
-                phoneNumber: '+60178348297',
-                email: 'amioq@yahoo.com'
-            }
-        ],
-        references: [
-            {
-                name: 'Omar, Azrol Amir',
-                position: 'Second Engineer',
-                phoneNumber: '+60178348297',
-                email: 'amioq@yahoo.com'
-            }
-        ]
+        nextOfKin: [],
+        references: []
     });
+
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Fetch resume data on mount
+    useEffect(() => {
+        const processData = (data) => {
+            setUserData((prevData) => {
+                const pi = data.personalInfo || {};
+                const ps = data.summary || {};
+                const sk = data.skills || [];
+                const lic = data.licenses || [];
+                const sea = data.seaService || [];
+                const aca = data.education || [];
+                const med = data.medicalTravelDocuments || [];
+                const bio = data.biometrics || {};
+                const stcwData = data.stcwCertificates || [];
+                const kinList = data.nextOfKin || [];
+                const refList = data.referees || [];
+
+                const getArray = (arr) => Array.isArray(arr) ? arr : [];
+
+                const formatDateRange = (start, end) => {
+                    if (!start && !end) return '';
+                    const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+                    const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
+                    const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
+                    return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
+                };
+
+                return {
+                    ...prevData,
+                    userType: (() => {
+                        const stored = sessionStorage.getItem('professionType');
+                        if (stored === 'ratings') return 'rating';
+                        if (stored === 'catering') return 'medical';
+                        return stored || 'officer';
+                    })(),
+                    name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : prevData.name,
+                    phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : prevData.phone,
+                    email: pi.email || pi.emailAddress || prevData.email,
+                    address: [pi.streetAddress || pi.address, pi.city, pi.state, pi.zipCode || pi.postcode, pi.country].filter(Boolean).join(', ') || prevData.address,
+                    image: data.profilePhoto || prevData.image,
+                    professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
+                    skills: getArray(sk).map(s => ({ name: s.skillName, rating: s.rating })),
+                    licenses: getArray(lic).filter(l => !l.isEndorsement).map(l => ({
+                        license: l.name,
+                        licenseNumber: l.number,
+                        capacity: l.capacity || '',
+                        issuingCountry: l.country,
+                        dateOfIssue: l.issueDate,
+                        validTill: l.expiryDate
+                    })),
+                    endorsements: getArray(lic).filter(l => l.isEndorsement).map(e => ({
+                        endorsement: e.name,
+                        issuingCountry: e.country,
+                        dateOfIssue: e.issueDate,
+                        validTill: e.expiryDate
+                    })),
+                    seaServiceLog: getArray(sea).map(s => ({
+                        company: s.companyName,
+                        role: s.role,
+                        vesselName: s.vesselName,
+                        imoNo: s.imoNumber,
+                        flag: s.flag,
+                        type: s.vesselType,
+                        dwt: s.dwt,
+                        meType: s.meType,
+                        kw: s.kwType,
+                        duration: formatDateRange(s.joiningDate, s.tillDate),
+                    })),
+                    academicQualifications: getArray(aca).map(a => ({
+                        dates: formatDateRange(a.startDate, a.endDate),
+                        qualificationName: a.qualificationName,
+                        institution: a.institution,
+                        grade: a.grade
+                    })),
+                    stcwCertificates: getArray(stcwData).map(c => ({
+                        stcwQualification: c.qualification,
+                        certificateNumber: c.certificateNumber,
+                        issuingCountry: c.issuingCountry,
+                        dateOfIssue: c.issueDate,
+                        validTill: c.expiryDate
+                    })),
+                    medicalCertificates: getArray(med).filter(m => m.type === 'MEDICAL').map(m => ({
+                        certificateName: m.name,
+                        certificateNumber: m.documentNumber,
+                        issuingCountry: m.issuingCountry,
+                        dateOfIssue: m.issueDate,
+                        validTill: m.expiryDate
+                    })),
+                    travelDocuments: getArray(med).filter(m => m.type === 'TRAVEL').map(m => ({
+                        documentName: m.name,
+                        documentNumber: m.documentNumber,
+                        issuingCountry: m.issuingCountry,
+                        dateOfIssue: m.issueDate,
+                        validTill: m.expiryDate
+                    })),
+                    biometricInfo: {
+                        gender: bio.gender || '',
+                        height: bio.height ? `${bio.height}cm` : '',
+                        weight: bio.weight ? `${bio.weight}kg` : '',
+                        bmi: bio.bmi || '',
+                        eyeColor: bio.eyeColor || '',
+                        shoeSize: bio.shoeSize || '',
+                        overallSize: bio.overallSize || ''
+                    },
+                    nextOfKin: getArray(kinList).map(kin => ({
+                        ...kin,
+                        phoneNumber: kin.phoneNumber || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
+                    })),
+                    references: getArray(refList).map(ref => ({
+                        ...ref,
+                        phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
+                    }))
+                };
+            });
+        };
+
+        const fetchResume = async () => {
+            setIsLoading(true);
+            try {
+                const data = await resumeService.getResume();
+                if (data) processData(data);
+            } catch (error) {
+                console.error("Failed to fetch CV resume", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchResume();
+    }, []);
 
     const cvRef = useRef(null);
 
     const handleEditResume = () => {
-        console.log('Edit Resume clicked');
+        const dashboardMap = {
+            'officer': '/officer-dashboard',
+            'rating': '/ratings-dashboard',
+            'medical': '/catering-medical-dashboard'
+        };
+        navigate(dashboardMap[userData.userType] || '/officer-dashboard');
     };
 
     const handleShareResume = () => {
@@ -286,29 +273,7 @@ const CVResume = ({ isReadOnly = false }) => {
     return (
         <div className="h-full flex flex-col overflow-hidden bg-[#F5F7FA]">
             {/* Dev Toolbar */}
-            {!isReadOnly && (
-                <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
-                    <span className="opacity-70 flex items-center">Preview Mode:</span>
-                    <button
-                        onClick={() => switchUserType('officer')}
-                        className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Officer
-                    </button>
-                    <button
-                        onClick={() => switchUserType('rating')}
-                        className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Rating/Crew
-                    </button>
-                    <button
-                        onClick={() => switchUserType('medical')}
-                        className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Medical
-                    </button>
-                </div>
-            )}
+            {/* Removed Preview Mode toggle - category is now automatic based on session */}
 
             <div className="flex-1 overflow-y-auto">
                 <div ref={cvRef}>

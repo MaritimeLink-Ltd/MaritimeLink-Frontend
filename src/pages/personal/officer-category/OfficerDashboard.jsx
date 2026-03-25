@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import resumeService from '../../../services/resumeService';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
@@ -32,7 +32,24 @@ const OfficerDashboard = () => {
     biometricsNextOfKin: {}
   });
 
-  // Map of which sidebar sections have sub-tabs and their order
+  // Fetch existing resume data on mount
+  useEffect(() => {
+    const fetchResume = async () => {
+      try {
+        setIsLoading(true);
+        const apiData = await resumeService.getResume();
+        if (apiData) {
+          const mapped = resumeService.mapApiToOfficerData(apiData);
+          setAllData(mapped);
+        }
+      } catch (error) {
+        console.log('No existing resume found or error fetching:', error?.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResume();
+  }, []);
   const sectionTabs = {
     4: ['licenses', 'endorsements'],
     6: ['academic', 'stcw'],
@@ -314,14 +331,23 @@ const OfficerDashboard = () => {
     setActiveSection(9);
   };
 
-  const handleSaveAndContinue = () => {
+  const handleSaveAndContinue = async () => {
     console.log('Saving and continuing later...', allData);
-    setShowSaveModal(true);
-    // Auto close modal after 1.5 seconds and redirect
-    setTimeout(() => {
-      setShowSaveModal(false);
-      navigate('/personal/documents');
-    }, 1500);
+    try {
+      setIsLoading(true);
+      await resumeService.submitBulkResume(allData, 'PUT');
+      
+      setShowSaveModal(true);
+      // Auto close modal after 1.5 seconds and redirect
+      setTimeout(() => {
+        setShowSaveModal(false);
+        navigate('/personal/documents');
+      }, 1500);
+    } catch (error) {
+      alert(error?.message || 'Failed to save resume. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderSection = () => {

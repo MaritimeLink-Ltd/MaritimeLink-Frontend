@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.seaServiceEntries) && initialData.seaServiceEntries.length > 0) {
+      setSeaServiceEntries(initialData.seaServiceEntries);
+    }
+  }, [initialData]);
   const [currentSeaService, setCurrentSeaService] = useState({
     companyName: '',
     role: '',
@@ -23,31 +29,37 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     });
   };
 
-  const handleAddSeaService = () => {
-    if (currentSeaService.companyName && currentSeaService.vesselName) {
-      // Validate dates
-      if (currentSeaService.joiningDate && currentSeaService.till) {
-        if (new Date(currentSeaService.joiningDate) > new Date(currentSeaService.till)) {
-          alert('Till date must be after or equal to Joining date');
-          return;
-        }
-      }
-
-      setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
-      setCurrentSeaService({
-        companyName: '',
-        role: '',
-        vesselName: '',
-        imoNo: '',
-        flag: '',
-        type: '',
-        dwt: '',
-        meType: '',
-        kwt: '',
-        joiningDate: '',
-        till: ''
-      });
+  const validateForm = (entry) => {
+    if (!entry.companyName || !entry.vesselName || !entry.role || !entry.imoNo || !entry.flag || !entry.type || !entry.joiningDate || !entry.till) {
+      return 'Please fill in all mandatory fields before adding.';
     }
+    if (new Date(entry.joiningDate) > new Date(entry.till)) {
+      return 'Till date must be after or equal to Joining date.';
+    }
+    return null;
+  };
+
+  const handleAddSeaService = () => {
+    const errorMsg = validateForm(currentSeaService);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
+    }
+
+    setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
+    setCurrentSeaService({
+      companyName: '',
+      role: '',
+      vesselName: '',
+      imoNo: '',
+      flag: '',
+      type: '',
+      dwt: '',
+      meType: '',
+      kwt: '',
+      joiningDate: '',
+      till: ''
+    });
   };
 
   const handleRemoveSeaService = (id) => {
@@ -56,11 +68,18 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
 
   const handleNext = () => {
     let finalEntries = [...seaServiceEntries];
-    if (currentSeaService.companyName && currentSeaService.vesselName) {
-      if (!currentSeaService.joiningDate || !currentSeaService.till || new Date(currentSeaService.joiningDate) <= new Date(currentSeaService.till)) {
-        finalEntries.push({ ...currentSeaService, id: Date.now() });
+    // Only attempt adding the trailing form if ANY partial string exists to protect user error
+    const isPartial = Object.values(currentSeaService).some(val => val !== '');
+    
+    if (isPartial) {
+      const errorMsg = validateForm(currentSeaService);
+      if (errorMsg) {
+        alert("Please complete or clear the active entry before continuing: " + errorMsg);
+        return; // Halt 
       }
+      finalEntries.push({ ...currentSeaService, id: Date.now() });
     }
+
     onNext({ seaServiceEntries: finalEntries });
   };
 

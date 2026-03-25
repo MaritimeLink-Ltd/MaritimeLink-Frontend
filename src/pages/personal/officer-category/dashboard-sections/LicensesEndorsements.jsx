@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.licenses) && initialData.licenses.length > 0) {
+      setLicenses(initialData.licenses);
+    }
+    if (initialData && Array.isArray(initialData.endorsements) && initialData.endorsements.length > 0) {
+      setEndorsements(initialData.endorsements);
+    }
+  }, [initialData]);
   const [currentLicense, setCurrentLicense] = useState({
     licenseName: '',
     licenseNumber: '',
@@ -32,26 +41,40 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
     });
   };
 
-  const handleAddLicense = () => {
-    if (currentLicense.licenseName && currentLicense.licenseNumber) {
-      // Validate dates if both are provided
-      if (currentLicense.dateOfIssue && currentLicense.validTill) {
-        const issueDate = new Date(currentLicense.dateOfIssue);
-        const validDate = new Date(currentLicense.validTill);
-        if (issueDate >= validDate) {
-          alert('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
-      setCurrentLicense({
-        licenseName: '',
-        licenseNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
+  const validateLicense = (entry) => {
+    if (!entry.licenseName || !entry.licenseNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory License fields before adding.';
     }
+    if (new Date(entry.dateOfIssue) >= new Date(entry.validTill)) {
+      return 'Date of Issue must be before Valid Till date.';
+    }
+    return null;
+  };
+
+  const validateEndorsement = (entry) => {
+    if (!entry.licenseName || !entry.licenseNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory Endorsement fields before adding.';
+    }
+    if (new Date(entry.dateOfIssue) >= new Date(entry.validTill)) {
+      return 'Date of Issue must be before Valid Till date.';
+    }
+    return null;
+  };
+
+  const handleAddLicense = () => {
+    const errorMsg = validateLicense(currentLicense);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
+    }
+    setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
+    setCurrentLicense({
+      licenseName: '',
+      licenseNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveLicense = (id) => {
@@ -59,25 +82,19 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
   };
 
   const handleAddEndorsement = () => {
-    if (currentEndorsement.licenseName && currentEndorsement.licenseNumber) {
-      // Validate dates if both are provided
-      if (currentEndorsement.dateOfIssue && currentEndorsement.validTill) {
-        const issueDate = new Date(currentEndorsement.dateOfIssue);
-        const validDate = new Date(currentEndorsement.validTill);
-        if (issueDate >= validDate) {
-          alert('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setEndorsements([...endorsements, { ...currentEndorsement, id: Date.now() }]);
-      setCurrentEndorsement({
-        licenseName: '',
-        licenseNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
+    const errorMsg = validateEndorsement(currentEndorsement);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
     }
+    setEndorsements([...endorsements, { ...currentEndorsement, id: Date.now() }]);
+    setCurrentEndorsement({
+      licenseName: '',
+      licenseNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveEndorsement = (id) => {
@@ -88,17 +105,24 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
     let finalLicenses = [...licenses];
     let finalEndorsements = [...endorsements];
 
-    if (currentLicense.licenseName && currentLicense.licenseNumber) {
-      if (!currentLicense.dateOfIssue || !currentLicense.validTill || new Date(currentLicense.dateOfIssue) < new Date(currentLicense.validTill)) {
-        finalLicenses.push({ ...currentLicense, id: Date.now() });
+    const isPartialLicense = Object.values(currentLicense).some(val => val !== '');
+    if (isPartialLicense) {
+      const errorMsg = validateLicense(currentLicense);
+      if (errorMsg) {
+        alert("Please complete or clear the active License entry before continuing: " + errorMsg);
+        return;
       }
+      finalLicenses.push({ ...currentLicense, id: Date.now() });
     }
 
-    if (currentEndorsement.licenseName && currentEndorsement.licenseNumber) {
-      if (!currentEndorsement.dateOfIssue || !currentEndorsement.validTill || new Date(currentEndorsement.dateOfIssue) < new Date(currentEndorsement.validTill)) {
-        // Use a slightly different ID so they don't collide if both are added same ms
-        finalEndorsements.push({ ...currentEndorsement, id: Date.now() + 1 });
+    const isPartialEndorsement = Object.values(currentEndorsement).some(val => val !== '');
+    if (isPartialEndorsement) {
+      const errorMsg = validateEndorsement(currentEndorsement);
+      if (errorMsg) {
+        alert("Please complete or clear the active Endorsement entry before continuing: " + errorMsg);
+        return;
       }
+      finalEndorsements.push({ ...currentEndorsement, id: Date.now() + 1 });
     }
 
     onNext({ licenses: finalLicenses, endorsements: finalEndorsements });

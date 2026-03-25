@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.medicalDocuments) && initialData.medicalDocuments.length > 0) {
+      setMedicalDocuments(initialData.medicalDocuments);
+    }
+    if (initialData && Array.isArray(initialData.travelDocuments) && initialData.travelDocuments.length > 0) {
+      setTravelDocuments(initialData.travelDocuments);
+    }
+  }, [initialData]);
   const [currentMedical, setCurrentMedical] = useState({
     certificateName: '',
     certificateNumber: '',
@@ -44,40 +53,47 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     }
   };
 
-  const handleAddMedical = () => {
-    if (currentMedical.certificateName && currentMedical.certificateNumber) {
-      // Validate date of issue is not in the future
-      if (currentMedical.dateOfIssue) {
-        const issueDate = new Date(currentMedical.dateOfIssue);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (issueDate > today) {
-          setMedicalDateError('Please enter valid date');
-          return;
-        }
-      }
-      // Validate dates if both are provided
-      if (currentMedical.dateOfIssue && currentMedical.validTill) {
-        const issueDate = new Date(currentMedical.dateOfIssue);
-        const validDate = new Date(currentMedical.validTill);
-        if (issueDate >= validDate) {
-          setMedicalDateError('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setMedicalDateError('');
-      setMedicalDocuments([...medicalDocuments, { ...currentMedical, id: Date.now() }]);
-      setCurrentMedical({
-        certificateName: '',
-        certificateNumber: '',
-        issuingCountry: '',
-        city: '',
-        institutionCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
-      setMedicalDateError('');
+  const validateMedical = (entry) => {
+    if (!entry.certificateName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory Medical fields before adding.';
     }
+    const issueDate = new Date(entry.dateOfIssue);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (issueDate > today) return 'Please enter valid issue date.';
+    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    return null;
+  };
+
+  const validateTravel = (entry) => {
+    if (!entry.documentName || !entry.documentNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory Travel fields before adding.';
+    }
+    const issueDate = new Date(entry.dateOfIssue);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (issueDate > today) return 'Please enter valid issue date.';
+    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    return null;
+  };
+
+  const handleAddMedical = () => {
+    const errorMsg = validateMedical(currentMedical);
+    if (errorMsg) {
+      setMedicalDateError(errorMsg);
+      return;
+    }
+    setMedicalDateError('');
+    setMedicalDocuments([...medicalDocuments, { ...currentMedical, id: Date.now() }]);
+    setCurrentMedical({
+      certificateName: '',
+      certificateNumber: '',
+      issuingCountry: '',
+      city: '',
+      institutionCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveMedical = (id) => {
@@ -85,37 +101,20 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
   };
 
   const handleAddTravel = () => {
-    if (currentTravel.documentName && currentTravel.documentNumber) {
-      // Validate date of issue is not in the future
-      if (currentTravel.dateOfIssue) {
-        const issueDate = new Date(currentTravel.dateOfIssue);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (issueDate > today) {
-          setTravelDateError('Please enter valid date');
-          return;
-        }
-      }
-      // Validate dates if both are provided
-      if (currentTravel.dateOfIssue && currentTravel.validTill) {
-        const issueDate = new Date(currentTravel.dateOfIssue);
-        const validDate = new Date(currentTravel.validTill);
-        if (issueDate >= validDate) {
-          setTravelDateError('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setTravelDateError('');
-      setTravelDocuments([...travelDocuments, { ...currentTravel, id: Date.now() }]);
-      setCurrentTravel({
-        documentName: '',
-        documentNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
-      setTravelDateError('');
+    const errorMsg = validateTravel(currentTravel);
+    if (errorMsg) {
+      setTravelDateError(errorMsg);
+      return;
     }
+    setTravelDateError('');
+    setTravelDocuments([...travelDocuments, { ...currentTravel, id: Date.now() }]);
+    setCurrentTravel({
+      documentName: '',
+      documentNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveTravel = (id) => {
@@ -126,21 +125,24 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     let finalMedical = [...medicalDocuments];
     let finalTravel = [...travelDocuments];
 
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    if (currentMedical.certificateName && currentMedical.certificateNumber) {
-      let valid = true;
-      if (currentMedical.dateOfIssue && new Date(currentMedical.dateOfIssue) > todayDate) valid = false;
-      if (currentMedical.dateOfIssue && currentMedical.validTill && new Date(currentMedical.dateOfIssue) >= new Date(currentMedical.validTill)) valid = false;
-      if (valid) finalMedical.push({ ...currentMedical, id: Date.now() });
+    const isPartialMedical = Object.values(currentMedical).some(val => val !== '');
+    if (isPartialMedical) {
+      const errorMsg = validateMedical(currentMedical);
+      if (errorMsg) {
+        setMedicalDateError("Please complete or clear active Medical entry: " + errorMsg);
+        return;
+      }
+      finalMedical.push({ ...currentMedical, id: Date.now() });
     }
 
-    if (currentTravel.documentName && currentTravel.documentNumber) {
-      let valid = true;
-      if (currentTravel.dateOfIssue && new Date(currentTravel.dateOfIssue) > todayDate) valid = false;
-      if (currentTravel.dateOfIssue && currentTravel.validTill && new Date(currentTravel.dateOfIssue) >= new Date(currentTravel.validTill)) valid = false;
-      if (valid) finalTravel.push({ ...currentTravel, id: Date.now() + 1 });
+    const isPartialTravel = Object.values(currentTravel).some(val => val !== '');
+    if (isPartialTravel) {
+      const errorMsg = validateTravel(currentTravel);
+      if (errorMsg) {
+        setTravelDateError("Please complete or clear active Travel entry: " + errorMsg);
+        return;
+      }
+      finalTravel.push({ ...currentTravel, id: Date.now() + 1 });
     }
 
     onNext({ medicalDocuments: finalMedical, travelDocuments: finalTravel });

@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
+
+  useEffect(() => {
+    if (initialData && Array.isArray(initialData.academicQualifications) && initialData.academicQualifications.length > 0) {
+      setAcademicQualifications(initialData.academicQualifications);
+    }
+    if (initialData && Array.isArray(initialData.stcwCertificates) && initialData.stcwCertificates.length > 0) {
+      setStcwCertificates(initialData.stcwCertificates);
+    }
+  }, [initialData]);
   const [currentAcademic, setCurrentAcademic] = useState({
     qualificationName: '',
     institution: '',
@@ -34,28 +43,43 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
     });
   };
 
-  const handleAddAcademic = () => {
-    if (currentAcademic.qualificationName && currentAcademic.institution) {
-      // Validate dates if both are provided
-      if (currentAcademic.startDate && currentAcademic.endDate) {
-        const start = new Date(currentAcademic.startDate);
-        const end = new Date(currentAcademic.endDate);
-        if (start >= end) {
-          alert('Start Date must be before End Date');
-          return;
-        }
-      }
-      setAcademicQualifications([...academicQualifications, { ...currentAcademic, id: Date.now() }]);
-      setCurrentAcademic({
-        qualificationName: '',
-        institution: '',
-        city: '',
-        institutionCountry: '',
-        grade: '',
-        startDate: '',
-        endDate: ''
-      });
+  const validateAcademic = (entry) => {
+    if (!entry.qualificationName || !entry.institution || !entry.city || !entry.institutionCountry || !entry.grade || !entry.startDate || !entry.endDate) {
+      return 'Please fill in all mandatory Academic fields before adding.';
     }
+    if (new Date(entry.startDate) >= new Date(entry.endDate)) {
+      return 'Start Date must be before End Date.';
+    }
+    return null;
+  };
+
+  const validateStcw = (entry) => {
+    if (!entry.qualificationName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+      return 'Please fill in all mandatory STCW fields before adding.';
+    }
+    if (new Date(entry.dateOfIssue) >= new Date(entry.validTill)) {
+      return 'Date of Issue must be before Valid Till date.';
+    }
+    return null;
+  };
+
+  const handleAddAcademic = () => {
+    const errorMsg = validateAcademic(currentAcademic);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
+    }
+
+    setAcademicQualifications([...academicQualifications, { ...currentAcademic, id: Date.now() }]);
+    setCurrentAcademic({
+      qualificationName: '',
+      institution: '',
+      city: '',
+      institutionCountry: '',
+      grade: '',
+      startDate: '',
+      endDate: ''
+    });
   };
 
   const handleRemoveAcademic = (id) => {
@@ -63,25 +87,20 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   };
 
   const handleAddStcw = () => {
-    if (currentStcw.qualificationName && currentStcw.certificateNumber) {
-      // Validate dates if both are provided
-      if (currentStcw.dateOfIssue && currentStcw.validTill) {
-        const issueDate = new Date(currentStcw.dateOfIssue);
-        const validDate = new Date(currentStcw.validTill);
-        if (issueDate >= validDate) {
-          alert('Date of Issue must be before Valid Till date');
-          return;
-        }
-      }
-      setStcwCertificates([...stcwCertificates, { ...currentStcw, id: Date.now() }]);
-      setCurrentStcw({
-        qualificationName: '',
-        certificateNumber: '',
-        issuingCountry: '',
-        dateOfIssue: '',
-        validTill: ''
-      });
+    const errorMsg = validateStcw(currentStcw);
+    if (errorMsg) {
+      alert(errorMsg);
+      return;
     }
+
+    setStcwCertificates([...stcwCertificates, { ...currentStcw, id: Date.now() }]);
+    setCurrentStcw({
+      qualificationName: '',
+      certificateNumber: '',
+      issuingCountry: '',
+      dateOfIssue: '',
+      validTill: ''
+    });
   };
 
   const handleRemoveStcw = (id) => {
@@ -92,16 +111,24 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
     let finalAcademic = [...academicQualifications];
     let finalStcw = [...stcwCertificates];
 
-    if (currentAcademic.qualificationName && currentAcademic.institution) {
-      if (!currentAcademic.startDate || !currentAcademic.endDate || new Date(currentAcademic.startDate) < new Date(currentAcademic.endDate)) {
-        finalAcademic.push({ ...currentAcademic, id: Date.now() });
+    const isPartialAcademic = Object.values(currentAcademic).some(val => val !== '');
+    if (isPartialAcademic) {
+      const errorMsg = validateAcademic(currentAcademic);
+      if (errorMsg) {
+        alert("Please complete or clear the active Academic entry before continuing: " + errorMsg);
+        return;
       }
+      finalAcademic.push({ ...currentAcademic, id: Date.now() });
     }
 
-    if (currentStcw.qualificationName && currentStcw.certificateNumber) {
-      if (!currentStcw.dateOfIssue || !currentStcw.validTill || new Date(currentStcw.dateOfIssue) < new Date(currentStcw.validTill)) {
-        finalStcw.push({ ...currentStcw, id: Date.now() + 1 });
+    const isPartialStcw = Object.values(currentStcw).some(val => val !== '');
+    if (isPartialStcw) {
+      const errorMsg = validateStcw(currentStcw);
+      if (errorMsg) {
+        alert("Please complete or clear the active STCW entry before continuing: " + errorMsg);
+        return;
       }
+      finalStcw.push({ ...currentStcw, id: Date.now() + 1 });
     }
 
     onNext({ academicQualifications: finalAcademic, stcwCertificates: finalStcw });

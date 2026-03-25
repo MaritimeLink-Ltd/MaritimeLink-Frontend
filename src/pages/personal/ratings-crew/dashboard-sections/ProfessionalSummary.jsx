@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const ProfessionalSummary = ({ onNext, onBack, initialData = {} }) => {
   const [formData, setFormData] = useState({
     professionalSummary: initialData.professionalSummary || ''
   });
+
+  useEffect(() => {
+    if (initialData && initialData.professionalSummary) {
+      setFormData({ professionalSummary: initialData.professionalSummary });
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     setFormData({

@@ -4,206 +4,68 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
-import resumeService from '../../../services/resumeService';
+import resumeService from '../../../../services/resumeService';
 
 const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
     const navigate = useNavigate();
     const [userData, setUserData] = useState({
-        name: 'Ali Shahzaib',
-        category: 'Deck Officer',
-        userType: defaultUserType, // 'officer', 'rating', or 'medical'
-        phone: '+1235662 89632',
-        email: 'pambeasly@gmail.com',
-        address: 'House #1 Street 43 California, USA',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-        professionalSummary: 'A highly disciplined Seafarer Officer with a passion for ensuring efficient, safe, and regulated maritime operations. With a strong foundation in nautical science/ marine engineering and critical problem-solving. Pam brings years of experience working across various vessel types and challenging sea conditions. Her expertise spans from meticulously designing and executing watchkeeping procedures and navigation plans (or maintaining clean, operable engine room machinery) to leading cross-functional maritime teams in executing complex maneuvers and port operation',
-        skills: [
-            { name: 'Cargo Operations', rating: 5 },
-            { name: 'Seamanship', rating: 5 },
-        ],
-        licenses: [
-            {
-                license: 'EOOW Certificate Of Competence',
-                licenseNumber: 'COC98293020',
-                capacity: 'Class 3 III/I Unlimited Motor & Steam',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                license: 'EOOW Certificate Of Competence',
-                licenseNumber: 'COC98293020',
-                capacity: 'Class 3 III/I Unlimited Motor & Steam',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        seaServiceLog: [
-            {
-                company: 'CalMac Ferries UK',
-                role: 'Third Engineer',
-                vesselName: 'Glen Sannox',
-                imoNo: '9875637',
-                flag: 'United Kingdom',
-                type: 'LNG (Motor)',
-                dwt: '900t',
-                meType: 'Dual Fuel Wartlisa 342i20df',
-                kw: '12000',
-                duration: '12-01-2026 To Till Date'
-            },
-            {
-                company: 'CalMac Ferries UK',
-                role: 'Third Engineer',
-                vesselName: 'Glen Sannox',
-                imoNo: '9875637',
-                flag: 'United Kingdom',
-                type: 'LNG (Motor)',
-                dwt: '900t',
-                meType: 'Dual Fuel Wartlisa 342i20df',
-                kw: '12000',
-                duration: '12-01-2026 To Till Date'
-            }
-        ],
-        endorsements: [
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                endorsement: 'Advance Gas Tanker Endorsement',
-                issuingCountry: 'MCA, United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        academicQualifications: [
-            {
-                dates: '09.2022 - 09/2024',
-                qualificationName: 'Master Of Science, Energy Engineering',
-                institution: 'University of Hull, UK',
-                grade: 'Distinction'
-            },
-            {
-                dates: '09.2022 - 09/2024',
-                qualificationName: 'Bachelors of Engineering with Honours, Marine Engineering',
-                institution: 'South Shields Marine School Northumbria University Newcastle, UK',
-                grade: '2.1, Top 6% of class'
-            }
-        ],
-        stcwCertificates: [
-            {
-                stcwQualification: 'Basic Safety Training',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Designated Security Duties',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Advanced Fire Fighting',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                stcwQualification: 'Proficiency in Survival Craft & RB',
-                certificateNumber: 'MRT/MAN/1246/2019',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        medicalCertificates: [
-            {
-                certificateName: 'MCA ENG 1',
-                certificateNumber: '243373',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                certificateName: 'Yellow Fever Vaccination',
-                certificateNumber: 'A2156457',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
-        travelDocuments: [
-            {
-                documentName: 'Passport',
-                documentNumber: '243373',
-                issuingCountry: 'United Kingdom',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            },
-            {
-                documentName: 'Visa Document',
-                documentNumber: 'A2156457',
-                issuingCountry: 'Nigeria',
-                dateOfIssue: '12-01-2024',
-                validTill: '12-01-2026'
-            }
-        ],
+        name: '',
+        category: '',
+        userType: defaultUserType || (sessionStorage.getItem('professionType') === 'ratings' ? 'rating' : sessionStorage.getItem('professionType') === 'catering' ? 'medical' : sessionStorage.getItem('professionType') || 'officer'), // 'officer', 'rating', or 'medical'
+        phone: '',
+        email: '',
+        address: '',
+        image: localStorage.getItem('profileImage') || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        professionalSummary: '',
+        skills: [],
+        licenses: [],
+        seaServiceLog: [],
+        endorsements: [],
+        academicQualifications: [],
+        stcwCertificates: [],
+        medicalCertificates: [],
+        travelDocuments: [],
         biometricInfo: {
-            gender: 'Male',
-            height: '160cm',
-            weight: '89kg',
-            bmi: '24.5',
-            eyeColor: 'Brown',
-            overallSize: 'Medium',
-            shoeSize: '9'
+            gender: '',
+            height: '',
+            weight: '',
+            bmi: '',
+            eyeColor: '',
+            overallSize: '',
+            shoeSize: ''
         },
-        nextOfKin: [
-            {
-                name: 'Osifo, Wisdom Ikiyobotei',
-                relationship: 'Brother',
-                phoneNumber: '+60178348297',
-                email: 'amioq@yahoo.com'
-            }
-        ],
-        references: [
-            {
-                name: 'Omar, Azrol Amir',
-                position: 'Second Engineer',
-                company: 'Maersk',
-                phoneNumber: '+60178348297',
-                email: 'amioq@yahoo.com'
-            }
-        ]
+        nextOfKin: [],
+        references: []
     });
 
     const [isLoading, setIsLoading] = useState(false);
 
     // Update userData based on formData from parent dashboards OR from API fetch
     useEffect(() => {
-        const processData = (data, isApiPayload = false) => {
+        const processData = (rawData, isApiPayload = false) => {
+            if (!rawData) {
+                console.warn("Resume: processData called with no data");
+                return;
+            }
+            // Unwrap if data is wrapped in a `resume` key (API GET response format)
+            const data = (isApiPayload && rawData.resume) ? rawData.resume : rawData;
+            console.log("Resume: Processing data (unwrapped):", data);
+            
             setUserData((prevData) => {
-                const pi = isApiPayload ? (data.personalInfo || {}) : (data.personalInfo || {});
-                const ps = isApiPayload ? (data.summary || {}) : (data.professionalSummary || {});
+                // Determine source for each section based on payload type
+                // isApiPayload means data came from getResume()
+                // Map common variations (camelCase vs snake_case if any)
+                const pi = isApiPayload ? (data.personalInfo || data || {}) : (data.personalInfo || {});
+                const ps = isApiPayload ? (data.summary || data.professionalSummary || data || {}) : (data.professionalSummary || {});
                 const sk = isApiPayload ? (data.skills || []) : (data.skills || {});
                 const lic = isApiPayload ? (data.licenses || []) : (data.licensesEndorsements || {});
                 const profLic = isApiPayload ? [] : (data.professionalLicensesCertificates || {}); 
                 const sea = isApiPayload ? (data.seaService || []) : (data.seaServiceLog || {});
                 const aca = isApiPayload ? (data.education || []) : (data.academicQualifications || {});
-                const med = isApiPayload ? (data.medicalTravelDocuments || []) : (data.medicalTravelDocs || {});
-                const bio = isApiPayload ? (data.biometrics || {}) : (data.biometricsNextOfKin || {});
+                const med = isApiPayload ? (data.medicalTravelDocuments || data.medicalCertificates || data.medical_travel_documents || data.medicalDocuments || []) : (data.medicalTravelDocs || {});
+                // GET response returns travel docs separately under `travelDocuments`
+                const travelDocs = isApiPayload ? (data.travelDocuments || data.travel_documents || []) : [];
+                const bio = isApiPayload ? (data.biometrics || data || {}) : (data.biometricsNextOfKin || {});
                 const stcwData = isApiPayload ? (data.stcwCertificates || []) : (aca.stcw || aca.stcwCertificates || []);
                 const kinList = isApiPayload ? (data.nextOfKin || []) : (bio.nextOfKinList || []);
                 const refList = isApiPayload ? (data.referees || []) : (bio.refereesList || []);
@@ -223,59 +85,75 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
                 };
 
+                // Extract User Type
+                const newUserType = (() => {
+                    if (defaultUserType && defaultUserType !== 'officer') return defaultUserType;
+                    const stored = sessionStorage.getItem('professionType');
+                    if (stored === 'ratings') return 'rating';
+                    if (stored === 'catering') return 'medical';
+                    return stored || defaultUserType || 'officer';
+                })();
+
+                const firstName = pi.firstName || pi.first_name || '';
+                const lastName = pi.lastName || pi.last_name || '';
+                const fullName = pi.fullName || pi.full_name || '';
+
                 return {
                     ...prevData,
-                    userType: defaultUserType || prevData.userType,
-                    name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : prevData.name,
-                    phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : prevData.phone,
-                    email: pi.email || pi.emailAddress || prevData.email,
-                    address: [pi.streetAddress || pi.address, pi.city, pi.state, pi.zipCode || pi.postcode, pi.country].filter(Boolean).join(', ') || prevData.address,
-                    professionalSummary: ps.professionalSummary || ps.summary || prevData.professionalSummary,
+                    userType: newUserType,
+                    name: (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (fullName || prevData.name),
+                    category: pi.category || prevData.category,
+                    phone: pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number ? `${pi.countryCode || pi.phoneCode || pi.country_code || pi.phone_code || ''} ${pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number}`.trim() : prevData.phone,
+                    email: pi.email || pi.emailAddress || pi.email_address || prevData.email,
+                    address: [pi.streetAddress || pi.address || pi.street_address, pi.city, pi.state, pi.zipCode || pi.postcode || pi.zip_code || pi.post_code, pi.country].filter(Boolean).join(', ') || prevData.address,
+                    image: (isApiPayload && data.profilePhoto) ? data.profilePhoto : (localStorage.getItem('profileImage') || prevData.image),
+                    professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
+                    
                     skills: isApiPayload 
-                        ? (Array.isArray(sk) ? sk : []).map(s => ({ name: s.skillName, rating: s.rating }))
-                        : getArray(sk.skills),
+                        ? (Array.isArray(sk) ? sk : []).map(s => ({ name: s.skillName || s.name || s.skill_name, rating: s.rating || s.level || 0 }))
+                        : getArray(sk.skills || sk).map(s => ({ name: s.name || s.skillName || s.skill_name, rating: s.rating || s.level || 0 })),
 
                     licenses: isApiPayload 
                         ? (Array.isArray(lic) ? lic : []).filter(l => !l.isEndorsement).map(l => ({
-                            license: l.name,
-                            licenseNumber: l.number,
+                            license: l.name || l.license_name,
+                            licenseNumber: l.number || l.license_number,
                             capacity: l.capacity || '',
-                            issuingCountry: l.country,
-                            dateOfIssue: l.issueDate,
-                            validTill: l.expiryDate
+                            issuingCountry: l.country || l.issuing_country,
+                            dateOfIssue: l.issueDate || l.issue_date,
+                            validTill: l.expiryDate || l.expiry_date
                         }))
                         : getArray(lic.licenses, profLic.licenses).map(l => ({
                             ...l,
-                            license: l.license || l.licenseName || '',
+                            license: l.license || l.licenseName || l.license_name || '',
                             capacity: l.capacity || l.capacityRanking || l.rank || '',
                         })),
                     
                     endorsements: isApiPayload
                         ? (Array.isArray(lic) ? lic : []).filter(l => l.isEndorsement).map(e => ({
-                            endorsement: e.name,
-                            issuingCountry: e.country,
-                            dateOfIssue: e.issueDate,
-                            validTill: e.expiryDate
+                            endorsement: e.name || e.endorsement_name,
+                            issuingCountry: e.country || e.issuing_country,
+                            dateOfIssue: e.issueDate || e.issue_date,
+                            validTill: e.expiryDate || e.expiry_date
                         }))
                         : getArray(lic.endorsements, profLic.certificates).map(e => ({
                             ...e,
-                            endorsement: e.endorsement || e.certificateName || e.licenseName || '',
+                            endorsement: e.endorsement || e.certificateName || e.certificate_name || e.licenseName || '',
                         })),
 
                     seaServiceLog: isApiPayload
                         ? (Array.isArray(sea) ? sea : []).map(s => ({
-                            company: s.companyName,
+                            company: s.companyName || s.company_name || s.company,
                             role: s.role,
-                            vesselName: s.vesselName,
-                            imoNo: s.imoNumber,
+                            vesselName: s.vesselName || s.vessel_name,
+                            imoNo: s.imoNumber || s.imo_number || s.imoNo,
                             flag: s.flag,
-                            type: s.vesselType,
+                            type: s.vesselType || s.vessel_type || s.type,
                             dwt: s.dwt,
-                            meType: s.meType,
-                            kw: s.kwType,
-                            duration: formatDateRange(s.joiningDate, s.tillDate),
+                            meType: s.meType || s.me_type,
+                            kw: s.kwType || s.kwtType || s.kw_type || s.kw,
+                            duration: formatDateRange(s.joiningDate || s.joining_date, s.tillDate || s.till_date),
                         }))
-                        : getArray(sea.seaServiceLog || sea.seaServiceEntries).map(s => ({
+                        : getArray(sea.seaServiceLog || sea.seaServiceEntries || sea).map(s => ({
                             ...s,
                             company: s.company || s.companyName || '',
                             kw: s.kw || s.kwt || s.engineKw || '',
@@ -284,68 +162,78 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
                     academicQualifications: isApiPayload
                         ? (Array.isArray(aca) ? aca : []).map(a => ({
-                            dates: formatDateRange(a.startDate, a.endDate),
-                            qualificationName: a.qualificationName,
+                            dates: formatDateRange(a.startDate || a.start_date, a.endDate || a.end_date),
+                            qualificationName: a.qualificationName || a.qualification_name,
                             institution: a.institution,
                             grade: a.grade
                         }))
-                        : getArray(aca.academic || aca.academicQualifications).map(a => ({
+                        : getArray(aca.academic || aca.academicQualifications || aca).map(a => ({
                             ...a,
                             dates: a.dates || formatDateRange(a.startDate, a.endDate),
                         })),
 
                     stcwCertificates: isApiPayload
                         ? (Array.isArray(stcwData) ? stcwData : []).map(c => ({
-                            stcwQualification: c.qualification,
-                            certificateNumber: c.certificateNumber,
-                            issuingCountry: c.issuingCountry,
-                            dateOfIssue: c.issueDate,
-                            validTill: c.expiryDate
+                            stcwQualification: c.qualification || c.qualification_name,
+                            certificateNumber: c.certificateNumber || c.certificate_number,
+                            issuingCountry: c.issuingCountry || c.issuing_country,
+                            dateOfIssue: c.issueDate || c.issue_date,
+                            validTill: c.expiryDate || c.expiry_date
                         }))
                         : getArray(stcwData).map(c => ({
                             ...c,
                             stcwQualification: c.stcwQualification || c.qualificationName || c.certificateName || '',
                         })),
 
-                    medicalCertificates: isApiPayload
-                        ? (Array.isArray(med) ? med : []).filter(m => m.type === 'MEDICAL').map(m => ({
-                            certificateName: m.name,
-                            certificateNumber: m.documentNumber,
-                            issuingCountry: m.issuingCountry,
-                            dateOfIssue: m.issueDate,
-                            validTill: m.expiryDate
-                        }))
-                        : getArray(med.medical || med.medicalDocuments),
+                    medicalCertificates: (() => {
+                        if (!isApiPayload) return getArray(med.medical || med.medicalDocuments || med);
+                        // Check for separate medicalDocuments array on the data object
+                        const medicalArr = data.medicalDocuments || data.medical_documents || [];
+                        const combinedMedical = (Array.isArray(med) ? med : []).filter(m => m.type === 'MEDICAL');
+                        const finalArr = combinedMedical.length > 0 ? combinedMedical : (Array.isArray(medicalArr) && medicalArr.length > 0 ? medicalArr : (Array.isArray(med) ? med : []));
+                        return finalArr.map(m => ({
+                            certificateName: m.name || m.certificateName || m.certificate_name,
+                            certificateNumber: m.documentNumber || m.certificateNumber || m.document_number,
+                            issuingCountry: m.issuingCountry || m.issuing_country,
+                            dateOfIssue: m.issueDate || m.dateOfIssue || m.issue_date,
+                            validTill: m.expiryDate || m.validTill || m.expiry_date
+                        }));
+                    })(),
 
-                    travelDocuments: isApiPayload
-                        ? (Array.isArray(med) ? med : []).filter(m => m.type === 'TRAVEL').map(m => ({
-                            documentName: m.name,
-                            documentNumber: m.documentNumber,
-                            issuingCountry: m.issuingCountry,
-                            dateOfIssue: m.issueDate,
-                            validTill: m.expiryDate
-                        }))
-                        : getArray(med.travel || med.travelDocuments),
+                    travelDocuments: (() => {
+                        if (!isApiPayload) return getArray(med.travel || med.travelDocuments || med);
+                        // Check for separate travelDocuments array on the data object
+                        const travelArr = data.travelDocuments || data.travel_documents || [];
+                        const combinedTravel = (Array.isArray(med) ? med : []).filter(m => m.type === 'TRAVEL');
+                        const finalArr = combinedTravel.length > 0 ? combinedTravel : (Array.isArray(travelArr) && travelArr.length > 0 ? travelArr : []);
+                        return finalArr.map(m => ({
+                            documentName: m.name || m.documentName || m.document_name,
+                            documentNumber: m.documentNumber || m.document_number,
+                            issuingCountry: m.issuingCountry || m.issuing_country,
+                            dateOfIssue: m.issueDate || m.dateOfIssue || m.issue_date,
+                            validTill: m.expiryDate || m.validTill || m.expiry_date
+                        }));
+                    })(),
 
                     biometricInfo: {
                         gender: (isApiPayload ? bio.gender : bio.biometricData?.gender) || '',
-                        height: (isApiPayload ? bio.height : bio.biometricData?.height) ? `${isApiPayload ? bio.height : bio.biometricData?.height}cm` : '',
-                        weight: (isApiPayload ? bio.weight : bio.biometricData?.weight) ? `${isApiPayload ? bio.weight : bio.biometricData?.weight}kg` : '',
+                        height: (isApiPayload ? (bio.height || bio.height_cm) : bio.biometricData?.height) ? `${isApiPayload ? (bio.height || bio.height_cm) : bio.biometricData?.height}cm` : '',
+                        weight: (isApiPayload ? (bio.weight || bio.weight_kg) : bio.biometricData?.weight) ? `${isApiPayload ? (bio.weight || bio.weight_kg) : bio.biometricData?.weight}kg` : '',
                         bmi: (isApiPayload ? bio.bmi : bio.biometricData?.bmi) || '',
-                        eyeColor: (isApiPayload ? bio.eyeColor : bio.biometricData?.eyeColor) || '',
-                        shoeSize: (isApiPayload ? bio.shoeSize : bio.biometricData?.shoeSize) || '',
-                        overallSize: (isApiPayload ? bio.overallSize : bio.biometricData?.overallSize) || '',
+                        eyeColor: (isApiPayload ? (bio.eyeColor || bio.eye_color) : bio.biometricData?.eyeColor) || '',
+                        shoeSize: (isApiPayload ? (bio.shoeSize || bio.shoe_size) : bio.biometricData?.shoeSize) || '',
+                        overallSize: (isApiPayload ? (bio.overallSize || bio.overall_size) : bio.biometricData?.overallSize) || '',
                         boilerSuitSize: bio.biometricData?.boilerSuitSize || '',
                     },
 
                     nextOfKin: getArray(kinList).map(kin => ({
                         ...kin,
-                        phoneNumber: kin.phoneNumber || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
+                        phoneNumber: kin.phoneNumber || kin.phone_number || (kin.phone ? `${kin.countryCode || ''} ${kin.phone}`.trim() : '')
                     })),
 
                     references: getArray(refList).map(ref => ({
                         ...ref,
-                        phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
+                        phoneNumber: ref.phoneNumber || ref.phone_number || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
                     }))
                 };
             });
@@ -358,9 +246,20 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                 setIsLoading(true);
                 try {
                     const data = await resumeService.getResume();
-                    if (data) processData(data, true);
+                    console.log("Resume Fetch Result:", data);
+                    if (data) {
+                        processData(data, true);
+                        if (data.profilePhoto || data.profile_photo) {
+                            const photo = data.profilePhoto || data.profile_photo;
+                            localStorage.setItem('profileImage', photo);
+                            // Trigger storage event for other components
+                            window.dispatchEvent(new Event('storage'));
+                        }
+                    } else {
+                        console.warn("Resume: API returned null or empty data");
+                    }
                 } catch (error) {
-                    console.error("Failed to fetch formal resume", error);
+                    console.error("Failed to fetch formal resume:", error);
                 } finally {
                     setIsLoading(false);
                 }
@@ -375,7 +274,12 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         if (onEdit) {
             onEdit();
         } else {
-            navigate('/officer-dashboard'); // Go to CV resume create/edit page
+            const dashboardMap = {
+                'officer': '/officer-dashboard',
+                'rating': '/ratings-dashboard',
+                'medical': '/catering-medical-dashboard'
+            };
+            navigate(dashboardMap[userData.userType] || '/officer-dashboard');
         }
     };
 
@@ -532,29 +436,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
     return (
         <div className="min-h-screen bg-[#F5F7FA]">
             {/* Preview Mode Tabs */}
-            {!isReviewMode && (
-                <div className="flex-shrink-0 bg-gray-800 text-white px-8 py-2 flex justify-center gap-4 text-sm">
-                    <span className="opacity-70 flex items-center">Preview Mode:</span>
-                    <button
-                        onClick={() => setUserData({ ...userData, userType: 'officer' })}
-                        className={`px-3 py-1 rounded ${userData.userType === 'officer' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Officer
-                    </button>
-                    <button
-                        onClick={() => setUserData({ ...userData, userType: 'rating' })}
-                        className={`px-3 py-1 rounded ${userData.userType === 'rating' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Rating/Crew
-                    </button>
-                    <button
-                        onClick={() => setUserData({ ...userData, userType: 'medical' })}
-                        className={`px-3 py-1 rounded ${userData.userType === 'medical' ? 'bg-[#003971]' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    >
-                        Medical
-                    </button>
-                </div>
-            )}
+            {/* Removed Preview Mode toggle - category is now automatic based on dashboard/session */}
 
             {/* Action Buttons Header */}
             <div className={`${isReviewMode ? '' : 'sticky top-0 z-30'} bg-white px-4 sm:px-8 py-4 border-b border-gray-200`}>

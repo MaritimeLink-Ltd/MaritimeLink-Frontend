@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
 
 const PersonalInfo = ({ onNext, initialData = {}, isLoading = false, apiError = null }) => {
@@ -16,6 +16,26 @@ const PersonalInfo = ({ onNext, initialData = {}, isLoading = false, apiError = 
     contactNumber: initialData.contactNumber || '',
     email: initialData.email || ''
   });
+
+  // Sync when initialData arrives asynchronously (e.g. from API fetch)
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0 && initialData.firstName) {
+      setFormData({
+        firstName: initialData.firstName || '',
+        middleName: initialData.middleName || '',
+        lastName: initialData.lastName || '',
+        dateOfBirth: initialData.dateOfBirth || '',
+        streetAddress: initialData.streetAddress || '',
+        city: initialData.city || '',
+        state: initialData.state || '',
+        zipCode: initialData.zipCode || '',
+        country: initialData.country || '',
+        countryCode: initialData.countryCode || '+44',
+        contactNumber: initialData.contactNumber || '',
+        email: initialData.email || ''
+      });
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

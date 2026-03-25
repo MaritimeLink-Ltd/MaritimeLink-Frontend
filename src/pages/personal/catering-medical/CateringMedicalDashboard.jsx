@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import resumeService from '../../../services/resumeService';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
@@ -30,7 +30,24 @@ const CateringMedicalDashboard = () => {
     biometricsNextOfKin: {}
   });
 
-  // Map of which sidebar sections have sub-tabs and their order
+  // Fetch existing resume data on mount
+  useEffect(() => {
+    const fetchResume = async () => {
+      try {
+        setIsLoading(true);
+        const apiData = await resumeService.getResume();
+        if (apiData) {
+          const mapped = resumeService.mapApiToCateringData(apiData);
+          setAllData(mapped);
+        }
+      } catch (error) {
+        console.log('No existing resume found or error fetching:', error?.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResume();
+  }, []);
   const sectionTabs = {
     4: ['licenses', 'certificates'],
     6: ['academic', 'stcw'],
@@ -118,11 +135,20 @@ const CateringMedicalDashboard = () => {
       setIsLoading(false);
     }
 
-    // Section 4: Licenses & Certificates — call API (Licenses only for now)
+    // Section 4: Licenses & Certificates — call API
     if (activeSection === 4) {
       const promises = [];
       if (sectionData.licenses?.length > 0) {
         sectionData.licenses.forEach(lic => promises.push(resumeService.addLicense({ ...lic, isEndorsement: false })));
+      }
+      
+      if (sectionData.certificates?.length > 0) {
+        sectionData.certificates.forEach(cert => promises.push(resumeService.addLicense({ 
+          ...cert,
+          licenseName: cert.certificateName,
+          licenseNumber: cert.number,
+          isCertificate: true 
+        })));
       }
 
       if (promises.length > 0) {
@@ -299,9 +325,17 @@ const CateringMedicalDashboard = () => {
     setActiveSection(9);
   };
 
-  const handleSaveAndContinue = () => {
+  const handleSaveAndContinue = async () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal/documents');
+    try {
+      setIsLoading(true);
+      await resumeService.submitBulkResume(allData, 'PUT');
+      navigate('/personal/documents');
+    } catch (error) {
+      alert(error?.message || 'Failed to save resume. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderSection = () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import resumeService from '../../../services/resumeService';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
@@ -28,7 +28,24 @@ const RatingsDashboard = () => {
     biometricsNextOfKin: {}
   });
 
-  // Map of which sidebar sections have sub-tabs and their order
+  // Fetch existing resume data on mount
+  useEffect(() => {
+    const fetchResume = async () => {
+      try {
+        setIsLoading(true);
+        const apiData = await resumeService.getResume();
+        if (apiData) {
+          const mapped = resumeService.mapApiToRatingsData(apiData);
+          setAllData(mapped);
+        }
+      } catch (error) {
+        console.log('No existing resume found or error fetching:', error?.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResume();
+  }, []);
   const sectionTabs = {
     5: ['academic', 'stcw'],
     6: ['medical', 'travel'],
@@ -275,9 +292,17 @@ const RatingsDashboard = () => {
     setActiveSection(8);
   };
 
-  const handleSaveAndContinue = () => {
+  const handleSaveAndContinue = async () => {
     console.log('Saving and continuing later...', allData);
-    navigate('/personal/documents');
+    try {
+      setIsLoading(true);
+      await resumeService.submitBulkResume(allData, 'PUT');
+      navigate('/personal/documents');
+    } catch (error) {
+      alert(error?.message || 'Failed to save resume. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderSection = () => {
