@@ -150,7 +150,8 @@ const CVResume = ({ isReadOnly = false }) => {
                     })),
                     references: getArray(refList).map(ref => ({
                         ...ref,
-                        phoneNumber: ref.phoneNumber || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
+                        company: ref.company || ref.companyName || ref.company_name || '',
+                        phoneNumber: ref.phoneNumber || ref.phone_number || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
                     }))
                 };
             });
@@ -429,7 +430,6 @@ const CVResume = ({ isReadOnly = false }) => {
                                             <tr className="bg-[#1E3A5F] text-white">
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">License</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">License Number</th>
-                                                <th className="px-5 py-3.5 text-left text-sm font-semibold">Capacity</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Issuing Country</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Date Of Issue</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Valid Till</th>
@@ -440,7 +440,6 @@ const CVResume = ({ isReadOnly = false }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.license}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.licenseNumber}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{license.capacity}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.issuingCountry}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.dateOfIssue}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.validTill}</td>
@@ -507,7 +506,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Type</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">DWT</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Me Type</th>
-                                                <th className="px-5 py-3.5 text-left text-sm font-semibold">KW</th>
+                                                <th className="px-5 py-3.5 text-left text-sm font-semibold">KWT</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Duration</th>
                                             </tr>
                                         </thead>
@@ -522,7 +521,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                                     <td className="px-5 py-4 text-sm text-gray-700">{log.type}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{log.dwt}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{log.meType}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{log.kw}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{log.kwt}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{log.duration}</td>
                                                 </tr>
                                             ))}
@@ -747,6 +746,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                             <tr className="bg-[#1E3A5F] text-white">
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">Name</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Position</th>
+                                                <th className="px-5 py-3.5 text-left text-sm font-semibold">Company</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold">Phone Number</th>
                                                 <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Email</th>
                                             </tr>
@@ -756,6 +756,7 @@ const CVResume = ({ isReadOnly = false }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{ref.name}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{ref.position}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{ref.company}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{ref.phoneNumber}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{ref.email}</td>
                                                 </tr>

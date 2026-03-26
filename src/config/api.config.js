@@ -31,6 +31,13 @@ export const API_ENDPOINTS = {
     SELECT_PROFESSION: '/api/professional/profession',
     SELECT_ROLE: '/api/professional/role',
   },
+  // Document Endpoints
+  DOCUMENTS: {
+    UPLOAD: '/api/professional/documents/upload',
+    LIST: '/api/professional/documents',
+    UPDATE: (id) => `/api/professional/documents/${id}`,
+    DELETE: (id) => `/api/professional/documents/${id}`,
+  },
   // Resume Endpoints
   RESUME: {
     GET_RESUME: '/api/professional/resume',

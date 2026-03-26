@@ -16,8 +16,20 @@ class ResumeService {
     async getResume() {
         try {
             const response = await httpClient.get(API_ENDPOINTS.RESUME.GET_RESUME);
-            // Handle various response wrappers: { resume: {...} }, { data: {...} }, or direct object
-            return response.resume || response.data || response;
+            let result = response;
+            // Deeply unwrap generic 'data' wrapper
+            if (result && result.data) result = result.data;
+            
+            // The backend returns a mixed structure: Some fields (like firstName, medicalDocuments) are on the root.
+            // Other fields (like address, gender, height) are nested inside the 'resume' object.
+            // Merge the inner 'resume' object onto the root so the mapper can access everything flatly.
+            if (result && result.resume) {
+                const innerResume = result.resume;
+                result = { ...result, ...innerResume };
+                delete result.resume; // Remove the nested object now that it's merged
+            }
+            
+            return result || {};
         } catch (error) {
             console.error('Fetch Resume error:', error);
             throw error;
@@ -489,98 +501,152 @@ class ResumeService {
      * Map API GET response → Officer Dashboard allData shape
      */
     mapApiToOfficerData(api) {
-        const pi = api.personalInfo || {};
-        const licenses = (api.licenses || []).filter(l => !l.isEndorsement && !l.isCertificate);
-        const endorsements = (api.licenses || []).filter(l => l.isEndorsement);
-        const medDocs = (api.medicalTravelDocuments || []).filter(d => d.type === 'MEDICAL');
-        const travelDocs = (api.medicalTravelDocuments || []).filter(d => d.type === 'TRAVEL');
-        const bio = api.biometrics || {};
+        if (!api) return {};
+
+        const getObj = (obj1, obj2, obj3) => {
+            if (obj1 && Object.keys(obj1).length > 0) return obj1;
+            if (obj2 && Object.keys(obj2).length > 0) return obj2;
+            if (obj3 && Object.keys(obj3).length > 0) return obj3;
+            // Fallback to evaluating the root object 'api'
+            return api;
+        };
+
+        const getArray = (arr1, arr2, arr3) => {
+            if (Array.isArray(arr1) && arr1.length > 0) return arr1;
+            if (Array.isArray(arr2) && arr2.length > 0) return arr2;
+            if (Array.isArray(arr3) && arr3.length > 0) return arr3;
+            return [];
+        };
+
+        const pi = getObj(api.personalInfo, api.personal_info, null);
+        
+        const licenses = getArray(api.licenses, api.licenses_endorsements, []).filter(l => !l.isEndorsement);
+        const endorsements = getArray(api.licenses, api.licenses_endorsements, []).filter(l => l.isEndorsement);
+        
+        // Documents can be returned grouped or separated
+        const combinedMedDocs = getArray(api.medicalTravelDocuments, api.medical_travel_documents, api.medicalTravelDocs);
+        const medDocs = combinedMedDocs.filter(d => d.type === 'MEDICAL').concat(getArray(api.medicalDocuments, api.medical_documents, api.medicalCertificates));
+        const travelDocs = combinedMedDocs.filter(d => d.type === 'TRAVEL').concat(getArray(api.travelDocuments, api.travel_documents, []));
+        
+        const bio = getObj(api.biometrics, api.biometric_data, api.biometricsNextOfKin);
+
+        let firstName = pi.firstName || pi.first_name || '';
+        let middleName = pi.middleName || pi.middle_name || '';
+        let lastName = pi.lastName || pi.last_name || '';
+        let email = pi.email || pi.emailAddress || pi.email_address || '';
+
+        // Fallback to local storage profile if API didn't return names
+        if (!firstName && !lastName) {
+            try {
+                const profileStr = localStorage.getItem('userProfile');
+                const emailStr = localStorage.getItem('userEmail');
+                if (profileStr) {
+                    const profile = JSON.parse(profileStr);
+                    let detectedName = profile.firstName || profile.first_name || profile.name || profile.fullName || profile.full_name || '';
+                    if (detectedName && detectedName.includes(' ') && !profile.lastName) {
+                        const parts = detectedName.split(' ');
+                        firstName = parts[0];
+                        lastName = parts.slice(1).join(' ');
+                    } else {
+                        firstName = detectedName;
+                        lastName = profile.lastName || profile.last_name || '';
+                    }
+                    email = email || profile.email || emailStr || '';
+                }
+            } catch (e) {
+                console.error('Failed to parse userProfile fallback', e);
+            }
+        }
+        
+        let formattedGender = bio.gender || bio.gender_identity || 'Male';
+        if (formattedGender.toLowerCase() === 'male') formattedGender = 'Male';
+        else if (formattedGender.toLowerCase() === 'female') formattedGender = 'Female';
 
         return {
             personalInfo: {
-                firstName: pi.firstName || '',
-                middleName: pi.middleName || '',
-                lastName: pi.lastName || '',
-                dateOfBirth: pi.dateOfBirth || '',
-                streetAddress: pi.address || '',
+                firstName: firstName,
+                middleName: middleName,
+                lastName: lastName,
+                dateOfBirth: (pi.dateOfBirth || pi.date_of_birth || '').split('T')[0],
+                streetAddress: pi.address || pi.street_address || '',
                 city: pi.city || '',
                 state: pi.state || '',
-                zipCode: pi.postcode || '',
+                zipCode: pi.zipCode || pi.zip_code || pi.postcode || '',
                 country: pi.country || '',
-                countryCode: pi.phoneCode || '',
-                contactNumber: pi.phoneNumber || '',
-                email: pi.emailAddress || ''
+                countryCode: pi.countryCode || pi.country_code || pi.phoneCode || pi.phone_code || '+44',
+                contactNumber: pi.contactNumber || pi.contact_number || pi.phoneNumber || pi.phone_number || '',
+                email: email
             },
-            professionalSummary: { professionalSummary: api.summary || '' },
+            professionalSummary: { professionalSummary: api.summary || api.professional_summary || '' },
             skills: {
                 skills: (api.skills || []).map(s => ({
-                    name: s.skillName, level: s.rating, id: Date.now() + Math.random()
+                    name: s.skillName || s.skill_name || s.name, level: s.rating || s.level, id: Date.now() + Math.random()
                 }))
             },
             licensesEndorsements: {
                 licenses: licenses.map(l => ({
-                    licenseName: l.name, licenseNumber: l.number,
-                    issuingCountry: l.country, dateOfIssue: l.issueDate,
-                    validTill: l.expiryDate, id: Date.now() + Math.random()
+                    licenseName: l.name || l.license_name, licenseNumber: l.number || l.license_number,
+                    issuingCountry: l.country || l.issuing_country, dateOfIssue: l.issueDate || l.issue_date,
+                    validTill: l.expiryDate || l.expiry_date, id: Date.now() + Math.random()
                 })),
                 endorsements: endorsements.map(e => ({
-                    licenseName: e.name, licenseNumber: e.number,
-                    issuingCountry: e.country, dateOfIssue: e.issueDate,
-                    validTill: e.expiryDate, id: Date.now() + Math.random()
+                    licenseName: e.name || e.endorsement_name, licenseNumber: e.number || e.endorsement_number || 'N/A',
+                    issuingCountry: e.country || e.issuing_country, dateOfIssue: e.issueDate || e.issue_date,
+                    validTill: e.expiryDate || e.expiry_date, id: Date.now() + Math.random()
                 }))
             },
             seaServiceLog: {
-                seaServiceEntries: (api.seaService || []).map(s => ({
-                    companyName: s.companyName, role: s.role, vesselName: s.vesselName,
-                    imoNo: s.imoNumber, flag: s.flag, type: s.vesselType,
-                    dwt: s.dwt, meType: s.meType, kwt: s.kwType,
-                    joiningDate: s.joiningDate, till: s.tillDate,
+                seaServiceEntries: (api.seaService || api.sea_service || api.seaServiceLog || []).map(s => ({
+                    companyName: s.companyName || s.company_name, role: s.role, vesselName: s.vesselName || s.vessel_name,
+                    imoNo: s.imoNumber || s.imo_number, flag: s.flag, type: s.vesselType || s.vessel_type,
+                    dwt: s.dwt, meType: s.meType || s.me_type, kwt: s.kwType || s.kw_type || s.kw,
+                    joiningDate: s.joiningDate || s.joining_date, till: s.tillDate || s.till_date,
                     id: Date.now() + Math.random()
                 }))
             },
             academicQualifications: {
-                academicQualifications: (api.education || []).map(a => ({
-                    qualificationName: a.qualificationName, institution: a.institution,
-                    city: a.city, institutionCountry: a.country, grade: a.grade,
-                    startDate: a.startDate, endDate: a.endDate,
+                academicQualifications: (api.education || api.academicQualifications || api.academic_qualifications || []).map(a => ({
+                    qualificationName: a.qualificationName || a.qualification_name, institution: a.institution,
+                    city: a.city, institutionCountry: a.country || a.institution_country, grade: a.grade,
+                    startDate: a.startDate || a.start_date, endDate: a.endDate || a.end_date,
                     id: Date.now() + Math.random()
                 })),
-                stcwCertificates: (api.stcwCertificates || []).map(c => ({
-                    qualificationName: c.qualification, certificateNumber: c.certificateNumber,
-                    issuingCountry: c.issuingCountry, dateOfIssue: c.issueDate,
-                    validTill: c.expiryDate, id: Date.now() + Math.random()
+                stcwCertificates: (api.stcwCertificates || api.stcw_certificates || []).map(c => ({
+                    qualificationName: c.qualification || c.qualification_name, certificateNumber: c.certificateNumber || c.certificate_number,
+                    issuingCountry: c.issuingCountry || c.issuing_country, dateOfIssue: c.issueDate || c.issue_date,
+                    validTill: c.expiryDate || c.expiry_date, id: Date.now() + Math.random()
                 }))
             },
             medicalTravelDocs: {
                 medicalDocuments: medDocs.map(m => ({
-                    certificateName: m.name, certificateNumber: m.documentNumber,
-                    issuingCountry: m.issuingCountry, city: m.city || '',
-                    institutionCountry: m.institutionCountry || '',
-                    dateOfIssue: m.issueDate, validTill: m.expiryDate,
+                    certificateName: m.name || m.certificate_name, certificateNumber: m.documentNumber || m.document_number,
+                    issuingCountry: m.issuingCountry || m.issuing_country, city: m.city || '',
+                    institutionCountry: m.institutionCountry || m.institution_country || '',
+                    dateOfIssue: m.issueDate || m.issue_date, validTill: m.expiryDate || m.expiry_date,
                     id: Date.now() + Math.random()
                 })),
                 travelDocuments: travelDocs.map(t => ({
-                    documentName: t.name, documentNumber: t.documentNumber,
-                    issuingCountry: t.issuingCountry,
-                    dateOfIssue: t.issueDate, validTill: t.expiryDate,
+                    documentName: t.name || t.document_name, documentNumber: t.documentNumber || t.document_number,
+                    issuingCountry: t.issuingCountry || t.issuing_country,
+                    dateOfIssue: t.issueDate || t.issue_date, validTill: t.expiryDate || t.expiry_date,
                     id: Date.now() + Math.random()
                 }))
             },
             biometricsNextOfKin: {
                 biometricData: {
-                    gender: bio.gender || 'Male', height: bio.height || '',
-                    weight: bio.weight || '', bmi: bio.bmi || '',
-                    eyeColor: bio.eyeColor || '', overallSize: bio.overallSize || '',
-                    shoeSize: bio.shoeSize || ''
+                    gender: formattedGender, height: bio.height || bio.height_cm || '',
+                    weight: bio.weight || bio.weight_kg || '', bmi: bio.bmi || '',
+                    eyeColor: bio.eyeColor || bio.eye_color || '', overallSize: bio.overallSize || bio.overall_size || '',
+                    shoeSize: bio.shoeSize || bio.shoe_size || ''
                 },
-                nextOfKinList: (api.nextOfKin || []).map(k => ({
+                nextOfKinList: (api.nextOfKin || api.next_of_kin || []).map(k => ({
                     name: k.name, relationship: k.relationship,
-                    countryCode: k.countryCode || '+44', phone: k.phone || k.phoneNumber || '',
+                    countryCode: k.countryCode || k.country_code || '+44', phone: k.phone || k.phoneNumber || k.phone_number || '',
                     email: k.email || '', id: Date.now() + Math.random()
                 })),
                 refereesList: (api.referees || []).map(r => ({
-                    name: r.name, position: r.position || '', company: r.company || '',
-                    countryCode: r.countryCode || '+44', phone: r.phone || r.phoneNumber || '',
+                    name: r.name, position: r.position || '', company: r.company || r.companyName || r.company_name || '',
+                    countryCode: r.countryCode || r.country_code || '+44', phone: r.phone || r.phoneNumber || r.phone_number || '',
                     email: r.email || '', id: Date.now() + Math.random()
                 }))
             }
@@ -610,14 +676,14 @@ class ResumeService {
             ...rest,
             professionalLicensesCertificates: {
                 licenses: licenses.map(l => ({
-                    licenseName: l.name, licenseNumber: l.number,
-                    issuingCountry: l.country, dateOfIssue: l.issueDate,
-                    validTill: l.expiryDate, id: Date.now() + Math.random()
+                    licenseName: l.name || l.license_name, licenseNumber: l.number || l.license_number,
+                    issuingCountry: l.country || l.issuing_country, dateOfIssue: l.issueDate || l.issue_date,
+                    validTill: l.expiryDate || l.expiry_date, id: Date.now() + Math.random()
                 })),
                 certificates: certificates.map(c => ({
-                    licenseName: c.name, licenseNumber: c.number,
-                    issuingCountry: c.country, dateOfIssue: c.issueDate,
-                    validTill: c.expiryDate, id: Date.now() + Math.random()
+                    licenseName: c.name || c.license_name, licenseNumber: c.number || c.license_number,
+                    issuingCountry: c.country || c.issuing_country, dateOfIssue: c.issueDate || c.issue_date,
+                    validTill: c.expiryDate || c.expiry_date, id: Date.now() + Math.random()
                 }))
             }
         };

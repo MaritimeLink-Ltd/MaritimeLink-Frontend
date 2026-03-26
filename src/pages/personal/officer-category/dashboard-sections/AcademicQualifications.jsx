@@ -4,10 +4,10 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.academicQualifications) && initialData.academicQualifications.length > 0) {
+    if (initialData && Array.isArray(initialData.academicQualifications)) {
       setAcademicQualifications(initialData.academicQualifications);
     }
-    if (initialData && Array.isArray(initialData.stcwCertificates) && initialData.stcwCertificates.length > 0) {
+    if (initialData && Array.isArray(initialData.stcwCertificates)) {
       setStcwCertificates(initialData.stcwCertificates);
     }
   }, [initialData]);
@@ -438,7 +438,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

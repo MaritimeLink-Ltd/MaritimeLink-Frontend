@@ -233,6 +233,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
                     references: getArray(refList).map(ref => ({
                         ...ref,
+                        company: ref.company || ref.companyName || ref.company_name || '',
                         phoneNumber: ref.phoneNumber || ref.phone_number || (ref.phone ? `${ref.countryCode || ''} ${ref.phone}`.trim() : '')
                     }))
                 };
@@ -590,7 +591,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                         <tr className="bg-[#1E3A5F] text-white">
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tl-lg">License</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">License Number</th>
-                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">Capacity</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Issuing Country</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Date Of Issue</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Valid Till</th>
@@ -601,7 +601,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.license}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.licenseNumber}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{license.capacity}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.issuingCountry}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.dateOfIssue}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.validTill}</td>
@@ -668,7 +667,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Type</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">DWT</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold">Me Type</th>
-                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">KW</th>
+                                            <th className="px-5 py-3.5 text-left text-sm font-semibold">KWT</th>
                                             <th className="px-5 py-3.5 text-left text-sm font-semibold rounded-tr-lg">Duration</th>
                                         </tr>
                                     </thead>
@@ -683,7 +682,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                                 <td className="px-5 py-4 text-sm text-gray-700">{log.type}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{log.dwt}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{log.meType}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{log.kw}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{log.kwt || log.kw}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{log.duration}</td>
                                             </tr>
                                         ))}

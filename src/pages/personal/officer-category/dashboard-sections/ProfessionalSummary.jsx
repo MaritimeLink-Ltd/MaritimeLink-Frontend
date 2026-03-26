@@ -6,8 +6,8 @@ const ProfessionalSummary = ({ onNext, onBack, initialData = {}, isLoading = fal
   });
 
   useEffect(() => {
-    if (initialData && initialData.professionalSummary) {
-      setFormData({ professionalSummary: initialData.professionalSummary });
+    if (initialData && Object.keys(initialData).length > 0) {
+      setFormData({ professionalSummary: initialData.professionalSummary || '' });
     }
   }, [initialData]);
 

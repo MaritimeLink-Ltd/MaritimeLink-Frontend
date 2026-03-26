@@ -4,10 +4,10 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.medicalDocuments) && initialData.medicalDocuments.length > 0) {
+    if (initialData && Array.isArray(initialData.medicalDocuments)) {
       setMedicalDocuments(initialData.medicalDocuments);
     }
-    if (initialData && Array.isArray(initialData.travelDocuments) && initialData.travelDocuments.length > 0) {
+    if (initialData && Array.isArray(initialData.travelDocuments)) {
       setTravelDocuments(initialData.travelDocuments);
     }
   }, [initialData]);
@@ -462,7 +462,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

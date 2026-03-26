@@ -4,7 +4,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.seaServiceEntries) && initialData.seaServiceEntries.length > 0) {
+    if (initialData && Array.isArray(initialData.seaServiceEntries)) {
       setSeaServiceEntries(initialData.seaServiceEntries);
     }
   }, [initialData]);
@@ -70,7 +70,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     let finalEntries = [...seaServiceEntries];
     // Only attempt adding the trailing form if ANY partial string exists to protect user error
     const isPartial = Object.values(currentSeaService).some(val => val !== '');
-    
+
     if (isPartial) {
       const errorMsg = validateForm(currentSeaService);
       if (errorMsg) {
@@ -312,7 +312,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

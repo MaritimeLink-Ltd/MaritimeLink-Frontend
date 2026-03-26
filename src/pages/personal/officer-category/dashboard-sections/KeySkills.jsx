@@ -5,7 +5,7 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
   const [currentSkill, setCurrentSkill] = useState({ name: '', level: 0 });
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.skills) && initialData.skills.length > 0) {
+    if (initialData && Array.isArray(initialData.skills)) {
       setSkills(initialData.skills);
     }
   }, [initialData]);
@@ -162,7 +162,7 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

@@ -13,13 +13,13 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   });
 
   useEffect(() => {
-    if (initialData && initialData.biometricData && initialData.biometricData.height) {
+    if (initialData && initialData.biometricData) {
       setBiometricData(initialData.biometricData);
     }
-    if (initialData && Array.isArray(initialData.nextOfKinList) && initialData.nextOfKinList.length > 0) {
+    if (initialData && Array.isArray(initialData.nextOfKinList)) {
       setNextOfKinList(initialData.nextOfKinList);
     }
-    if (initialData && Array.isArray(initialData.refereesList) && initialData.refereesList.length > 0) {
+    if (initialData && Array.isArray(initialData.refereesList)) {
       setRefereesList(initialData.refereesList);
     }
   }, [initialData]);
@@ -621,7 +621,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                 disabled={isLoading}
                 className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
               >
-                Save & Add Another
+                Save
               </button>
             )}
             <button

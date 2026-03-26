@@ -406,12 +406,12 @@ const OfficerDashboard = () => {
       <div className={`fixed lg:static inset-y-0 left-0 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out z-50 flex flex-col h-screen`}>
         {/* Logo and Menu */}
         <div className="p-3 flex items-center justify-between">
-          <img 
-            src="/images/logo.png" 
-            alt="MaritimeLink Logo" 
+          <img
+            src="/images/logo.png"
+            alt="MaritimeLink Logo"
             className="w-20 h-auto"
           />
-          <button 
+          <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden text-gray-600"
           >
@@ -427,17 +427,15 @@ const OfficerDashboard = () => {
             <div
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${
-                activeSection === section.id
+              className={`flex items-center space-x-2.5 p-2 mb-1 rounded-lg cursor-pointer transition-colors ${activeSection === section.id
                   ? 'bg-[#003971] text-white'
                   : 'text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
-                activeSection === section.id
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${activeSection === section.id
                   ? 'bg-white text-[#003971]'
                   : 'bg-gray-200 text-gray-600'
-              }`}>
+                }`}>
                 {section.id}
               </div>
               <span className="text-xs font-medium leading-tight">{section.title}</span>
@@ -493,26 +491,26 @@ const OfficerDashboard = () => {
           {/* Header */}
           <div className="text-center mb-4">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              {activeSection === 1 ? 'Personal Info' : 
-               activeSection === 2 ? 'Professional Summary' : 
-               activeSection === 3 ? 'Key Skills' :
-               activeSection === 4 ? 'Licences & Endorsements' :
-               activeSection === 5 ? 'Sea Service Log' :
-               activeSection === 6 ? 'Academic Qualifications & STCW Certificates' :
-               activeSection === 7 ? 'Medical & Travel Documents' :
-               activeSection === 8 ? 'Biometric, Next Of Kin & Referees' :
-               'Section ' + activeSection}
+              {activeSection === 1 ? 'Personal Info' :
+                activeSection === 2 ? 'Professional Summary' :
+                  activeSection === 3 ? 'Key Skills' :
+                    activeSection === 4 ? 'Licences & Endorsements' :
+                      activeSection === 5 ? 'Sea Service Log' :
+                        activeSection === 6 ? 'Academic Qualifications & STCW Certificates' :
+                          activeSection === 7 ? 'Medical & Travel Documents' :
+                            activeSection === 8 ? 'Biometric, Next Of Kin & Referees' :
+                              'Section ' + activeSection}
             </h1>
             <p className="text-gray-500 text-sm">
-              {activeSection === 1 ? 'Fill out to get started' : 
-               activeSection === 2 ? 'Enter your professional summary' : 
-               activeSection === 3 ? 'Add your skills' :
-               activeSection === 4 ? 'Add your licenses & endorsements' :
-               activeSection === 5 ? 'Add your sea service details' :
-               activeSection === 6 ? 'Add your academic and certificate details' :
-               activeSection === 7 ? 'Add your medical and travel documents' :
-               activeSection === 8 ? 'Fill out to get started' :
-               'Complete this section'}
+              {activeSection === 1 ? 'Fill out to get started' :
+                activeSection === 2 ? 'Enter your professional summary' :
+                  activeSection === 3 ? 'Add your skills' :
+                    activeSection === 4 ? 'Add your licenses & endorsements' :
+                      activeSection === 5 ? 'Add your sea service details' :
+                        activeSection === 6 ? 'Add your academic and certificate details' :
+                          activeSection === 7 ? 'Add your medical and travel documents' :
+                            activeSection === 8 ? 'Fill out to get started' :
+                              'Complete this section'}
             </p>
           </div>
 
@@ -764,7 +762,7 @@ const OfficerDashboard = () => {
                       onClick={handleAddSkill}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      Save & Add Another
+                      Save
                     </button>
                     <button
                       type="button"
@@ -785,22 +783,20 @@ const OfficerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('licenses')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      activeTab === 'licenses'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${activeTab === 'licenses'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Licenses
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveTab('endorsements')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      activeTab === 'endorsements'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${activeTab === 'endorsements'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Endorsements
                   </button>
@@ -829,8 +825,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{license.licenseName}</p>
                             <p className="text-xs text-gray-600">{license.issuingCountry}</p>
                             <p className="text-xs text-gray-500">
-                              {license.dateOfIssue && license.validTill ? 
-                                `${new Date(license.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(license.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {license.dateOfIssue && license.validTill ?
+                                `${new Date(license.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(license.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -947,8 +943,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{endorsement.licenseName}</p>
                             <p className="text-xs text-gray-600">{endorsement.issuingCountry}</p>
                             <p className="text-xs text-gray-500">
-                              {endorsement.dateOfIssue && endorsement.validTill ? 
-                                `${new Date(endorsement.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(endorsement.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {endorsement.dateOfIssue && endorsement.validTill ?
+                                `${new Date(endorsement.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(endorsement.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -1057,7 +1053,7 @@ const OfficerDashboard = () => {
                       onClick={activeTab === 'licenses' ? handleAddLicense : handleAddEndorsement}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      Save & Add Another
+                      Save
                     </button>
                     <button
                       type="button"
@@ -1094,8 +1090,8 @@ const OfficerDashboard = () => {
                           <p className="text-sm font-semibold text-gray-800">{entry.vesselName}</p>
                           <p className="text-xs text-gray-500">{entry.role}</p>
                           <p className="text-xs text-gray-500">
-                            {entry.joiningDate && entry.till ? 
-                              `${new Date(entry.joiningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(entry.till).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                            {entry.joiningDate && entry.till ?
+                              `${new Date(entry.joiningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(entry.till).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                               : 'Dates not specified'}
                           </p>
                         </div>
@@ -1298,7 +1294,7 @@ const OfficerDashboard = () => {
                       onClick={handleAddSeaService}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      Save & Add Another
+                      Save
                     </button>
                     <button
                       type="button"
@@ -1319,22 +1315,20 @@ const OfficerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setAcademicTab('academic')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      academicTab === 'academic'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${academicTab === 'academic'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Academic Qualifications
                   </button>
                   <button
                     type="button"
                     onClick={() => setAcademicTab('stcw')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      academicTab === 'stcw'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${academicTab === 'stcw'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     STCW Certificate
                   </button>
@@ -1363,8 +1357,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{academic.qualificationName}</p>
                             <p className="text-xs text-gray-600">{academic.institution}</p>
                             <p className="text-xs text-gray-500">
-                              {academic.startDate && academic.endDate ? 
-                                `${new Date(academic.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(academic.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {academic.startDate && academic.endDate ?
+                                `${new Date(academic.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(academic.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -1481,8 +1475,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{stcw.qualificationName}</p>
                             <p className="text-xs text-gray-600">{stcw.issuingCountry}</p>
                             <p className="text-xs text-gray-500">
-                              {stcw.dateOfIssue && stcw.validTill ? 
-                                `${new Date(stcw.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(stcw.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {stcw.dateOfIssue && stcw.validTill ?
+                                `${new Date(stcw.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(stcw.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -1591,7 +1585,7 @@ const OfficerDashboard = () => {
                       onClick={academicTab === 'academic' ? handleAddAcademic : handleAddStcw}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      Save & Add Another
+                      Save
                     </button>
                     <button
                       type="button"
@@ -1612,22 +1606,20 @@ const OfficerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setMedicalTab('medical')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      medicalTab === 'medical'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${medicalTab === 'medical'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Medical Document
                   </button>
                   <button
                     type="button"
                     onClick={() => setMedicalTab('travel')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      medicalTab === 'travel'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${medicalTab === 'travel'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Travel Document
                   </button>
@@ -1656,8 +1648,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{doc.certificateName}</p>
                             <p className="text-xs text-gray-600">{doc.issuingCountry}</p>
                             <p className="text-xs text-gray-500">
-                              {doc.dateOfIssue && doc.validTill ? 
-                                `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {doc.dateOfIssue && doc.validTill ?
+                                `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -1774,8 +1766,8 @@ const OfficerDashboard = () => {
                             <p className="text-sm font-semibold text-gray-800">{doc.documentName}</p>
                             <p className="text-xs text-gray-600">{doc.issuingCountry}</p>
                             <p className="text-xs text-gray-500">
-                              {doc.dateOfIssue && doc.validTill ? 
-                                `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` 
+                              {doc.dateOfIssue && doc.validTill ?
+                                `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                                 : 'Dates not specified'}
                             </p>
                           </div>
@@ -1884,7 +1876,7 @@ const OfficerDashboard = () => {
                       onClick={medicalTab === 'medical' ? handleAddMedical : handleAddTravel}
                       className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                     >
-                      Save & Add Another
+                      Save
                     </button>
                     <button
                       type="button"
@@ -1905,33 +1897,30 @@ const OfficerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setBiometricTab('biometric')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      biometricTab === 'biometric'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'biometric'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Biometric
                   </button>
                   <button
                     type="button"
                     onClick={() => setBiometricTab('nextOfKin')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      biometricTab === 'nextOfKin'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'nextOfKin'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Next Of Kin
                   </button>
                   <button
                     type="button"
                     onClick={() => setBiometricTab('referees')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                      biometricTab === 'referees'
+                    className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricTab === 'referees'
                         ? 'bg-[#003971] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Referees
                   </button>
@@ -1949,22 +1938,20 @@ const OfficerDashboard = () => {
                         <button
                           type="button"
                           onClick={() => setBiometricData({ ...biometricData, gender: 'Male' })}
-                          className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                            biometricData.gender === 'Male'
+                          className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Male'
                               ? 'bg-[#003971] text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           Male
                         </button>
                         <button
                           type="button"
                           onClick={() => setBiometricData({ ...biometricData, gender: 'Female' })}
-                          className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${
-                            biometricData.gender === 'Female'
+                          className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Female'
                               ? 'bg-[#003971] text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           Female
                         </button>
@@ -2328,7 +2315,7 @@ const OfficerDashboard = () => {
                         onClick={biometricTab === 'nextOfKin' ? handleAddNextOfKin : handleAddReferee}
                         className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm"
                       >
-                        Save & Add Another
+                        Save
                       </button>
                     )}
                     <button

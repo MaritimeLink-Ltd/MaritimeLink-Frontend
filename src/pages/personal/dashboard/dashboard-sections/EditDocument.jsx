@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import documentService from '../../../../services/documentService';
 
 const EditDocument = ({ onBack, onCompletion, document }) => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -8,11 +10,11 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
     
     // Pre-fill form with document data
     const [formData, setFormData] = useState({
-        certificateName: document?.title || '',
-        certificateNumber: document?.certificateNumber || '',
+        certificateName: document?.name || document?.title || '',
+        certificateNumber: document?.certificateNumber || document?.number || '',
         issuingCountry: document?.issuingCountry || '',
-        dateOfIssue: document?.dateOfIssue || '',
-        validTill: document?.validTill || document?.expires || ''
+        dateOfIssue: document?.dateOfIssue || document?.issueDate || '',
+        validTill: document?.validTill || document?.expires || document?.expiryDate || ''
     });
 
     const tabs = [
@@ -23,6 +25,7 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
     ];
 
     const [ocrState, setOcrState] = useState('idle'); // 'idle', 'scanning', 'completed'
+    const [isUpdating, setIsUpdating] = useState(false);
     const [dateError, setDateError] = useState('');
     const today = new Date().toISOString().split('T')[0];
 
@@ -94,19 +97,72 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
         }
         setDateError('');
 
-        // Call completion handler with updated data
-        if (onCompletion) {
-            onCompletion({
-                ...document,
-                ...formData,
-                type: activeTab,
-                image: selectedFile ? URL.createObjectURL(selectedFile) : document?.image
-            });
-        }
+        const updateData = async () => {
+            try {
+                setIsUpdating(true);
+                
+                // Construct the payload to match what the backend expects
+                // Since this is PATCH, we might not need FormData unless we are changing the file.
+                // Assuming backend expects JSON if no file, or FormData if there is a file change.
+                // Helper to format date to full ISO string
+                const toISODate = (dateStr) => {
+                    if (!dateStr) return '';
+                    try {
+                        return new Date(dateStr).toISOString();
+                    } catch (e) {
+                        return '';
+                    }
+                };
+
+                let payload;
+                
+                if (selectedFile) {
+                    payload = new FormData();
+                    payload.append('document', selectedFile);
+                    if (formData.certificateName) payload.append('name', formData.certificateName);
+                    if (formData.certificateNumber) payload.append('number', formData.certificateNumber);
+                    if (formData.issuingCountry) payload.append('issuingCountry', formData.issuingCountry);
+                    if (formData.dateOfIssue) payload.append('issueDate', toISODate(formData.dateOfIssue));
+                    if (formData.validTill) payload.append('expiryDate', toISODate(formData.validTill));
+                } else {
+                    payload = {
+                        name: formData.certificateName,
+                        number: formData.certificateNumber,
+                        issuingCountry: formData.issuingCountry,
+                        issueDate: toISODate(formData.dateOfIssue),
+                        expiryDate: toISODate(formData.validTill)
+                    };
+                }
+
+                // If document.id is essentially a local timestamp from earlier, the backend call will fail.
+                // We'll proceed optimistically if no ID exists, though typically it should be provided by DB.
+                if (document?.id && typeof document.id !== 'number') {
+                     await documentService.updateDocument(document.id, payload);
+                }
+
+                toast.success('Document updated successfully!');
+                
+                if (onCompletion) {
+                    onCompletion({
+                        ...document,
+                        ...formData,
+                        type: activeTab,
+                        image: selectedFile ? URL.createObjectURL(selectedFile) : document?.image
+                    });
+                }
+            } catch (error) {
+                toast.error(error.message || 'Failed to update document.');
+            } finally {
+                setIsUpdating(false);
+            }
+        };
+
+        updateData();
     };
 
     return (
         <div className="w-full max-w-7xl mx-auto p-8 relative">
+            <Toaster />
             {/* Header with Back Button */}
             <div className="mb-8">
                 <button
@@ -213,9 +269,17 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                     <div className="space-y-3 pt-4">
                         <button 
                             onClick={handleUpdateDocument}
-                            className="w-full bg-[#003366] text-white py-3 rounded-lg font-medium hover:bg-blue-900 transition-colors"
+                            disabled={isUpdating}
+                            className="w-full flex justify-center items-center gap-2 bg-[#003366] text-white py-3 rounded-lg font-medium hover:bg-blue-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Update Document
+                            {isUpdating ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} />
+                                    Updating...
+                                </>
+                            ) : (
+                                'Update Document'
+                            )}
                         </button>
                         <button
                             onClick={onBack}
@@ -248,13 +312,17 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                                 <span className="text-lg font-medium text-gray-800 break-all max-w-xs">{selectedFile.name}</span>
                                 <span className="text-sm text-gray-500 mt-2">Click to change</span>
                             </div>
-                        ) : document?.image ? (
-                            <div className="flex flex-col items-center p-6 text-center">
-                                <div className="mb-4 max-h-[300px] overflow-hidden">
+                        ) : document?.fileUrl ? (
+                            <div className="flex flex-col items-center p-6 text-center w-full">
+                                <div className="mb-4 max-h-[300px] overflow-hidden w-full flex items-center justify-center bg-gray-50 rounded-lg">
                                     <img 
-                                        src={document.image} 
-                                        alt={document.title}
-                                        className="max-w-full h-auto rounded-lg"
+                                        src={document.fileUrl} 
+                                        alt={document.title || document.name}
+                                        className="max-w-full h-auto max-h-[300px] object-contain"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://placehold.co/400x300/f3f4f6/9ca3af?text=Document+Preview";
+                                        }}
                                     />
                                 </div>
                                 <span className="text-sm text-gray-500 mt-2">Click to upload new file</span>

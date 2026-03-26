@@ -4,10 +4,10 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
   const [licenses, setLicenses] = useState(initialData.licenses || []);
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.licenses) && initialData.licenses.length > 0) {
+    if (initialData && Array.isArray(initialData.licenses)) {
       setLicenses(initialData.licenses);
     }
-    if (initialData && Array.isArray(initialData.certificates) && initialData.certificates.length > 0) {
+    if (initialData && Array.isArray(initialData.certificates)) {
       setCertificates(initialData.certificates);
     }
   }, [initialData]);
@@ -432,7 +432,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

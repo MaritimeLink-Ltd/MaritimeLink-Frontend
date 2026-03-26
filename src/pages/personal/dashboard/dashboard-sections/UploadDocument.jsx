@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import documentService from '../../../../services/documentService';
 
-const UploadDocument = ({ onBack, onCompletion }) => {
+const UploadDocument = ({ onBack, onCompletion, category }) => {
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = React.useRef(null);
-    const [activeTab, setActiveTab] = useState('Licenses & Endorsements');
+    
+    // Fallback mapping for dynamic categories passed from DocumentsWallet
+    const initialTabMap = {
+        'licenses': 'Licenses & Endorsements',
+        'stcw': 'STCW Certificates',
+        'medical': 'Medical Certificates',
+        'seaman': 'Seaman Book data/Stamp pages',
+        'travel': 'Travel Documents',
+        'academic': 'Academic Qualifications',
+        'company': 'Company Letters / Misc',
+        'appraisals': 'Recent Appraisals'
+    };
+    
+    const defaultTab = category?.id ? initialTabMap[category.id] : 'Licenses & Endorsements';
+    const [activeTab, setActiveTab] = useState(defaultTab || 'Licenses & Endorsements');
 
     const tabs = [
         'Licenses & Endorsements',
@@ -19,6 +34,7 @@ const UploadDocument = ({ onBack, onCompletion }) => {
     ];
 
     const [ocrState, setOcrState] = useState('idle'); // 'idle', 'scanning', 'completed'
+    const [isUploading, setIsUploading] = useState(false);
     const [formData, setFormData] = useState({
         certificateName: '',
         certificateNumber: '',
@@ -65,7 +81,34 @@ const UploadDocument = ({ onBack, onCompletion }) => {
 
     const isOcrRequired = !['Company Letters / Misc', 'Recent Appraisals'].includes(activeTab);
 
-    const handleUploadClick = () => {
+    // Map frontend tab names to backend ENUM strings if needed
+    const getCategoryEnum = (tabName) => {
+        // Handle all variations of case and text by normalizing
+        const normalized = String(tabName).toLowerCase();
+        if (normalized.includes('license')) return 'LICENSES_ENDORSEMENTS';
+        if (normalized.includes('stcw')) return 'STCW_CERTIFICATES';
+        if (normalized.includes('medical')) return 'MEDICAL_CERTIFICATES';
+        if (normalized.includes('seaman')) return 'SEAMAN_BOOK_STAMP';
+        if (normalized.includes('travel')) return 'TRAVEL_DOCUMENTS';
+        if (normalized.includes('academic')) return 'ACADEMIC_QUALIFICATIONS';
+        if (normalized.includes('company') || normalized.includes('misc')) return 'COMPANY_LETTERS_MISC';
+        if (normalized.includes('appraisal')) return 'RECENT_APPRAISALS';
+        
+        // Exact match fallback
+        const map = {
+            'Licenses & Endorsements': 'LICENSES_ENDORSEMENTS',
+            'STCW Certificates': 'STCW_CERTIFICATES',
+            'Medical Certificates': 'MEDICAL_CERTIFICATES',
+            'Seaman Book data/Stamp pages': 'SEAMAN_BOOK_STAMP',
+            'Travel Documents': 'TRAVEL_DOCUMENTS',
+            'Academic Qualifications': 'ACADEMIC_QUALIFICATIONS',
+            'Company Letters / Misc': 'COMPANY_LETTERS_MISC',
+            'Recent Appraisals': 'RECENT_APPRAISALS'
+        };
+        return map[tabName] || 'LICENSES_ENDORSEMENTS'; // Fallback to a valid ENUM to avoid 400 backend errors
+    };
+
+    const handleUploadClick = async () => {
         if (!selectedFile) {
             toast.error('Please upload a document first.', { position: 'top-right' });
             return;
@@ -95,18 +138,58 @@ const UploadDocument = ({ onBack, onCompletion }) => {
             }
         }
 
-        toast.success('Document uploaded successfully!', { position: 'top-right' });
+        try {
+            setIsUploading(true);
+            
+            // Helper to format date to full ISO string
+            const toISODate = (dateStr) => {
+                if (!dateStr) return '';
+                try {
+                    return new Date(dateStr).toISOString();
+                } catch (e) {
+                    return '';
+                }
+            };
 
-        if (onCompletion) {
-            onCompletion({
-                id: Date.now(),
-                title: formData.certificateName || file.name.split('.')[0] || 'Uploaded Document',
-                expiry: formData.validTill,
-                type: activeTab,
-                status: 'Pending Approval',
-                statusColor: 'bg-yellow-500',
-                image: URL.createObjectURL(selectedFile)
-            });
+            const uploadData = {
+                file: selectedFile,
+                category: getCategoryEnum(activeTab),
+                name: formData.certificateName,
+                number: formData.certificateNumber || '',
+                issuingCountry: formData.issuingCountry || '',
+                issueDate: toISODate(formData.dateOfIssue),
+                expiryDate: toISODate(formData.validTill)
+            };
+
+            const response = await documentService.uploadDocument(uploadData);
+            
+            toast.success('Document uploaded successfully!', { position: 'top-right' });
+
+            if (onCompletion) {
+                // Pass back the saved document data from the response to the parent
+                // Response structure matches { status, data: { document: {...}, ocrData: {...} } }
+                const savedDoc = response.data?.document || {
+                    id: Date.now(),
+                    title: formData.certificateName,
+                    expiry: formData.validTill,
+                    type: activeTab,
+                    status: 'Pending Approval',
+                    statusColor: 'bg-yellow-500',
+                    image: URL.createObjectURL(selectedFile)
+                };
+                
+                // Keep the UI activeTab as type for easier frontend mapping if the backend returns the ENUM
+                onCompletion({
+                    ...savedDoc,
+                    title: savedDoc.name || savedDoc.title,
+                    type: activeTab,
+                    image: savedDoc.fileUrl || URL.createObjectURL(selectedFile)
+                });
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to upload document. Please try again.', { position: 'top-right' });
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -241,9 +324,17 @@ const UploadDocument = ({ onBack, onCompletion }) => {
                     <div className="space-y-3 pt-4">
                         <button
                             onClick={handleUploadClick}
-                            className="w-full bg-[#003366] text-white py-3 rounded-lg font-medium hover:bg-blue-900 transition-colors"
+                            disabled={isUploading}
+                            className="w-full flex justify-center items-center gap-2 bg-[#003366] text-white py-3 rounded-lg font-medium hover:bg-blue-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Upload Document
+                            {isUploading ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={20} />
+                                    Uploading...
+                                </>
+                            ) : (
+                                'Upload Document'
+                            )}
                         </button>
                         <button
                             onClick={onBack}

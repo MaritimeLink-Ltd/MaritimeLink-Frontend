@@ -4,10 +4,10 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
   const [licenses, setLicenses] = useState(initialData.licenses || []);
 
   useEffect(() => {
-    if (initialData && Array.isArray(initialData.licenses) && initialData.licenses.length > 0) {
+    if (initialData && Array.isArray(initialData.licenses)) {
       setLicenses(initialData.licenses);
     }
-    if (initialData && Array.isArray(initialData.endorsements) && initialData.endorsements.length > 0) {
+    if (initialData && Array.isArray(initialData.endorsements)) {
       setEndorsements(initialData.endorsements);
     }
   }, [initialData]);
@@ -412,7 +412,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save & Add Another
+              Save
             </button>
             <button
               type="button"

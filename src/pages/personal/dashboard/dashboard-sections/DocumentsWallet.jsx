@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Download,
     Share2,
@@ -18,6 +18,7 @@ import UploadDocument from './UploadDocument';
 import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
+import documentService from '../../../../services/documentService';
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -37,6 +38,10 @@ const DocumentsWallet = () => {
     // Track if user clicked already
     const [exportClickedOnce, setExportClickedOnce] = useState(false);
     const [shareClickedOnce, setShareClickedOnce] = useState(false);
+    
+    // Real data state
+    const [documents, setDocuments] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const filters = [
         'All',
@@ -122,7 +127,62 @@ const DocumentsWallet = () => {
         }
     ];
 
-    const filteredCategories = categories.filter(category => {
+    // Dynamic categories with real counts
+    const [dynamicCategories, setDynamicCategories] = useState(categories);
+
+    const fetchDocuments = async () => {
+        try {
+            setIsLoading(true);
+            const response = await documentService.getDocuments();
+            // Extract documents array from the nested response structure
+            let docs = [];
+            if (response?.data?.documents) {
+                docs = response.data.documents;
+            } else if (Array.isArray(response?.data)) {
+                docs = response.data;
+            } else if (Array.isArray(response)) {
+                docs = response;
+            }
+
+            setDocuments(docs);
+            
+            // Re-calculate counts
+            // Map backend ENUM to our frontend IDs
+            const categoryMap = {
+                'LICENSES_ENDORSEMENTS': 'licenses',
+                'STCW_CERTIFICATES': 'stcw',
+                'MEDICAL_CERTIFICATES': 'medical',
+                'SEAMAN_BOOK_STAMP': 'seaman',
+                'TRAVEL_DOCUMENTS': 'travel',
+                'ACADEMIC_QUALIFICATIONS': 'academic',
+                'COMPANY_LETTERS_MISC': 'company',
+                'RECENT_APPRAISALS': 'appraisals'
+            };
+            
+            const counts = {};
+            docs.forEach(doc => {
+                const mappedId = categoryMap[doc.category] || 'company'; // fallback to misc
+                counts[mappedId] = (counts[mappedId] || 0) + 1;
+            });
+
+            setDynamicCategories(prevCats => prevCats.map(cat => ({
+                ...cat,
+                count: counts[cat.id] || 0
+            })));
+            
+        } catch (error) {
+            console.error("Failed to fetch documents", error);
+            // toast error could go here
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
+
+    const filteredDynamicCategories = dynamicCategories.filter(category => {
         // Search Filter
         const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -132,16 +192,13 @@ const DocumentsWallet = () => {
             if (!category.status) {
                 matchesFilter = false;
             } else {
-                // Check if the status label contains the active filter text
-                // Adjusting logic to match typical string containment
                 const statusText = category.status.label.toLowerCase();
                 const filterText = activeFilter.toLowerCase();
 
-                // Specific mapping or looser check
                 if (activeFilter === 'Expiring Soon' && statusText.includes('expiring soon')) matchesFilter = true;
                 else if (activeFilter === 'Compliance Ready' && statusText.includes('compliance ready')) matchesFilter = true;
                 else if (activeFilter === 'Pending Approval' && statusText.includes('pending approval')) matchesFilter = true;
-                else if (activeFilter === 'Expired' && statusText.includes('expired') && !statusText.includes('soon')) matchesFilter = true; // Avoid 'expiring soon' matching 'expired' if simple includes
+                else if (activeFilter === 'Expired' && statusText.includes('expired') && !statusText.includes('soon')) matchesFilter = true;
                 else matchesFilter = false;
             }
         }
@@ -150,6 +207,7 @@ const DocumentsWallet = () => {
     });
 
     const handleUploadComplete = (newDoc) => {
+        fetchDocuments(); // refresh list
         setSelectedDoc(newDoc);
         setView('detail');
     };
@@ -228,8 +286,9 @@ const DocumentsWallet = () => {
     if (view === 'edit') {
         return <EditDocument
             document={selectedDoc}
-            onBack={() => { setView('list'); setSelectedDoc(null); }}
+            onBack={() => { setView('list'); setSelectedDoc(null); fetchDocuments(); }}
             onCompletion={(updatedDoc) => {
+                fetchDocuments();
                 setSelectedDoc(updatedDoc);
                 setView('detail');
             }}
@@ -237,13 +296,17 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'detail') {
-        return <DocumentDetail document={selectedDoc} onBack={() => { setView('list'); setSelectedDoc(null); }} />;
+        return <DocumentDetail 
+            document={selectedDoc} 
+            onBack={() => { setView('list'); setSelectedDoc(null); fetchDocuments(); }}
+            onDeleteSuccess={() => { setView('list'); setSelectedDoc(null); fetchDocuments(); }}
+        />;
     }
 
     if (view === 'category') {
         return <CategoryDocuments
             category={selectedCategory}
-            onBack={() => { setView('list'); setSelectedCategory(null); }}
+            onBack={() => { setView('list'); setSelectedCategory(null); fetchDocuments(); }}
             onUploadClick={() => setView('upload')}
         />;
     }
@@ -332,8 +395,12 @@ const DocumentsWallet = () => {
 
             {/* Categories Grid - Single column on mobile, 2 on tablet+ */}
             <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                {filteredCategories.length > 0 ? (
-                    filteredCategories.map((cat) => (
+                {isLoading ? (
+                    <div className="col-span-full py-12 flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366]"></div>
+                    </div>
+                ) : filteredDynamicCategories.length > 0 ? (
+                    filteredDynamicCategories.map((cat) => (
                         <div
                             key={cat.id}
                             onClick={() => handleCategoryClick(cat)}

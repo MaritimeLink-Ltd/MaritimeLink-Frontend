@@ -19,7 +19,7 @@ const PersonalInfo = ({ onNext, initialData = {}, isLoading = false, apiError = 
 
   // Sync when initialData arrives asynchronously (e.g. from API fetch)
   useEffect(() => {
-    if (initialData && Object.keys(initialData).length > 0 && initialData.firstName) {
+    if (initialData && Object.keys(initialData).length > 0) {
       setFormData({
         firstName: initialData.firstName || '',
         middleName: initialData.middleName || '',

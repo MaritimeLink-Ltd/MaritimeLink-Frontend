@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
+import documentService from '../../../../services/documentService';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
@@ -19,69 +21,59 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
         'Expired'
     ];
 
-    // Mock documents data - in real app, this would come from API based on category
-    const documents = [
-        {
-            id: 1,
-            title: 'Certificate of Competency',
-            expires: '2026-12-31',
-            type: 'License Certificate',
-            fileType: 'PDF',
-            status: { label: 'VALID', color: 'bg-emerald-600' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
-        },
-        {
-            id: 2,
-            title: 'Basic Safety Training',
-            expires: '2026-12-31',
-            type: 'STCW Certificate',
-            fileType: 'PDF',
-            status: { label: 'VALID', color: 'bg-emerald-600' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
-        },
-        {
-            id: 3,
-            title: 'Medical Fitness Certificate',
-            expires: '2026-12-31',
-            type: 'Medical Certificate',
-            fileType: 'PDF',
-            status: { label: 'VALID', color: 'bg-emerald-600' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
-        },
-        {
-            id: 4,
-            title: 'Passport',
-            expires: '2026-12-31',
-            type: 'Travel Document',
-            fileType: 'PDF',
-            status: { label: 'EXPIRING', color: 'bg-orange-500' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
-        },
-        {
-            id: 5,
-            title: 'Seaman Book',
-            expires: '2026-12-31',
-            type: 'Seaman Document',
-            fileType: 'PDF',
-            status: { label: 'EXPIRED', color: 'bg-red-500' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
-        },
-        {
-            id: 6,
-            title: 'Engineering Degree',
-            expires: '2026-12-31',
-            type: 'Academic Certificate',
-            fileType: 'PDF',
-            status: { label: 'PENDING', color: 'bg-yellow-500' },
-            thumbnail: '/placeholder-doc.png',
-            expiryDate: '31 December 2026'
+    const [documents, setDocuments] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Map frontend IDs to backend ENUM strings if needed
+    const categoryMap = {
+        'licenses': 'LICENSES_ENDORSEMENTS',
+        'stcw': 'STCW_CERTIFICATES',
+        'medical': 'MEDICAL_CERTIFICATES',
+        'seaman': 'SEAMAN_BOOK_STAMP',
+        'travel': 'TRAVEL_DOCUMENTS',
+        'academic': 'ACADEMIC_QUALIFICATIONS',
+        'company': 'COMPANY_LETTERS_MISC',
+        'appraisals': 'RECENT_APPRAISALS'
+    };
+
+    const fetchDocuments = async () => {
+        try {
+            setIsLoading(true);
+            const categoryEnum = categoryMap[category?.id] || '';
+            const response = await documentService.getDocuments(categoryEnum);
+            
+            // Transform backend data to frontend format if necessary
+            // Extract documents array from nested backend response
+            let docs = [];
+            if (response?.data?.documents) {
+                docs = response.data.documents;
+            } else if (Array.isArray(response?.data)) {
+                docs = response.data;
+            } else if (Array.isArray(response)) {
+                docs = response;
+            }
+
+            const formattedDocs = docs.map(doc => ({
+                ...doc,
+                // fallback properties if backend doesn't provide them yet
+                status: { label: 'PENDING', color: 'bg-yellow-500' }, 
+                expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
+                type: category?.title || 'Document'
+            }));
+            
+            setDocuments(formattedDocs);
+        } catch (error) {
+            console.error("Failed to fetch categorized documents", error);
+            toast.error("Failed to load documents.");
+        } finally {
+            setIsLoading(false);
         }
-    ];
+    };
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [category]);
 
     const handleDocumentClick = (doc) => {
         setSelectedDoc(doc);
@@ -107,8 +99,9 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
     // Handle Edit Completion
     const handleEditCompletion = (updatedDoc) => {
-        setSuccessMessage(`"${updatedDoc.title}" updated successfully!`);
+        setSuccessMessage(`Document updated successfully!`);
         setShowSuccessModal(true);
+        fetchDocuments();
         setTimeout(() => {
             setShowSuccessModal(false);
             setView('list');
@@ -146,27 +139,27 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
     // Handle Download Document
     const handleDownloadDocument = (doc) => {
-        setSuccessMessage(`Downloading "${doc.title}"...`);
-        setShowSuccessModal(true);
-        
-        // Simulate download with dummy zip file
-        setTimeout(() => {
-            // Create a dummy blob for zip file
-            const dummyContent = `Document: ${doc.title}\nType: ${doc.type}\nExpires: ${doc.expiryDate}\nStatus: ${doc.status.label}`;
-            const blob = new Blob([dummyContent], { type: 'application/zip' });
-            const url = URL.createObjectURL(blob);
-            
-            // Create download link
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${doc.title.replace(/\s+/g, '_')}.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            setShowSuccessModal(false);
-        }, 1000);
+        if (doc.fileUrl) {
+            window.open(doc.fileUrl, '_blank');
+        } else {
+            toast.error("Document file not available.");
+        }
+    };
+
+    // Handle Delete Document
+    const handleDeleteDocument = async (doc) => {
+        if (window.confirm(`Are you sure you want to delete "${doc.name || doc.title}"?`)) {
+            try {
+                setIsDeleting(true);
+                await documentService.deleteDocument(doc.id);
+                toast.success('Document deleted successfully');
+                fetchDocuments();
+            } catch (error) {
+                toast.error(error.message || 'Failed to delete document');
+            } finally {
+                setIsDeleting(false);
+            }
+        }
     };
 
     // Filter documents based on active filter
@@ -195,7 +188,11 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
     // If viewing document detail, show DocumentDetail component
     if (view === 'detail') {
-        return <DocumentDetail document={selectedDoc} onBack={handleBackFromDetail} />;
+        return <DocumentDetail 
+            document={selectedDoc} 
+            onBack={handleBackFromDetail}
+            onDeleteSuccess={() => { setView('list'); setSelectedDoc(null); fetchDocuments(); }}
+        />;
     }
 
     // If editing document, show EditDocument component
@@ -204,7 +201,13 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     }
 
     return (
-        <div className="w-full max-w-7xl mx-auto h-full overflow-hidden">
+        <div className="w-full max-w-7xl mx-auto h-full overflow-hidden relative">
+            <Toaster />
+            {isDeleting && (
+                <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center backdrop-blur-sm">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#003366]" />
+                </div>
+            )}
             {/* Header Section */}
             <div className="bg-white px-4 sm:px-6 pt-4 pb-3">
                 {/* Title Row with Back Button */}
@@ -249,78 +252,108 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
             {/* Documents Grid - Single column on mobile */}
             <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto bg-white" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                {filteredDocuments.map((doc) => (
-                    <div
-                        key={doc.id}
-                        onClick={() => handleDocumentClick(doc)}
-                        className="bg-white rounded-xl p-4 flex gap-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                    >
-                        {/* Document Thumbnail */}
-                        <div className="w-28 h-32 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* Document Info */}
-                        <div className="flex-1 flex flex-col">
-                            <div className="flex items-start justify-between mb-2">
-                                <h3 className="text-base font-bold text-gray-800">{doc.title}</h3>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${doc.status.color}`}>
-                                    {doc.status.label}
-                                </span>
-                            </div>
-
-                            <div className="space-y-1 mb-3">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <span>Expires: <strong>{doc.expires}</strong></span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <span>Type: <strong>{doc.type}</strong></span>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-4 mt-auto">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDocumentClick(doc); }}
-                                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
-                                >
-                                    <Eye size={14} />
-                                    View
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleEditDocument(doc); }}
-                                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
-                                >
-                                    <Edit2 size={14} />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleReplaceDocument(doc); }}
-                                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
-                                >
-                                    <RotateCcw size={14} />
-                                    Replace
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDownloadDocument(doc); }}
-                                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
-                                >
-                                    <Download size={14} />
-                                </button>
-                            </div>
-                        </div>
+                {isLoading ? (
+                    <div className="col-span-full py-12 flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366]"></div>
                     </div>
-                ))}
+                ) : filteredDocuments.length > 0 ? (
+                    filteredDocuments.map((doc) => (
+                        <div
+                            key={doc.id}
+                            onClick={() => handleDocumentClick(doc)}
+                            className="bg-white rounded-xl p-4 flex gap-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                        >
+                            {/* Document Thumbnail */}
+                            <div className="w-28 h-32 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                                {doc.fileUrl ? (
+                                    <img 
+                                        src={doc.fileUrl} 
+                                        alt={doc.name || doc.title} 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://placehold.co/200x250/f3f4f6/9ca3af?text=Doc";
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                        <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Document Info */}
+                            <div className="flex-1 flex flex-col">
+                                <div className="flex items-start justify-between mb-2">
+                                    <h3 className="text-base font-bold text-gray-800">{doc.name || doc.title}</h3>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${doc.status?.color || 'bg-blue-500'}`}>
+                                        {doc.status?.label || 'PENDING'}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-1 mb-3">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <span>Expires: <strong>{doc.expires}</strong></span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <span>Type: <strong>{doc.type}</strong></span>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-4 mt-auto">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDocumentClick(doc); }}
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
+                                    >
+                                        <Eye size={14} />
+                                        View
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleEditDocument(doc); }}
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
+                                    >
+                                        <Edit2 size={14} />
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleReplaceDocument(doc); }}
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
+                                    >
+                                        <RotateCcw size={14} />
+                                        Replace
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDownloadDocument(doc); }}
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
+                                    >
+                                        <Download size={14} />
+                                        Download
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc); }}
+                                        className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors ml-auto"
+                                    >
+                                        <Trash2 size={14} />
+                                        
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="col-span-full py-12 text-center text-gray-500">
+                        <p>No documents found in this category.</p>
+                    </div>
+                )}
             </div>
 
             {/* Success Modal */}
