@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2, AlertTriangle, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
@@ -12,6 +12,8 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [replaceDocId, setReplaceDocId] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteTargetDoc, setDeleteTargetDoc] = useState(null);
 
     const filters = [
         'All',
@@ -147,18 +149,24 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     };
 
     // Handle Delete Document
-    const handleDeleteDocument = async (doc) => {
-        if (window.confirm(`Are you sure you want to delete "${doc.name || doc.title}"?`)) {
-            try {
-                setIsDeleting(true);
-                await documentService.deleteDocument(doc.id);
-                toast.success('Document deleted successfully');
-                fetchDocuments();
-            } catch (error) {
-                toast.error(error.message || 'Failed to delete document');
-            } finally {
-                setIsDeleting(false);
-            }
+    const handleDeleteDocument = (doc) => {
+        setDeleteTargetDoc(doc);
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteTargetDoc) return;
+        try {
+            setIsDeleting(true);
+            await documentService.deleteDocument(deleteTargetDoc.id);
+            setShowDeleteModal(false);
+            setDeleteTargetDoc(null);
+            toast.success('Document deleted successfully');
+            fetchDocuments();
+        } catch (error) {
+            toast.error(error.message || 'Failed to delete document');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -355,6 +363,56 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && deleteTargetDoc && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-end p-3 pb-0">
+                            <button
+                                onClick={() => { setShowDeleteModal(false); setDeleteTargetDoc(null); }}
+                                disabled={isDeleting}
+                                className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="px-6 pb-6 text-center">
+                            <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                                <AlertTriangle size={28} className="text-red-500" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Document</h3>
+                            <p className="text-sm text-gray-500 mb-1">Are you sure you want to delete</p>
+                            <p className="text-sm font-semibold text-gray-700 mb-5">
+                                "{deleteTargetDoc.name || deleteTargetDoc.title}"?
+                            </p>
+                            <p className="text-xs text-gray-400 mb-6">This action cannot be undone.</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setShowDeleteModal(false); setDeleteTargetDoc(null); }}
+                                    disabled={isDeleting}
+                                    className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteConfirm}
+                                    disabled={isDeleting}
+                                    className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 text-white font-medium text-sm hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                                >
+                                    {isDeleting
+                                        ? <><Loader2 size={16} className="animate-spin" /> Deleting...</>
+                                        : <><Trash2 size={16} /> Delete</>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Success Modal */}
             {showSuccessModal && (
