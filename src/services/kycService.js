@@ -6,6 +6,31 @@
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 
+/** API expects these exact enum strings (see professional KYC submit schema). */
+const API_DOCUMENT_TYPES = ['PASSPORT', 'DRIVING_LICENSE', 'NATIONAL_ID', 'RESIDENCE_PERMIT'];
+
+const SLUG_TO_API_DOCUMENT_TYPE = {
+    passport: 'PASSPORT',
+    'driving-license': 'DRIVING_LICENSE',
+    'national-id': 'NATIONAL_ID',
+    'residence-permit': 'RESIDENCE_PERMIT',
+};
+
+/**
+ * Maps UI / OCR document type strings to API enum values.
+ * @param {string} [raw]
+ * @returns {string}
+ */
+export function mapKycDocumentTypeToApi(raw) {
+    if (raw == null || typeof raw !== 'string') return 'PASSPORT';
+    const trimmed = raw.trim();
+    if (!trimmed) return 'PASSPORT';
+    if (SLUG_TO_API_DOCUMENT_TYPE[trimmed]) return SLUG_TO_API_DOCUMENT_TYPE[trimmed];
+    const normalized = trimmed.toUpperCase().replace(/-/g, '_').replace(/\s+/g, '_');
+    if (API_DOCUMENT_TYPES.includes(normalized)) return normalized;
+    return normalized;
+}
+
 class KycService {
     /**
      * Step 1a - Upload Identity Document (Front)
@@ -67,6 +92,10 @@ class KycService {
      */
     async submitKycDetails(data) {
         try {
+            const payload = {
+                ...data,
+                documentType: mapKycDocumentTypeToApi(data.documentType),
+            };
             // FIX #7: Use httpClient.request consistently with all other methods.
             // The original httpClient.post() call may bypass auth header injection,
             // error normalization, or retry logic that httpClient.request provides,
@@ -74,7 +103,7 @@ class KycService {
             const response = await httpClient.request(API_ENDPOINTS.PROFESSIONAL.KYC_SUBMIT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
+                body: JSON.stringify(payload),
             });
 
             return response;

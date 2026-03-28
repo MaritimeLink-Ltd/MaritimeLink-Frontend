@@ -1,12 +1,24 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+const DOCUMENT_TYPE_LABELS = {
+    passport: 'Passport',
+    'driving-license': 'Driving License',
+    'national-id': 'National ID',
+    'residence-permit': 'Residence Permit',
+};
+
+function labelForDocumentTypeSlug(slug) {
+    if (!slug) return '';
+    return DOCUMENT_TYPE_LABELS[slug] || slug;
+}
+
 function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData, documentType }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         dateOfBirth: '',
-        documentType: documentType || 'Driving License',
+        documentType: documentType || 'driving-license',
         documentNumber: '',
         expiryDate: '',
         issuingCountry: ''
@@ -23,11 +35,21 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
 
     useEffect(() => {
         if (initialData) {
+            const docNo =
+                initialData.number ||
+                initialData.documentNumber ||
+                initialData.passportNumber ||
+                initialData.idNumber ||
+                initialData.licenseNumber ||
+                '';
             setFormData(prev => ({
                 ...prev,
-                firstName: initialData.name?.split(' ')[0] || prev.firstName,
-                lastName: initialData.name?.split(' ').slice(1).join(' ') || prev.lastName,
-                documentNumber: initialData.number || prev.documentNumber,
+                firstName: initialData.name?.split(' ')[0] || initialData.firstName || prev.firstName,
+                lastName:
+                    initialData.name?.split(' ').slice(1).join(' ') ||
+                    initialData.lastName ||
+                    prev.lastName,
+                documentNumber: docNo || prev.documentNumber,
                 expiryDate: initialData.expiryDate || prev.expiryDate,
                 issuingCountry: initialData.issuingCountry || prev.issuingCountry,
             }));
@@ -44,6 +66,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
         if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
         if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
         if (!formData.issuingCountry.trim()) newErrors.issuingCountry = 'Issuing country is required';
+        if (!formData.documentNumber.trim()) newErrors.documentNumber = 'Document number is required';
         return newErrors;
     };
 
@@ -146,7 +169,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                             <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
                             <input
                                 type="text"
-                                value={formData.documentType}
+                                value={labelForDocumentTypeSlug(formData.documentType)}
                                 readOnly
                                 className={readonlyClass}
                             />
@@ -156,13 +179,22 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                     {/* Document Number & Expiry Date */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Document Number</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Document Number <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="text"
                                 value={formData.documentNumber}
-                                readOnly
-                                className={readonlyClass}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, documentNumber: e.target.value });
+                                    clearError('documentNumber');
+                                }}
+                                placeholder="As shown on your ID"
+                                className={fieldClass('documentNumber')}
                             />
+                            {errors.documentNumber && (
+                                <p className="text-xs text-red-500 mt-1">{errors.documentNumber}</p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
