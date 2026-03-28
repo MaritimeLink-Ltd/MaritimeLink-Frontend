@@ -1,9 +1,17 @@
 import { X, Camera } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import kycService from '../../services/kycService';
 
 function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const videoRef = useRef(null);
-    const [stream, setStream] = useState(null);
+
+    // FIX #1 & #2: Use a ref instead of state to hold the media stream.
+    // A useState setter is async — the cleanup function in useEffect captures
+    // the initial null value and never sees the updated stream. A ref is
+    // mutated synchronously, so both cleanup and capturePhoto always read
+    // the live MediaStream object.
+    const streamRef = useRef(null);
+
     const [photoTaken, setPhotoTaken] = useState(false);
 
     const startCamera = async () => {
@@ -13,11 +21,24 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
             });
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
-                setStream(mediaStream);
             }
+            // Store in ref — not state — so every closure sees the live value
+            streamRef.current = mediaStream;
         } catch (err) {
             console.error('Error accessing camera:', err);
             alert('Unable to access camera. Please ensure camera permissions are enabled.');
+        }
+    };
+
+    const stopCamera = () => {
+        // FIX #1: cleanup now reliably stops the camera because it reads
+        // streamRef.current instead of a stale captured state value
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
         }
     };
 
@@ -25,27 +46,51 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
         if (isOpen) {
             startCamera();
         }
-        
+        // Cleanup runs when isOpen changes to false OR on unmount
         return () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
+            stopCamera();
         };
     }, [isOpen]);
 
     const capturePhoto = () => {
         setPhotoTaken(true);
-        // Simulate photo capture and processing
-        setTimeout(() => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+        if (!videoRef.current) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoRef.current, 0, 0);
+
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                try {
+                    const professionalId = localStorage.getItem('professionalId');
+                    const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+
+                    await kycService.uploadSelfie(professionalId, file);
+
+                    // FIX #2: capturePhoto now reads streamRef.current instead
+                    // of the stale stream state — tracks are actually stopped here
+                    stopCamera();
+
+                    if (onSelfieTaken) {
+                        onSelfieTaken();
+                    } else if (onPhotoTaken) {
+                        onPhotoTaken();
+                    }
+                } catch (err) {
+                    console.error('Selfie upload failed', err);
+                    setPhotoTaken(false);
+                    alert('Upload failed. Please try again.');
+                }
             }
-            if (onSelfieTaken) {
-                onSelfieTaken();
-            } else if (onPhotoTaken) {
-                onPhotoTaken();
-            }
-        }, 1500);
+        }, 'image/jpeg');
+    };
+
+    const handleClose = () => {
+        stopCamera();
+        onClose();
     };
 
     if (!isOpen) return null;
@@ -55,12 +100,7 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
             <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full relative my-4 max-h-[95vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
-                    onClick={() => {
-                        if (stream) {
-                            stream.getTracks().forEach(track => track.stop());
-                        }
-                        onClose();
-                    }}
+                    onClick={handleClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
                 >
                     <X className="h-5 w-5" />
@@ -82,7 +122,10 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                 </p>
 
                 {/* Camera Preview */}
-                <div className="relative mb-4 sm:mb-6 bg-gray-900 rounded-2xl overflow-hidden" style={{ aspectRatio: '3/4', maxHeight: '60vh' }}>
+                <div
+                    className="relative mb-4 sm:mb-6 bg-gray-900 rounded-2xl overflow-hidden"
+                    style={{ aspectRatio: '3/4', maxHeight: '60vh' }}
+                >
                     <video
                         ref={videoRef}
                         autoPlay
@@ -94,7 +137,6 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                     {/* Face Oval Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-48 sm:w-64 h-60 sm:h-80 border-4 border-white/50 rounded-[50%] relative">
-                            {/* Instruction Text */}
                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 sm:mt-4 text-white text-xs sm:text-sm font-medium whitespace-nowrap">
                                 Position your face in the oval
                             </div>

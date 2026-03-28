@@ -8,13 +8,37 @@ import VerifyDetailsModal from '../../../components/modals/VerifyDetailsModal';
 import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
+import kycService from '../../../services/kycService';
+
+// ─── Resolve Professional ID ──────────────────────────────────────────────────
+// The payload showed professionalId: null because localStorage.getItem('professionalId')
+// returned null — meaning the key used during login/registration is different.
+// This helper tries every common key name your backend might use so the ID is
+// always found regardless of what the auth service stored it as.
+// ✅ To permanently fix: search your login/register response handler and confirm
+//    the exact key (e.g. 'id', 'userId', 'professional_id') then keep only that one.
+const resolveProfessionalId = () => {
+  const candidates = [
+    'professionalId',
+    'professional_id',
+    'userId',
+    'user_id',
+    'id',
+  ];
+  for (const key of candidates) {
+    const value = localStorage.getItem(key);
+    if (value) return value;
+  }
+  console.warn('[KYC] Could not resolve professionalId from localStorage. Check your auth login handler.');
+  return null;
+};
 
 const PersonalDashboard = () => {
   const navigate = useNavigate();
-  const [showOldDashboard, setShowOldDashboard] = useState(false);
 
-  // KYC Modal States
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(true); // Show on initial load
+  const kycStatus = localStorage.getItem('kycStatus');
+  const [showOldDashboard, setShowOldDashboard] = useState(kycStatus === 'completed');
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!kycStatus);
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -22,8 +46,10 @@ const PersonalDashboard = () => {
   const [showProcessingModal, setShowProcessingModal] = useState(false);
   const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
+  const [kycData, setKycData] = useState(null);
 
-  // KYC Flow Handlers
+  // ─── KYC Flow Handlers ────────────────────────────────────────────────────
+
   const handleStartVerification = () => {
     setShowVerifyIdentityModal(false);
     setShowSelectDocumentModal(true);
@@ -35,21 +61,49 @@ const PersonalDashboard = () => {
     setShowUploadDocumentModal(true);
   };
 
-  const handleDocumentUploaded = () => {
+  const handleDocumentUploaded = (ocrData) => {
+    setKycData(ocrData);
     setShowUploadDocumentModal(false);
     setShowVerifyDetailsModal(true);
   };
 
-  const handleDetailsVerified = () => {
-    setShowVerifyDetailsModal(false);
-    setShowTakeSelfieModal(true);
+  const handleDetailsVerified = async (verifiedData) => {
+    // Resolve the ID at call-time so it's always fresh
+    const professionalId = resolveProfessionalId();
+
+    if (!professionalId) {
+      alert('Session error: your account ID could not be found. Please log out and log back in.');
+      return;
+    }
+
+    try {
+      // Build the payload matching the API schema:
+      // Remap issuingCountry → issueCountry, and include document URLs from upload step
+      await kycService.submitKycDetails({
+        professionalId,
+        firstName: verifiedData.firstName,
+        lastName: verifiedData.lastName,
+        dateOfBirth: verifiedData.dateOfBirth,
+        documentType: verifiedData.documentType,
+        documentNumber: verifiedData.documentNumber,
+        expiryDate: verifiedData.expiryDate,
+        issueCountry: verifiedData.issuingCountry || verifiedData.issueCountry,
+        documentUrl: kycData?.documentFrontUrl || '',
+        documentFrontUrl: kycData?.documentFrontUrl || '',
+        documentBackUrl: kycData?.documentBackUrl || '',
+      });
+      setShowVerifyDetailsModal(false);
+      setShowTakeSelfieModal(true);
+    } catch (err) {
+      console.error('KYC Submit failed', err);
+      alert('Failed to confirm details. Please try again.');
+    }
   };
 
   const handleSelfieTaken = () => {
     setShowTakeSelfieModal(false);
     setShowProcessingModal(true);
-    
-    // Simulate processing time
+
     setTimeout(() => {
       setShowProcessingModal(false);
       setShowVerificationSubmittedModal(true);
@@ -57,20 +111,21 @@ const PersonalDashboard = () => {
   };
 
   const handleVerificationComplete = () => {
+    localStorage.setItem('kycStatus', 'completed');
     setShowVerificationSubmittedModal(false);
-    // User can now access dashboard
+    setShowOldDashboard(true);
   };
 
   const handleSkipVerification = () => {
+    localStorage.setItem('kycStatus', 'skipped');
     setShowVerifyIdentityModal(false);
-    // Allow user to continue without verification
   };
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-white">
-      {!showOldDashboard && (
-        <Dashboard />
-      )}
+      {!showOldDashboard && <Dashboard />}
 
       {showOldDashboard && (
         <div className="h-full flex items-center justify-center p-8">
@@ -84,8 +139,8 @@ const PersonalDashboard = () => {
                 Your information and documents are currently under review by our team.
               </p>
               <p>
-                Once the verification process is complete, you will be notified by email and
-                granted full access to your dashboard.
+                Once the verification process is complete, you will be notified by
+                email and granted full access to your dashboard.
               </p>
               <p className="font-medium text-gray-700">
                 No further action is required from you at this time.
@@ -96,37 +151,37 @@ const PersonalDashboard = () => {
       )}
 
       {/* KYC Modals */}
-      <VerifyIdentityModal 
-        isOpen={showVerifyIdentityModal} 
+      <VerifyIdentityModal
+        isOpen={showVerifyIdentityModal}
         onClose={handleSkipVerification}
         onStartVerification={handleStartVerification}
       />
-      <SelectDocumentModal 
-        isOpen={showSelectDocumentModal} 
+      <SelectDocumentModal
+        isOpen={showSelectDocumentModal}
         onClose={() => setShowSelectDocumentModal(false)}
         onSelectDocument={handleSelectDocument}
       />
-      <UploadDocumentModal 
-        isOpen={showUploadDocumentModal} 
+      <UploadDocumentModal
+        isOpen={showUploadDocumentModal}
         onClose={() => setShowUploadDocumentModal(false)}
         onUploadComplete={handleDocumentUploaded}
         documentType={selectedDocumentType}
       />
-      <VerifyDetailsModal 
-        isOpen={showVerifyDetailsModal} 
+      <VerifyDetailsModal
+        isOpen={showVerifyDetailsModal}
         onClose={() => setShowVerifyDetailsModal(false)}
         onConfirm={handleDetailsVerified}
+        initialData={kycData}
+        documentType={selectedDocumentType}
       />
-      <TakeSelfieModal 
-        isOpen={showTakeSelfieModal} 
+      <TakeSelfieModal
+        isOpen={showTakeSelfieModal}
         onClose={() => setShowTakeSelfieModal(false)}
         onSelfieTaken={handleSelfieTaken}
       />
-      <ProcessingDocumentModal 
-        isOpen={showProcessingModal} 
-      />
-      <VerificationSubmittedModal 
-        isOpen={showVerificationSubmittedModal} 
+      <ProcessingDocumentModal isOpen={showProcessingModal} />
+      <VerificationSubmittedModal
+        isOpen={showVerificationSubmittedModal}
         onClose={handleVerificationComplete}
       />
     </div>

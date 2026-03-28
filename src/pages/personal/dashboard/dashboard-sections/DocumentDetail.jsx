@@ -4,18 +4,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { API_CONFIG } from '../../../../config/api.config';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utility: isInternalUrl
-//
-// Returns true only if the given URL belongs to our own backend API.
-// External URLs (Supabase Storage, S3, Cloudinary, etc.) return false.
-//
-// Why this matters:
-//   Supabase public-bucket URLs reject requests that carry an Authorization
-//   header — they respond with 400 Bad Request. Our hook was sending
-//   `Bearer <token>` to every URL, causing the preview to always fail.
-//   The fix: only send the Bearer token to our own API.
-// ─────────────────────────────────────────────────────────────────────────────
 const isInternalUrl = (url) => {
     try {
         const fileOrigin = new URL(url).origin;

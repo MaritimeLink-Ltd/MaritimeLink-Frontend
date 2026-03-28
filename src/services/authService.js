@@ -495,6 +495,11 @@ class AuthService {
             // Persist user profile for use across the app
             if (response?.data?.user) {
                 localStorage.setItem('userProfile', JSON.stringify(response.data.user));
+                // Save professionalId so KYC and other flows can resolve it
+                const id = response.data.user.id || response.data.user.professionalId || response.data.user._id;
+                if (id) {
+                    localStorage.setItem('professionalId', id);
+                }
             }
 
             return response;

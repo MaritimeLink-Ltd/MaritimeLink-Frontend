@@ -37,6 +37,14 @@ function SignIn() {
       localStorage.setItem('userType', 'professional');
       localStorage.setItem('userEmail', formData.email);
 
+      // Ensure professionalId is saved (authService.login already does this,
+      // but we double-check here in case the response shape varies)
+      const user = response?.data?.user || response?.data;
+      const professionalId = user?.id || user?.professionalId || user?._id;
+      if (professionalId) {
+        localStorage.setItem('professionalId', professionalId);
+      }
+
       // Navigate to personal dashboard
       navigate('/personal/dashboard');
     } catch (err) {

@@ -1,9 +1,12 @@
 import { X, Upload, Info } from 'lucide-react';
 import { useState } from 'react';
+import kycService from '../../services/kycService';
 
 function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }) {
     const [frontSide, setFrontSide] = useState(null);
     const [backSide, setBackSide] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(null);
 
     if (!isOpen) return null;
 
@@ -11,17 +14,52 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
         const file = e.target.files[0];
         if (file) {
             setFrontSide(file);
+            // Reset back side whenever a new front is selected
+            setBackSide(null);
+            setUploadError(null);
         }
     };
 
-    const handleBackUpload = (e) => {
+    const handleBackUpload = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setBackSide(file);
-            // Simulate upload complete
-            setTimeout(() => {
-                onUploadComplete();
-            }, 1500);
+        if (!file) return;
+
+        // FIX #6: Guard in the handler — some browsers (Safari, older Chrome)
+        // allow clicks through a <label> wrapping a disabled <input>, so the
+        // disabled attribute alone is not a reliable gate.
+        if (!frontSide) {
+            // Reset the input so the same file can be selected again after front is uploaded
+            e.target.value = '';
+            return;
+        }
+
+        setBackSide(file);
+        setIsUploading(true);
+        setUploadError(null);
+
+        try {
+            const frontResponse = await kycService.uploadFrontDocument(frontSide);
+            const backResponse = await kycService.uploadBackDocument(file);
+
+            // Merge OCR data with document URLs from both upload responses
+            const ocrData = frontResponse.data?.ocrData || frontResponse.data || {};
+            const documentFrontUrl = frontResponse.data?.documentUrl || frontResponse.data?.url || '';
+            const documentBackUrl = backResponse.data?.documentUrl || backResponse.data?.url || '';
+
+            onUploadComplete({
+                ...ocrData,
+                documentFrontUrl,
+                documentBackUrl,
+            });
+        } catch (err) {
+            console.error('Document upload failed: ', err);
+            setUploadError(err.response?.data?.message || 'Failed to upload documents. Please try again.');
+            // Reset back side so the user can retry
+            setBackSide(null);
+            // Reset the input value so the same file can be reselected
+            e.target.value = '';
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -51,8 +89,22 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
                     Make sure all corners are visible and text is clear
                 </p>
 
+                {uploadError && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+                        {uploadError}
+                    </div>
+                )}
+
                 {/* Upload Areas */}
-                <div className="space-y-4 mb-6">
+                <div className="space-y-4 mb-6 relative">
+                    {isUploading && (
+                        <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-xl">
+                            <span className="font-medium text-[#003971] bg-white p-2 rounded shadow">
+                                Uploading documents...
+                            </span>
+                        </div>
+                    )}
+
                     {/* Front Side */}
                     <div>
                         <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
@@ -71,20 +123,29 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
                     </div>
 
                     {/* Back Side */}
+                    {/* FIX #6: The visual disabled state is kept for UX clarity,
+                        but the actual gate is inside handleBackUpload above.
+                        The input element has no disabled attribute so the handler
+                        controls access cross-browser consistently. */}
                     <div>
-                        <label className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${frontSide
-                                ? 'border-gray-300 hover:border-[#003971]'
-                                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                            }`}>
+                        <label
+                            className={`block border-2 border-dashed rounded-xl p-8 text-center transition-colors ${frontSide
+                                    ? 'border-gray-300 hover:border-[#003971] cursor-pointer'
+                                    : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                }`}
+                        >
                             <input
                                 type="file"
                                 className="hidden"
                                 accept="image/*,.pdf"
                                 onChange={handleBackUpload}
-                                disabled={!frontSide}
                             />
+                            <Upload className={`h-8 w-8 mx-auto mb-3 ${frontSide ? 'text-gray-400' : 'text-gray-300'}`} />
                             <p className={`font-medium mb-1 ${frontSide ? 'text-gray-900' : 'text-gray-400'}`}>
-                                {backSide ? backSide.name : 'Back side (Upload front first)'}
+                                {backSide ? backSide.name : 'Click to upload back side'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                {frontSide ? 'JPG, PNG or PDF up to 5MB' : 'Upload front side first'}
                             </p>
                         </label>
                     </div>
