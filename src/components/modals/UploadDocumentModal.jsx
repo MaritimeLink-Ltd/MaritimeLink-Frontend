@@ -65,103 +65,116 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
-                {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                    <X className="h-5 w-5" />
-                </button>
+            {/*
+             * KEY CHANGE: Added max-h-[90vh] + flex flex-col so the modal
+             * never exceeds 90% of the viewport height.
+             * The inner scroll container (overflow-y-auto + flex-1) handles
+             * overflow independently of the sticky header/footer areas.
+             */}
+            <div className="bg-white rounded-2xl max-w-md w-full relative flex flex-col max-h-[90vh]">
 
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-2 text-sm mb-6">
-                    <span className="text-gray-900 font-medium">Identity Verification</span>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-[#003971] font-medium">Upload ID</span>
+                {/* ── STICKY HEADER (never scrolls away) ── */}
+                <div className="p-6 pb-0 flex-shrink-0">
+                    {/* Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+
+                    {/* Breadcrumb */}
+                    <div className="flex items-center gap-2 text-sm mb-6">
+                        <span className="text-gray-900 font-medium">Identity Verification</span>
+                        <span className="text-gray-400">/</span>
+                        <span className="text-[#003971] font-medium">Upload ID</span>
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+                        Upload {documentType || 'driving license'}
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Make sure all corners are visible and text is clear
+                    </p>
                 </div>
 
-                {/* Title */}
-                <h2 className="text-xl font-bold text-gray-900 mb-2">
-                    Upload {documentType || 'driving license'}
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                    Make sure all corners are visible and text is clear
-                </p>
-
-                {uploadError && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
-                        {uploadError}
-                    </div>
-                )}
-
-                {/* Upload Areas */}
-                <div className="space-y-4 mb-6 relative">
-                    {isUploading && (
-                        <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-xl">
-                            <span className="font-medium text-[#003971] bg-white p-2 rounded shadow">
-                                Uploading documents...
-                            </span>
+                {/* ── SCROLLABLE BODY ── */}
+                <div className="overflow-y-auto flex-1 px-6 pb-6">
+                    {uploadError && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+                            {uploadError}
                         </div>
                     )}
 
-                    {/* Front Side */}
-                    <div>
-                        <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
-                            <input
-                                type="file"
-                                className="hidden"
-                                accept="image/*,.pdf"
-                                onChange={handleFrontUpload}
-                            />
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                            <p className="font-medium text-gray-900 mb-1">
-                                {frontSide ? frontSide.name : 'Click to upload front side'}
-                            </p>
-                            <p className="text-xs text-gray-500">JPG, PNG or PDF up to 5MB</p>
-                        </label>
-                    </div>
+                    {/* Upload Areas */}
+                    <div className="space-y-4 mb-6 relative">
+                        {isUploading && (
+                            <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-xl">
+                                <span className="font-medium text-[#003971] bg-white p-2 rounded shadow">
+                                    Uploading documents...
+                                </span>
+                            </div>
+                        )}
 
-                    {/* Back Side */}
-                    {/* FIX #6: The visual disabled state is kept for UX clarity,
-                        but the actual gate is inside handleBackUpload above.
-                        The input element has no disabled attribute so the handler
-                        controls access cross-browser consistently. */}
-                    <div>
-                        <label
-                            className={`block border-2 border-dashed rounded-xl p-8 text-center transition-colors ${frontSide
-                                    ? 'border-gray-300 hover:border-[#003971] cursor-pointer'
-                                    : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                                }`}
-                        >
-                            <input
-                                type="file"
-                                className="hidden"
-                                accept="image/*,.pdf"
-                                onChange={handleBackUpload}
-                            />
-                            <Upload className={`h-8 w-8 mx-auto mb-3 ${frontSide ? 'text-gray-400' : 'text-gray-300'}`} />
-                            <p className={`font-medium mb-1 ${frontSide ? 'text-gray-900' : 'text-gray-400'}`}>
-                                {backSide ? backSide.name : 'Click to upload back side'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {frontSide ? 'JPG, PNG or PDF up to 5MB' : 'Upload front side first'}
-                            </p>
-                        </label>
-                    </div>
-                </div>
-
-                {/* Photo Quality Tips */}
-                <div className="bg-blue-50 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        {/* Front Side */}
                         <div>
-                            <p className="font-bold text-blue-900 mb-2">Photo Quality Tips</p>
-                            <ul className="space-y-1 text-sm text-blue-700">
-                                <li>No glare or shadows</li>
-                                <li>High resolution and sharp</li>
-                                <li>All 4 corners visible</li>
-                            </ul>
+                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*,.pdf"
+                                    onChange={handleFrontUpload}
+                                />
+                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                                <p className="font-medium text-gray-900 mb-1">
+                                    {frontSide ? frontSide.name : 'Click to upload front side'}
+                                </p>
+                                <p className="text-xs text-gray-500">JPG, PNG or PDF up to 5MB</p>
+                            </label>
+                        </div>
+
+                        {/* Back Side */}
+                        {/* FIX #6: The visual disabled state is kept for UX clarity,
+                            but the actual gate is inside handleBackUpload above.
+                            The input element has no disabled attribute so the handler
+                            controls access cross-browser consistently. */}
+                        <div>
+                            <label
+                                className={`block border-2 border-dashed rounded-xl p-8 text-center transition-colors ${frontSide
+                                        ? 'border-gray-300 hover:border-[#003971] cursor-pointer'
+                                        : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                    }`}
+                            >
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*,.pdf"
+                                    onChange={handleBackUpload}
+                                />
+                                <Upload className={`h-8 w-8 mx-auto mb-3 ${frontSide ? 'text-gray-400' : 'text-gray-300'}`} />
+                                <p className={`font-medium mb-1 ${frontSide ? 'text-gray-900' : 'text-gray-400'}`}>
+                                    {backSide ? backSide.name : 'Click to upload back side'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {frontSide ? 'JPG, PNG or PDF up to 5MB' : 'Upload front side first'}
+                                </p>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Photo Quality Tips */}
+                    <div className="bg-blue-50 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-blue-900 mb-2">Photo Quality Tips</p>
+                                <ul className="space-y-1 text-sm text-blue-700">
+                                    <li>No glare or shadows</li>
+                                    <li>High resolution and sharp</li>
+                                    <li>All 4 corners visible</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
