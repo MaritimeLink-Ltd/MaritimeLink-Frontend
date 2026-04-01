@@ -37,6 +37,7 @@ function RecruiterDashboard({ onNavigate }) {
             showProcessingModal,
             showVerificationSubmittedModal,
             selectedDocumentType,
+            kycData,
         },
         actions: {
             handleStartVerification,
@@ -481,11 +482,14 @@ function RecruiterDashboard({ onNavigate }) {
                 onClose={() => setShowUploadDocumentModal(false)}
                 onUploadComplete={handleDocumentUploaded}
                 documentType={selectedDocumentType}
+                userType="recruiter"
             />
             <VerifyDetailsModal
                 isOpen={showVerifyDetailsModal}
                 onClose={() => setShowVerifyDetailsModal(false)}
                 onConfirm={handleDetailsVerified}
+                initialData={kycData}
+                documentType={selectedDocumentType}
             />
             <TakeSelfieModal
                 isOpen={showTakeSelfieModal}

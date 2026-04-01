@@ -264,6 +264,11 @@ class AuthService {
                 if (profile) {
                     localStorage.setItem('userProfile', JSON.stringify(profile));
                     localStorage.setItem('userRole', profile.role);
+                    // Save recruiterId so KYC and other flows can resolve it
+                    const id = profile.id || profile.recruiterId || profile._id;
+                    if (id) {
+                        localStorage.setItem('recruiterId', id);
+                    }
                 }
             }
 

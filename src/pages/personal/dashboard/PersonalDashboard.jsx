@@ -100,9 +100,25 @@ const PersonalDashboard = () => {
     }
   };
 
-  const handleSelfieTaken = () => {
+  const handleSelfieTaken = async (selfieFile) => {
+    const professionalId = resolveProfessionalId();
+
+    if (!professionalId) {
+      alert('Session error: your account ID could not be found. Please log out and log back in.');
+      return;
+    }
+
     setShowTakeSelfieModal(false);
     setShowProcessingModal(true);
+
+    try {
+      await kycService.uploadSelfie(professionalId, selfieFile);
+    } catch (err) {
+      console.error('KYC Selfie upload failed', err);
+      alert('Failed to upload selfie. Please try again.');
+      setShowProcessingModal(false);
+      return;
+    }
 
     setTimeout(() => {
       setShowProcessingModal(false);

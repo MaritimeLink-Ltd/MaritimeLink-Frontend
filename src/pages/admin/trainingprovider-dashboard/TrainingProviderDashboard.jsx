@@ -39,6 +39,7 @@ function TrainingProviderDashboard() {
             showProcessingModal,
             showVerificationSubmittedModal,
             selectedDocumentType,
+            kycData,
         },
         actions: {
             handleStartVerification,
@@ -388,11 +389,14 @@ function TrainingProviderDashboard() {
                 onClose={() => setShowUploadDocumentModal(false)}
                 onUploadComplete={handleDocumentUploaded}
                 documentType={selectedDocumentType}
+                userType="training-provider"
             />
             <VerifyDetailsModal
                 isOpen={showVerifyDetailsModal}
                 onClose={() => setShowVerifyDetailsModal(false)}
                 onConfirm={handleDetailsVerified}
+                initialData={kycData}
+                documentType={selectedDocumentType}
             />
             <TakeSelfieModal
                 isOpen={showTakeSelfieModal}

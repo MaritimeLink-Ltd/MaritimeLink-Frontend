@@ -30,6 +30,19 @@ function resolveIdFromLocalStorage(candidateKeys) {
     const value = localStorage.getItem(key);
     if (value) return value;
   }
+  // Fallback: try to extract from the stored userProfile JSON
+  try {
+    const profile = JSON.parse(localStorage.getItem('userProfile'));
+    if (profile) {
+      for (const key of candidateKeys) {
+        if (profile[key]) return profile[key];
+      }
+      // Last resort: common id fields
+      return profile.id || profile._id || null;
+    }
+  } catch {
+    // ignore parse errors
+  }
   return null;
 }
 

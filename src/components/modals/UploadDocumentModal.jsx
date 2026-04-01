@@ -2,7 +2,7 @@ import { X, Upload, Info } from 'lucide-react';
 import { useState } from 'react';
 import kycService from '../../services/kycService';
 
-function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }) {
+function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, userType }) {
     const [frontSide, setFrontSide] = useState(null);
     const [backSide, setBackSide] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -38,8 +38,20 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
         setUploadError(null);
 
         try {
-            const frontResponse = await kycService.uploadFrontDocument(frontSide);
-            const backResponse = await kycService.uploadBackDocument(file);
+            let frontResponse, backResponse;
+
+            if (userType === 'recruiter') {
+                const recruiterId = localStorage.getItem('recruiterId') || localStorage.getItem('userId') || localStorage.getItem('id');
+                frontResponse = await kycService.uploadRecruiterFrontDocument(recruiterId, frontSide);
+                backResponse = await kycService.uploadRecruiterBackDocument(recruiterId, file);
+            } else if (userType === 'training-provider') {
+                const trainingProviderId = localStorage.getItem('trainingProviderId') || localStorage.getItem('training_provider_id') || localStorage.getItem('userId') || localStorage.getItem('id');
+                frontResponse = await kycService.uploadTrainingProviderFrontDocument(trainingProviderId, frontSide);
+                backResponse = await kycService.uploadTrainingProviderBackDocument(trainingProviderId, file);
+            } else {
+                frontResponse = await kycService.uploadFrontDocument(frontSide);
+                backResponse = await kycService.uploadBackDocument(file);
+            }
 
             // Merge OCR data with document URLs from both upload responses
             const ocrData = frontResponse.data?.ocrData || frontResponse.data || {};
@@ -53,7 +65,7 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete }
             });
         } catch (err) {
             console.error('Document upload failed: ', err);
-            setUploadError(err.response?.data?.message || 'Failed to upload documents. Please try again.');
+            setUploadError(err.data?.message || err.message || 'Failed to upload documents. Please try again.');
             // Reset back side so the user can retry
             setBackSide(null);
             // Reset the input value so the same file can be reselected

@@ -76,9 +76,17 @@ export const API_ENDPOINTS = {
   },
   // Recruiter KYC Endpoints
   RECRUITER_KYC: {
-    UPLOAD_DOCUMENT: '/api/recruiter/kyc/upload-document',
+    UPLOAD_DOCUMENT_FRONT: '/api/recruiter/kyc/upload-document-front',
+    UPLOAD_DOCUMENT_BACK: '/api/recruiter/kyc/upload-document-back',
     SUBMIT: '/api/recruiter/kyc/submit',
     UPLOAD_SELFIE: '/api/recruiter/kyc/upload-selfie',
+  },
+  // Training Provider KYC Endpoints
+  TRAINING_PROVIDER_KYC: {
+    UPLOAD_DOCUMENT_FRONT: '/api/trainer/kyc/upload-document-front',
+    UPLOAD_DOCUMENT_BACK: '/api/trainer/kyc/upload-document-back',
+    SUBMIT: '/api/trainer/kyc/submit',
+    UPLOAD_SELFIE: '/api/trainer/kyc/upload-selfie',
   },
   // Admin Endpoints
   ADMIN: {

@@ -114,6 +114,56 @@ class KycService {
     }
 
     /**
+     * Recruiter KYC – Step 1a: Upload Identity Document (Front)
+     * POST /api/recruiter/kyc/upload-document-front
+     * @param {string} recruiterId - Recruiter ID
+     * @param {File} document - Front side image of the identity document
+     * @returns {Promise<Object>} { status, data: { url, ocrData: { name, number, issuingCountry, issueDate, expiryDate } } }
+     */
+    async uploadRecruiterFrontDocument(recruiterId, document) {
+        try {
+            const formData = new FormData();
+            formData.append('recruiterId', recruiterId);
+            formData.append('documentFront', document);
+
+            const response = await httpClient.request(API_ENDPOINTS.RECRUITER_KYC.UPLOAD_DOCUMENT_FRONT, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter KYC Upload Front Document error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Recruiter KYC – Step 1b: Upload Identity Document (Back)
+     * POST /api/recruiter/kyc/upload-document-back
+     * @param {string} recruiterId - Recruiter ID
+     * @param {File} document - Back side image of the identity document
+     * @returns {Promise<Object>} { status, data: { url } }
+     */
+    async uploadRecruiterBackDocument(recruiterId, document) {
+        try {
+            const formData = new FormData();
+            formData.append('recruiterId', recruiterId);
+            formData.append('documentBack', document);
+
+            const response = await httpClient.request(API_ENDPOINTS.RECRUITER_KYC.UPLOAD_DOCUMENT_BACK, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter KYC Upload Back Document error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Recruiter KYC details.
      * Uses dedicated recruiter KYC submit endpoint.
      */
@@ -138,13 +188,77 @@ class KycService {
     }
 
     /**
-     * Training provider KYC details wrapper.
-     * Currently delegates to the professional KYC endpoint until dedicated
-     * provider KYC routes are available.
+     * Training Provider KYC – Step 1a: Upload Identity Document (Front)
+     * POST /api/training-provider/kyc/upload-document-front
+     * @param {string} trainingProviderId - Training Provider ID
+     * @param {File} document - Front side image of the identity document
+     * @returns {Promise<Object>} { status, data: { url, ocrData } }
+     */
+    async uploadTrainingProviderFrontDocument(trainingProviderId, document) {
+        try {
+            const formData = new FormData();
+            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('documentFront', document);
+
+            const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_DOCUMENT_FRONT, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Training Provider KYC Upload Front Document error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Training Provider KYC – Step 1b: Upload Identity Document (Back)
+     * POST /api/training-provider/kyc/upload-document-back
+     * @param {string} trainingProviderId - Training Provider ID
+     * @param {File} document - Back side image of the identity document
+     * @returns {Promise<Object>} { status, data: { url } }
+     */
+    async uploadTrainingProviderBackDocument(trainingProviderId, document) {
+        try {
+            const formData = new FormData();
+            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('documentBack', document);
+
+            const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_DOCUMENT_BACK, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Training Provider KYC Upload Back Document error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Training Provider KYC – Step 2: Submit KYC Details
+     * POST /api/training-provider/kyc/submit
      */
     async submitTrainingProviderKycDetails(data) {
-        // TODO: switch to dedicated training-provider KYC endpoint when backend is ready.
-        return this.submitKycDetails(data);
+        try {
+            const payload = {
+                ...data,
+                documentType: mapKycDocumentTypeToApi(data.documentType),
+            };
+
+            const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.SUBMIT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Training Provider KYC Submit error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -194,12 +308,28 @@ class KycService {
     }
 
     /**
-     * Training provider selfie upload wrapper.
-     * Delegates to the professional selfie endpoint for now.
+     * Training Provider KYC – Step 3: Upload Selfie
+     * POST /api/training-provider/kyc/upload-selfie
+     * @param {string} trainingProviderId - Training Provider ID
+     * @param {File} selfie - Selfie image file
+     * @returns {Promise<Object>} Response indicating success
      */
     async uploadTrainingProviderSelfie(trainingProviderId, selfie) {
-        // TODO: replace with training-provider-specific selfie endpoint.
-        return this.uploadSelfie(trainingProviderId, selfie);
+        try {
+            const formData = new FormData();
+            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('selfie', selfie);
+
+            const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_SELFIE, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Training Provider KYC Upload Selfie error:', error);
+            throw error;
+        }
     }
 }
 

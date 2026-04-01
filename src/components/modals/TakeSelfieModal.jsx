@@ -1,6 +1,5 @@
 import { X, Camera } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import kycService from '../../services/kycService';
 
 function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const videoRef = useRef(null);
@@ -62,27 +61,18 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(videoRef.current, 0, 0);
 
-        canvas.toBlob(async (blob) => {
+        canvas.toBlob((blob) => {
             if (blob) {
-                try {
-                    const professionalId = localStorage.getItem('professionalId');
-                    const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
 
-                    await kycService.uploadSelfie(professionalId, file);
+                stopCamera();
 
-                    // FIX #2: capturePhoto now reads streamRef.current instead
-                    // of the stale stream state — tracks are actually stopped here
-                    stopCamera();
-
-                    if (onSelfieTaken) {
-                        onSelfieTaken();
-                    } else if (onPhotoTaken) {
-                        onPhotoTaken();
-                    }
-                } catch (err) {
-                    console.error('Selfie upload failed', err);
-                    setPhotoTaken(false);
-                    alert('Upload failed. Please try again.');
+                // Pass the file to the parent (wizard hook) which handles
+                // the correct API call based on userType
+                if (onSelfieTaken) {
+                    onSelfieTaken(file);
+                } else if (onPhotoTaken) {
+                    onPhotoTaken(file);
                 }
             }
         }, 'image/jpeg');
