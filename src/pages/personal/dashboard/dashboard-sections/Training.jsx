@@ -5,6 +5,27 @@ import { getAvailableSpaces, getSessionsForCourse } from '../../../../utils/trai
 
 const Training = () => {
     const navigate = useNavigate();
+
+    const adminVerified = (localStorage.getItem('adminVerified') === 'true');
+
+    if (!adminVerified) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="max-w-xl text-center px-4 py-10">
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
+                        Welcome to MaritimeLink
+                    </h1>
+                    <p className="text-gray-600 mb-2">
+                        Thanks for joining us.
+                    </p>
+                    <p className="text-gray-500 text-sm md:text-base">
+                        After your KYC and documents are verified by our admin team,
+                        you’ll be able to browse and book training courses here.
+                    </p>
+                </div>
+            </div>
+        );
+    }
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [savedCourses, setSavedCourses] = useState(new Set());
     const [showFilter, setShowFilter] = useState(false);

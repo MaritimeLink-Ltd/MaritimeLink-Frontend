@@ -1,10 +1,13 @@
-import { useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileText, X, Download } from 'lucide-react';
+import httpClient from '../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../config/api.config';
 
 function ComplianceProfile() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
 
     // State
     const [showDocViewer, setShowDocViewer] = useState(false);
@@ -18,53 +21,129 @@ function ComplianceProfile() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+
+    const [kycData, setKycData] = useState(null);
 
     // Notes State
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
 
-    // Determine if it is a company KYC or individual
-    const isCompany = id?.startsWith('KYC');
+    const inferredUserTypeFromState = location.state?.userType;
 
-    // Mock data - Individual (Default)
-    const defaultUser = {
-        name: 'Carlos Vega',
-        status: 'UNDER REVIEW',
-        role: 'Crew Member',
-        company: 'Worldwide Crew Now',
-        dateOfBirth: '17 May 1985',
-        documentNumber: '****3832',
-        expiryDate: '15/04/2028',
-        issuingCountry: 'Spain',
-        firstName: 'Carlos Andres',
-        lastName: 'Vega',
-        ocrConfidence: '98%',
-        type: 'INDIVIDUAL'
+    const resolveUserType = () => {
+        if (inferredUserTypeFromState) {
+            return inferredUserTypeFromState;
+        }
+        // Fallback: try to infer from last accounts list mapping, but default to PROFESSIONAL
+        return 'PROFESSIONAL';
     };
 
-    // Mock data - Company (KYC)
-    const companyUser = {
-        name: 'Pacific Shipping Co.',
-        status: 'DOCUMENTS PENDING',
-        role: 'Company',
-        company: 'Pacific Shipping',
-        dateOfBirth: 'N/A', // Not applicable for company
-        documentNumber: 'REG-2024-8892',
-        expiryDate: 'N/A',
-        issuingCountry: 'USA',
-        firstName: 'Pacific Shipping',
-        lastName: 'Co. Ltd',
-        ocrConfidence: '95%',
-        type: 'COMPANY'
+    const mapStatusChip = (status) => {
+        if (!status) return 'UNDER REVIEW';
+        const upper = status.toUpperCase();
+        if (upper === 'PENDING') return 'UNDER REVIEW';
+        return upper.replace(/_/g, ' ');
     };
 
-    const userData = isCompany ? companyUser : defaultUser;
+    const formatDate = (value) => {
+        if (!value) return 'N/A';
+        try {
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return value;
+            return d.toLocaleDateString();
+        } catch {
+            return value;
+        }
+    };
+
+    useEffect(() => {
+        const fetchDetail = async () => {
+            setIsLoading(true);
+            setLoadError('');
+            try {
+                const userType = resolveUserType();
+                const endpoint = `${API_ENDPOINTS.ADMIN.KYC_SUBMISSION_DETAIL(id)}?userType=${encodeURIComponent(
+                    userType
+                )}`;
+                const response = await httpClient.get(endpoint);
+                const kyc = response?.data?.kyc;
+                if (!kyc) {
+                    throw new Error('KYC record not found');
+                }
+
+                setKycData(kyc);
+                setNotes((kyc.notes || []).map((n, index) => ({
+                    id: n.id || index,
+                    content: n.content || n.note || '',
+                    author: n.author || 'Admin',
+                    initials: (n.author || 'Admin').split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2),
+                    time: n.createdAt ? new Date(n.createdAt).toLocaleString() : '',
+                })));
+            } catch (error) {
+                console.error('Failed to load KYC detail:', error);
+                setLoadError(error.message || 'Failed to load KYC detail');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDetail();
+    }, [id]);
+
+    const isApprovedStatus = kycData && kycData.status && kycData.status.toUpperCase() === 'APPROVED';
+
+    const userData = (() => {
+        if (!kycData) {
+            return {
+                name: 'Loading...',
+                status: 'UNDER REVIEW',
+                role: '',
+                company: '',
+                dateOfBirth: '',
+                documentNumber: '',
+                expiryDate: '',
+                issuingCountry: '',
+                firstName: '',
+                lastName: '',
+                ocrConfidence: '',
+                type: 'INDIVIDUAL',
+            };
+        }
+
+        const isProfessional = Boolean(kycData.professional);
+        const profile = kycData.professional || {};
+
+        const fullName =
+            profile.fullname ||
+            [profile.firstName, profile.middleName, profile.lastName].filter(Boolean).join(' ') ||
+            [kycData.firstName, kycData.lastName].filter(Boolean).join(' ');
+
+        return {
+            name: fullName || 'Unknown user',
+            status: mapStatusChip(kycData.status),
+            role: isProfessional ? 'Crew Member' : 'Account',
+            company: isProfessional ? (profile.subcategory || 'Individual') : (kycData.companyName || 'N/A'),
+            dateOfBirth: formatDate(kycData.dateOfBirth),
+            documentNumber: kycData.documentNumber || '',
+            expiryDate: formatDate(kycData.expiryDate),
+            issuingCountry: kycData.issueCountry || '',
+            firstName: kycData.firstName || profile.firstName || '',
+            lastName: kycData.lastName || profile.lastName || '',
+            ocrConfidence: kycData.ocrConfidence ? `${kycData.ocrConfidence}%` : '—',
+            type: isProfessional ? 'INDIVIDUAL' : 'COMPANY',
+            documentFrontUrl: kycData.documentFrontUrl,
+            documentBackUrl: kycData.documentBackUrl,
+            selfieUrl: kycData.selfieUrl,
+        };
+    })();
 
     // Document Data for Viewer
     const idDocument = {
-        name: 'ID_Card_Front.jpg',
+        name: 'ID Document',
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1586282391129-76a6df230234?w=800&q=80', // Placeholder
+        url: userData.documentFrontUrl || '',
         size: '2.4 MB',
         date: 'Oct 24, 2023',
         iconBg: 'bg-blue-50',
@@ -73,14 +152,30 @@ function ComplianceProfile() {
     };
 
     // Handlers
-    const handleViewDocument = () => {
-        setSelectedDocument(idDocument);
+    const handleViewDocument = (documentKey = 'front') => {
+        let base = idDocument;
+        if (documentKey === 'back' && userData.documentBackUrl) {
+            base = {
+                ...idDocument,
+                name: 'ID Document - Back',
+                url: userData.documentBackUrl,
+            };
+        } else if (documentKey === 'selfie' && userData.selfieUrl) {
+            base = {
+                ...idDocument,
+                name: 'Selfie',
+                url: userData.selfieUrl,
+            };
+        }
+
+        if (!base.url) return;
+        setSelectedDocument(base);
         setShowDocViewer(true);
     };
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 1000);
+        window.location.reload();
     };
 
     const toggleSearch = () => {
@@ -89,40 +184,113 @@ function ComplianceProfile() {
     };
 
     // Note Handler
-    const handlePostNote = () => {
-        if (newNote.trim()) {
-            const noteFn = {
-                id: Date.now(),
-                content: newNote.trim(),
-                author: 'Admin', // As requested
-                initials: 'AD',
-                time: 'Just now' // In a real app, this would be a formatted date
+    const handlePostNote = async () => {
+        const content = newNote.trim();
+        if (!content) return;
+
+        const userType = resolveUserType();
+        try {
+            const payload = {
+                content,
+                userType,
             };
-            setNotes([noteFn, ...notes]);
+
+            const endpoint = API_ENDPOINTS.ADMIN.KYC_ADD_NOTE(id);
+            const response = await httpClient.post(endpoint, payload);
+            const apiNote = response?.data?.note || response?.note || null;
+
+            const createdAt = apiNote?.createdAt ? new Date(apiNote.createdAt).toLocaleString() : 'Just now';
+            const authorEmail = apiNote?.admin?.email || 'Admin';
+            const initials = authorEmail
+                .split('@')[0]
+                .split(/[.\s_-]/)
+                .filter(Boolean)
+                .map((p) => p[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+
+            const noteToAdd = {
+                id: apiNote?.id || Date.now(),
+                content: apiNote?.content || content,
+                author: authorEmail,
+                initials,
+                time: createdAt,
+            };
+
+            setNotes((prev) => [noteToAdd, ...prev]);
             setNewNote('');
+        } catch (error) {
+            console.error('Failed to post note:', error);
+            alert(error.message || 'Failed to post note');
         }
     };
 
     // Action Handlers
-    const handleApprove = () => {
-        // Logic to approve would go here
-        // In a real app, this would be an API call
-        setShowApprovePopup(false);
-        // Navigate back to Accounts with KYC tab active
-        navigate('/admin/accounts', {
-            state: {
-                activeTab: 'KYC Status',
-                successMessage: 'Verification Approved Successfully!'
+    const handleApprove = async () => {
+        const userType = resolveUserType();
+        try {
+            const payload = {
+                userType,
+                status: 'APPROVED',
+                reviewStep: 0,
+                riskLevel: kycData?.riskLevel || 'LOW',
+                mismatchDetails: kycData?.mismatchDetails || '',
+            };
+
+            const endpoint = API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+            const response = await httpClient.patch(endpoint, payload);
+
+            const updated = response?.data?.updated || response;
+            if (updated) {
+                setKycData((prev) => ({ ...(prev || {}), ...updated }));
             }
-        });
+
+            setShowApprovePopup(false);
+
+            navigate('/admin/accounts', {
+                state: {
+                    activeTab: 'KYC Status',
+                    successMessage: 'Verification Approved Successfully!',
+                },
+            });
+        } catch (error) {
+            console.error('Failed to approve KYC:', error);
+            alert(error.message || 'Failed to approve KYC');
+        }
     };
 
-    const handleReject = () => {
-        // Logic to reject would go here
-        if (rejectReason.trim()) {
-            alert(`Rejected with reason: ${rejectReason}`);
+    const handleReject = async () => {
+        if (!rejectReason.trim()) return;
+
+        const userType = resolveUserType();
+        try {
+            const payload = {
+                userType,
+                status: 'REJECTED',
+                reviewStep: 0,
+                riskLevel: 'HIGH',
+                mismatchDetails: rejectReason.trim(),
+            };
+
+            const endpoint = API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+            const response = await httpClient.patch(endpoint, payload);
+
+            const updated = response?.data?.updated || response;
+            if (updated) {
+                setKycData((prev) => ({ ...(prev || {}), ...updated }));
+            }
+
             setShowRejectPopup(false);
-            navigate(-1);
+            navigate('/admin/accounts', {
+                state: {
+                    activeTab: 'KYC Status',
+                    successMessage: 'Verification Rejected Successfully!',
+                },
+            });
+        } catch (error) {
+            console.error('Failed to reject KYC:', error);
+            alert(error.message || 'Failed to reject KYC');
         }
     };
 
@@ -278,38 +446,47 @@ function ComplianceProfile() {
                 <div className="flex items-start justify-between">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-2xl font-bold text-gray-900">{userData.name}</h1>
-                            <span className="px-3 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-md">
-                                {userData.status}
-                            </span>
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                {isLoading ? 'Loading...' : userData.name}
+                            </h1>
+                            {!isLoading && (
+                                <span className="px-3 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-md">
+                                    {userData.status}
+                                </span>
+                            )}
                         </div>
-                        <p className="text-sm text-gray-600">
-                            {userData.role}: <span className="text-[#1e5a8f] font-semibold">{userData.company}</span>
-                        </p>
+                        {!isLoading && (
+                            <p className="text-sm text-gray-600">
+                                {userData.role}:{' '}
+                                <span className="text-[#1e5a8f] font-semibold">{userData.company}</span>
+                            </p>
+                        )}
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowResubmitPopup(true)}
-                            className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                            Request Resubmission
-                        </button>
-                        <button
-                            onClick={() => setShowRejectPopup(true)}
-                            className="px-4 py-2 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
-                        >
-                            Reject
-                        </button>
-                        <button
-                            onClick={() => setShowApprovePopup(true)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                            Approve Verification
-                        </button>
-                    </div>
+                    {/* Action Buttons (hidden when already approved) */}
+                    {!isApprovedStatus && (
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setShowResubmitPopup(true)}
+                                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Request Resubmission
+                            </button>
+                            <button
+                                onClick={() => setShowRejectPopup(true)}
+                                className="px-4 py-2 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                            >
+                                Reject
+                            </button>
+                            <button
+                                onClick={() => setShowApprovePopup(true)}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                            >
+                                <CheckCircle className="h-4 w-4" />
+                                Approve Verification
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Progress Stepper */}
@@ -317,7 +494,11 @@ function ComplianceProfile() {
                     <div className="relative">
                         {/* Progress Line */}
                         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200"></div>
-                        <div className="absolute top-5 left-0 w-2/4 h-0.5 bg-green-500"></div>
+                        <div
+                            className={`absolute top-5 left-0 h-0.5 bg-green-500 ${
+                                isApprovedStatus ? 'right-0' : 'w-2/4'
+                            }`}
+                        ></div>
 
                         <div className="relative flex justify-between">
                             {/* Account Approved */}
@@ -338,18 +519,46 @@ function ComplianceProfile() {
 
                             {/* Document Review */}
                             <div className="flex flex-col items-center">
-                                <div className="w-10 h-10 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center mb-2">
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <div
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                                        isApprovedStatus ? 'bg-green-500' : 'bg-white border-2 border-blue-500'
+                                    }`}
+                                >
+                                    {isApprovedStatus ? (
+                                        <CheckCircle className="h-5 w-5 text-white" />
+                                    ) : (
+                                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                    )}
                                 </div>
-                                <span className="text-xs font-bold text-gray-900">Document Review</span>
+                                <span
+                                    className={`text-xs font-bold ${
+                                        isApprovedStatus ? 'text-green-600' : 'text-gray-900'
+                                    }`}
+                                >
+                                    Document Review
+                                </span>
                             </div>
 
                             {/* Cleared */}
                             <div className="flex flex-col items-center">
-                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2">
-                                    <span className="text-xs text-gray-400">4</span>
+                                <div
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                                        isApprovedStatus ? 'bg-green-500' : 'bg-gray-100'
+                                    }`}
+                                >
+                                    {isApprovedStatus ? (
+                                        <CheckCircle className="h-5 w-5 text-white" />
+                                    ) : (
+                                        <span className="text-xs text-gray-400">4</span>
+                                    )}
                                 </div>
-                                <span className="text-xs font-bold text-gray-400">Cleared</span>
+                                <span
+                                    className={`text-xs font-bold ${
+                                        isApprovedStatus ? 'text-green-600' : 'text-gray-400'
+                                    }`}
+                                >
+                                    Cleared
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -408,30 +617,57 @@ function ComplianceProfile() {
 
                         {/* Document Images */}
                         <div className="grid grid-cols-2 gap-4">
-                            {/* Spanish ID Card */}
-                            <div
-                                className="bg-gray-50 rounded-xl p-6 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group relative overflow-hidden"
-                                onClick={handleViewDocument}
+                            {/* ID Front */}
+                            <button
+                                type="button"
+                                className="bg-gray-50 rounded-xl p-6 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group relative overflow-hidden text-left"
+                                onClick={() => handleViewDocument('front')}
+                                disabled={!userData.documentFrontUrl}
                             >
-                                <div className="aspect-[3/2] bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center relative">
-                                    <div className="text-center">
-                                        <div className="text-xs text-gray-500 mb-2">ESPAÑA 🇪🇸</div>
-                                        <div className="text-lg font-bold text-gray-700 mb-1">VEGA</div>
-                                        <div className="text-sm font-semibold text-gray-700 mb-2">CARLOS ANDRES</div>
-                                        <div className="text-xs text-gray-500">15-04-2028</div>
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                        <Eye className="opacity-0 group-hover:opacity-100 text-white w-8 h-8 drop-shadow-md transition-opacity" />
-                                    </div>
+                                <div className="aspect-[3/2] bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                    {userData.documentFrontUrl ? (
+                                        <img
+                                            src={userData.documentFrontUrl}
+                                            alt="ID front"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs text-gray-500">No front document uploaded</span>
+                                    )}
+                                    {userData.documentFrontUrl && (
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <Eye className="opacity-0 group-hover:opacity-100 text-white w-8 h-8 drop-shadow-md transition-opacity" />
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                                <div className="mt-2 text-xs font-medium text-gray-600">ID Document - Front</div>
+                            </button>
 
-                            {/* Photo */}
-                            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                                <div className="aspect-[3/2] bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg flex items-center justify-center">
-                                    <div className="text-6xl">👤</div>
+                            {/* Selfie */}
+                            <button
+                                type="button"
+                                className="bg-gray-50 rounded-xl p-6 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group relative overflow-hidden text-left"
+                                onClick={() => handleViewDocument('selfie')}
+                                disabled={!userData.selfieUrl}
+                            >
+                                <div className="aspect-[3/2] bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                    {userData.selfieUrl ? (
+                                        <img
+                                            src={userData.selfieUrl}
+                                            alt="Selfie"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs text-gray-500">No selfie uploaded</span>
+                                    )}
+                                    {userData.selfieUrl && (
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <Eye className="opacity-0 group-hover:opacity-100 text-white w-8 h-8 drop-shadow-md transition-opacity" />
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                                <div className="mt-2 text-xs font-medium text-gray-600">Selfie</div>
+                            </button>
                         </div>
                     </div>
 
@@ -484,24 +720,12 @@ function ComplianceProfile() {
                             <div>
                                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Issuing Country</label>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-gray-900">{userData.issuingCountry}</span>
-                                    <span>🇪🇸</span>
+                                    <span className="text-sm font-semibold text-gray-900">{userData.issuingCountry || 'N/A'}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Mismatch Warning */}
-                        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                            <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <div className="flex-1">
-                                <div className="text-sm font-bold text-yellow-900 mb-1">Detected mismatch</div>
-                                <div className="text-sm text-yellow-700">
-                                    The expiry date on the document (2028) differs from the user input (2035). Please verify.
-                                </div>
-                            </div>
-                        </div>
+                        {/* Mismatch alert removed – will be driven by backend flags if needed */}
                     </div>
                 </div>
 

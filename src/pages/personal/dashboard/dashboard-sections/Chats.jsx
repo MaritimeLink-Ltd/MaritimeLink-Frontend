@@ -2,6 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Building2, ArrowUp, ArrowLeft } from 'lucide-react';
 
 const Chats = ({ onViewJob }) => {
+  const adminVerified = (localStorage.getItem('adminVerified') === 'true');
+
+  if (!adminVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="max-w-xl text-center px-4 py-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
+            Welcome to MaritimeLink
+          </h1>
+          <p className="text-gray-600 mb-2">
+            Thanks for joining us.
+          </p>
+          <p className="text-gray-500 text-sm md:text-base">
+            Chat with recruiters and training providers will be available
+            once your account has been verified by our admin team.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const [selectedChat, setSelectedChat] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [showChatList, setShowChatList] = useState(true); // For mobile toggle

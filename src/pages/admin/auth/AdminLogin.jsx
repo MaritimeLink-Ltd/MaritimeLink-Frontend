@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function AdminLogin() {
     const navigate = useNavigate();
@@ -32,35 +33,24 @@ function AdminLogin() {
         setLoading(true);
 
         try {
-            // TODO: Implement login API call
-            console.log('Login submitted:', formData);
+            const response = await authService.loginAdmin({
+                email: formData.email,
+                password: formData.password,
+            });
 
-            // Simulate different user types based on email domain for demo
-            let userType = 'admin'; // default
-
-            if (formData.email.includes('recruiter') || formData.email.includes('agent')) {
-                userType = 'recruiter';
-            } else if (formData.email.includes('training') || formData.email.includes('provider')) {
-                userType = 'training-provider';
-            } else if (formData.email.includes('admin') || formData.email.includes('super')) {
-                userType = 'admin';
+            if (!response || (!response.token && !response.data?.token)) {
+                setError('Login failed. Please check your credentials.');
+                return;
             }
 
-            // Store user type in localStorage
-            localStorage.setItem('userType', userType);
+            localStorage.setItem('userType', 'admin');
             localStorage.setItem('userEmail', formData.email);
 
-            // Navigate based on user type
-            if (userType === 'admin') {
-                navigate('/admin-dashboard');
-            } else if (userType === 'training-provider') {
-                navigate('/trainingprovider-dashboard');
-            } else if (userType === 'recruiter') {
-                navigate('/recruiter-dashboard');
-            }
+            navigate('/admin-dashboard');
         } catch (err) {
             console.error('Login error:', err);
-            setError(err.message || 'Login failed. Please check your credentials.');
+            const message = err?.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
+            setError(message);
         } finally {
             setLoading(false);
         }

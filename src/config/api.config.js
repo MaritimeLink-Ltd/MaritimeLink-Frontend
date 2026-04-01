@@ -73,7 +73,22 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: '/api/recruiter/forgot-password',
     RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
     UPDATE_PASSWORD: '/api/recruiter/update-password',
-  }
+  },
+  // Recruiter KYC Endpoints
+  RECRUITER_KYC: {
+    UPLOAD_DOCUMENT: '/api/recruiter/kyc/upload-document',
+    SUBMIT: '/api/recruiter/kyc/submit',
+    UPLOAD_SELFIE: '/api/recruiter/kyc/upload-selfie',
+  },
+  // Admin Endpoints
+  ADMIN: {
+    LOGIN: '/api/admin/login',
+    KYC_SUBMISSIONS: '/api/admin/kyc-submissions',
+    KYC_SUBMISSION_DETAIL: (id) => `/api/admin/kyc-submissions/${id}`,
+    KYC_UPDATE_STATUS: (id) => `/api/admin/kyc-submissions/${id}/status`,
+    KYC_ADD_NOTE: (id) => `/api/admin/kyc-submissions/${id}/notes`,
+    KYC_STATS: '/api/admin/kyc/stats',
+  },
 };
 
 export default API_CONFIG;

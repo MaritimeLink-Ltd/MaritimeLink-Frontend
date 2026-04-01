@@ -114,6 +114,40 @@ class KycService {
     }
 
     /**
+     * Recruiter KYC details.
+     * Uses dedicated recruiter KYC submit endpoint.
+     */
+    async submitRecruiterKycDetails(data) {
+        try {
+            const payload = {
+                ...data,
+                documentType: mapKycDocumentTypeToApi(data.documentType),
+            };
+
+            const response = await httpClient.request(API_ENDPOINTS.RECRUITER_KYC.SUBMIT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter KYC Submit error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Training provider KYC details wrapper.
+     * Currently delegates to the professional KYC endpoint until dedicated
+     * provider KYC routes are available.
+     */
+    async submitTrainingProviderKycDetails(data) {
+        // TODO: switch to dedicated training-provider KYC endpoint when backend is ready.
+        return this.submitKycDetails(data);
+    }
+
+    /**
      * Step 3 - Upload Selfie
      * @param {string} professionalId - Professional ID
      * @param {File} selfie - Selfie image file
@@ -135,6 +169,37 @@ class KycService {
             console.error('KYC Upload Selfie error:', error);
             throw error;
         }
+    }
+
+    /**
+     * Recruiter selfie upload.
+     * Uses dedicated recruiter KYC selfie endpoint.
+     */
+    async uploadRecruiterSelfie(recruiterId, selfie) {
+        try {
+            const formData = new FormData();
+            formData.append('recruiterId', recruiterId);
+            formData.append('selfie', selfie);
+
+            const response = await httpClient.request(API_ENDPOINTS.RECRUITER_KYC.UPLOAD_SELFIE, {
+                method: 'POST',
+                body: formData,
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Recruiter KYC Upload Selfie error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Training provider selfie upload wrapper.
+     * Delegates to the professional selfie endpoint for now.
+     */
+    async uploadTrainingProviderSelfie(trainingProviderId, selfie) {
+        // TODO: replace with training-provider-specific selfie endpoint.
+        return this.uploadSelfie(trainingProviderId, selfie);
     }
 }
 

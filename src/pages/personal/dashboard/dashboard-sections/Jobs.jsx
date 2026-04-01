@@ -4,6 +4,27 @@ import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Ch
 
 const Jobs = () => {
     const navigate = useNavigate();
+
+    // If user is not yet verified by admin, show a simple locked message.
+    const adminVerified = (localStorage.getItem('adminVerified') === 'true');
+    if (!adminVerified) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="max-w-xl text-center px-4 py-10">
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
+                        Welcome to MaritimeLink
+                    </h1>
+                    <p className="text-gray-600 mb-2">
+                        Thanks for joining us.
+                    </p>
+                    <p className="text-gray-500 text-sm md:text-base">
+                        Your account is awaiting verification by our admin team.
+                        Once you are verified, job recommendations and applications will be available here.
+                    </p>
+                </div>
+            </div>
+        );
+    }
     const [selectedJob, setSelectedJob] = useState(null);
     const [appliedJobs, setAppliedJobs] = useState(new Set());
     const [savedJobs, setSavedJobs] = useState(new Set());

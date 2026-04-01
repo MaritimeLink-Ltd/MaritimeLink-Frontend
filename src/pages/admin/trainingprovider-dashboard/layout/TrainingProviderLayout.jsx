@@ -20,6 +20,11 @@ function TrainingProviderLayout() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+    const isTrainingProviderVerified = typeof window !== 'undefined' && localStorage.getItem('trainingProviderAdminVerified') === 'true';
+    const isRestrictedTrainingRoute = ['/trainingprovider/demand', '/trainingprovider/courses', '/trainingprovider/bookings', '/trainingprovider/chats'].some(
+        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+    );
+
     const isActive = (path) => location.pathname === path || (path === '/trainingprovider/demand' && ['/trainingprovider/expiries-overview', '/trainingprovider/expiries'].includes(location.pathname));
 
     const handleLogoutClick = () => {
@@ -169,7 +174,24 @@ function TrainingProviderLayout() {
 
                 {/* Main Page Content */}
                 <main className="flex-1 overflow-y-auto bg-[#F5F7FA] p-4 md:p-6 lg:p-8">
-                    <Outlet />
+                    {!isTrainingProviderVerified && isRestrictedTrainingRoute ? (
+                        <div className="h-full flex items-center justify-center">
+                            <div className="max-w-2xl text-center space-y-3">
+                                <h1 className="text-3xl md:text-4xl font-bold text-[#003971]">
+                                    Welcome to MaritimeLink
+                                </h1>
+                                <p className="text-gray-600">
+                                    Thanks for joining us.
+                                </p>
+                                <p className="text-gray-500 text-sm md:text-base">
+                                    These training provider features will become available once your account has been
+                                    verified by our admin team.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <Outlet />
+                    )}
                 </main>
             </div>
 

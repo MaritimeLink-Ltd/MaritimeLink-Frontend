@@ -17,60 +17,37 @@ import VerifyDetailsModal from '../../../components/modals/VerifyDetailsModal';
 import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
+import { useKycWizard } from '../../../hooks/useKycWizard';
 
 function RecruiterDashboard({ onNavigate }) {
     const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // KYC Modal States
-    const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(true);
-    const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
-    const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
-    const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
-    const [showTakeSelfieModal, setShowTakeSelfieModal] = useState(false);
-    const [showProcessingModal, setShowProcessingModal] = useState(false);
-    const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
-    const [selectedDocumentType, setSelectedDocumentType] = useState(null);
-
-    // KYC Flow Handlers
-    const handleStartVerification = () => {
-        setShowVerifyIdentityModal(false);
-        setShowSelectDocumentModal(true);
-    };
-
-    const handleSelectDocument = (docType) => {
-        setSelectedDocumentType(docType);
-        setShowSelectDocumentModal(false);
-        setShowUploadDocumentModal(true);
-    };
-
-    const handleDocumentUploaded = () => {
-        setShowUploadDocumentModal(false);
-        setShowVerifyDetailsModal(true);
-    };
-
-    const handleDetailsVerified = () => {
-        setShowVerifyDetailsModal(false);
-        setShowTakeSelfieModal(true);
-    };
-
-    const handleSelfieTaken = () => {
-        setShowTakeSelfieModal(false);
-        setShowProcessingModal(true);
-        setTimeout(() => {
-            setShowProcessingModal(false);
-            setShowVerificationSubmittedModal(true);
-        }, 3000);
-    };
-
-    const handleVerificationComplete = () => {
-        setShowVerificationSubmittedModal(false);
-    };
-
-    const handleSkipVerification = () => {
-        setShowVerifyIdentityModal(false);
-    };
+    const {
+        kycStatus,
+        isKycUnderReview,
+        hasFullAccess,
+        ui: {
+            showVerifyIdentityModal,
+            showSelectDocumentModal,
+            showUploadDocumentModal,
+            showVerifyDetailsModal,
+            showTakeSelfieModal,
+            showProcessingModal,
+            showVerificationSubmittedModal,
+            selectedDocumentType,
+        },
+        actions: {
+            handleStartVerification,
+            handleSelectDocument,
+            handleDocumentUploaded,
+            handleDetailsVerified,
+            handleSelfieTaken,
+            handleVerificationComplete,
+            handleSkipVerification,
+        },
+    } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
 
     // Refresh handler
     const handleRefresh = () => {
@@ -226,6 +203,50 @@ function RecruiterDashboard({ onNavigate }) {
         }
     };
 
+    const isPreKyc = !kycStatus || kycStatus === 'pending' || kycStatus === 'rejected' || kycStatus === 'skipped';
+
+    const renderKycGate = () => {
+        if (isKycUnderReview) {
+            return (
+                <div className="h-full flex items-center justify-center p-8">
+                    <div className="max-w-2xl text-center">
+                        <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
+                            Welcome to MaritimeLink
+                        </h1>
+                        <p className="text-gray-600 mb-2">Thanks for submitting your KYC details.</p>
+                        <p className="text-gray-500">
+                            Your information and documents are currently under review by our team.
+                            Once verification is complete, you will be granted full access to your recruiter dashboard.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="h-full flex items-center justify-center p-8">
+                <div className="max-w-2xl text-center space-y-4">
+                    <h1 className="text-3xl md:text-4xl font-bold text-[#003971]">
+                        Welcome to MaritimeLink
+                    </h1>
+                    <p className="text-gray-600">Thanks for joining us.</p>
+                    <p className="text-gray-500">
+                        To protect your company and professionals on the platform, we need to verify your identity
+                        and company details. Complete your KYC to unlock all recruiter features.
+                    </p>
+                    <div className="pt-2">
+                        <button
+                            onClick={handleStartVerification}
+                            className="inline-flex items-center px-6 py-3 rounded-full bg-[#003971] text-white font-semibold text-sm hover:bg-[#002855] transition-colors"
+                        >
+                            Start verification
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
             {/* Header Section */}
@@ -264,183 +285,185 @@ function RecruiterDashboard({ onNavigate }) {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat) => (
-                    <div
-                        key={stat.id}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden`}
-                    >
-                        <div className="relative z-10 flex flex-col h-full">
-                            {/* Top Row: Icon + Optional Calendar */}
-                            <div className="flex items-start justify-between mb-6">
-                                <div className={`p-3 rounded-2xl ${stat.iconBg}`}>
-                                    <stat.icon className="h-6 w-6 text-white" />
-                                </div>
-                                {stat.topIcon && (
-                                    <stat.topIcon className="h-5 w-5 text-white/40" />
-                                )}
-                            </div>
-
-                            {/* Bottom Content */}
-                            <div className="mt-auto">
-                                <div className="text-4xl font-extrabold mb-2 tracking-tight">{stat.value}</div>
-                                <div className="font-bold text-base leading-snug mb-1">{stat.title}</div>
-                                <div className="text-sm text-white/70 font-medium">{stat.subtext}</div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Left Column: Action Required */}
-                <div className="flex-1 space-y-5">
-                    <h2 className="text-lg font-bold text-gray-900">Action Required</h2>
-
-                    <div className="space-y-4">
-                        {actionItems.map((item) => (
-                            <div key={item.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className={`p-3 rounded-xl ${item.iconBg} flex-shrink-0`}>
-                                        <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+            {hasFullAccess ? (
+                <>
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {stats.map((stat) => (
+                            <div
+                                key={stat.id}
+                                className={`bg-gradient-to-br ${stat.gradient} rounded-[28px] p-7 text-white shadow-xl relative overflow-hidden`}
+                            >
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex items-start justify-between mb-6">
+                                        <div className={`p-3 rounded-2xl ${stat.iconBg}`}>
+                                            <stat.icon className="h-6 w-6 text-white" />
+                                        </div>
+                                        {stat.topIcon && (
+                                            <stat.topIcon className="h-5 w-5 text-white/40" />
+                                        )}
                                     </div>
-                                    <span className="text-gray-900 font-medium text-sm">{item.text}</span>
+
+                                    <div className="mt-auto">
+                                        <div className="text-4xl font-extrabold mb-2 tracking-tight">{stat.value}</div>
+                                        <div className="font-bold text-base leading-snug mb-1">{stat.title}</div>
+                                        <div className="text-sm text-white/70 font-medium">{stat.subtext}</div>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        if (item.jobId) {
-                                            if (item.isEdit) {
-                                                // Navigate to edit job
-                                                navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true, dashboardType: 'recruiter' } });
-                                            } else {
-                                                // Navigate to job detail
-                                                navigate(`/admin/jobs/${item.jobId}`);
-                                            }
-                                        } else {
-                                            handleNavigate(item.section);
-                                        }
-                                    }}
-                                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
-                                        ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
-                                        : 'bg-[#003971] text-white hover:bg-[#002855]'
-                                        } flex items-center gap-2`}>
-                                    {item.actionText}
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
                             </div>
                         ))}
                     </div>
-                </div>
 
-                {/* Right Column: Insights */}
-                <div className="lg:w-1/3">
-                    <div className="bg-gray-50/70 rounded-2xl p-6 h-full border border-gray-100">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="text-orange-500">
-                                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                                </svg>
+                    <div className="flex flex-col lg:flex-row gap-8">
+                        {/* Left Column: Action Required */}
+                        <div className="flex-1 space-y-5">
+                            <h2 className="text-lg font-bold text-gray-900">Action Required</h2>
+
+                            <div className="space-y-4">
+                                {actionItems.map((item) => (
+                                    <div key={item.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className={`p-3 rounded-xl ${item.iconBg} flex-shrink-0`}>
+                                                <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                                            </div>
+                                            <span className="text-gray-900 font-medium text-sm">{item.text}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (item.jobId) {
+                                                    if (item.isEdit) {
+                                                        navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true, dashboardType: 'recruiter' } });
+                                                    } else {
+                                                        navigate(`/admin/jobs/${item.jobId}`);
+                                                    }
+                                                } else {
+                                                    handleNavigate(item.section);
+                                                }
+                                            }}
+                                            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
+                                                ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                                                : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                                } flex items-center gap-2`}>
+                                            {item.actionText}
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
-                            <h2 className="text-sm font-bold text-gray-900">Insight: Popular Searches</h2>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
-                            {popularSearches.map((search, index) => (
-                                <div
-                                    key={index}
-                                    onClick={() => handlePopularSearchClick(search)}
-                                    className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-gray-400 font-bold text-sm w-4">{index + 1}.</span>
-                                        <span className="text-gray-900 font-bold text-sm">{search}</span>
+                        {/* Right Column: Insights */}
+                        <div className="lg:w-1/3">
+                            <div className="bg-gray-50/70 rounded-2xl p-6 h-full border border-gray-100">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <div className="text-orange-500">
+                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                            <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                                        </svg>
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-gray-300" />
+                                    <h2 className="text-sm font-bold text-gray-900">Insight: Popular Searches</h2>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+                                    {popularSearches.map((search, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => handlePopularSearchClick(search)}
+                                            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-gray-400 font-bold text-sm w-4">{index + 1}.</span>
+                                                <span className="text-gray-900 font-bold text-sm">{search}</span>
+                                            </div>
+                                            <ChevronRight className="h-4 w-4 text-gray-300" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Jobs at a Glance */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
+                            <button
+                                onClick={() => handleNavigate('jobs')}
+                                className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1"
+                            >
+                                View All Jobs &gt;
+                            </button>
+                        </div>
+
+                        <div className="divide-y divide-gray-50">
+                            <div className="grid grid-cols-12 px-8 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                <div className="col-span-6">Job Title</div>
+                                <div className="col-span-3">Status / Applicants</div>
+                                <div className="col-span-3 text-right">Matches (Not Applied)</div>
+                            </div>
+
+                            {jobs.map((job) => (
+                                <div key={job.id} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors">
+                                    <div className="col-span-6 flex items-center gap-4">
+                                        <img
+                                            src={job.image}
+                                            alt={job.title}
+                                            className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
+                                        />
+                                        <div>
+                                            <button
+                                                onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
+                                                className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
+                                            >
+                                                {job.title}
+                                            </button>
+                                            <p className="text-xs text-gray-500 font-medium">{job.type}</p>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-3">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${job.status === 'Active'
+                                            ? 'bg-teal-50 text-teal-600'
+                                            : job.status === 'Ending Soon'
+                                                ? 'bg-orange-50 text-orange-600'
+                                                : 'bg-gray-100 text-gray-600'
+                                            }`}>
+                                            {job.status}
+                                        </span>
+                                    </div>
+                                    <div className="col-span-3 flex justify-end">
+                                        {job.status === 'Draft' ? (
+                                            <button
+                                                onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true, dashboardType: 'recruiter' } })}
+                                                className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
+                                            >
+                                                Edit Draft
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
+                                                className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                            >
+                                                {job.matches} <ChevronRight className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Jobs at a Glance */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
-                    <button
-                        onClick={() => handleNavigate('jobs')}
-                        className="text-sm font-bold text-[#003971] hover:underline flex items-center gap-1"
-                    >
-                        View All Jobs &gt;
-                    </button>
-                </div>
-
-                <div className="divide-y divide-gray-50">
-                    <div className="grid grid-cols-12 px-8 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        <div className="col-span-6">Job Title</div>
-                        <div className="col-span-3">Status / Applicants</div>
-                        <div className="col-span-3 text-right">Matches (Not Applied)</div>
-                    </div>
-
-                    {jobs.map((job) => (
-                        <div key={job.id} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors">
-                            <div className="col-span-6 flex items-center gap-4">
-                                <img
-                                    src={job.image}
-                                    alt={job.title}
-                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
-                                />
-                                <div>
-                                    <button
-                                        onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
-                                        className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
-                                    >
-                                        {job.title}
-                                    </button>
-                                    <p className="text-xs text-gray-500 font-medium">{job.type}</p>
-                                </div>
-                            </div>
-                            <div className="col-span-3">
-                                <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${job.status === 'Active'
-                                    ? 'bg-teal-50 text-teal-600'
-                                    : job.status === 'Ending Soon'
-                                        ? 'bg-orange-50 text-orange-600'
-                                        : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                    {job.status}
-                                </span>
-                            </div>
-                            <div className="col-span-3 flex justify-end">
-                                {job.status === 'Draft' ? (
-                                    <button
-                                        onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true, dashboardType: 'recruiter' } })}
-                                        className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
-                                    >
-                                        Edit Draft
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
-                                        className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                    >
-                                        {job.matches} <ChevronRight className="h-3.5 w-3.5" />
-                                    </button>
-                                )}
-                            </div>
+                        <div className="px-8 py-5 border-t border-gray-100 text-center">
+                            <button
+                                onClick={() => handleNavigate('jobs')}
+                                className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"
+                            >
+                                View All Jobs <ChevronRight className="h-4 w-4" />
+                            </button>
                         </div>
-                    ))}
-                </div>
-
-                <div className="px-8 py-5 border-t border-gray-100 text-center">
-                    <button
-                        onClick={() => handleNavigate('jobs')}
-                        className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"
-                    >
-                        View All Jobs <ChevronRight className="h-4 w-4" />
-                    </button>
-                </div>
-            </div>
+                    </div>
+                </>
+            ) : (
+                renderKycGate()
+            )}
 
             {/* KYC Modals */}
             <VerifyIdentityModal

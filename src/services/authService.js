@@ -510,6 +510,33 @@ class AuthService {
     }
 
     /**
+     * Admin Login
+     * @param {Object} credentials
+     * @param {string} credentials.email
+     * @param {string} credentials.password
+     * @returns {Promise<Object>} Response shape: { status, token }
+     */
+    async loginAdmin(credentials) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.ADMIN.LOGIN, {
+                email: credentials.email,
+                password: credentials.password,
+            });
+
+            if (response?.token || response?.data?.token) {
+                const token = response.token || response.data.token;
+                localStorage.setItem('authToken', token);
+                localStorage.setItem('adminUserType', 'admin');
+            }
+
+            return response;
+        } catch (error) {
+            console.error('Admin Login error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Forgot Password - Request a password reset link
      * @param {string} email - User's email
      * @returns {Promise<Object>} Response shape: { status, message }

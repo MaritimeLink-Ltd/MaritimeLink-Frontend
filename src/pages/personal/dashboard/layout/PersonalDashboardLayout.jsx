@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     Home,
@@ -59,8 +59,36 @@ function PersonalDashboardLayout() {
 
     const isActive = (path) => location.pathname === path;
 
+    // Admin verification state for professionals
+    const isVerifiedByAdmin = useMemo(() => {
+        // Primary flag that can be set after backoffice approval
+        const adminFlag = localStorage.getItem('adminVerified');
+        if (adminFlag === 'true') return true;
+
+        // Backwards compatibility: if you already use kycStatus === 'approved' we also treat as verified
+        const kycStatus = localStorage.getItem('kycStatus');
+        if (kycStatus && (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified')) {
+            return true;
+        }
+
+        return false;
+    }, []);
+
     // Check if current page is my-jobs or saved-courses page
     const isFullScreenPage = location.pathname === '/personal/my-jobs' || location.pathname === '/personal/saved-courses';
+
+    // Pages that are always allowed even before admin verification
+    const isAlwaysAllowedPath = useMemo(() => {
+        const path = location.pathname;
+        // KYC dashboard (shows verification dialogs)
+        if (path === '/personal/dashboard') return true;
+        // Resume view
+        if (path === '/personal/resume') return true;
+        // Document wallet and nested document views
+        if (path === '/personal/documents') return true;
+        if (path.startsWith('/personal/documents/')) return true;
+        return false;
+    }, [location.pathname]);
 
     const handleLogout = () => {
         // Clear any stored user data

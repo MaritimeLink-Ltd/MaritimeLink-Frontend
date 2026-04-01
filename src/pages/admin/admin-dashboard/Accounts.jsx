@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, ChevronDown, UserCheck, AlertTriangle, Shield, RefreshCw, Download, CheckCircle } from 'lucide-react';
+import httpClient from '../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../config/api.config';
 
 function Accounts() {
     const location = useLocation();
@@ -21,6 +23,15 @@ function Accounts() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showExportNotification, setShowExportNotification] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [kycSubmissions, setKycSubmissions] = useState([]);
+    const [isLoadingKyc, setIsLoadingKyc] = useState(false);
+    const [kycError, setKycError] = useState('');
+    const [kycSummary, setKycSummary] = useState({
+        total: 0,
+        pending: 0,
+        highRisk: 0,
+        verified: 0,
+    });
 
     useEffect(() => {
         if (location.state?.successMessage) {
@@ -50,6 +61,95 @@ function Accounts() {
 
     const tabs = ['Recruiters', 'Training Providers', 'Professionals', 'KYC Status'];
     const isProfessionalTab = activeTab === 'Professionals';
+
+    const mapKycStatusLabel = (status) => {
+        if (!status) return 'Unknown';
+        const upper = status.toUpperCase();
+        if (upper === 'PENDING') return 'Under Review';
+        if (upper === 'APPROVED') return 'KYC Approved';
+        if (upper === 'REJECTED') return 'Rejected';
+        if (upper === 'DOCUMENTS_PENDING') return 'Documents Pending';
+        return status
+            .toLowerCase()
+            .split('_')
+            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+            .join(' ');
+    };
+
+    const mapKycStatusColor = (status) => {
+        if (!status) return 'text-gray-600';
+        const upper = status.toUpperCase();
+        if (upper === 'PENDING' || upper === 'UNDER_REVIEW') return 'text-blue-500';
+        if (upper === 'APPROVED') return 'text-green-500';
+        if (upper === 'REJECTED') return 'text-red-500';
+        if (upper === 'DOCUMENTS_PENDING') return 'text-orange-500';
+        return 'text-gray-600';
+    };
+
+    const fetchKycSubmissions = async () => {
+        setIsLoadingKyc(true);
+        setKycError('');
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.ADMIN.KYC_SUBMISSIONS);
+            const submissions = response?.data?.submissions || [];
+
+            const mappedSubmissions = submissions.map((item) => ({
+                id: item.id,
+                userType: item.userType, // PROFESSIONAL | RECRUITER | TRAINING_PROVIDER
+                name: item.name || 'Unknown',
+                company: item.companyName || (item.userType === 'PROFESSIONAL' ? 'Individual' : 'N/A'),
+                domain: item.email || 'N/A',
+                country: item.userType || 'N/A',
+                tier: item.riskLevel || 'N/A',
+                lastActive: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'N/A',
+                status: mapKycStatusLabel(item.status),
+                statusColor: mapKycStatusColor(item.status),
+            }));
+
+            setKycSubmissions(mappedSubmissions);
+
+            const total = typeof response.total === 'number' ? response.total : submissions.length;
+
+            // Fetch consolidated stats (pending, high risk, verified)
+            try {
+                const statsResponse = await httpClient.get(API_ENDPOINTS.ADMIN.KYC_STATS);
+                const statsData = statsResponse?.data || statsResponse || {};
+
+                setKycSummary({
+                    total,
+                    pending: statsData.pending || 0,
+                    highRisk: statsData.highRisk || 0,
+                    verified: statsData.verified || 0,
+                });
+            } catch (statsError) {
+                console.error('Failed to load KYC stats:', statsError);
+                setKycSummary({
+                    total,
+                    pending: 0,
+                    highRisk: 0,
+                    verified: 0,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load KYC submissions:', error);
+            setKycError(error.message || 'Failed to load KYC submissions');
+            setKycSubmissions([]);
+            setKycSummary({
+                total: 0,
+                pending: 0,
+                highRisk: 0,
+                verified: 0,
+            });
+        } finally {
+            setIsLoadingKyc(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'KYC Status') {
+            fetchKycSubmissions();
+        }
+    }, [activeTab]);
 
     // Tab-specific data
     const recruitersData = [
@@ -259,74 +359,7 @@ function Accounts() {
         }))
     ];
 
-    const kycStatusData = [
-        {
-            id: 'KYC001',
-            name: 'Pacific Shipping Co.',
-            company: 'Pacific Shipping',
-            domain: 'pacificship.com',
-            country: 'USA',
-            tier: 'Pro',
-            lastActive: '1 hour ago',
-            status: 'Documents Pending',
-            statusColor: 'text-orange-500'
-        },
-        {
-            id: 'KYC002',
-            name: 'Atlantic Marine Services',
-            company: 'Atlantic Marine',
-            domain: 'atlanticmarine.com',
-            country: 'UK',
-            tier: 'Pro',
-            lastActive: '3 hours ago',
-            status: 'Under Review',
-            statusColor: 'text-blue-500'
-        },
-        {
-            id: 'KYC003',
-            name: 'Mediterranean Crew',
-            company: 'Med Crew Ltd',
-            domain: 'medcrew.com',
-            country: 'Greece',
-            tier: 'Free',
-            lastActive: '1 day ago',
-            status: 'KYC Approved',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'KYC004',
-            name: 'Nordic Maritime',
-            company: 'Nordic Maritime AS',
-            domain: 'nordicmaritime.no',
-            country: 'Norway',
-            tier: 'Pro',
-            lastActive: '2 days ago',
-            status: 'Rejected',
-            statusColor: 'text-red-500'
-        },
-        {
-            id: 'KYC005',
-            name: 'Asian Seafarers Hub',
-            company: 'Asian Seafarers',
-            domain: 'asianseafarers.com',
-            country: 'Singapore',
-            tier: 'Free',
-            lastActive: '3 days ago',
-            status: 'Documents Pending',
-            statusColor: 'text-orange-500'
-        },
-        ...Array(12).fill(null).map((_, i) => ({
-            id: `KYC${String(i + 6).padStart(3, '0')}`,
-            name: `Company ${i + 6}`,
-            company: `Company ${i + 6} Ltd`,
-            domain: `company${i + 6}.com`,
-            country: ['USA', 'UK', 'Singapore', 'Norway', 'Greece'][i % 5],
-            tier: i % 2 === 0 ? 'Pro' : 'Free',
-            lastActive: `${i + 4} days ago`,
-            status: ['Documents Pending', 'Under Review', 'KYC Approved', 'Rejected'][i % 4],
-            statusColor: ['text-orange-500', 'text-blue-500', 'text-green-500', 'text-red-500'][i % 4]
-        }))
-    ];
+    const kycStatusData = kycSubmissions;
 
     // Get current tab data
     const getCurrentTabData = () => {
@@ -457,36 +490,36 @@ function Accounts() {
             case 'KYC Status':
                 return [
                     {
-                        value: '245',
+                        value: kycSummary.total.toString(),
                         label: 'Total Submissions',
-                        sublabel: '+18 today',
+                        sublabel: '+0 today',
                         icon: UserCheck,
                         iconColor: 'text-blue-500',
                         iconBg: 'bg-blue-50'
                     },
                     {
-                        value: '42',
-                        label: 'Documents Pending',
-                        sublabel: 'Awaiting upload',
+                        value: kycSummary.pending.toString(),
+                        label: 'Pending',
+                        sublabel: 'Awaiting review',
                         icon: UserCheck,
                         iconColor: 'text-orange-500',
                         iconBg: 'bg-orange-50'
                     },
                     {
-                        value: '178',
-                        label: 'KYC Approved',
-                        sublabel: 'Last 30 days',
+                        value: kycSummary.highRisk.toString(),
+                        label: 'High Risk',
+                        sublabel: 'Requires attention',
                         icon: Shield,
-                        iconColor: 'text-green-500',
-                        iconBg: 'bg-green-50'
+                        iconColor: 'text-red-500',
+                        iconBg: 'bg-red-50'
                     },
                     {
-                        value: '15',
-                        label: 'Under Review',
-                        sublabel: 'In progress',
+                        value: kycSummary.verified.toString(),
+                        label: 'Verified',
+                        sublabel: 'KYC approved',
                         icon: AlertTriangle,
-                        iconColor: 'text-blue-500',
-                        iconBg: 'bg-blue-50'
+                        iconColor: 'text-green-500',
+                        iconBg: 'bg-green-50'
                     }
                 ];
             default:
@@ -504,6 +537,14 @@ function Accounts() {
     // Refresh handler
     const handleRefresh = () => {
         setIsRefreshing(true);
+
+        if (activeTab === 'KYC Status') {
+            fetchKycSubmissions().finally(() => {
+                setIsRefreshing(false);
+            });
+            return;
+        }
+
         setTimeout(() => {
             setIsRefreshing(false);
         }, 1000);
@@ -958,7 +999,19 @@ function Accounts() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                            {paginatedAccounts.length > 0 ? (
+                            {activeTab === 'KYC Status' && isLoadingKyc ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                        Loading KYC submissions...
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'KYC Status' && kycError ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                        {kycError}
+                                    </td>
+                                </tr>
+                            ) : paginatedAccounts.length > 0 ? (
                                 paginatedAccounts.map((account, index) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-4">
@@ -991,7 +1044,7 @@ function Accounts() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">
-                                            {account.id.toString().startsWith('PRO') ? (
+                                            {account.id.toString().startsWith('PRO') && activeTab !== 'KYC Status' ? (
                                                 <Link
                                                     to={`/admin/candidate/${account.id}`}
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
@@ -1001,9 +1054,14 @@ function Accounts() {
                                             ) : (
                                                 <Link
                                                     to={
-                                                        account.id.toString().startsWith('KYC')
+                                                        activeTab === 'KYC Status'
                                                             ? `/admin/accounts/compliance/${account.id}`
                                                             : `/admin/accounts/${account.id}`
+                                                    }
+                                                    state={
+                                                        activeTab === 'KYC Status' && account.userType
+                                                            ? { userType: account.userType }
+                                                            : undefined
                                                     }
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >
