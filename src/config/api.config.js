@@ -3,7 +3,7 @@
  * Centralized configuration for all API endpoints
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://maritime-apis.onrender.com';
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
