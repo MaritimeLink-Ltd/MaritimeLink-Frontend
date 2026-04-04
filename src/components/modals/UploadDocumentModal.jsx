@@ -2,6 +2,29 @@ import { X, Upload, Info } from 'lucide-react';
 import { useState } from 'react';
 import kycService from '../../services/kycService';
 
+const resolveProfessionalId = () => {
+    const candidateKeys = ['professionalId', 'professional_id', 'userId', 'user_id', 'id'];
+
+    for (const key of candidateKeys) {
+        const value = localStorage.getItem(key);
+        if (value) return value;
+    }
+
+    return null;
+};
+
+const resolveEntityId = (userType) => {
+    if (userType === 'recruiter') {
+        return localStorage.getItem('recruiterId') || localStorage.getItem('userId') || localStorage.getItem('id');
+    }
+
+    if (userType === 'training-provider') {
+        return localStorage.getItem('trainingProviderId') || localStorage.getItem('training_provider_id') || localStorage.getItem('userId') || localStorage.getItem('id');
+    }
+
+    return resolveProfessionalId();
+};
+
 function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, userType }) {
     const [frontSide, setFrontSide] = useState(null);
     const [backSide, setBackSide] = useState(null);
@@ -38,19 +61,23 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
         setUploadError(null);
 
         try {
+            const entityId = resolveEntityId(userType);
+
+            if (!entityId) {
+                throw new Error('Session error: your account ID could not be found. Please log out and log back in.');
+            }
+
             let frontResponse, backResponse;
 
             if (userType === 'recruiter') {
-                const recruiterId = localStorage.getItem('recruiterId') || localStorage.getItem('userId') || localStorage.getItem('id');
-                frontResponse = await kycService.uploadRecruiterFrontDocument(recruiterId, frontSide);
-                backResponse = await kycService.uploadRecruiterBackDocument(recruiterId, file);
+                frontResponse = await kycService.uploadRecruiterFrontDocument(entityId, frontSide);
+                backResponse = await kycService.uploadRecruiterBackDocument(entityId, file);
             } else if (userType === 'training-provider') {
-                const trainingProviderId = localStorage.getItem('trainingProviderId') || localStorage.getItem('training_provider_id') || localStorage.getItem('userId') || localStorage.getItem('id');
-                frontResponse = await kycService.uploadTrainingProviderFrontDocument(trainingProviderId, frontSide);
-                backResponse = await kycService.uploadTrainingProviderBackDocument(trainingProviderId, file);
+                frontResponse = await kycService.uploadTrainingProviderFrontDocument(entityId, frontSide);
+                backResponse = await kycService.uploadTrainingProviderBackDocument(entityId, file);
             } else {
-                frontResponse = await kycService.uploadFrontDocument(frontSide);
-                backResponse = await kycService.uploadBackDocument(file);
+                frontResponse = await kycService.uploadFrontDocument(entityId, frontSide);
+                backResponse = await kycService.uploadBackDocument(entityId, file);
             }
 
             // Merge OCR data with document URLs from both upload responses
