@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2 } from 'lucide-react';
+import jobService from '../../../services/jobService';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
@@ -19,6 +20,8 @@ function UploadJob({ onBack: onBackProp }) {
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [isClosed, setIsClosed] = useState(editData?.status === 'Closed' || false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
     const [formData, setFormData] = useState({
         jobTitle: '',
         region: 'Global',
@@ -29,15 +32,27 @@ function UploadJob({ onBack: onBackProp }) {
         description: ''
     });
 
+    const API_TO_CATEGORY = {
+        'OFFICER': 'Officer',
+        'RATINGS_AND_CREW': 'Ratings & Crew',
+        'CATERING_AND_MEDICAL': 'Catering & Medical'
+    };
+
+    const API_TO_CONTRACT = {
+        'TEMPORARY': 'Temporary',
+        'CONTRACT': 'Contract',
+        'PERMANENT': 'Permanent'
+    };
+
     useEffect(() => {
         if (isEditMode && editData) {
             setFormData({
                 jobTitle: editData.jobTitle || editData.title || '',
                 region: editData.region || editData.location || 'Global',
-                category: editData.category || 'Officer',
-                contractType: editData.contractType || editData.type || 'Temporary',
+                category: API_TO_CATEGORY[editData.category] || editData.category || 'Officer',
+                contractType: API_TO_CONTRACT[editData.contractType] || editData.contractType || editData.type || 'Temporary',
                 salary: editData.salary || '',
-                closingDate: editData.closingDate || '',
+                closingDate: editData.closingDate ? editData.closingDate.split('T')[0] : '',
                 description: editData.description || ''
             });
         }
@@ -97,10 +112,47 @@ function UploadJob({ onBack: onBackProp }) {
         }
     };
 
-    const handlePublish = () => {
-        console.log('Publishing job:', formData);
-        // Show success modal
-        setShowSuccessModal(true);
+    const handlePublish = async () => {
+        // Validate required fields
+        if (!formData.jobTitle.trim()) {
+            setSubmitError('Job title is required.');
+            return;
+        }
+        if (!formData.description.trim()) {
+            setSubmitError('Job description is required.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitError('');
+
+        try {
+            const payload = {
+                title: formData.jobTitle,
+                location: formData.region,
+                category: formData.category,
+                contractType: formData.contractType,
+                salary: formData.salary,
+                description: formData.description,
+                closingDate: formData.closingDate || undefined,
+            };
+
+            let response;
+            if (isEditMode && editData?.id) {
+                response = await jobService.updateJob(editData.id, payload);
+                console.log('Job updated successfully:', response);
+            } else {
+                response = await jobService.createJob(payload);
+                console.log('Job created successfully:', response);
+            }
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error('Failed to create job:', error);
+            const message = error?.data?.message || error?.message || 'Failed to create job. Please try again.';
+            setSubmitError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCloseModal = () => {
@@ -314,12 +366,21 @@ function UploadJob({ onBack: onBackProp }) {
                                 />
                             </div>
 
+                            {/* Error Message */}
+                            {submitError && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                                    {submitError}
+                                </div>
+                            )}
+
                             {/* Publish Button */}
                             <button
                                 onClick={handlePublish}
-                                className="w-full bg-[#1e5a8f] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm"
+                                disabled={isSubmitting}
+                                className="w-full bg-[#1e5a8f] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                {isEditMode ? 'Update Job' : 'Publish Job'}
+                                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                {isSubmitting ? 'Publishing...' : (isEditMode ? 'Update Job' : 'Publish Job')}
                             </button>
                         </div>
                     )}

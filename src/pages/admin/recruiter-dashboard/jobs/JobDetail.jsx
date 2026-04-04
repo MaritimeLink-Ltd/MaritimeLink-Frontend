@@ -7,17 +7,25 @@ import {
     AlertTriangle,
     XCircle,
     ChevronDown,
-    Edit2
+    Edit2,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import jobService from '../../../../services/jobService';
 
 function JobDetail({ onBack }) {
     const navigate = useNavigate();
     const { jobId } = useParams();
     const location = useLocation();
     const jobData = location.state?.jobData;
+    const [job, setJob] = useState(jobData || null);
+    const [isLoadingJob, setIsLoadingJob] = useState(!jobData); // Only load if no jobData provided initially, or always load to get fresh data
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [jobStatus, setJobStatus] = useState(jobData?.status || 'Active');
+    
+    // Derived values
     const isPublished = jobStatus === 'Active';
     const isClosed = jobStatus === 'Closed';
     const [activeTab, setActiveTab] = useState('matches');
@@ -43,241 +51,88 @@ function JobDetail({ onBack }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Mock job data - in real app, fetch based on jobId
-    const job = jobData || {
-        id: jobId || '000001',
-        title: 'Chief Engineer',
-        vessel: 'LNG Tanker',
-        location: 'Global',
-        posted: '2 days ago',
-        status: 'Active',
-        type: 'Permanent',
-        description: 'We are seeking an experienced Chief Engineer to join our LNG Tanker operations...'
-    };
+    // Fetch Job Data
+    useEffect(() => {
+        const fetchJobDetail = async () => {
+             if (!jobId) return;
+             try {
+                 setIsLoadingJob(true);
+                 const response = await jobService.getJobById(jobId);
+                 if (response?.data?.job) {
+                     const fetchedJob = response.data.job;
+                     
+                     // Format category like we do in AdminJobs
+                     const formatCategory = (cat) => {
+                         if (!cat) return '';
+                         return cat.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+                     };
+                     
+                     // Format date for "posted"
+                     const createdAt = new Date(fetchedJob.createdAt);
+                     const now = new Date();
+                     const diffDays = Math.ceil(Math.abs(now - createdAt) / (1000 * 60 * 60 * 24));
+                     let postedString = `${diffDays} days ago`;
+                     if (diffDays === 0) postedString = 'Today';
+                     else if (diffDays === 1) postedString = '1 day ago';
+                     
+                     const formattedStatus = fetchedJob.status ? 
+                         fetchedJob.status.charAt(0) + fetchedJob.status.slice(1).toLowerCase() : 'Active';
+
+                     setJob({
+                         ...fetchedJob,
+                         title: fetchedJob.title || 'Untitled',
+                         vessel: formatCategory(fetchedJob.category) || 'General',
+                         domain: fetchedJob.companyId || 'company.com',
+                         location: fetchedJob.location || 'Global',
+                         posted: postedString,
+                         status: formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed')
+                     });
+                     
+                     setJobStatus(formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed'));
+                 }
+             } catch (error) {
+                 console.error("Failed to fetch job detail:", error);
+             } finally {
+                 setIsLoadingJob(false);
+             }
+        };
+        fetchJobDetail();
+    }, [jobId]);
+
+    const allApplicants = job?.applicants || []; // Use real applicants data or empty array
 
     const stats = [
         {
             icon: Users,
-            label: activeTab === 'matches' ? 'Total Candidates' : 'Total Applicants',
-            value: '45',
-            subtitle: 'Since 20 Apr 2024',
+            label: 'Total Applicants',
+            value: allApplicants.length.toString(),
+            subtitle: 'Real time count',
             color: 'bg-blue-50',
             iconColor: 'text-blue-600'
         },
         {
             icon: CheckCircle,
             label: 'Compliance Ready',
-            value: '21',
-            subtitle: 'Amm days',
+            value: allApplicants.filter(a => a.compliance === 'Ready').length.toString(),
+            subtitle: 'Ready to deploy',
             color: 'bg-green-50',
             iconColor: 'text-green-600'
         },
         {
             icon: AlertTriangle,
             label: 'Expiring Soon',
-            value: '14',
-            subtitle: 'Expire in 90 days',
+            value: allApplicants.filter(a => a.compliance === 'Expiring Soon').length.toString(),
+            subtitle: 'Renewals needed',
             color: 'bg-orange-50',
             iconColor: 'text-orange-600'
         },
         {
             icon: XCircle,
             label: 'Not Deployable',
-            value: '10',
+            value: allApplicants.filter(a => a.compliance === 'Not Deployable').length.toString(),
             subtitle: 'Missing critical certs',
             color: 'bg-red-50',
             iconColor: 'text-red-600'
-        }
-    ];
-
-    const allApplicants = [
-        // New applicants
-        {
-            id: 1,
-            name: 'Sarah Johnson',
-            age: 28,
-            rank: 'Chief Engineer',
-            availability: 'Meyer Avance',
-            availabilitySubtext: 'Master',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '26 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'new'
-        },
-        {
-            id: 4,
-            name: 'David Chen',
-            age: 32,
-            rank: 'Second Engineer',
-            availability: 'MSC Gülsün',
-            availabilitySubtext: '2nd Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '22 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'new'
-        },
-        {
-            id: 5,
-            name: 'Emma Wilson',
-            age: 29,
-            rank: 'Third Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: '3rd Engineer',
-            compliance: 'Expiring Soon',
-            complianceSubtext: 'Ends in 45 days',
-            applicationDate: '5 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'new'
-        },
-        // Matches
-        {
-            id: 2,
-            name: 'Michael Brown',
-            age: 34,
-            rank: 'Chief Engineer',
-            availability: 'BW Pavilion Arches',
-            availabilitySubtext: '3rd Officer',
-            compliance: 'Expiring Soon',
-            complianceSubtext: 'Ends in 2 days',
-            applicationDate: '2 Mar 2026',
-            avatar: '/images/login-image.webp',
-            status: 'matches'
-        },
-        {
-            id: 6,
-            name: 'Robert Taylor',
-            age: 36,
-            rank: 'Chief Engineer',
-            availability: 'Ever Given',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '3 Mar 2026',
-            avatar: '/images/login-image.webp',
-            status: 'matches'
-        },
-        {
-            id: 7,
-            name: 'Lisa Anderson',
-            age: 31,
-            rank: 'Second Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: '2nd Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '4 Mar 2026',
-            avatar: '/images/login-image.webp',
-            status: 'matches'
-        },
-        // Shortlisted
-        {
-            id: 8,
-            name: 'James Martinez',
-            age: 33,
-            rank: 'Chief Engineer',
-            availability: 'CMA CGM Antoine',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '25 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'shortlisted'
-        },
-        {
-            id: 9,
-            name: 'Patricia Lee',
-            age: 35,
-            rank: 'Chief Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '3 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'shortlisted'
-        },
-        // Interviewing
-        {
-            id: 10,
-            name: 'Thomas Garcia',
-            age: 37,
-            rank: 'Chief Engineer',
-            availability: 'OOCL Hong Kong',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '26 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'interviewing'
-        },
-        {
-            id: 11,
-            name: 'Jennifer White',
-            age: 30,
-            rank: 'Second Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: '2nd Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '15 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'interviewing'
-        },
-        // Offered
-        {
-            id: 12,
-            name: 'Christopher Moore',
-            age: 38,
-            rank: 'Chief Engineer',
-            availability: 'Maersk Triple E',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '20 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'offered'
-        },
-        {
-            id: 13,
-            name: 'Mary Thompson',
-            age: 32,
-            rank: 'Chief Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '1 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'offered'
-        },
-        // Hired
-        {
-            id: 3,
-            name: 'John Smith',
-            age: 30,
-            rank: 'Chief Engineer',
-            availability: 'Available Now',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '23 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'hired'
-        },
-        {
-            id: 14,
-            name: 'Daniel Harris',
-            age: 39,
-            rank: 'Chief Engineer',
-            availability: 'MSC Oscar',
-            availabilitySubtext: 'Chief Engineer',
-            compliance: 'Ready',
-            complianceSubtext: '',
-            applicationDate: '8 Feb 2026',
-            avatar: '/images/login-image.webp',
-            status: 'hired'
         }
     ];
 
@@ -357,6 +212,21 @@ function JobDetail({ onBack }) {
         // In real app, this would send an API request
     };
 
+    const handleDeleteJob = async () => {
+        try {
+            setIsDeleting(true);
+            await jobService.deleteJob(jobId);
+            setShowDeleteModal(false);
+            // Navigate back to jobs list
+            const listPath = location.pathname.includes('/admin/marketplace') ? '/admin/marketplace/jobs' : '/admin/jobs';
+            navigate(listPath);
+        } catch (error) {
+            console.error("Failed to delete job:", error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className="flex flex-col bg-gray-50">
             {/* Fixed Header Section */}
@@ -373,7 +243,7 @@ function JobDetail({ onBack }) {
                 <div className="flex items-start justify-between mb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl font-bold text-gray-900">{job.title}</h1>
+                            <h1 className="text-3xl font-bold text-gray-900">{job?.title || 'Loading...'}</h1>
                             {/* Published/Unpublished Badge */}
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isClosed
                                 ? 'bg-red-100 text-red-700'
@@ -385,9 +255,9 @@ function JobDetail({ onBack }) {
                             </span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                            <span>{job.vessel}</span>
+                            <span>{job?.vessel || 'General'}</span>
                             <span>•</span>
-                            <span>Posted {job.posted}</span>
+                            <span>Posted {job?.posted || 'Recently'}</span>
                         </div>
                     </div>
 
@@ -436,6 +306,14 @@ function JobDetail({ onBack }) {
                             className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
                         >
                             View Job Details
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Job
                         </button>
                     </div>
                 </div>
@@ -721,16 +599,16 @@ function JobDetail({ onBack }) {
                 </div>
             </div>
 
-            {showJobDetailsModal && (
+            {showJobDetailsModal && job && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Job Details</h3>
                         <p className="text-sm text-gray-600 mb-1">{job.title} • {job.vessel}</p>
                         <p className="text-sm text-gray-600 mb-5">Posted {job.posted}</p>
 
-                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
-                            <p className="text-sm font-semibold text-gray-700 mb-1">Description</p>
-                            <p className="text-sm text-gray-700 leading-6">{job.description}</p>
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6 max-h-[50vh] overflow-y-auto overflow-x-hidden">
+                            <p className="text-sm font-semibold text-gray-700 mb-1 sticky top-0 bg-gray-50 z-10 pb-1">Description</p>
+                            <p className="text-sm text-gray-700 leading-6 whitespace-pre-wrap break-words">{job.description}</p>
                         </div>
 
                         <div className="flex items-center justify-end gap-3">
@@ -773,6 +651,38 @@ function JobDetail({ onBack }) {
                                     Job Closed
                                 </button>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                        <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mb-4 mx-auto">
+                            <Trash2 className="h-6 w-6 text-red-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Delete Job?</h3>
+                        <p className="text-sm text-gray-600 text-center mb-6">
+                            Are you sure you want to delete <span className="font-semibold text-gray-900">{job?.title}</span>? This action cannot be undone and will remove all applications associated with this job.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteJob}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {isDeleting ? 'Deleting...' : 'Delete Job'}
+                            </button>
                         </div>
                     </div>
                 </div>

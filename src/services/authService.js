@@ -269,6 +269,40 @@ class AuthService {
                     if (id) {
                         localStorage.setItem('recruiterId', id);
                     }
+                    // Persist approval/account status for routing decisions
+                    if (profile.status) {
+                        localStorage.setItem('recruiterStatus', profile.status);
+                    }
+                    if (profile.isApproved !== undefined) {
+                        localStorage.setItem('recruiterIsApproved', String(profile.isApproved));
+                    }
+
+                    // Sync KYC wizard localStorage keys so the dashboard renders correctly.
+                    // The useKycWizard hook reads `{prefix}KycStatus` and `{prefix}AdminVerified`
+                    // to decide whether to show the KYC popup or the actual dashboard.
+                    const isApproved =
+                        profile.isApproved === true ||
+                        profile.status === 'APPROVED' ||
+                        profile.status === 'ACTIVE' ||
+                        profile.status === 'active' ||
+                        profile.status === 'approved';
+
+                    // Determine the storage prefix based on role
+                    const isTrainingProvider =
+                        profile.role === 'TRAINING_AGENT' ||
+                        profile.role === 'training-provider';
+                    const prefix = isTrainingProvider ? 'trainingProvider' : 'recruiter';
+
+                    if (isApproved) {
+                        localStorage.setItem(`${prefix}KycStatus`, 'completed');
+                        localStorage.setItem(`${prefix}AdminVerified`, 'true');
+                    } else {
+                        // If the profile has kycStatus from backend, persist it
+                        const backendKycStatus = profile.kycStatus || profile.kyc_status;
+                        if (backendKycStatus) {
+                            localStorage.setItem(`${prefix}KycStatus`, backendKycStatus);
+                        }
+                    }
                 }
             }
 

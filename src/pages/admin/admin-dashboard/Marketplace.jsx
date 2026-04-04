@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, Briefcase, GraduationCap, CheckCircle, AlertTriangle, XCircle, RefreshCw, Download, Clock, Eye, FileEdit, PauseCircle, Upload, Plus } from 'lucide-react';
+import jobService from '../../../services/jobService';
 
 function Marketplace() {
     const [activeMainTab, setActiveMainTab] = useState('Oversight');
@@ -11,6 +12,10 @@ function Marketplace() {
     const [riskFilter, setRiskFilter] = useState('Risk Level');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showExportNotification, setShowExportNotification] = useState(false);
+
+    // API Data state
+    const [remoteJobs, setRemoteJobs] = useState([]);
+    const [totalRemoteJobs, setTotalRemoteJobs] = useState(0);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -86,16 +91,34 @@ function Marketplace() {
     const riskOptions = ['All', 'High', 'Medium', 'Low'];
 
     // Refresh handler
+    const loadJobsData = async (page) => {
+        try {
+            setIsRefreshing(true);
+            const res = await jobService.getAllAdminJobs(page, itemsPerPage);
+            if (res?.data?.jobs) {
+                setRemoteJobs(res.data.jobs);
+                setTotalRemoteJobs(res.total || 0);
+            }
+        } catch (error) {
+            console.error('Failed to load admin jobs:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeSubTab === 'Jobs') {
+            loadJobsData(currentPage);
+        }
+    }, [currentPage, activeSubTab]);
+
     const handleRefresh = () => {
-        setIsRefreshing(true);
         // Reset filters
         setSearchQuery('');
         setStatusFilter('Status');
         setRiskFilter('Risk Level');
         setCurrentPage(1);
-        setTimeout(() => {
-            setIsRefreshing(false);
-        }, 1000);
+        if (activeSubTab === 'Jobs') loadJobsData(1);
     };
 
     // Export CSV handler
@@ -180,28 +203,32 @@ function Marketplace() {
         setTimeout(() => setShowExportNotification(false), 3000);
     };
 
+    // Calculate dynamic stats from API job data
+    const oversightJobs = remoteJobs.filter(j => j.recruiterId);
+    const mlinkJobs = remoteJobs.filter(j => j.adminId);
+
     // Oversight - Jobs Stats
     const oversightJobsStats = [
         {
-            value: '256',
-            label: 'Live Jobs',
-            sublabel: '+11 today',
+            value: totalRemoteJobs > 0 ? oversightJobs.filter(j => j.status === 'ACTIVE').length + '+' : '0',
+            label: 'Active Jobs (Page)',
+            sublabel: 'Out of total ' + totalRemoteJobs,
             icon: Briefcase,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             cardBg: 'bg-blue-50'
         },
         {
-            value: '1,203',
+            value: oversightJobs.reduce((sum, j) => sum + (j.applications || 0), 0).toString(),
             label: 'Total Applications',
-            sublabel: '+148 today',
+            sublabel: 'For current list',
             icon: CheckCircle,
             iconColor: 'text-purple-500',
             iconBg: 'bg-purple-50',
             cardBg: 'bg-white'
         },
         {
-            value: '19',
+            value: oversightJobs.filter(j => j.riskLevel === 'HIGH').length.toString(),
             label: 'Flagged Jobs',
             sublabel: 'Action required',
             sublabelColor: 'text-red-600',
@@ -211,9 +238,9 @@ function Marketplace() {
             cardBg: 'bg-white'
         },
         {
-            value: '5',
-            label: 'Removed Jobs',
-            sublabel: 'Violations',
+            value: oversightJobs.filter(j => j.status === 'CLOSED').length.toString(),
+            label: 'Removed/Closed',
+            sublabel: 'Violations or filled',
             icon: XCircle,
             iconColor: 'text-red-500',
             iconBg: 'bg-red-50',
@@ -265,16 +292,16 @@ function Marketplace() {
     // MaritimeLink - Jobs Stats
     const maritimeLinkJobsStats = [
         {
-            value: '18',
+            value: mlinkJobs.filter(j => j.status === 'ACTIVE').length.toString(),
             label: 'Active Listings',
-            sublabel: '+2 today',
+            sublabel: 'In current view',
             icon: Briefcase,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             cardBg: 'bg-blue-50'
         },
         {
-            value: '4',
+            value: mlinkJobs.filter(j => j.status === 'DRAFT').length.toString(),
             label: 'Drafts',
             sublabel: 'Pending publish',
             sublabelColor: 'text-gray-600',
@@ -608,10 +635,22 @@ function Marketplace() {
 
     const getCurrentData = () => {
         let data;
-        if (activeMainTab === 'Oversight') {
-            data = activeSubTab === 'Jobs' ? oversightJobsData : oversightTrainingData;
+        if (activeSubTab === 'Jobs') {
+            data = remoteJobs;
+            
+            // local split for oversight vs maritimelink based on creator
+            if (activeMainTab === 'Oversight') {
+                data = data.filter(job => job.recruiterId);
+            } else {
+                data = data.filter(job => job.adminId);
+            }
         } else {
-            data = activeSubTab === 'Jobs' ? maritimeLinkJobsData : maritimeLinkTrainingData;
+            // Processing for Training Courses Mock Data
+            if (activeMainTab === 'Oversight') {
+                data = oversightTrainingData;
+            } else {
+                data = maritimeLinkTrainingData;
+            }
         }
 
         // Apply search filter
@@ -690,10 +729,21 @@ function Marketplace() {
     const isMaritimeLinkTab = activeMainTab === 'MaritimeLink Listings';
 
     // Pagination Logic
-    const totalPages = Math.ceil(currentData.length / itemsPerPage);
+    // If it's jobs, totalPages comes from backend 'totalRemoteJobs'. If training courses, use local length.
+    const totalPages = activeSubTab === 'Jobs' 
+        ? Math.max(1, Math.ceil(totalRemoteJobs / itemsPerPage))
+        : Math.ceil(currentData.length / itemsPerPage);
+        
+    // For local dummy data (training courses) slice the array. 
+    // For paginated Jobs data, we just render what we got on this page.
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedData = currentData.slice(startIndex, endIndex);
+    const endIndex = activeSubTab === 'Jobs' 
+        ? startIndex + currentData.length 
+        : startIndex + itemsPerPage;
+        
+    const paginatedData = activeSubTab === 'Jobs' 
+        ? currentData 
+        : currentData.slice(startIndex, startIndex + itemsPerPage);
 
     const handlePageChange = (page) => {
         if (page >= 1 && page <= totalPages) {
@@ -934,90 +984,61 @@ function Marketplace() {
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                {isMaritimeLinkTab ? (
-                                    // MaritimeLink columns
-                                    activeSubTab === 'Jobs' ? (
-                                        <>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Job Title
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Type
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Location
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Applications
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Views
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Posted
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Course Name
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Type
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Location
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Bookings
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Views
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Posted
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </>
-                                    )
+                                {activeSubTab === 'Jobs' ? (
+                                    <>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Job Title
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Creator
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Location
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Risk Level
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Posted
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </>
+                                ) : isMaritimeLinkTab ? (
+                                    <>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Course Name
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Location
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Bookings
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Views
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Posted
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </>
                                 ) : (
-                                    // Oversight columns
-                                    activeSubTab === 'Jobs' ? (
-                                        <>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Recruiter / Company
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Total Live Jobs
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Jobs Posted
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Total Applications
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Flagged Jobs
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Risk Level
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </>
-                                    ) : (
                                         <>
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                                 Course Name
@@ -1042,73 +1063,89 @@ function Marketplace() {
                                             </th>
                                         </>
                                     )
-                                )}
+                                    }
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                            {isMaritimeLinkTab ? (
-                                // MaritimeLink table rows
-                                activeSubTab === 'Jobs' ? (
-                                    paginatedData.map((record) => (
-                                        <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm font-semibold text-gray-900">{record.jobTitle}</div>
-                                                <div className="text-xs text-gray-500">{record.jobSubtext}</div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${record.typeColor}`}>
-                                                    {record.type}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.location}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${record.statusColor}`}>
-                                                    {record.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.applications}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.views}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-500">{record.posted}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                {record.status === 'Draft' ? (
-                                                    <button
-                                                        onClick={() => navigate('/admin/marketplace/create-job', {
-                                                            state: {
-                                                                dashboardType: 'admin',
-                                                                isEdit: true,
-                                                                jobData: record,
-                                                                returnPath: '/admin/marketplace'
-                                                            }
-                                                        })}
-                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                    >
-                                                        Edit Job
-                                                    </button>
-                                                ) : (
-                                                    <Link
-                                                        to={`/admin/marketplace/internal/jobs/${record.id}`}
-                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                    >
-                                                        View Details
-                                                    </Link>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
+                            {activeSubTab === 'Jobs' ? (
+                                paginatedData.map((job) => {
+                                    const creator = job.recruiter?.organizationName || job.admin?.email || 'Unknown';
+                                    const formattedStatus = job.status === 'ACTIVE' ? 'Active' : (job.status === 'DRAFT' ? 'Draft' : 'Closed');
+                                    let statusColor = 'text-gray-600';
+                                    if (formattedStatus === 'Active') statusColor = 'text-green-600';
+                                    if (formattedStatus === 'Draft') statusColor = 'text-orange-600';
+                                    
+                                    let riskColor = 'text-green-600';
+                                    if (job.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
+                                    if (job.riskLevel === 'HIGH') riskColor = 'text-red-600';
+
+                                    const jobType = job.category ? job.category.replace(/_/g, ' ') : 'JOB';
+                                    const postedDate = new Date(job.createdAt).toLocaleDateString();
+
+                                    return (
+                                    <tr key={job.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-4">
+                                            <div className="text-sm font-semibold text-gray-900">{job.title}</div>
+                                            <div className="text-xs text-gray-500 truncate max-w-[150px]">{job.description || 'No description'}</div>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className="text-sm text-gray-900">{creator}</span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className="text-sm font-semibold text-[#1e5a8f]">{jobType}</span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className="text-sm text-gray-900">{job.location}</span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={`text-sm font-semibold ${statusColor}`}>
+                                                {formattedStatus}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={`text-sm font-semibold ${riskColor}`}>
+                                                {job.riskLevel || 'LOW'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className="text-sm text-gray-500">{postedDate}</span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            {formattedStatus === 'Draft' ? (
+                                                <button
+                                                    onClick={() => navigate('/admin/marketplace/create-job', {
+                                                        state: {
+                                                            dashboardType: 'admin',
+                                                            isEdit: true,
+                                                            jobData: job,
+                                                            returnPath: '/admin/marketplace'
+                                                        }
+                                                    })}
+                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                >
+                                                    Edit Draft
+                                                </button>
+                                            ) : (
+                                                <Link
+                                                    to={job.recruiterId 
+                                                        ? `/admin/marketplace/oversight/jobs/${job.id}`
+                                                        : `/admin/marketplace/internal/jobs/${job.id}`
+                                                    }
+                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                >
+                                                    View Details
+                                                </Link>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    );
+                                })
+                            ) : isMaritimeLinkTab ? (
                                     paginatedData.map((record) => (
                                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="text-sm font-semibold text-gray-900">{record.courseName}</div>
-                                                <div className="text-xs text-gray-500">{record.courseSubtext}</div>
+                                                <div className="text-xs text-gray-500">{record.courseProvider}</div>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className={`text-sm font-semibold ${record.typeColor}`}>
@@ -1116,7 +1153,7 @@ function Marketplace() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.location}</span>
+                                                <span className="text-sm text-gray-900">{record.company}</span>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className={`text-sm font-semibold ${record.statusColor}`}>
@@ -1125,9 +1162,6 @@ function Marketplace() {
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className="text-sm text-gray-900">{record.bookings}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-500">{record.views}</span>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className="text-sm text-gray-500">{record.posted}</span>
@@ -1149,63 +1183,10 @@ function Marketplace() {
                                                     </button>
                                                 ) : (
                                                     <Link
-                                                        to={`/admin/marketplace/internal/courses/${record.id}`}
+                                                        to={`/admin/marketplace/oversight/courses/${record.id}`}
                                                         className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                     >
                                                         View Details
-                                                    </Link>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )
-                            ) : (
-                                // Oversight table rows
-                                activeSubTab === 'Jobs' ? (
-                                    paginatedData.map((record) => (
-                                        <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm font-semibold text-gray-900">{record.recruiterName}</div>
-                                                <div className="text-xs text-gray-500">{record.recruiterSubtext}</div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.totalLiveJobs}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.jobsPosted}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.totalApplications}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.flaggedJobs}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${record.riskColor}`}>
-                                                    {record.riskLevel}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                {record.status === 'Draft' ? (
-                                                    <button
-                                                        onClick={() => navigate('/admin/marketplace/create-job', {
-                                                            state: {
-                                                                dashboardType: 'admin',
-                                                                isEdit: true,
-                                                                jobData: { ...record, jobTitle: record.recruiterName }, // Mapping recruiterName to jobTitle for demo purposes
-                                                                returnPath: '/admin/marketplace'
-                                                            }
-                                                        })}
-                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                    >
-                                                        Edit Job
-                                                    </button>
-                                                ) : (
-                                                    <Link
-                                                        to={`/admin/marketplace/oversight/jobs/${record.id}`}
-                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                    >
-                                                        View Jobs
                                                     </Link>
                                                 )}
                                             </td>
@@ -1264,7 +1245,7 @@ function Marketplace() {
                                         </tr>
                                     ))
                                 )
-                            )}
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -1272,7 +1253,7 @@ function Marketplace() {
                 {/* Pagination */}
                 <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-white">
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-semibold">{Math.min(startIndex + 1, currentData.length)}</span> - <span className="font-semibold">{Math.min(endIndex, currentData.length)}</span> of <span className="font-semibold">{currentData.length}</span> entries
+                        Showing <span className="font-semibold">{Math.min(startIndex + 1, activeSubTab === 'Jobs' ? totalRemoteJobs : currentData.length)}</span> - <span className="font-semibold">{Math.min(startIndex + paginatedData.length, activeSubTab === 'Jobs' ? totalRemoteJobs : currentData.length)}</span> of <span className="font-semibold">{activeSubTab === 'Jobs' ? totalRemoteJobs : currentData.length}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
                         <button

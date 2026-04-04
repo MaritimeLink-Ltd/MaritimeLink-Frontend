@@ -88,6 +88,16 @@ export const API_ENDPOINTS = {
     SUBMIT: '/api/trainer/kyc/submit',
     UPLOAD_SELFIE: '/api/trainer/kyc/upload-selfie',
   },
+  // Job Endpoints
+  JOBS: {
+    CREATE: '/api/jobs',
+    LIST: '/api/jobs',
+    MY: '/api/jobs/my',
+    DETAIL: (id) => `/api/jobs/${id}`,
+    UPDATE: (id) => `/api/jobs/${id}`,
+    DELETE: (id) => `/api/jobs/${id}`,
+    ADMIN_ALL: '/api/admin/jobs',
+  },
   // Admin Endpoints
   ADMIN: {
     LOGIN: '/api/admin/login',

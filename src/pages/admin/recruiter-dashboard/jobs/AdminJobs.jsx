@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import jobService from '../../../../services/jobService';
 import {
     Plus,
     Search,
@@ -32,10 +33,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     // Refresh handler
     const handleRefresh = () => {
         setIsRefreshing(true);
-        // Simulate refresh
-        setTimeout(() => {
-            setIsRefreshing(false);
-        }, 1000);
+        fetchJobs();
     };
 
     const handleExportCSV = () => {
@@ -79,179 +77,76 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         setTimeout(() => setShowExportNotification(false), 3000);
     };
 
-    const jobs = [
-        {
-            id: '000001',
-            title: 'Chief Engineer',
-            vessel: 'LNG Tanker',
-            domain: 'lngtanker.com',
-            location: 'Global',
-            applicants: 12,
-            posted: '2 hours ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000002',
-            title: '3rd Officer',
-            vessel: 'DP Vessel',
-            domain: 'lngtanker.com',
-            location: 'Singapore',
-            applicants: 45,
-            posted: '5 hours ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000003',
-            title: 'Deck Officer',
-            vessel: 'Container Ship',
-            domain: 'containership.com',
-            location: 'Italy',
-            applicants: 8,
-            posted: '1 day ago',
-            status: 'Active',
-            type: 'Contract'
-        },
-        {
-            id: '000004',
-            title: 'Master',
-            vessel: 'Bulk Carrier',
-            domain: 'bulkcarrier.com',
-            location: 'India',
-            applicants: 0,
-            posted: '2 days ago',
-            status: 'Draft',
-            type: 'Permanent'
-        },
-        {
-            id: '000005',
-            title: 'Chief Mate',
-            vessel: 'Offshore Supply',
-            domain: 'offshoresupply.com',
-            location: 'USA',
-            applicants: 156,
-            posted: '3 days ago',
-            status: 'Closed',
-            type: 'Contract'
-        },
-        {
-            id: '000006',
-            title: '2nd Engineer',
-            vessel: 'Cruise Ship',
-            domain: 'cruiseship.com',
-            location: 'USA',
-            applicants: 0,
-            posted: '3 days ago',
-            status: 'Draft',
-            type: 'Permanent'
-        },
-        {
-            id: '000007',
-            title: 'Chief Mate',
-            vessel: 'VLCC Tanker',
-            domain: 'vlcctanker.com',
-            location: 'UK',
-            applicants: 34,
-            posted: '4 days ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000008',
-            title: 'Electrician (ETO)',
-            vessel: 'Container Ship',
-            domain: 'containership.com',
-            location: 'Netherlands',
-            applicants: 21,
-            posted: '5 days ago',
-            status: 'Active',
-            type: 'Contract'
-        },
-        {
-            id: '000009',
-            title: '2nd Officer',
-            vessel: 'RoRo Vessel',
-            domain: 'roro.com',
-            location: 'Germany',
-            applicants: 67,
-            posted: '6 days ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000010',
-            title: 'Chief Engineer',
-            vessel: 'Offshore Platform',
-            domain: 'offshore.com',
-            location: 'Norway',
-            applicants: 89,
-            posted: '1 week ago',
-            status: 'Active',
-            type: 'Contract'
-        },
-        {
-            id: '000011',
-            title: 'Bosun',
-            vessel: 'General Cargo',
-            domain: 'cargo.com',
-            location: 'Philippines',
-            applicants: 124,
-            posted: '1 week ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000012',
-            title: 'Fitter',
-            vessel: 'Bulk Carrier',
-            domain: 'bulkcarrier.com',
-            location: 'India',
-            applicants: 0,
-            posted: '1 week ago',
-            status: 'Draft',
-            type: 'Contract'
-        },
-        {
-            id: '000013',
-            title: 'Pumpman',
-            vessel: 'Chemical Tanker',
-            domain: 'chemtanker.com',
-            location: 'UAE',
-            applicants: 42,
-            posted: '2 weeks ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000014',
-            title: 'AB Seaman',
-            vessel: 'LNG Tanker',
-            domain: 'lngtanker.com',
-            location: 'Qatar',
-            applicants: 215,
-            posted: '2 weeks ago',
-            status: 'Active',
-            type: 'Permanent'
-        },
-        {
-            id: '000015',
-            title: 'Oiler',
-            vessel: 'Offshore Supply',
-            domain: 'offshoresupply.com',
-            location: 'Australia',
-            applicants: 88,
-            posted: '2 weeks ago',
-            status: 'Closed',
-            type: 'Contract'
-        }
-    ];
+    const [jobs, setJobs] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Calculate dynamic counts based on job data
+    const fetchJobs = async () => {
+        setIsLoading(true);
+        try {
+            const response = await jobService.getMyJobs();
+            if (response?.data?.jobs) {
+                // Map API data to the format expected by the component
+                const mappedJobs = response.data.jobs.map(job => {
+                    const createdAt = new Date(job.createdAt);
+                    const now = new Date();
+                    const diffTime = Math.abs(now - createdAt);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let postedString = `${diffDays} days ago`;
+                    if (diffDays === 0) {
+                        postedString = 'Today';
+                    } else if (diffDays === 1) {
+                        postedString = '1 day ago';
+                    }
+
+                    // Format contract type and category nicely
+                    const formattedType = job.contractType ? 
+                        job.contractType.charAt(0) + job.contractType.slice(1).toLowerCase() : 'Permanent';
+                    
+                    const formatCategory = (cat) => {
+                        if (!cat) return '';
+                        return cat.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+                    };
+
+                    const formattedStatus = job.status ? 
+                        job.status.charAt(0) + job.status.slice(1).toLowerCase() : 'Active';
+
+                    return {
+                        ...job, // Spread original data first
+                        id: job.id,
+                        title: job.title || 'Untitled',
+                        vessel: formatCategory(job.category) || 'General',
+                        domain: job.companyId || 'company.com',
+                        location: job.location || 'Global',
+                        applicants: job.applicantsCount || 0, // Fallback if API hasn't added it yet
+                        posted: postedString,
+                        postedDaysAgo: diffDays, 
+                        status: formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed'), // Overwrite API status with UI status
+                        type: formattedType
+                    };
+                });
+                
+                // Sort by newest first
+                mappedJobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                setJobs(mappedJobs);
+            }
+        } catch (error) {
+            console.error('Failed to fetch my jobs:', error);
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false); // Reset refreshing state if called from handleRefresh
+        }
+    };
+
+    useEffect(() => {
+        fetchJobs();
+    }, []);
+
+
     const activeJobsCount = jobs.filter(job => job.status === 'Active').length;
     const draftJobsCount = jobs.filter(job => job.status === 'Draft').length;
     const closedJobsCount = jobs.filter(job => job.status === 'Closed').length;
-    const totalApplications = jobs.length > 0 ? jobs.length * 22 : 0; // Mock calculation
+    const totalApplications = jobs.reduce((sum, job) => sum + (job.applicants || 0), 0);
 
     const stats = [
         {
@@ -302,7 +197,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             const query = searchQuery.toLowerCase();
             if (!job.title.toLowerCase().includes(query) &&
                 !job.vessel.toLowerCase().includes(query) &&
-                !job.id.includes(query)) {
+                !job.id.toLowerCase().includes(query)) {
                 return false;
             }
         }
@@ -319,22 +214,9 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
         // Posted Time Filter
         if (filters.postedTime !== '') {
-            const postedString = job.posted.toLowerCase();
-            let postedDaysAgo = 0;
+            const postedDaysAgo = job.postedDaysAgo !== undefined ? job.postedDaysAgo : 0;
 
-            if (postedString.includes('hour') || postedString.includes('minute')) {
-                postedDaysAgo = 0;
-            } else if (postedString.includes('day')) {
-                postedDaysAgo = parseInt(postedString) || 1;
-            } else if (postedString.includes('week')) {
-                postedDaysAgo = (parseInt(postedString) || 1) * 7;
-            } else if (postedString.includes('month')) {
-                postedDaysAgo = (parseInt(postedString) || 1) * 30;
-            } else if (postedString.includes('year')) {
-                postedDaysAgo = (parseInt(postedString) || 1) * 365;
-            }
-
-            if (filters.postedTime === 'Today' && postedDaysAgo > 0) return false;
+            if (filters.postedTime === 'Today' && postedDaysAgo > 1) return false;
             if (filters.postedTime === '7 Days' && postedDaysAgo > 7) return false;
             if (filters.postedTime === '30 Days' && postedDaysAgo > 30) return false;
         }
@@ -534,7 +416,20 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {currentJobs.map((job, idx) => (
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                                                Loading jobs...
+                                            </td>
+                                        </tr>
+                                    ) : currentJobs.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                                                No jobs found. Apply filters or create a new job.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        currentJobs.map((job, idx) => (
                                         <tr key={job.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-900">{job.title}</div>
@@ -599,7 +494,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                 )}
                                             </td>
                                         </tr>
-                                    ))}
+                                    )))}
                                 </tbody>
                             </table>
                         </div>

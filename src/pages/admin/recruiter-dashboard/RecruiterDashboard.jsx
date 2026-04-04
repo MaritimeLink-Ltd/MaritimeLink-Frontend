@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Briefcase,
@@ -18,11 +18,21 @@ import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import { useKycWizard } from '../../../hooks/useKycWizard';
+import jobService from '../../../services/jobService';
 
 function RecruiterDashboard({ onNavigate }) {
     const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    
+    // Remote data states
+    const [realJobs, setRealJobs] = useState([]);
+    const [dashStats, setDashStats] = useState({
+        activeJobs: 0,
+        newApplications: 0,
+        matchedPros: 0,
+        jobsNeedingAttention: 0
+    });
 
     const {
         kycStatus,
@@ -51,12 +61,54 @@ function RecruiterDashboard({ onNavigate }) {
     } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
 
     // Refresh handler
-    const handleRefresh = () => {
+    const loadDashboardData = async () => {
+        if (!hasFullAccess) return;
         setIsRefreshing(true);
-        // Simulate refresh
-        setTimeout(() => {
+        try {
+            const res = await jobService.getMyJobs();
+            if (res?.data?.jobs) {
+                const jobsList = res.data.jobs;
+                setRealJobs(jobsList);
+                
+                // Calculate stats based on actual data
+                const activeCount = jobsList.filter(j => j.status === 'ACTIVE').length;
+                let attentionCount = 0;
+                let newApps = 0;
+                
+                const now = new Date();
+                jobsList.forEach(j => {
+                    if (j.status === 'DRAFT') { 
+                        attentionCount++; 
+                    } else if (j.status === 'ACTIVE' && j.closingDate) {
+                        const daysLeft = (new Date(j.closingDate) - now) / (1000 * 60 * 60 * 24);
+                        if (daysLeft <= 7 && daysLeft >= 0) attentionCount++;
+                    }
+                    
+                    if (j.applicants && Array.isArray(j.applicants)) {
+                        newApps += j.applicants.length;
+                    }
+                });
+
+                setDashStats({
+                    activeJobs: activeCount,
+                    newApplications: newApps,
+                    matchedPros: 0, // Placeholder
+                    jobsNeedingAttention: attentionCount
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch dashboard data:', error);
+        } finally {
             setIsRefreshing(false);
-        }, 1000);
+        }
+    };
+
+    useEffect(() => {
+        loadDashboardData();
+    }, [hasFullAccess]);
+
+    const handleRefresh = () => {
+        loadDashboardData();
     };
 
     const handleNavigate = (section) => {
@@ -76,115 +128,35 @@ function RecruiterDashboard({ onNavigate }) {
         }
     };
 
-    // Stats Data based on time filter
-    const statsData = {
-        'Today': [
-            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 2, title: 'New Applications', value: '5', subtext: 'Since 12:00 AM', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 3, title: 'Matched Professionals', value: '12', subtext: 'Today', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
-            { id: 4, title: 'Jobs Needing Attention', value: '1', subtext: 'Expiring today', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
-        ],
-        '7 Days': [
-            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 2, title: 'New Applications', value: '26', subtext: 'This week', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 3, title: 'Matched Professionals', value: '84', subtext: 'This week', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
-            { id: 4, title: 'Jobs Needing Attention', value: '3', subtext: 'Expiring soon / Drafts', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
-        ],
-        '1 Month': [
-            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 2, title: 'New Applications', value: '142', subtext: 'This month', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 3, title: 'Matched Professionals', value: '256', subtext: 'This month', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
-            { id: 4, title: 'Jobs Needing Attention', value: '5', subtext: 'Expiring this month', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
-        ],
-        'Custom': [
-            { id: 1, title: 'Active Jobs', value: '7', subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 2, title: 'New Applications', value: '26', subtext: 'Custom range', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-            { id: 3, title: 'Matched Professionals', value: '84', subtext: 'Custom range', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
-            { id: 4, title: 'Jobs Needing Attention', value: '3', subtext: 'Custom range', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
-        ]
-    };
+    // Get current stats using dynamic data
+    const stats = [
+        { id: 1, title: 'Active Jobs', value: dashStats.activeJobs.toString(), subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+        { id: 2, title: 'Total Applications', value: dashStats.newApplications.toString(), subtext: 'All time', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
+        { id: 3, title: 'Matched Professionals', value: dashStats.matchedPros.toString(), subtext: 'System matches', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
+        { id: 4, title: 'Jobs Needing Attention', value: dashStats.jobsNeedingAttention.toString(), subtext: 'Expiring soon / Drafts', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
+    ];
 
-    // Get current stats based on time filter
-    const stats = statsData[timeFilter] || statsData['Today'];
-
-    // Action Items Data
+    // Action Items Data (Static placeholders mapped to generic sections)
     const actionItems = [
         {
             id: 1,
-            text: '5 new applicants awaiting review for Chief Engineer',
+            text: 'Review new professionals applied through MaritimeLink',
             type: 'applicants',
             icon: Briefcase,
             iconColor: 'text-[#003971]',
             iconBg: 'bg-[#EBF3FF]',
-            actionText: 'View Detail',
+            actionText: 'View Dashboard',
             section: 'jobs',
-            jobId: '000001',
-            targetTab: 'new'
         },
         {
             id: 2,
-            text: '13 matched professionals ready to invite (Deck Officer)',
+            text: 'Discover matched professionals for your active jobs',
             type: 'matches',
             icon: Search,
             iconColor: 'text-[#003971]',
             iconBg: 'bg-[#EBF3FF]',
-            actionText: 'View Matches',
+            actionText: 'Search Pros',
             section: 'search'
-        },
-        {
-            id: 3,
-            text: "Job '3rd Officer' expires in 2 days",
-            type: 'expiring',
-            icon: Calendar,
-            iconColor: 'text-orange-500',
-            iconBg: 'bg-orange-50',
-            actionText: 'Edit Job',
-            secondaryAction: true,
-            section: 'jobs',
-            jobId: '000002',
-            isEdit: true
-        },
-        {
-            id: 4,
-            text: "Job 'Master' has zero applicants",
-            type: 'zero',
-            icon: Briefcase,
-            iconColor: 'text-[#003971]',
-            iconBg: 'bg-[#EBF3FF]',
-            actionText: 'View Job',
-            section: 'jobs',
-            jobId: '000003'
-        }
-    ];
-
-    // Jobs Data
-    const jobs = [
-        {
-            id: 1,
-            jobId: '000001',
-            title: 'Chief Engineer',
-            type: 'Permanent / LNG Tanker',
-            status: 'Active',
-            matches: 18,
-            image: '/images/login-image.webp',
-        },
-        {
-            id: 2,
-            jobId: '000002',
-            title: '3rd Officer',
-            type: 'Permanent / DP Vessel',
-            status: 'Ending Soon',
-            matches: 6,
-            image: '/images/login-image.webp',
-        },
-        {
-            id: 3,
-            jobId: '000003',
-            title: 'Deck Officer',
-            type: 'Temporary / Container Ship',
-            status: 'Draft',
-            matches: 8,
-            image: '/images/login-image.webp',
         }
     ];
 
@@ -403,53 +375,67 @@ function RecruiterDashboard({ onNavigate }) {
                                 <div className="col-span-3 text-right">Matches (Not Applied)</div>
                             </div>
 
-                            {jobs.map((job) => (
-                                <div key={job.id} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors">
+                            {realJobs.slice(0, 5).map((job) => {
+                                const formattedStatus = job.status === 'ACTIVE' ? 'Active' : (job.status === 'DRAFT' ? 'Draft' : 'Closed');
+                                const displayCategory = job.category 
+                                    ? job.category.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) 
+                                    : 'Category';
+                                const contractType = job.contractType 
+                                    ? job.contractType.charAt(0) + job.contractType.slice(1).toLowerCase() 
+                                    : 'Permanent';
+                                
+                                return (
+                                <div key={job.id} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors border-b border-gray-50">
                                     <div className="col-span-6 flex items-center gap-4">
-                                        <img
-                                            src={job.image}
-                                            alt={job.title}
-                                            className="h-12 w-12 rounded-full object-cover border-2 border-gray-100"
-                                        />
+                                        <div className="h-12 w-12 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-500">
+                                            <Briefcase className="h-5 w-5" />
+                                        </div>
                                         <div>
                                             <button
-                                                onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
+                                                onClick={() => navigate(`/admin/jobs/${job.id}`)}
                                                 className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
                                             >
                                                 {job.title}
                                             </button>
-                                            <p className="text-xs text-gray-500 font-medium">{job.type}</p>
+                                            <p className="text-xs text-gray-500 font-medium">{contractType} / {displayCategory}</p>
                                         </div>
                                     </div>
                                     <div className="col-span-3">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${job.status === 'Active'
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${formattedStatus === 'Active'
                                             ? 'bg-teal-50 text-teal-600'
-                                            : job.status === 'Ending Soon'
+                                            : formattedStatus === 'Draft'
                                                 ? 'bg-orange-50 text-orange-600'
                                                 : 'bg-gray-100 text-gray-600'
                                             }`}>
-                                            {job.status}
+                                            {formattedStatus}
                                         </span>
                                     </div>
                                     <div className="col-span-3 flex justify-end">
-                                        {job.status === 'Draft' ? (
+                                        {formattedStatus === 'Draft' ? (
                                             <button
-                                                onClick={() => navigate('/admin/upload-job', { state: { jobId: job.jobId, isEdit: true, dashboardType: 'recruiter' } })}
+                                                onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true, dashboardType: 'recruiter' } })}
                                                 className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
                                             >
                                                 Edit Draft
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={() => navigate(`/admin/jobs/${job.jobId}`)}
+                                                onClick={() => navigate(`/admin/jobs/${job.id}`)}
                                                 className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
                                             >
-                                                {job.matches} <ChevronRight className="h-3.5 w-3.5" />
+                                                {job.applicants?.length || 0} <ChevronRight className="h-3.5 w-3.5" />
                                             </button>
                                         )}
                                     </div>
                                 </div>
-                            ))}
+                            )})}
+                            
+                            {realJobs.length === 0 && (
+                                <div className="text-center py-10">
+                                    <Briefcase className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500 font-medium pb-2">No jobs found in your account.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="px-8 py-5 border-t border-gray-100 text-center">

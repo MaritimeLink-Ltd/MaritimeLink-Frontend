@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import authService from '../../../services/authService';
 
 function TrainingProviderLogin() {
     const navigate = useNavigate();
@@ -32,18 +33,38 @@ function TrainingProviderLogin() {
         setLoading(true);
 
         try {
-            // TODO: Implement login API call
-            console.log('Training Provider Login submitted:', formData);
+            const response = await authService.loginRecruiter(formData);
 
             // Store user type in localStorage
             localStorage.setItem('userType', 'training-provider');
+            localStorage.setItem('adminUserType', 'training-provider');
             localStorage.setItem('userEmail', formData.email);
 
-            // Navigate to training provider dashboard
-            navigate('/trainingprovider-dashboard');
+            // Check if training provider is approved by admin
+            const profile = response.data?.recruiter || response.data;
+            const status = profile?.status;
+            const isApproved = profile?.isApproved;
+
+            const approved =
+                isApproved === true ||
+                status === 'APPROVED' ||
+                status === 'ACTIVE' ||
+                status === 'active' ||
+                status === 'approved';
+
+            if (approved) {
+                // Set KYC keys so the dashboard skips the KYC wizard/popup
+                localStorage.setItem('trainingProviderKycStatus', 'completed');
+                localStorage.setItem('trainingProviderAdminVerified', 'true');
+                // Training provider is approved — go to dashboard
+                navigate('/trainingprovider-dashboard');
+            } else {
+                // Training provider is pending review — go to under review page
+                navigate('/agent/under-review');
+            }
         } catch (err) {
             console.error('Login error:', err);
-            setError(err.message || 'Login failed. Please check your credentials.');
+            setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
