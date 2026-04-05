@@ -539,6 +539,18 @@ class AuthService {
                 if (id) {
                     localStorage.setItem('professionalId', id);
                 }
+
+                // Persist admin verification status for dashboard access control
+                const userStatus = response.data.user.status;
+                if (userStatus) {
+                    localStorage.setItem('professionalVerificationStatus', userStatus);
+                    // Also set the adminVerified flag if status is VERIFIED
+                    if (userStatus.toUpperCase() === 'VERIFIED') {
+                        localStorage.setItem('adminVerified', 'true');
+                    } else {
+                        localStorage.setItem('adminVerified', 'false');
+                    }
+                }
             }
 
             return response;

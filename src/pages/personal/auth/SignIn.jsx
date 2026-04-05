@@ -45,6 +45,17 @@ function SignIn() {
         localStorage.setItem('professionalId', professionalId);
       }
 
+      // Save admin verification status for dashboard gating
+      const verificationStatus = user?.status;
+      if (verificationStatus) {
+        localStorage.setItem('professionalVerificationStatus', verificationStatus);
+        if (verificationStatus.toUpperCase() === 'VERIFIED') {
+          localStorage.setItem('adminVerified', 'true');
+        } else {
+          localStorage.setItem('adminVerified', 'false');
+        }
+      }
+
       // Navigate to personal dashboard
       navigate('/personal/dashboard');
     } catch (err) {

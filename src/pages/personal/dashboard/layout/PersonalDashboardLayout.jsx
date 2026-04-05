@@ -61,6 +61,10 @@ function PersonalDashboardLayout() {
 
     // Admin verification state for professionals
     const isVerifiedByAdmin = useMemo(() => {
+        // Check the verification status saved from login response
+        const verificationStatus = localStorage.getItem('professionalVerificationStatus');
+        if (verificationStatus && verificationStatus.toUpperCase() === 'VERIFIED') return true;
+
         // Primary flag that can be set after backoffice approval
         const adminFlag = localStorage.getItem('adminVerified');
         if (adminFlag === 'true') return true;
@@ -90,6 +94,9 @@ function PersonalDashboardLayout() {
         return false;
     }, [location.pathname]);
 
+    // Whether the current route is restricted (not allowed before verification)
+    const isRestrictedRoute = !isVerifiedByAdmin && !isAlwaysAllowedPath;
+
     const handleLogout = () => {
         // Clear any stored user data
         localStorage.removeItem('userType');
@@ -99,7 +106,7 @@ function PersonalDashboardLayout() {
         setShowLogoutModal(false);
     };
 
-    const navItems = [
+    const allNavItems = [
         { name: 'Dashboard', path: '/personal/dashboard', icon: Home },
         { name: 'Resume', path: '/personal/resume', icon: FileText },
         { name: 'Documents', path: '/personal/documents', icon: Folder },
@@ -108,6 +115,13 @@ function PersonalDashboardLayout() {
         { name: 'Chats', path: '/personal/chats', icon: MessageCircle },
         { name: 'Profile', path: '/personal/profile', icon: User },
     ];
+
+    // If not verified, only show Dashboard, Resume, Documents in sidebar
+    const navItems = isVerifiedByAdmin
+        ? allNavItems
+        : allNavItems.filter(item =>
+            ['/personal/dashboard', '/personal/resume', '/personal/documents'].includes(item.path)
+        );
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -239,7 +253,33 @@ function PersonalDashboardLayout() {
                 {/* Page Content */}
                 <main className="flex-1 overflow-hidden bg-white">
                     <div className="h-full overflow-y-auto scrollbar-hide">
-                        <Outlet />
+                        {isRestrictedRoute ? (
+                            <div className="h-full flex items-center justify-center p-6">
+                                <div className="max-w-lg text-center space-y-4">
+                                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                                        <AlertTriangle size={40} className="text-amber-600" />
+                                    </div>
+                                    <h1 className="text-2xl md:text-3xl font-bold text-[#003971]">
+                                        Account Under Review
+                                    </h1>
+                                    <p className="text-gray-600">
+                                        Your account is currently being reviewed by our admin team.
+                                    </p>
+                                    <p className="text-gray-500 text-sm">
+                                        Once your KYC verification is approved, you will have full access to Jobs, Training, Chats, and Profile.
+                                        In the meantime, you can update your <strong>Resume</strong> and <strong>Documents</strong>.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/personal/dashboard')}
+                                        className="mt-4 px-6 py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#002855] transition-colors"
+                                    >
+                                        Go to Dashboard
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <Outlet />
+                        )}
                     </div>
                 </main>
             </div>
