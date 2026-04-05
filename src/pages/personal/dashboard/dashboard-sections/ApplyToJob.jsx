@@ -1,6 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star, Folder, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star, Folder, ChevronRight, Loader2 } from 'lucide-react';
+import jobService from '../../../../services/jobService';
+import resumeService from '../../../../services/resumeService';
+import documentService from '../../../../services/documentService';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = () => {
@@ -19,71 +22,72 @@ const ApplyToJob = () => {
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [selectedFolder, setSelectedFolder] = useState(null);
 
-    // Sample job data
-    const jobs = {
-        '1': {
-            id: 1,
-            title: 'Senior Seafarer',
-            company: 'ABC Company',
-            salary: 'GBP 50000',
-            location: 'London',
-            type: 'Full Time'
-        },
-        '2': {
-            id: 2,
-            title: 'Marine Engineer',
-            company: 'Ocean Dynamics Ltd',
-            salary: 'GBP 45000',
-            location: 'Southampton',
-            type: 'Full Time'
-        },
-        '3': {
-            id: 3,
-            title: 'Deck Officer',
-            company: 'Maritime Solutions',
-            salary: 'GBP 55000',
-            location: 'Liverpool',
-            type: 'Contract'
-        },
-        '4': {
-            id: 4,
-            title: 'Chief Engineer',
-            company: 'Seafarers International',
-            salary: 'GBP 65000',
-            location: 'Glasgow',
-            type: 'Full Time'
-        },
-        '5': {
-            id: 5,
-            title: 'Navigation Officer',
-            company: 'Global Maritime Group',
-            salary: 'GBP 48000',
-            location: 'London',
-            type: 'Full Time'
+    const [job, setJob] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [platformResume, setPlatformResume] = useState(null);
+    const [documentWalletItems, setDocumentWalletItems] = useState([]);
+    const [isApplying, setIsApplying] = useState(false);
+
+    useEffect(() => {
+        const fetchAllData = async () => {
+            try {
+                setIsLoading(true);
+                const [jobResponse, resumeResponse, docResponse] = await Promise.all([
+                    jobService.getProfessionalJobById(jobId).catch(() => null),
+                    resumeService.getResume().catch(() => null),
+                    documentService.getDocuments().catch(() => null)
+                ]);
+
+                if (jobResponse?.status === 'success' && jobResponse.data?.job) {
+                    const apiJob = jobResponse.data.job;
+                    setJob({
+                        id: apiJob.id,
+                        title: apiJob.title,
+                        company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                        salary: apiJob.salary,
+                        location: apiJob.location || 'Global',
+                        type: apiJob.contractType
+                    });
+                }
+
+                if (resumeResponse && resumeResponse.updatedAt) {
+                    setPlatformResume({
+                        id: 'platform',
+                        title: 'MaritimeLink Profile CV',
+                        createdDate: `Updated ${new Date(resumeResponse.updatedAt).toLocaleDateString()}`
+                    });
+                } else {
+                    setPlatformResume({
+                        id: 'platform',
+                        title: 'MaritimeLink Profile CV',
+                        createdDate: 'Up-to-date'
+                    });
+                }
+
+                if (docResponse?.status === 'success' && docResponse.data?.documents) {
+                    setDocumentWalletItems(
+                        docResponse.data.documents.map(d => ({
+                            id: d.id,
+                            title: d.name,
+                            expiry: d.expiryDate ? new Date(d.expiryDate).toLocaleDateString() : 'N/A',
+                            type: d.category || 'Document'
+                        }))
+                    );
+                }
+            } catch (error) {
+                console.error("Failed to fetch application data", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (jobId) {
+            fetchAllData();
         }
-    };
+    }, [jobId]);
 
-    const job = jobs[jobId] || jobs['1'];
-
-    // Sample resume data
-    const resumes = [
-        {
-            id: 1,
-            title: 'My CV 2026',
-            createdDate: 'Created 12 Dec 2025',
-            thumbnail: 'https://placehold.co/300x400/f3f4f6/a3a3a3?text=CV+2026'
-        }
-    ];
-
-    // Sample document wallet data
-    const documentWalletItems = [
-        { id: 'doc1', title: 'Certificate of Competency', expiry: '31 Dec 2026', type: 'License Certificate' },
-        { id: 'doc2', title: 'Basic Safety Training', expiry: '31 Dec 2026', type: 'STCW Certificate' },
-        { id: 'doc3', title: 'Medical Fitness Certificate', expiry: '31 Dec 2026', type: 'Medical Certificate' },
-        { id: 'doc4', title: 'Passport', expiry: '31 Dec 2026', type: 'Travel Document' },
-        { id: 'doc5', title: 'Seaman Book', expiry: '31 Dec 2026', type: 'Seaman Document' },
-        { id: 'doc6', title: 'Engineering Degree', expiry: '31 Dec 2026', type: 'Academic Certificate' }
-    ];
+    const resumes = platformResume ? [platformResume] : [];
 
     const documentFolders = Object.entries(
         documentWalletItems.reduce((folders, document) => {
@@ -114,23 +118,50 @@ const ApplyToJob = () => {
         }
     };
 
-    const handleApply = () => {
-        if (selectedResume) {
-            // Handle job application submission
+    const handleApply = async () => {
+        if (!selectedResume) return;
+
+        setIsApplying(true);
+        try {
+            let cvUrl = undefined;
+            if (selectedResume === 'uploaded' && uploadedResume) {
+                const cvRes = await jobService.uploadCV(uploadedResume);
+                if (cvRes.status === 'success' && cvRes.data?.url) {
+                    cvUrl = cvRes.data.url;
+                }
+            }
+
+            let coverLetterUrl = undefined;
+            let coverLetterText = undefined;
+            if (coverLetterMode === 'upload' && uploadedCoverLetter) {
+                const clRes = await jobService.uploadCoverLetter(uploadedCoverLetter);
+                if (clRes.status === 'success' && clRes.data?.url) {
+                    coverLetterUrl = clRes.data.url;
+                }
+            } else if (coverLetterMode === 'write' && coverLetter.trim()) {
+                coverLetterText = coverLetter;
+            }
+
             const applicationData = {
-                jobId,
-                resumeType: selectedResume === 'uploaded' ? 'uploaded' : 'platform',
-                resumeData: selectedResume === 'uploaded' ? uploadedResume : resumes.find(r => r.id === selectedResume),
-                coverLetterMode,
-                coverLetterData: coverLetterMode === 'write' ? coverLetter : uploadedCoverLetter,
-                selectedDocuments
+                coverLetter: coverLetterText,
+                coverLetterUrl: coverLetterUrl,
+                cvUrl: cvUrl,
+                documentIds: selectedDocuments
             };
-            console.log('Applying with data:', applicationData);
-            setShowSuccessModal(true);
-            setTimeout(() => {
-                setShowSuccessModal(false);
-                navigate('/personal/jobs');
-            }, 2000);
+
+            const applyRes = await jobService.applyToJob(jobId, applicationData);
+            if (applyRes.status === 'success') {
+                setShowSuccessModal(true);
+                setTimeout(() => {
+                    setShowSuccessModal(false);
+                    navigate('/personal/jobs');
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Application failed:', error);
+            alert('Failed to submit application. Please try again.');
+        } finally {
+            setIsApplying(false);
         }
     };
 
@@ -138,8 +169,14 @@ const ApplyToJob = () => {
         <div className="w-full min-h-screen flex justify-center py-10 px-4 sm:px-8 bg-white lg:bg-gray-50 overflow-y-auto">
             {/* Main Form Container - matching dashboard sizing */}
             <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col mb-10">
-                {/* Back Button and Title */}
-                <div className="mb-6">
+                {isLoading || !job ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+                        <Loader2 size={32} className="animate-spin text-[#003971]" />
+                    </div>
+                ) : (
+                    <>
+                        {/* Back Button and Title */}
+                        <div className="mb-6">
                     <button
                         onClick={() => step === 2 ? setStep(1) : navigate('/personal/jobs')}
                         className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 transition-colors min-h-[44px]"
@@ -422,10 +459,13 @@ const ApplyToJob = () => {
                         {/* Apply Button */}
                         <button
                             onClick={handleApply}
-                            className="w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 bg-[#003971] hover:bg-[#003971]/90"
+                            disabled={isApplying}
+                            className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 flex items-center justify-center ${isApplying ? 'bg-[#003971]/70' : 'bg-[#003971] hover:bg-[#003971]/90'}`}
                         >
-                            Submit Application
+                            {isApplying ? <Loader2 size={18} className="animate-spin" /> : 'Submit Application'}
                         </button>
+                    </>
+                )}
                     </>
                 )}
             </div>

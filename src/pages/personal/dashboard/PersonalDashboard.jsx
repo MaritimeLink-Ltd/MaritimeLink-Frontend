@@ -37,7 +37,6 @@ const PersonalDashboard = () => {
   const navigate = useNavigate();
 
   const kycStatus = localStorage.getItem('kycStatus');
-  const [showOldDashboard, setShowOldDashboard] = useState(kycStatus === 'completed');
   const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!kycStatus);
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
@@ -129,7 +128,6 @@ const PersonalDashboard = () => {
   const handleVerificationComplete = () => {
     localStorage.setItem('kycStatus', 'completed');
     setShowVerificationSubmittedModal(false);
-    setShowOldDashboard(true);
   };
 
   const handleSkipVerification = () => {
@@ -141,30 +139,7 @@ const PersonalDashboard = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {!showOldDashboard && <Dashboard />}
-
-      {showOldDashboard && (
-        <div className="h-full flex items-center justify-center p-8">
-          <div className="max-w-2xl text-center">
-            <h1 className="text-4xl font-bold text-blue-900 mb-6">
-              Welcome to the Maritime Link
-            </h1>
-            <div className="space-y-4 text-gray-600 text-lg leading-relaxed">
-              <p>Thank you for completing your profile.</p>
-              <p>
-                Your information and documents are currently under review by our team.
-              </p>
-              <p>
-                Once the verification process is complete, you will be notified by
-                email and granted full access to your dashboard.
-              </p>
-              <p className="font-medium text-gray-700">
-                No further action is required from you at this time.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dashboard />
 
       {/* KYC Modals */}
       <VerifyIdentityModal

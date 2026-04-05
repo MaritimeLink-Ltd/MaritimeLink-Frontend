@@ -1,30 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2 } from 'lucide-react';
+import jobService from '../../../../services/jobService';
 
 const Jobs = () => {
     const navigate = useNavigate();
 
-    // If user is not yet verified by admin, show a simple locked message.
-    const adminVerified = (localStorage.getItem('adminVerified') === 'true');
-    if (!adminVerified) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="max-w-xl text-center px-4 py-10">
-                    <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
-                        Welcome to MaritimeLink
-                    </h1>
-                    <p className="text-gray-600 mb-2">
-                        Thanks for joining us.
-                    </p>
-                    <p className="text-gray-500 text-sm md:text-base">
-                        Your account is awaiting verification by our admin team.
-                        Once you are verified, job recommendations and applications will be available here.
-                    </p>
-                </div>
-            </div>
-        );
-    }
+
     const [selectedJob, setSelectedJob] = useState(null);
     const [appliedJobs, setAppliedJobs] = useState(new Set());
     const [savedJobs, setSavedJobs] = useState(new Set());
@@ -50,198 +32,72 @@ const Jobs = () => {
     };
 
     // Sample job data
-    const allJobs = [
-        {
-            id: 1,
-            title: 'Chief Engineer',
-            company: 'Ocean Maritime Ltd',
-            location: 'London',
-            salary: 'GBP 75000',
-            category: 'Engine Officer',
-            jobType: 'Permanent',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-            jobDescription: 'On-site Job: United Kingdom (London / Joining Port as Assigned)',
-            aboutCompany: 'We are a reputable maritime organization operating international vessels with a strong commitment to safety, compliance, and operational excellence. We are currently seeking a qualified Chief Engineer to join our fleet.',
-            whatWeLookFor: 'We value professionalism, discipline, and a strong safety mindset. The ideal candidate demonstrates excellent engineering skills, effective communication, and the ability to work efficiently within a multinational crew.',
-            responsibilities: [
-                'Oversee engine room operations',
-                'Maintain all mechanical and electrical systems',
-                'Ensure compliance with maritime regulations',
-                'Manage engineering team effectively'
-            ]
-        },
-        {
-            id: 2,
-            title: 'Deck Officer',
-            company: 'Global Shipping Co',
-            location: 'Southampton',
-            salary: 'GBP 55000',
-            category: 'Deck Officer',
-            jobType: 'Contract',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-            jobDescription: 'On-site Job: United Kingdom (Southampton / Joining Port as Assigned)',
-            aboutCompany: 'Global Shipping Co operates a modern fleet across international waters. We seek experienced Deck Officers committed to safety and professional excellence.',
-            whatWeLookFor: 'Strong navigation skills, leadership abilities, and dedication to maritime safety standards.',
-            responsibilities: [
-                'Navigate and operate vessel safely',
-                'Maintain deck equipment and systems',
-                'Ensure compliance with maritime regulations',
-                'Coordinate with crew members effectively'
-            ]
-        },
-        {
-            id: 3,
-            title: 'Able Seaman',
-            company: 'Maritime Solutions Inc',
-            location: 'Liverpool',
-            salary: 'GBP 35000',
-            category: 'Deck Ratings',
-            jobType: 'Temporary',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
-            jobDescription: 'On-site Job: United Kingdom (Liverpool / Joining Port as Assigned)',
-            aboutCompany: 'Maritime Solutions Inc is a leading provider of crew services for commercial vessels worldwide.',
-            whatWeLookFor: 'Experienced seamen with strong work ethic and commitment to safety.',
-            responsibilities: [
-                'Perform deck maintenance duties',
-                'Assist with mooring operations',
-                'Stand watch as required',
-                'Follow all safety procedures'
-            ]
-        },
-        {
-            id: 4,
-            title: 'Ship Cook',
-            company: 'Culinary Marine Services',
-            location: 'Portsmouth',
-            salary: 'GBP 40000',
-            category: 'Catering',
-            jobType: 'Contract',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
-            jobDescription: 'On-site Job: United Kingdom (Portsmouth / Joining Port as Assigned)',
-            aboutCompany: 'We provide exceptional catering services to maritime vessels, ensuring crew welfare through quality nutrition.',
-            whatWeLookFor: 'Qualified cooks with maritime experience and ability to work in confined spaces.',
-            responsibilities: [
-                'Prepare nutritious meals for crew',
-                'Maintain galley hygiene standards',
-                'Manage food inventory',
-                'Accommodate dietary requirements'
-            ]
-        },
-        {
-            id: 5,
-            title: 'Oiler/Motorman',
-            company: 'Engine Room Experts',
-            location: 'Newcastle',
-            salary: 'GBP 38000',
-            category: 'Engine Ratings',
-            jobType: 'Permanent',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
-            jobDescription: 'On-site Job: United Kingdom (Newcastle / Joining Port as Assigned)',
-            aboutCompany: 'Engine Room Experts specializes in providing skilled engine room crew to commercial vessels.',
-            whatWeLookFor: 'Experienced oilers with mechanical aptitude and safety consciousness.',
-            responsibilities: [
-                'Maintain and lubricate machinery',
-                'Assist engineers with repairs',
-                'Monitor engine room systems',
-                'Perform routine maintenance tasks'
-            ]
-        },
-        {
-            id: 6,
-            title: 'Ship Medic',
-            company: 'Maritime Healthcare Services',
-            location: 'Bristol',
-            salary: 'GBP 48000',
-            category: 'Medical',
-            jobType: 'Permanent',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20), // 20 days ago
-            jobDescription: 'On-site Job: United Kingdom (Bristol / Joining Port as Assigned)',
-            aboutCompany: 'Maritime Healthcare Services provides medical support to seafarers worldwide.',
-            whatWeLookFor: 'Qualified medical professionals with maritime experience and emergency response training.',
-            responsibilities: [
-                'Provide medical care to crew',
-                'Maintain medical inventory',
-                'Conduct health and safety inspections',
-                'Respond to medical emergencies'
-            ]
-        },
-        {
-            id: 7,
-            title: 'Second Engineer',
-            company: 'Tech Marine Ltd',
-            location: 'Glasgow',
-            salary: 'GBP 62000',
-            category: 'Engine Officer',
-            jobType: 'Contract',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 25), // 25 days ago
-            jobDescription: 'On-site Job: United Kingdom (Glasgow / Joining Port as Assigned)',
-            aboutCompany: 'Tech Marine Ltd operates technologically advanced vessels requiring skilled engineering officers.',
-            whatWeLookFor: 'Second Engineers with modern vessel experience and strong technical knowledge.',
-            responsibilities: [
-                'Assist Chief Engineer in operations',
-                'Maintain engine and auxiliary systems',
-                'Supervise engine room crew',
-                'Ensure regulatory compliance'
-            ]
-        },
-        {
-            id: 8,
-            title: 'Ordinary Seaman',
-            company: 'Seafarer Recruitment Agency',
-            location: 'Cardiff',
-            salary: 'GBP 28000',
-            category: 'Deck Ratings',
-            jobType: 'Temporary',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 32), // 32 days ago
-            jobDescription: 'On-site Job: United Kingdom (Cardiff / Joining Port as Assigned)',
-            aboutCompany: 'Leading recruitment agency placing seafarers on quality vessels worldwide.',
-            whatWeLookFor: 'Entry-level seamen willing to learn and develop maritime skills.',
-            responsibilities: [
-                'Assist deck crew with daily tasks',
-                'Perform cleaning and maintenance',
-                'Learn navigation and seamanship',
-                'Follow safety protocols'
-            ]
-        },
-        {
-            id: 9,
-            title: 'Chief Cook',
-            company: 'Premium Catering Maritime',
-            location: 'Belfast',
-            salary: 'GBP 45000',
-            category: 'Catering',
-            jobType: 'Permanent',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-            jobDescription: 'On-site Job: United Kingdom (Belfast / Joining Port as Assigned)',
-            aboutCompany: 'Premium Catering Maritime provides high-quality food services to luxury cruise vessels.',
-            whatWeLookFor: 'Experienced Chief Cooks with culinary qualifications and leadership skills.',
-            responsibilities: [
-                'Lead galley operations',
-                'Train and supervise kitchen staff',
-                'Plan menus and manage budgets',
-                'Ensure food safety standards'
-            ]
-        },
-        {
-            id: 10,
-            title: 'Third Officer',
-            company: 'Royal Fleet Services',
-            location: 'Plymouth',
-            salary: 'GBP 48000',
-            category: 'Deck Officer',
-            jobType: 'Temporary',
-            datePosted: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8), // 8 days ago
-            jobDescription: 'On-site Job: United Kingdom (Plymouth / Joining Port as Assigned)',
-            aboutCompany: 'Royal Fleet Services manages a diverse fleet requiring skilled navigation officers.',
-            whatWeLookFor: 'Third Officers with valid certification and commitment to maritime excellence.',
-            responsibilities: [
-                'Stand navigation watches',
-                'Maintain safety equipment',
-                'Assist with cargo operations',
-                'Ensure compliance with regulations'
-            ]
+    const [allJobs, setAllJobs] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+    const handleJobClick = async (job) => {
+        setSelectedJob(job);
+        setIsDetailLoading(true);
+        try {
+            const response = await jobService.getProfessionalJobById(job.id);
+            if (response.status === 'success' && response.data?.job) {
+                const apiJob = response.data.job;
+                setSelectedJob({
+                    id: apiJob.id,
+                    title: apiJob.title,
+                    company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                    location: apiJob.location || 'Global',
+                    salary: apiJob.salary,
+                    category: apiJob.category,
+                    jobType: apiJob.contractType,
+                    datePosted: new Date(apiJob.createdAt),
+                    jobDescription: apiJob.description,
+                    aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
+                    whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
+                    responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
+                });
+            }
+        } catch (error) {
+            console.error("Failed to fetch detailed job info:", error);
+        } finally {
+            setIsDetailLoading(false);
         }
-    ];
+    };
+
+    useEffect(() => {
+        const fetchJobs = async () => {
+            try {
+                setIsLoading(true);
+                const response = await jobService.getProfessionalJobs();
+                // The API actually returns response.data.jobs (from the user's sample) 
+                // But let's check response structure:
+                if (response.status === 'success' && response.data?.jobs) {
+                    const mappedJobs = response.data.jobs.map(apiJob => ({
+                        id: apiJob.id,
+                        title: apiJob.title,
+                        company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                        location: apiJob.location || 'Global',
+                        salary: apiJob.salary,
+                        category: apiJob.category,
+                        jobType: apiJob.contractType,
+                        datePosted: new Date(apiJob.createdAt),
+                        jobDescription: apiJob.description,
+                        aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
+                        whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
+                        responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
+                    }));
+                    setAllJobs(mappedJobs);
+                }
+            } catch (error) {
+                console.error("Failed to fetch jobs:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchJobs();
+    }, []);
 
     // Filter jobs based on selected filters and search
     const jobs = allJobs.filter(job => {
@@ -348,35 +204,57 @@ const Jobs = () => {
             <div className="flex-1 flex overflow-hidden">
                 {/* Job List - Left Sidebar - Hidden on mobile when job detail is open */}
                 <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide`}>
-                    {jobs.map((job) => (
-                        <div
-                            key={job.id}
-                            onClick={() => setSelectedJob(job)}
-                            className={`p-5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedJob?.id === job.id ? 'bg-blue-50' : ''
-                                }`}
-                        >
-                            <div className="mb-3">
-                                <div className="flex items-start justify-between mb-2">
-                                    <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
-                                    <div className="flex items-center gap-1 text-[#003971] text-sm">
-                                        <MapPin size={14} />
-                                        <span>{job.location}</span>
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                            <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
+                            <p>Loading jobs...</p>
+                        </div>
+                    ) : jobs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
+                            <Briefcase size={48} className="text-gray-300 mb-4" strokeWidth={1.5} />
+                            <p className="text-lg font-medium text-gray-700">No jobs found</p>
+                            <p className="text-sm mt-1">Adjust your filters or try a different search</p>
+                        </div>
+                    ) : (
+                        jobs.map((job) => (
+                            <div
+                                key={job.id}
+                                onClick={() => handleJobClick(job)}
+                                className={`p-5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedJob?.id === job.id ? 'bg-blue-50' : ''
+                                    }`}
+                            >
+                                <div className="mb-3">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
+                                        <div className="flex items-center gap-1 text-[#003971] text-sm hidden">
+                                            <MapPin size={14} />
+                                            <span>{job.location}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                                        <Building2 size={14} />
+                                        <span>{job.company}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm text-gray-800 font-medium">
+                                        <span>{job.salary}</span>
+                                        <div className="flex items-center gap-1 text-[#003971] text-sm">
+                                            <MapPin size={14} />
+                                            <span>{job.location}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                                    <Building2 size={14} />
-                                    <span>{job.company}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-800 font-medium">
-                                    <span>{job.salary}</span>
-                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
 
                 {/* Job Detail - Right Side - Full width on mobile when job is selected */}
-                <div className={`${!selectedJob && 'hidden lg:flex'} flex-1 flex flex-col bg-white overflow-y-auto scrollbar-hide`}>
+                <div className={`${!selectedJob && 'hidden lg:flex'} flex-1 flex flex-col bg-white overflow-y-auto scrollbar-hide relative`}>
+                    {isDetailLoading && (
+                        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center">
+                            <Loader2 size={32} className="animate-spin text-[#003971]" />
+                        </div>
+                    )}
                     {selectedJob ? (
                         <div className="px-4 sm:px-8 py-4 sm:py-6">
                             {/* Job Header */}
@@ -414,16 +292,21 @@ const Jobs = () => {
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => {
-                                                setSavedJobs(prev => {
-                                                    const newSaved = new Set(prev);
-                                                    if (newSaved.has(selectedJob.id)) {
-                                                        newSaved.delete(selectedJob.id);
-                                                    } else {
-                                                        newSaved.add(selectedJob.id);
-                                                    }
-                                                    return newSaved;
-                                                });
+                                            onClick={async () => {
+                                                try {
+                                                    await jobService.saveJob(selectedJob.id);
+                                                    setSavedJobs(prev => {
+                                                        const newSaved = new Set(prev);
+                                                        if (newSaved.has(selectedJob.id)) {
+                                                            newSaved.delete(selectedJob.id);
+                                                        } else {
+                                                            newSaved.add(selectedJob.id);
+                                                        }
+                                                        return newSaved;
+                                                    });
+                                                } catch (error) {
+                                                    console.error("Failed to save/unsave job:", error);
+                                                }
                                             }}
                                             className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${savedJobs.has(selectedJob.id)
                                                 ? 'bg-[#003971] border-[#003971] text-white'

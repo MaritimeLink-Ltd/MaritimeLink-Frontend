@@ -1,19 +1,77 @@
-import React, { useState } from 'react';
-import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check, Loader2 } from 'lucide-react';
+import jobService from '../../../../services/jobService';
 
-const JobDetail = ({ job, onBack, onApplyClick }) => {
+const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
+    const { jobId } = useParams();
+    const navigate = useNavigate();
+
+    const [fetchedJob, setFetchedJob] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
     const [applied, setApplied] = useState(false);
     const [saved, setSaved] = useState(false);
     const [showAppliedModal, setShowAppliedModal] = useState(false);
 
+    useEffect(() => {
+        if (!propJob && jobId) {
+            const fetchJobDetails = async () => {
+                setIsLoading(true);
+                try {
+                    const response = await jobService.getProfessionalJobById(jobId);
+                    if (response?.status === 'success' && response.data?.job) {
+                        const apiJob = response.data.job;
+                        setFetchedJob({
+                            id: apiJob.id,
+                            title: apiJob.title,
+                            company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                            location: apiJob.location || 'Global',
+                            salary: apiJob.salary,
+                            category: apiJob.category,
+                            jobType: apiJob.contractType,
+                            datePosted: new Date(apiJob.createdAt),
+                            jobDescription: apiJob.description,
+                            aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
+                            whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
+                            responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch standalone job info:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchJobDetails();
+        }
+    }, [propJob, jobId]);
+
+    const job = propJob || fetchedJob;
+
     const handleApply = () => {
-        setApplied(true);
-        setShowAppliedModal(true);
-        setTimeout(() => setShowAppliedModal(false), 2000);
         if (onApplyClick) {
+            setApplied(true);
+            setShowAppliedModal(true);
+            setTimeout(() => setShowAppliedModal(false), 2000);
             onApplyClick(job);
+        } else {
+            navigate(`/personal/jobs/apply/${job.id}`);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 text-gray-400">
+                <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
+                <p>Loading job details...</p>
+            </div>
+        );
+    }
+
+    if (!job) {
+        return null;
+    }
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50">
@@ -21,7 +79,7 @@ const JobDetail = ({ job, onBack, onApplyClick }) => {
             <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
                     <button
-                        onClick={onBack}
+                        onClick={onBack || (() => navigate(-1))}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     >
                         <ArrowLeft size={20} className="text-gray-700" />
@@ -57,7 +115,14 @@ const JobDetail = ({ job, onBack, onApplyClick }) => {
                                     </button>
                                 )}
                                 <button 
-                                    onClick={() => setSaved(!saved)}
+                                    onClick={async () => {
+                                        try {
+                                            await jobService.saveJob(job.id);
+                                            setSaved(!saved);
+                                        } catch (e) {
+                                            console.error("Failed to save job");
+                                        }
+                                    }}
                                     className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${
                                         saved
                                             ? 'bg-[#003971] border-[#003971] text-white'

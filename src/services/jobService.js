@@ -112,6 +112,137 @@ class JobService {
     }
 
     /**
+     * Get all jobs for Professional
+     * GET /api/professional/jobs
+     * @param {number} page - Page number
+     * @param {number} limit - Items per page
+     * @returns {Promise<Object>} Response with paginated list of professional jobs
+     */
+    async getProfessionalJobs(page = 1, limit = 10) {
+        try {
+            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.PROFESSIONAL_ALL}?page=${page}&limit=${limit}`);
+            return response;
+        } catch (error) {
+            console.error('Get Professional Jobs error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get a single job by ID for Professional
+     * GET /api/professional/jobs/:id
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with professional job detail
+     */
+    async getProfessionalJobById(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.PROFESSIONAL_DETAIL(id));
+            return response;
+        } catch (error) {
+            console.error('Get Professional Job Detail error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload custom CV for applying to a job
+     * POST /api/professional/upload-cv
+     * @param {File} file - CV document file
+     * @returns {Promise<Object>} Response containing url and documentId
+     */
+    async uploadCV(file) {
+        try {
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('type', file.type || 'application/pdf');
+
+            const response = await httpClient.post(API_ENDPOINTS.PROFESSIONAL.UPLOAD_CV, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response;
+        } catch (error) {
+            console.error('Upload CV error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload custom cover letter for applying to a job
+     * POST /api/professional/upload-cover-letter
+     * @param {File} file - Cover letter document file
+     * @returns {Promise<Object>} Response containing url and documentId
+     */
+    async uploadCoverLetter(file) {
+        try {
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('type', file.type || 'application/pdf');
+
+            const response = await httpClient.post(API_ENDPOINTS.PROFESSIONAL.UPLOAD_COVER_LETTER, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response;
+        } catch (error) {
+            console.error('Upload Cover Letter error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Apply to a job
+     * POST /api/professional/jobs/:id/apply
+     * @param {string} jobId - Job ID
+     * @param {Object} applicationData - Application payload containing coverLetter, coverLetterUrl, cvUrl, documentIds
+     * @returns {Promise<Object>} Response with application details
+     */
+    async applyToJob(jobId, applicationData) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.JOBS.APPLY(jobId), applicationData);
+            return response;
+        } catch (error) {
+            console.error('Apply to Job error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Save a job
+     * POST /api/professional/jobs/:id/save
+     * @param {string} jobId - Job ID
+     * @returns {Promise<Object>} Response
+     */
+    async saveJob(jobId) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.JOBS.SAVE(jobId));
+            return response;
+        } catch (error) {
+            console.error('Save Job error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all saved jobs for Professional
+     * GET /api/professional/jobs/saved
+     * @param {number} page - Page number
+     * @param {number} limit - Items per page
+     * @returns {Promise<Object>} Response with paginated list of saved jobs
+     */
+    async getSavedJobs(page = 1, limit = 10) {
+        try {
+            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.SAVED_ALL}?page=${page}&limit=${limit}`);
+            return response;
+        } catch (error) {
+            console.error('Get Saved Jobs error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get a single job by ID
      * GET /api/jobs/:id
      * @param {string} id - Job ID

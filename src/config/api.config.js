@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
   PROFESSIONAL: {
     UPLOAD_ID: '/api/professional/upload-id',
     UPLOAD_PHOTO: '/api/professional/upload-photo',
+    UPLOAD_CV: '/api/professional/upload-cv',
+    UPLOAD_COVER_LETTER: '/api/professional/upload-cover-letter',
     COMPLETE_PROFILE: '/api/professional/complete-profile',
     SELECT_PROFESSION: '/api/professional/profession',
     SELECT_ROLE: '/api/professional/role',
@@ -97,6 +99,11 @@ export const API_ENDPOINTS = {
     UPDATE: (id) => `/api/jobs/${id}`,
     DELETE: (id) => `/api/jobs/${id}`,
     ADMIN_ALL: '/api/admin/jobs',
+    PROFESSIONAL_ALL: '/api/professional/jobs',
+    PROFESSIONAL_DETAIL: (id) => `/api/professional/jobs/${id}`,
+    APPLY: (id) => `/api/professional/jobs/${id}/apply`,
+    SAVE: (id) => `/api/professional/jobs/${id}/save`,
+    SAVED_ALL: '/api/professional/jobs/saved',
   },
   // Admin Endpoints
   ADMIN: {
