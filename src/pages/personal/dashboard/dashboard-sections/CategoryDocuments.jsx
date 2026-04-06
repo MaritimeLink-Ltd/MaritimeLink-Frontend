@@ -30,12 +30,12 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     // Map frontend IDs to backend ENUM strings if needed
     const categoryMap = {
         'licenses': 'LICENSES_ENDORSEMENTS',
-        'stcw': 'STCW_CERTIFICATES',
+        'stcw': 'LICENSES_ENDORSEMENTS',
         'medical': 'MEDICAL_CERTIFICATES',
-        'seaman': 'SEAMAN_BOOK_STAMP',
+        'seaman': 'SEAMANS_BOOK',
         'travel': 'TRAVEL_DOCUMENTS',
         'academic': 'ACADEMIC_QUALIFICATIONS',
-        'company': 'COMPANY_LETTERS_MISC',
+        'company': 'MISC_COMPANY_LETTERS',
         'appraisals': 'RECENT_APPRAISALS'
     };
 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot, Loader2 } from 'lucide-react';
 import resumeService from '../../../../services/resumeService';
+import authService from '../../../../services/authService';
+import toast, { Toaster } from 'react-hot-toast';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -15,6 +17,7 @@ const Profile = () => {
         return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
     });
     const [isAvailable, setIsAvailable] = useState(false);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
     // Get user data from localStorage
     const [userName, setUserName] = useState('User');
@@ -96,30 +99,72 @@ const Profile = () => {
         navigate('/signin');
     };
 
-    // Handle profile image upload
-    const handleImageUpload = (event) => {
+    // Handle profile image upload — calls the real API
+    const handleImageUpload = async (event) => {
         const file = event.target.files[0];
-        if (file) {
-            // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-            if (!validTypes.includes(file.type)) {
-                alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            toast.error('Please upload a valid image file (JPEG, PNG, or GIF)', { position: 'top-right' });
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size must be less than 5MB', { position: 'top-right' });
+            return;
+        }
+
+        // Show local preview immediately
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProfileImage(reader.result);
+        };
+        reader.readAsDataURL(file);
+
+        // Upload to API
+        try {
+            setIsUploadingPhoto(true);
+            const professionalId = localStorage.getItem('professionalId');
+            if (!professionalId) {
+                toast.error('Professional ID not found. Please log in again.', { position: 'top-right' });
                 return;
             }
 
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must be less than 5MB');
-                return;
-            }
+            const response = await authService.uploadProfilePhoto(professionalId, file);
+            const photoUrl = response?.data?.url || response?.data?.photoUrl || response?.data?.profilePhoto;
 
-            // Create preview URL
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImage(reader.result);
-                localStorage.setItem('profileImage', reader.result);
-            };
-            reader.readAsDataURL(file);
+            if (photoUrl) {
+                setProfileImage(photoUrl);
+                localStorage.setItem('profileImage', photoUrl);
+
+                // Update userProfile in localStorage too
+                const savedProfile = localStorage.getItem('userProfile');
+                if (savedProfile) {
+                    try {
+                        const profile = JSON.parse(savedProfile);
+                        profile.profilePhoto = photoUrl;
+                        localStorage.setItem('userProfile', JSON.stringify(profile));
+                    } catch (e) { /* ignore */ }
+                }
+
+                // Dispatch custom event so header and other components update immediately
+                window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: photoUrl } }));
+
+                toast.success('Profile photo updated successfully!', { position: 'top-right' });
+            } else {
+                toast.success('Photo uploaded!', { position: 'top-right' });
+            }
+        } catch (error) {
+            console.error('Profile photo upload error:', error);
+            toast.error(error.message || 'Failed to upload photo. Please try again.', { position: 'top-right' });
+            // Revert to saved image on failure
+            const saved = localStorage.getItem('profileImage');
+            if (saved) setProfileImage(saved);
+        } finally {
+            setIsUploadingPhoto(false);
         }
     };
 
@@ -128,10 +173,13 @@ const Profile = () => {
         const defaultImage = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
         setProfileImage(defaultImage);
         localStorage.setItem('profileImage', defaultImage);
+        // Notify header
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultImage } }));
     };
 
     return (
         <div className="w-full h-full bg-gray-50 overflow-y-auto">
+            <Toaster />
             {/* Main Content - Two Column Layout with spacing */}
             <div className="p-4 sm:p-8">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">

@@ -95,13 +95,14 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                 })();
 
                 const firstName = pi.firstName || pi.first_name || '';
+                const middleName = pi.middleName || pi.middle_name || '';
                 const lastName = pi.lastName || pi.last_name || '';
                 const fullName = pi.fullName || pi.full_name || '';
 
                 return {
                     ...prevData,
                     userType: newUserType,
-                    name: (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (fullName || prevData.name),
+                    name: (firstName || middleName || lastName) ? `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim() : (fullName || prevData.name),
                     category: pi.category || prevData.category,
                     phone: pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number ? `${pi.countryCode || pi.phoneCode || pi.country_code || pi.phone_code || ''} ${pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number}`.trim() : prevData.phone,
                     email: pi.email || pi.emailAddress || pi.email_address || prevData.email,
@@ -253,8 +254,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                         if (data.profilePhoto || data.profile_photo) {
                             const photo = data.profilePhoto || data.profile_photo;
                             localStorage.setItem('profileImage', photo);
-                            // Trigger storage event for other components
-                            window.dispatchEvent(new Event('storage'));
                         }
                     } else {
                         console.warn("Resume: API returned null or empty data");
@@ -267,6 +266,18 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
             };
             fetchResume();
         }
+
+        // Listen for photo updates from the Profile page
+        const handleCustomPhotoUpdate = (e) => {
+            if (e.detail && e.detail.url) {
+                setUserData(prev => ({ ...prev, image: e.detail.url }));
+            }
+        };
+        window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+
+        return () => {
+            window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        };
     }, [formData, defaultUserType]);
 
     const cvRef = useRef(null);

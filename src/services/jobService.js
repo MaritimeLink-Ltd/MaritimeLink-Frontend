@@ -112,6 +112,55 @@ class JobService {
     }
 
     /**
+     * Get applicants for a job (Admin)
+     * GET /api/admin/jobs/:id/applicants
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with list of applicants
+     */
+    async getAdminJobApplicants(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.ADMIN_APPLICANTS(id));
+            return response;
+        } catch (error) {
+            console.error('Get Admin Job Applicants error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get matches for a job (Admin)
+     * GET /api/admin/jobs/:id/matches
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with list of matched candidates
+     */
+    async getAdminJobMatches(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.ADMIN_MATCHES(id));
+            return response;
+        } catch (error) {
+            console.error('Get Admin Job Matches error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send an invitation to a matching professional (Admin)
+     * POST /api/admin/jobs/:jobId/invite/:professionalId
+     * @param {string} jobId - Job ID
+     * @param {string} professionalId - Professional ID
+     * @returns {Promise<Object>} Response confirming invitation sent
+     */
+    async inviteAdminMatch(jobId, professionalId) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.JOBS.ADMIN_INVITE_MATCH(jobId, professionalId), {});
+            return response;
+        } catch (error) {
+            console.error('Invite Admin Match error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get all jobs for Professional
      * GET /api/professional/jobs
      * @param {number} page - Page number
@@ -254,6 +303,55 @@ class JobService {
             return response;
         } catch (error) {
             console.error('Get Job Detail error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get applicants for a job (Recruiter)
+     * GET /api/recruiter/jobs/:id/applicants
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with list of applicants
+     */
+    async getJobApplicants(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.RECRUITER_APPLICANTS(id));
+            return response;
+        } catch (error) {
+            console.error('Get Job Applicants error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get matches for a job (Recruiter)
+     * GET /api/recruiter/jobs/:id/matches
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with list of matched candidates
+     */
+    async getJobMatches(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.RECRUITER_MATCHES(id));
+            return response;
+        } catch (error) {
+            console.error('Get Job Matches error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send an invitation to a matching professional
+     * POST /api/recruiter/jobs/:jobId/invite/:professionalId
+     * @param {string} jobId - Job ID
+     * @param {string} professionalId - Professional ID
+     * @returns {Promise<Object>} Response confirming invitation sent
+     */
+    async inviteMatch(jobId, professionalId) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.JOBS.RECRUITER_INVITE_MATCH(jobId, professionalId), {});
+            return response;
+        } catch (error) {
+            console.error('Invite Match error:', error);
             throw error;
         }
     }

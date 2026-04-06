@@ -1,36 +1,116 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ChevronDown, FileText, CheckCircle, XCircle, AlertTriangle, RefreshCw, Download, Users } from 'lucide-react';
+import httpClient from '../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../config/api.config';
 
 function Compliance() {
     const [activeTab, setActiveTab] = useState('All');
     const [timeFilter, setTimeFilter] = useState('30 Days');
 
     const tabs = ['All', 'Professionals', 'Recruiters', 'Training Providers'];
-    const timeFilters = ['Today', '7 Days', '30 Days'];
+    const timeFilters = ['Today', '7 Days', '30 Days', 'All'];
 
-    // Stats data
+    const [complianceRecords, setComplianceRecords] = useState([]);
+    const [apiStats, setApiStats] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [fetchTrigger, setFetchTrigger] = useState(0);
+
+    const getTimeAgo = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMs = now.getTime() - date.getTime();
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInHours / 24);
+
+        if (diffInHours < 1) return 'Just now';
+        if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    };
+
+    useEffect(() => {
+        const fetchSubmissions = async () => {
+            setIsLoading(true);
+            try {
+                const [submissionsResponse, statsResponse] = await Promise.all([
+                    httpClient.get(API_ENDPOINTS.ADMIN.KYC_SUBMISSIONS),
+                    httpClient.get(API_ENDPOINTS.ADMIN.KYC_STATS)
+                ]);
+                
+                const data = submissionsResponse?.data?.submissions || [];
+                const statsData = statsResponse?.data || null;
+                setApiStats(statsData);
+                
+                const mappedRecords = data.map(item => {
+                    let statusLabel = 'Pending Review';
+                    if (item.status === 'APPROVED') statusLabel = 'Verified';
+                    else if (item.status === 'REJECTED') statusLabel = 'Rejected';
+
+                    let riskColor = 'text-gray-600';
+                    if (item.riskLevel === 'LOW') riskColor = 'text-green-600';
+                    else if (item.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
+                    else if (item.riskLevel === 'HIGH') riskColor = 'text-red-600';
+
+                    let slaColor = 'text-green-600';
+                    let slaDot = 'bg-green-500';
+                    if (item.slaStatus?.toLowerCase().includes('breach')) {
+                        slaColor = 'text-red-600';
+                        slaDot = 'bg-red-500';
+                    }
+
+                    return {
+                        id: item.id,
+                        originalId: item.id,
+                        userName: item.name || 'Unknown',
+                        userRole: item.roleLabel || item.userType,
+                        company: item.companyName || 'N/A',
+                        companySubtext: item.email || '',
+                        complianceType: 'KYC',
+                        riskLevel: item.riskLevel || 'Unknown',
+                        riskColor: riskColor,
+                        submitted: getTimeAgo(item.submittedAt),
+                        rawSubmittedDate: item.submittedAt,
+                        sla: item.slaStatus || 'Within SLA',
+                        slaColor: slaColor,
+                        slaDot: slaDot,
+                        status: statusLabel,
+                        rawUserType: item.userType
+                    };
+                });
+                setComplianceRecords(mappedRecords);
+            } catch (err) {
+                console.error("Failed to fetch kyc submissions:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSubmissions();
+    }, [fetchTrigger]);
+
+    // Stats data from API
     const stats = [
         {
-            value: '23',
+            value: apiStats?.pendingReview?.count?.toString() || '0',
             label: 'KYC Pending Review',
-            sublabel: '+4 today',
+            sublabel: apiStats?.pendingReview?.today ? `+${apiStats.pendingReview.today} today` : 'Action needed',
             icon: FileText,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             cardBg: 'bg-blue-50'
         },
         {
-            value: '431',
+            value: apiStats?.verified?.toString() || '0',
             label: 'KYC Verified',
-            sublabel: '+8 today',
+            sublabel: 'Good standing',
             icon: CheckCircle,
             iconColor: 'text-purple-500',
             iconBg: 'bg-purple-50',
             cardBg: 'bg-white'
         },
         {
-            value: '14',
+            value: apiStats?.rejected?.toString() || '0',
             label: 'KYC Rejected',
             sublabel: 'Action needed',
             icon: XCircle,
@@ -39,107 +119,13 @@ function Compliance() {
             cardBg: 'bg-white'
         },
         {
-            value: '8',
+            value: apiStats?.highRisk?.toString() || '0',
             label: 'High-Risk Alerts',
             sublabel: 'alerts',
             icon: AlertTriangle,
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-50',
             cardBg: 'bg-white'
-        }
-    ];
-
-    // Sample compliance data
-    const complianceRecords = [
-        {
-            id: '1',
-            userName: 'David Turner',
-            userRole: 'Professional',
-            company: 'OceanhHire Agency',
-            companySubtext: 'OceanhHire Agency Ltd',
-            complianceType: 'KYC',
-            riskLevel: 'New submission',
-            riskColor: 'text-gray-600',
-            submitted: '5 hours ago',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
-            slaDot: 'bg-green-500',
-            status: 'Pending Review'
-        },
-        {
-            id: '2',
-            userName: 'Sarah Johnson',
-            userRole: 'Recruiter',
-            company: 'BlueWave Crewing',
-            companySubtext: 'BlueWave Crewing Ltd',
-            complianceType: 'KYC',
-            riskLevel: 'Medium',
-            riskColor: 'text-orange-600',
-            submitted: '7 hours ago',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
-            slaDot: 'bg-green-500',
-            status: 'Verified'
-        },
-        {
-            id: '3',
-            userName: 'Peter White',
-            userRole: 'Recruiter',
-            company: 'OceanhHire Agency',
-            companySubtext: 'OceanhHire Agency Ltd',
-            complianceType: 'KYC',
-            riskLevel: 'Low',
-            riskColor: 'text-green-600',
-            submitted: '1 day ago',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
-            slaDot: 'bg-green-500',
-            status: 'Verified'
-        },
-        {
-            id: '4',
-            userName: 'Carlos Vega',
-            userRole: 'Crew Member',
-            company: 'Worldwide Crew Now',
-            companySubtext: 'SeaCrew Recruiters',
-            complianceType: 'KYC',
-            riskLevel: 'High',
-            riskColor: 'text-red-600',
-            submitted: '1 day ago',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
-            slaDot: 'bg-green-500',
-            status: 'Rejected'
-        },
-        {
-            id: '5',
-            userName: 'Anna Müller',
-            userRole: 'Training',
-            company: 'Sophia Turner',
-            companySubtext: 'Global Marine Talent',
-            complianceType: 'KYC',
-            riskLevel: 'Medium',
-            riskColor: 'text-orange-600',
-            submitted: '2 days ago',
-            sla: 'Within SLA',
-            slaColor: 'text-green-600',
-            slaDot: 'bg-green-500',
-            status: 'Pending Review'
-        },
-        {
-            id: '6',
-            userName: 'Daniel Martinez',
-            userRole: 'Trainer',
-            company: 'Elizabeth Fang',
-            companySubtext: 'Global Marine Talent',
-            complianceType: 'KYC',
-            riskLevel: 'High',
-            riskColor: 'text-red-600',
-            submitted: '2 days ago',
-            sla: 'Breaching soon',
-            slaColor: 'text-red-600',
-            slaDot: 'bg-red-500',
-            status: 'Pending Review'
         }
     ];
 
@@ -158,9 +144,9 @@ function Compliance() {
     // Filter Logic
     const filteredRecords = complianceRecords.filter(record => {
         const matchesTab = activeTab === 'All' ||
-            (activeTab === 'Professionals' && (record.userRole === 'Professional' || record.userRole === 'Crew Member')) ||
-            (activeTab === 'Recruiters' && record.userRole === 'Recruiter') ||
-            (activeTab === 'Training Providers' && (record.userRole === 'Training' || record.userRole === 'Trainer'));
+            (activeTab === 'Professionals' && record.rawUserType === 'PROFESSIONAL') ||
+            (activeTab === 'Recruiters' && record.rawUserType === 'RECRUITER') ||
+            (activeTab === 'Training Providers' && record.rawUserType === 'TRAINING_PROVIDER');
 
         const matchesSearch = record.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             record.company.toLowerCase().includes(searchQuery.toLowerCase());
@@ -169,28 +155,26 @@ function Compliance() {
         const matchesRisk = riskFilter === '' || record.riskLevel === riskFilter;
         const matchesSla = slaFilter === '' || record.sla === slaFilter;
 
-        // Time filter - parse submitted field to determine days ago
         let matchesTime = true;
-        if (timeFilter !== '30 Days') {
-            const submitted = record.submitted?.toLowerCase() || '';
-            let daysAgo = 0;
-
-            if (submitted.includes('min')) {
-                daysAgo = 0;
-            } else if (submitted.includes('hour')) {
-                daysAgo = 0;
-            } else if (submitted.includes('day')) {
-                const match = submitted.match(/(\d+)/);
-                daysAgo = match ? parseInt(match[1]) : 1;
-            } else if (submitted.includes('week')) {
-                const match = submitted.match(/(\d+)/);
-                daysAgo = match ? parseInt(match[1]) * 7 : 7;
-            }
-
-            if (timeFilter === 'Today') {
-                matchesTime = daysAgo === 0;
+        if (record.rawSubmittedDate) {
+            const submittedDate = new Date(record.rawSubmittedDate);
+            const now = new Date();
+            
+            // Normalize to midnight to compute calendar days difference accurately
+            const submittedDay = new Date(submittedDate.getFullYear(), submittedDate.getMonth(), submittedDate.getDate());
+            const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            const diffTime = currentDay - submittedDay;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+            
+            if (timeFilter === 'All') {
+                matchesTime = true;
+            } else if (timeFilter === 'Today') {
+                matchesTime = diffDays === 0;
             } else if (timeFilter === '7 Days') {
-                matchesTime = daysAgo <= 7;
+                matchesTime = diffDays <= 7;
+            } else if (timeFilter === '30 Days') {
+                matchesTime = diffDays <= 30;
             }
         }
 
@@ -430,6 +414,7 @@ function Compliance() {
                             <button
                                 onClick={() => {
                                     setIsRefreshing(true);
+                                    setFetchTrigger(prev => prev + 1);
                                     setTimeout(() => setIsRefreshing(false), 1000);
                                     setStatusFilter('');
                                     setRiskFilter('');
@@ -482,7 +467,22 @@ function Compliance() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                            {currentRecords.map((record) => (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan="7" className="px-4 py-8 text-center text-sm text-gray-500 bg-gray-50/50">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <RefreshCw className="h-6 w-6 text-[#1e5a8f] animate-spin" />
+                                            <span>Loading submissions...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : currentRecords.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-4 py-8 text-center text-sm text-gray-500 bg-gray-50/50">
+                                        No compliance records found.
+                                    </td>
+                                </tr>
+                            ) : currentRecords.map((record) => (
                                 <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-4 py-4">
                                         <div className="text-sm font-semibold text-gray-900">{record.userName}</div>
@@ -516,6 +516,7 @@ function Compliance() {
                                     <td className="px-4 py-4">
                                         <Link
                                             to={`/admin/compliance/${record.id}`}
+                                            state={{ userType: record.rawUserType }}
                                             className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                         >
                                             View Details

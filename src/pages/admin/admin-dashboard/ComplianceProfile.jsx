@@ -736,32 +736,41 @@ function ComplianceProfile() {
                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">FLAGS & ISSUES</h3>
 
                         <div className="space-y-3">
-                            {/* Document Expired */}
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <div className="flex items-start gap-2 mb-1">
-                                    <svg className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <div className="flex-1">
-                                        <div className="text-xs font-bold text-red-900 mb-1">Document Expired</div>
-                                        <div className="text-xs text-red-700">HIGH</div>
-                                    </div>
-                                </div>
-                                <div className="text-xs text-red-700 mt-2">
-                                    ID card expired on 15 Apr 2028
-                                </div>
-                            </div>
-
-                            {/* Certificate OCR Readable */}
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-start gap-2">
-                                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                                    <div className="flex-1">
-                                        <div className="text-xs font-bold text-green-900 mb-1">Certificate OCR Readable</div>
-                                        <div className="text-xs text-green-700">All data fields extracted successfully</div>
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Flags Logic */}
+                            {(() => {
+                                const isExpired = kycData && kycData.expiryDate && new Date(kycData.expiryDate) < new Date();
+                                
+                                if (isExpired) {
+                                    return (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <div className="flex items-start gap-2 mb-1">
+                                                <svg className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <div className="flex-1">
+                                                    <div className="text-xs font-bold text-red-900 mb-1">Document Expired</div>
+                                                    <div className="text-xs text-red-700">HIGH</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-red-700 mt-2">
+                                                ID card expired on {userData.expiryDate}
+                                            </div>
+                                        </div>
+                                    );
+                                } else {
+                                    return (
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                            <div className="flex items-start gap-2">
+                                                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <div className="text-xs font-bold text-green-900 mb-1">Certificate OCR Readable</div>
+                                                    <div className="text-xs text-green-700">All data fields extracted successfully</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            })()}
                         </div>
                     </div>
 

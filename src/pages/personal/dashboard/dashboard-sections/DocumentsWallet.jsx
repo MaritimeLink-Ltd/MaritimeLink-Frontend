@@ -152,10 +152,10 @@ const DocumentsWallet = () => {
                 'LICENSES_ENDORSEMENTS': 'licenses',
                 'STCW_CERTIFICATES': 'stcw',
                 'MEDICAL_CERTIFICATES': 'medical',
-                'SEAMAN_BOOK_STAMP': 'seaman',
+                'SEAMANS_BOOK': 'seaman',
                 'TRAVEL_DOCUMENTS': 'travel',
                 'ACADEMIC_QUALIFICATIONS': 'academic',
-                'COMPANY_LETTERS_MISC': 'company',
+                'MISC_COMPANY_LETTERS': 'company',
                 'RECENT_APPRAISALS': 'appraisals'
             };
             

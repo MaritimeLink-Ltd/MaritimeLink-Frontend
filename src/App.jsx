@@ -86,6 +86,7 @@ import SupportCaseDetails from './pages/admin/admin-dashboard/SupportCaseDetails
 import SystemJobDetail from './pages/admin/admin-dashboard/SystemJobDetail';
 import ManualActionReview from './pages/admin/admin-dashboard/ManualActionReview';
 import AdminProfile from './pages/admin/admin-dashboard/AdminProfile';
+import OversightRecruiterJobs from './pages/admin/admin-dashboard/OversightRecruiterJobs';
 
 // Personal Dashboard Layout and Pages
 import PersonalDashboardLayout from './pages/personal/dashboard/layout/PersonalDashboardLayout';
@@ -211,6 +212,7 @@ function App() {
             <Route path="/admin/marketplace/internal/courses/:courseId" element={<CourseDetail />} />
             <Route path="/admin/marketplace/oversight/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/marketplace/oversight/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/admin/marketplace/oversight/recruiter/:recruiterId/jobs" element={<OversightRecruiterJobs />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
             <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />

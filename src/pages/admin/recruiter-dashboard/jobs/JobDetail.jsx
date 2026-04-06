@@ -38,6 +38,8 @@ function JobDetail({ onBack }) {
     const [timeFilter, setTimeFilter] = useState('7days');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+    const [allApplicants, setAllApplicants] = useState([]);
+    const [isLoadingApplicants, setIsLoadingApplicants] = useState(false);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -99,7 +101,87 @@ function JobDetail({ onBack }) {
         fetchJobDetail();
     }, [jobId]);
 
-    const allApplicants = job?.applicants || []; // Use real applicants data or empty array
+    // Fetch Applicants
+    useEffect(() => {
+        const fetchApplicants = async () => {
+             if (!jobId) return;
+             try {
+                 setIsLoadingApplicants(true);
+                 const isAdminPath = location.pathname.includes('/admin/');
+                 const [applicantsRes, matchesRes] = await Promise.all([
+                     isAdminPath ? jobService.getAdminJobApplicants(jobId) : jobService.getJobApplicants(jobId),
+                     isAdminPath ? jobService.getAdminJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; }) : jobService.getJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; })
+                 ]);
+                 
+                 let applicantsList = [];
+                 if (applicantsRes?.data?.applicants) {
+                     applicantsList = applicantsRes.data.applicants.map(app => {
+                         const prof = app.professional || {};
+                         const resume = prof?.resume || {};
+                         let uiStatus = 'new';
+                         if (app.status === 'APPLIED') uiStatus = 'new';
+                         else if (app.status === 'SHORTLISTED') uiStatus = 'shortlisted';
+                         else if (app.status === 'INTERVIEWING') uiStatus = 'interviewing';
+                         else if (app.status === 'OFFERED') uiStatus = 'offered';
+                         else if (app.status === 'HIRED') uiStatus = 'hired';
+                         else if (app.status === 'REJECTED') uiStatus = 'rejected';
+                         
+                         return {
+                             id: app.id,
+                             professionalId: app.professionalId || prof.id,
+                             name: prof?.fullname || 'Unknown',
+                             age: resume?.dateOfBirth ? (new Date().getFullYear() - new Date(resume.dateOfBirth).getFullYear()) : 'N/A',
+                             avatar: prof?.avatarUrl || 'https://i.pravatar.cc/150?img=12', // placeholder
+                             rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
+                             availability: 'Immediate',
+                             availabilitySubtext: prof?.profession || '',
+                             compliance: 'Ready',
+                             complianceSubtext: '',
+                             applicationDate: app.createdAt ? new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+                             status: uiStatus,
+                             rawApplicant: app
+                         };
+                     });
+                 }
+                 
+                 let matchesList = [];
+                 if (matchesRes?.data?.candidates) {
+                     matchesList = matchesRes.data.candidates.map(candidate => {
+                         const prof = candidate.professional || candidate;
+                         const resume = prof?.resume || {};
+                         
+                         return {
+                             id: candidate.id || prof.id,
+                             professionalId: candidate.professionalId || prof.id,
+                             name: prof?.fullname || 'Unknown',
+                             age: resume?.dateOfBirth ? (new Date().getFullYear() - new Date(resume.dateOfBirth).getFullYear()) : 'N/A',
+                             avatar: prof?.avatarUrl || 'https://i.pravatar.cc/150?img=12',
+                             rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
+                             availability: 'Immediate',
+                             availabilitySubtext: prof?.profession || '',
+                             compliance: 'Ready',
+                             complianceSubtext: '',
+                             applicationDate: 'Not Applied', // Match without applying
+                             status: 'matches',
+                             rawApplicant: candidate
+                         };
+                     });
+                 }
+                 
+                 // Merge lists, prefer applicant over match if duplicate by professionalId
+                 const mergedMap = new Map();
+                 matchesList.forEach(m => mergedMap.set(m.professionalId, m));
+                 applicantsList.forEach(a => mergedMap.set(a.professionalId, a));
+                 
+                 setAllApplicants(Array.from(mergedMap.values()));
+             } catch (error) {
+                 console.error("Failed to fetch applicants:", error);
+             } finally {
+                 setIsLoadingApplicants(false);
+             }
+        };
+        fetchApplicants();
+    }, [jobId]);
 
     const stats = [
         {
@@ -202,9 +284,20 @@ function JobDetail({ onBack }) {
         }
     };
 
-    const handleInviteToApply = (applicantId) => {
-        setInvitedApplicants([...invitedApplicants, applicantId]);
-        // In real app, this would send an API request
+    const handleInviteToApply = async (professionalId) => {
+        try {
+            setInvitedApplicants([...invitedApplicants, professionalId]);
+            const isAdminPath = location.pathname.includes('/admin/');
+            if (isAdminPath) {
+                await jobService.inviteAdminMatch(jobId, professionalId);
+            } else {
+                await jobService.inviteMatch(jobId, professionalId);
+            }
+        } catch (error) {
+            console.error("Failed to invite match:", error);
+            // Revert state if failed
+            setInvitedApplicants(invitedApplicants.filter(id => id !== professionalId));
+        }
     };
 
     const handleScheduleInterview = (applicantId) => {
@@ -522,17 +615,31 @@ function JobDetail({ onBack }) {
                                                     </button>
                                                 )}
                                                 {activeTab === 'matches' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            const candidateRoute = location.pathname.includes('/marketplace')
-                                                                ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/recruiter/candidate/${applicant.id}`;
-                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
-                                                        }}
-                                                        className="text-blue-600 font-semibold hover:underline text-sm"
-                                                    >
-                                                        View Profile
-                                                    </button>
+                                                    <div className="flex items-center gap-3">
+                                                        <button
+                                                            onClick={() => {
+                                                                const candidateRoute = location.pathname.includes('/marketplace')
+                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                    : `/recruiter/candidate/${applicant.id}`;
+                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                            }}
+                                                            className="text-blue-600 font-semibold hover:underline text-sm"
+                                                        >
+                                                            View Profile
+                                                        </button>
+                                                        {invitedApplicants.includes(applicant.professionalId) ? (
+                                                            <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold">
+                                                                Invited
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleInviteToApply(applicant.professionalId)}
+                                                                className="px-3 py-1.5 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors"
+                                                            >
+                                                                Invite
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'shortlisted' && (
                                                     <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">

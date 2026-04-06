@@ -54,7 +54,19 @@ function PersonalDashboardLayout() {
         updateUserData();
         // Also listen for potential changes (if other components update it)
         window.addEventListener('storage', updateUserData);
-        return () => window.removeEventListener('storage', updateUserData);
+        
+        // Listen for the custom event from the Profile upload
+        const handleCustomPhotoUpdate = (e) => {
+            if (e.detail && e.detail.url) {
+                setUserData(prev => ({ ...prev, photo: e.detail.url }));
+            }
+        };
+        window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        
+        return () => {
+            window.removeEventListener('storage', updateUserData);
+            window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        };
     }, []);
 
     const isActive = (path) => location.pathname === path;
