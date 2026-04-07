@@ -47,22 +47,31 @@ function resolveIdFromLocalStorage(candidateKeys) {
 }
 
 export function useKycWizard({ userType, storagePrefix }) {
-  const statusKey = `${storagePrefix}KycStatus`;
-  const adminVerifiedKey = `${storagePrefix}AdminVerified`;
-
-  const initialStatus = typeof window !== 'undefined' ? localStorage.getItem(statusKey) : null;
-  const [kycStatus, setKycStatus] = useState(initialStatus);
+  const userProfile = useMemo(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('userProfile')) || {};
+    } catch {
+      return {};
+    }
+  }, []);
 
   const isAdminVerified = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(adminVerifiedKey) === 'true';
-  }, [adminVerifiedKey]);
+    const profileStatus = userProfile.status?.toUpperCase();
+    return profileStatus === 'APPROVED' || profileStatus === 'VERIFIED' || profileStatus === 'ACTIVE';
+  }, [userProfile]);
 
-  const shouldShowKycWizard = !kycStatus || kycStatus === 'pending' || kycStatus === 'rejected';
+  const backendKycStatus = userProfile.kycStatus || userProfile.kyc_status;
+
+  const [sessionSkipped, setSessionSkipped] = useState(false);
+  const [kycStatus, setKycStatus] = useState(backendKycStatus || 'pending');
+
   const isKycUnderReview = kycStatus === 'completed' && !isAdminVerified;
   const hasFullAccess = isAdminVerified;
 
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(shouldShowKycWizard);
+  const shouldShowKycWizard = !isAdminVerified && !sessionSkipped;
+
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!isAdminVerified);
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -181,18 +190,12 @@ export function useKycWizard({ userType, storagePrefix }) {
   };
 
   const handleVerificationComplete = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(statusKey, 'completed');
-    }
     setKycStatus('completed');
     setShowVerificationSubmittedModal(false);
   };
 
   const handleSkipVerification = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(statusKey, 'skipped');
-    }
-    setKycStatus('skipped');
+    setSessionSkipped(true);
     setShowVerifyIdentityModal(false);
   };
 

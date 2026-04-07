@@ -103,10 +103,11 @@ class HttpClient {
      * POST request
      */
     async post(endpoint, data, options = {}) {
+        const isFormData = data instanceof FormData;
         return this.request(endpoint, {
             ...options,
             method: 'POST',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     }
 
@@ -114,10 +115,11 @@ class HttpClient {
      * PUT request
      */
     async put(endpoint, data, options = {}) {
+        const isFormData = data instanceof FormData;
         return this.request(endpoint, {
             ...options,
             method: 'PUT',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     }
 
@@ -125,10 +127,11 @@ class HttpClient {
      * PATCH request
      */
     async patch(endpoint, data, options = {}) {
+        const isFormData = data instanceof FormData;
         return this.request(endpoint, {
             ...options,
             method: 'PATCH',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     }
 

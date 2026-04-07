@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Dashboard from './dashboard-sections/Dashboard';
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
@@ -9,6 +9,7 @@ import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import kycService from '../../../services/kycService';
+import { AlertTriangle } from 'lucide-react';
 
 // ─── Resolve Professional ID ──────────────────────────────────────────────────
 // The payload showed professionalId: null because localStorage.getItem('professionalId')
@@ -36,8 +37,21 @@ const resolveProfessionalId = () => {
 const PersonalDashboard = () => {
   const navigate = useNavigate();
 
-  const kycStatus = localStorage.getItem('kycStatus');
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!kycStatus);
+  const userProfile = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userProfile')) || {};
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const isVerifiedByAdmin = useMemo(() => {
+    const profileStatus = userProfile.status?.toUpperCase();
+    return profileStatus === 'APPROVED' || profileStatus === 'VERIFIED' || profileStatus === 'ACTIVE';
+  }, [userProfile]);
+
+  const [sessionSkipped, setSessionSkipped] = useState(false);
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!isVerifiedByAdmin);
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -126,12 +140,12 @@ const PersonalDashboard = () => {
   };
 
   const handleVerificationComplete = () => {
-    localStorage.setItem('kycStatus', 'completed');
+    // Optionally trigger a profile refresh here if your backend dictates
     setShowVerificationSubmittedModal(false);
   };
 
   const handleSkipVerification = () => {
-    localStorage.setItem('kycStatus', 'skipped');
+    setSessionSkipped(true);
     setShowVerifyIdentityModal(false);
   };
 
@@ -139,7 +153,27 @@ const PersonalDashboard = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Dashboard />
+      {isVerifiedByAdmin ? (
+        <Dashboard />
+      ) : (
+        <div className="h-full flex items-center justify-center p-6 min-h-[calc(100vh-100px)]">
+          <div className="max-w-lg text-center space-y-4">
+            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle size={40} className="text-amber-600" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#003971]">
+              Account Under Review
+            </h1>
+            <p className="text-gray-600">
+              Your account is currently being reviewed by our admin team.
+            </p>
+            <p className="text-gray-500 text-sm">
+              Once your KYC verification is approved, you will have full access to Jobs, Training, Chats, and Profile.
+              In the meantime, you can update your <strong>Resume</strong> and <strong>Documents</strong>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* KYC Modals */}
       <VerifyIdentityModal

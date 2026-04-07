@@ -32,6 +32,25 @@ function Accounts() {
         highRisk: 0,
         verified: 0,
     });
+    const [professionals, setProfessionals] = useState([]);
+    const [isLoadingProfessionals, setIsLoadingProfessionals] = useState(false);
+    const [professionalsError, setProfessionalsError] = useState('');
+    const [professionalsSummary, setProfessionalsSummary] = useState({
+        total: 0,
+        pending: 0,
+        verified: 0,
+        flagged: 0
+    });
+
+    const [recruiters, setRecruiters] = useState([]);
+    const [isLoadingRecruiters, setIsLoadingRecruiters] = useState(false);
+    const [recruitersError, setRecruitersError] = useState('');
+    const [recruitersSummary, setRecruitersSummary] = useState({
+        total: 0,
+        pending: 0,
+        verified: 0,
+        flagged: 0
+    });
 
     useEffect(() => {
         if (location.state?.successMessage) {
@@ -145,81 +164,191 @@ function Accounts() {
         }
     };
 
+    const fetchProfessionals = async () => {
+        setIsLoadingProfessionals(true);
+        setProfessionalsError('');
+        try {
+            const response = await httpClient.get(`${API_ENDPOINTS.ADMIN.PROFESSIONALS}?limit=1000`);
+            
+            // Fetch stats
+            try {
+                const statsResponse = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONALS_STATS);
+                const statsData = statsResponse?.data || statsResponse || {};
+                setProfessionalsSummary({
+                    total: statsData.total || 0,
+                    pending: statsData.pending || 0,
+                    verified: statsData.verified || 0,
+                    flagged: statsData.flagged || 0,
+                });
+            } catch (statsError) {
+                console.error('Failed to load professional stats:', statsError);
+            }
+            let professionalsList = [];
+            if (response?.data?.professionals && Array.isArray(response.data.professionals)) {
+                professionalsList = response.data.professionals;
+            } else if (response?.data && Array.isArray(response.data)) {
+                professionalsList = response.data;
+            } else if (response?.professionals && Array.isArray(response.professionals)) {
+                professionalsList = response.professionals;
+            } else if (Array.isArray(response)) {
+                professionalsList = response;
+            }
+            
+            const getTimeAgo = (dateString) => {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+                const diffMs = new Date() - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 60) return `${Math.max(1, diffMins)} mins ago`;
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `${diffHours} hours ago`;
+                const diffDays = Math.floor(diffHours / 24);
+                if (diffDays < 7) return `${diffDays} days ago`;
+                const diffWeeks = Math.floor(diffDays / 7);
+                return `${diffWeeks} weeks ago`;
+            };
+
+            const mappedProfessionals = professionalsList.map((item) => {
+                let statusLabel = item.status === 'VERIFIED' || item.isVerified ? 'Verified' : 'Pending Verification';
+                if (item.status === 'FLAGGED') statusLabel = 'Flagged';
+                let statusColor = 'text-green-500';
+                if (statusLabel === 'Pending Verification') statusColor = 'text-orange-500';
+                if (statusLabel === 'Flagged') statusColor = 'text-red-500';
+                
+                return {
+                    id: item.id,
+                    name: item.fullname || 'Unknown',
+                    company: 'Self-Employed',
+                    domain: item.email || 'N/A',
+                    country: item.country || 'N/A',
+                    tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    lastActive: getTimeAgo(item.lastActive || item.createdAt),
+                    status: statusLabel,
+                    statusColor: statusColor,
+                    isVerified: item.isVerified
+                };
+            });
+            
+            setProfessionals(mappedProfessionals);
+        } catch (error) {
+            console.error('Failed to load professionals:', error);
+            setProfessionalsError(error.message || 'Failed to load professionals');
+            setProfessionals([]);
+        } finally {
+            setIsLoadingProfessionals(false);
+        }
+    };
+
+    const fetchRecruiters = async () => {
+        setIsLoadingRecruiters(true);
+        setRecruitersError('');
+        try {
+            const [response, statsResponse] = await Promise.allSettled([
+                httpClient.get(API_ENDPOINTS.ADMIN.RECRUITERS),
+                httpClient.get(API_ENDPOINTS.ADMIN.RECRUITERS_STATS),
+            ]);
+
+            // Parse recruiters list
+            let recruitersList = [];
+            if (response.status === 'fulfilled') {
+                const data = response.value;
+                if (data?.data?.recruiters && Array.isArray(data.data.recruiters)) {
+                    recruitersList = data.data.recruiters;
+                } else if (data?.data && Array.isArray(data.data)) {
+                    recruitersList = data.data;
+                } else if (Array.isArray(data)) {
+                    recruitersList = data;
+                }
+            }
+
+            const getTimeAgo = (dateString) => {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+                const diffMs = new Date() - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 60) return `${Math.max(1, diffMins)} mins ago`;
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `${diffHours} hours ago`;
+                const diffDays = Math.floor(diffHours / 24);
+                if (diffDays < 7) return `${diffDays} days ago`;
+                const diffWeeks = Math.floor(diffDays / 7);
+                return `${diffWeeks} weeks ago`;
+            };
+
+            // Compute fallback counts from list
+            let computedPending = 0, computedVerified = 0, computedFlagged = 0;
+
+            const mappedRecruiters = recruitersList.map((item) => {
+                let statusLabel = item.status || 'PENDING';
+                if (statusLabel === 'APPROVED') statusLabel = 'Approved';
+                else if (statusLabel === 'REJECTED') statusLabel = 'Rejected';
+                else if (statusLabel === 'PENDING') statusLabel = 'Pending';
+
+                if (statusLabel === 'Approved') computedVerified++;
+                if (statusLabel === 'Pending') computedPending++;
+                if (statusLabel === 'Rejected' || statusLabel === 'Flagged') computedFlagged++;
+
+                let statusColor = 'text-orange-500';
+                if (statusLabel === 'Approved') statusColor = 'text-green-500';
+                if (statusLabel === 'Rejected' || statusLabel === 'Flagged') statusColor = 'text-red-500';
+
+                return {
+                    id: item.id,
+                    name: item.organizationName || 'Unknown',
+                    company: item.organizationName || 'N/A',
+                    domain: item.email || 'N/A',
+                    country: item.companyCountry || 'N/A',
+                    tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    lastActive: getTimeAgo(item.lastActive || item.createdAt),
+                    status: statusLabel,
+                    statusColor: statusColor,
+                    isVerified: item.isVerified,
+                };
+            });
+
+            // Use stats API values if available, otherwise fall back to computed
+            if (statsResponse.status === 'fulfilled') {
+                const statsData = statsResponse.value?.data || statsResponse.value || {};
+                setRecruitersSummary({
+                    total: statsData.total ?? recruitersList.length,
+                    pending: statsData.pending ?? computedPending,
+                    verified: statsData.verified ?? computedVerified,
+                    flagged: (statsData.flagged ?? 0) + (statsData.rejected ?? computedFlagged),
+                });
+            } else {
+                console.warn('Recruiter stats API failed, using computed values');
+                setRecruitersSummary({
+                    total: recruitersList.length,
+                    pending: computedPending,
+                    verified: computedVerified,
+                    flagged: computedFlagged,
+                });
+            }
+
+            setRecruiters(mappedRecruiters);
+        } catch (error) {
+            console.error('Failed to load recruiters:', error);
+            setRecruitersError(error.message || 'Failed to load recruiters');
+            setRecruiters([]);
+        } finally {
+            setIsLoadingRecruiters(false);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'KYC Status') {
             fetchKycSubmissions();
+        } else if (activeTab === 'Professionals') {
+            fetchProfessionals();
+        } else if (activeTab === 'Recruiters') {
+            fetchRecruiters();
         }
     }, [activeTab]);
 
     // Tab-specific data
-    const recruitersData = [
-        {
-            id: 'REC001',
-            name: 'Oceantire Agency',
-            company: 'Oceantire Ltd',
-            domain: 'oceantire.com',
-            country: 'United Kingdom',
-            tier: 'Pro',
-            lastActive: '2 hours ago',
-            status: 'Pending',
-            statusColor: 'text-orange-500'
-        },
-        {
-            id: 'REC002',
-            name: 'BlueWave Crewing',
-            company: 'BlueWave Inc',
-            domain: 'bluewave.com',
-            country: 'USA',
-            tier: 'Free',
-            lastActive: '5 hours ago',
-            status: 'Approved',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'REC003',
-            name: 'Global Marine Talent',
-            company: 'Global Marine',
-            domain: 'gmt.com',
-            country: 'Italy',
-            tier: 'Pro',
-            lastActive: '1 day ago',
-            status: 'Stage 1 Approved',
-            statusColor: 'text-blue-500'
-        },
-        {
-            id: 'REC004',
-            name: 'SeaCrew Recruiters',
-            company: 'SeaCrew Pvt',
-            domain: 'seacrew.org',
-            country: 'India',
-            tier: 'Free',
-            lastActive: '2 days ago',
-            status: 'Rejected',
-            statusColor: 'text-red-500'
-        },
-        {
-            id: 'REC005',
-            name: 'Maritime Workplace',
-            company: 'Maritime Workplace',
-            domain: 'mwp.us',
-            country: 'USA',
-            tier: 'Pro',
-            lastActive: '3 days ago',
-            status: 'Pending',
-            statusColor: 'text-orange-500'
-        },
-        ...Array(10).fill(null).map((_, i) => ({
-            id: `REC${String(i + 6).padStart(3, '0')}`,
-            name: `Recruiter ${i + 6}`,
-            company: `Recruiter ${i + 6} Ltd`,
-            domain: `recruiter${i + 6}.com`,
-            country: ['USA', 'UK', 'India', 'Italy', 'Greece'][i % 5],
-            tier: i % 2 === 0 ? 'Pro' : 'Free',
-            lastActive: `${i + 4} days ago`,
-            status: ['Pending', 'Approved', 'Rejected'][i % 3],
-            statusColor: ['text-orange-500', 'text-green-500', 'text-red-500'][i % 3]
-        }))
-    ];
+    const recruitersData = recruiters;
 
     const trainingProvidersData = [
         {
@@ -290,74 +419,7 @@ function Accounts() {
         }))
     ];
 
-    const professionalsData = [
-        {
-            id: 'PRO001',
-            name: 'Captain James Wilson',
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: 'United Kingdom',
-            tier: 'Pro',
-            lastActive: '30 mins ago',
-            status: 'Verified',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'PRO002',
-            name: 'Chief Engineer Maria Santos',
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: 'Philippines',
-            tier: 'Free',
-            lastActive: '1 hour ago',
-            status: 'Verified',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'PRO003',
-            name: 'Second Officer John Smith',
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: 'USA',
-            tier: 'Pro',
-            lastActive: '2 hours ago',
-            status: 'Expiring Soon',
-            statusColor: 'text-orange-500'
-        },
-        {
-            id: 'PRO004',
-            name: 'AB Seaman Robert Chen',
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: 'China',
-            tier: 'Free',
-            lastActive: '5 hours ago',
-            status: 'Verified',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'PRO005',
-            name: 'Electrician Ahmed Hassan',
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: 'Egypt',
-            tier: 'Free',
-            lastActive: '1 day ago',
-            status: 'Flagged',
-            statusColor: 'text-red-500'
-        },
-        ...Array(20).fill(null).map((_, i) => ({
-            id: `PRO${String(i + 6).padStart(3, '0')}`,
-            name: `Professional ${i + 6}`,
-            company: 'Self-Employed',
-            domain: 'N/A',
-            country: ['USA', 'UK', 'Philippines', 'India', 'Greece', 'China'][i % 6],
-            tier: i % 3 === 0 ? 'Pro' : 'Free',
-            lastActive: `${i + 2} hours ago`,
-            status: ['Verified', 'Pending Verification', 'Flagged', 'Expiring Soon'][i % 4],
-            statusColor: ['text-green-500', 'text-orange-500', 'text-red-500', 'text-orange-500'][i % 4]
-        }))
-    ];
+    const professionalsData = professionals;
 
     const kycStatusData = kycSubmissions;
 
@@ -385,33 +447,33 @@ function Accounts() {
             case 'Recruiters':
                 return [
                     {
-                        value: '412',
+                        value: recruitersSummary.total.toString(),
                         label: 'Total Recruiters',
-                        sublabel: '+12 today',
+                        sublabel: 'Updated now',
                         icon: UserCheck,
                         iconColor: 'text-blue-500',
                         iconBg: 'bg-blue-50'
                     },
                     {
-                        value: '6',
+                        value: recruitersSummary.pending.toString(),
                         label: 'Pending',
-                        sublabel: 'Today (6)',
+                        sublabel: 'Requires action',
                         icon: UserCheck,
-                        iconColor: 'text-blue-500',
-                        iconBg: 'bg-blue-50'
+                        iconColor: 'text-orange-500',
+                        iconBg: 'bg-orange-50'
                     },
                     {
-                        value: '385',
+                        value: recruitersSummary.verified.toString(),
                         label: 'Verified',
-                        sublabel: 'Last 7 days',
+                        sublabel: 'Approved',
                         icon: Shield,
-                        iconColor: 'text-yellow-500',
-                        iconBg: 'bg-yellow-50'
+                        iconColor: 'text-green-500',
+                        iconBg: 'bg-green-50'
                     },
                     {
-                        value: '7',
-                        label: 'Flagged',
-                        sublabel: 'Older',
+                        value: recruitersSummary.flagged.toString(),
+                        label: 'Flagged/Rejected',
+                        sublabel: 'Review needed',
                         icon: AlertTriangle,
                         iconColor: 'text-red-500',
                         iconBg: 'bg-red-50'
@@ -455,33 +517,33 @@ function Accounts() {
             case 'Professionals':
                 return [
                     {
-                        value: '2,847',
+                        value: professionalsSummary.total.toString(),
                         label: 'Total Professionals',
-                        sublabel: '+45 today',
+                        sublabel: 'Updated now',
                         icon: UserCheck,
                         iconColor: 'text-blue-500',
                         iconBg: 'bg-blue-50'
                     },
                     {
-                        value: '89',
+                        value: professionalsSummary.pending.toString(),
                         label: 'Pending Verification',
-                        sublabel: 'Today (89)',
+                        sublabel: 'Requires action',
                         icon: UserCheck,
                         iconColor: 'text-orange-500',
                         iconBg: 'bg-orange-50'
                     },
                     {
-                        value: '2,721',
+                        value: professionalsSummary.verified.toString(),
                         label: 'Verified',
-                        sublabel: 'Last 7 days',
+                        sublabel: 'Approved',
                         icon: Shield,
                         iconColor: 'text-green-500',
                         iconBg: 'bg-green-50'
                     },
                     {
-                        value: '12',
+                        value: professionalsSummary.flagged.toString(),
                         label: 'Flagged',
-                        sublabel: 'Older',
+                        sublabel: 'Review needed',
                         icon: AlertTriangle,
                         iconColor: 'text-red-500',
                         iconBg: 'bg-red-50'
@@ -540,6 +602,20 @@ function Accounts() {
 
         if (activeTab === 'KYC Status') {
             fetchKycSubmissions().finally(() => {
+                setIsRefreshing(false);
+            });
+            return;
+        }
+
+        if (activeTab === 'Professionals') {
+            fetchProfessionals().finally(() => {
+                setIsRefreshing(false);
+            });
+            return;
+        }
+
+        if (activeTab === 'Recruiters') {
+            fetchRecruiters().finally(() => {
                 setIsRefreshing(false);
             });
             return;
@@ -1009,6 +1085,30 @@ function Accounts() {
                                 <tr>
                                     <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
                                         {kycError}
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'Professionals' && isLoadingProfessionals ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                        Loading professionals...
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'Professionals' && professionalsError ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                        {professionalsError}
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'Recruiters' && isLoadingRecruiters ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                        Loading recruiters...
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'Recruiters' && recruitersError ? (
+                                <tr>
+                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                        {recruitersError}
                                     </td>
                                 </tr>
                             ) : paginatedAccounts.length > 0 ? (

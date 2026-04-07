@@ -107,13 +107,19 @@ export const API_ENDPOINTS = {
     APPLY: (id) => `/api/professional/jobs/${id}/apply`,
     SAVE: (id) => `/api/professional/jobs/${id}/save`,
     SAVED_ALL: '/api/professional/jobs/saved',
+    APPLICATIONS: '/api/professional/applications',
     RECRUITER_APPLICANTS: (id) => `/api/recruiter/jobs/${id}/applicants`,
     RECRUITER_MATCHES: (id) => `/api/recruiter/jobs/${id}/matches`,
     RECRUITER_INVITE_MATCH: (jobId, professionalId) => `/api/recruiter/jobs/${jobId}/invite/${professionalId}`,
+    ADMIN_BULK_UPLOAD: '/api/admin/jobs/bulk-upload',
   },
   // Admin Endpoints
   ADMIN: {
     LOGIN: '/api/admin/login',
+    RECRUITERS: '/api/admin/recruiters',
+    RECRUITERS_STATS: '/api/admin/recruiters/stats',
+    PROFESSIONALS: '/api/admin/professionals',
+    PROFESSIONALS_STATS: '/api/admin/professionals/stats',
     KYC_SUBMISSIONS: '/api/admin/kyc-submissions',
     KYC_SUBMISSION_DETAIL: (id) => `/api/admin/kyc-submissions/${id}`,
     KYC_UPDATE_STATUS: (id) => `/api/admin/kyc-submissions/${id}/status`,
@@ -122,6 +128,8 @@ export const API_ENDPOINTS = {
     MARKETPLACE_STATS: '/api/admin/marketplace/stats',
     MARKETPLACE_OVERSIGHT: '/api/admin/marketplace/oversight',
     MARKETPLACE_LISTINGS: '/api/admin/marketplace/listings',
+    APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
+    UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
   },
 };
 

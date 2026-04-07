@@ -66,21 +66,42 @@ function Marketplace() {
         }
     };
 
-    const handleUploadSubmit = () => {
+    const handleUploadSubmit = async () => {
         if (!uploadFile) return;
 
         setIsUploading(true);
-        // Simulate upload delay
-        setTimeout(() => {
+        try {
+            const formData = new FormData();
+            formData.append('file', uploadFile);
+            
+            // Adjust to the newly added API endpoint
+            await httpClient.post(API_ENDPOINTS.JOBS.ADMIN_BULK_UPLOAD, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
             setIsUploading(false);
             setUploadComplete(true);
+            
+            // Reload the jobs table so new jobs show up
+            if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
+                loadJobsData(1);
+                setCurrentPage(1);
+            }
+            loadStatsData();
+            
             // Close modal after brief success message
             setTimeout(() => {
                 setShowUploadModal(false);
                 setUploadComplete(false);
                 setUploadFile(null);
             }, 2000);
-        }, 1500);
+        } catch (error) {
+            console.error('Failed to upload jobs:', error);
+            setIsUploading(false);
+            alert(error.response?.data?.message || 'Failed to bulk upload jobs');
+        }
     };
 
     const handleBulkUploadFile = (event) => {
@@ -100,12 +121,18 @@ function Marketplace() {
         try {
             setIsRefreshing(true);
             const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_LISTINGS}?page=${page}&limit=${itemsPerPage}`);
-            if (res?.data?.listings) {
-                setRemoteJobs(res.data.listings);
-                setTotalRemoteJobs(res.data?.total || res.total || res.data.listings.length || 0);
-            }
+            
+            // Always update state even if listings are empty to prevent stale data
+            const listings = res?.data?.listings || res?.listings || [];
+            const total = res?.data?.total || res?.total || listings.length || 0;
+            
+            setRemoteJobs(listings);
+            setTotalRemoteJobs(total);
         } catch (error) {
             console.error('Failed to load listings:', error);
+            // On error, clear current results to avoid confusion
+            setRemoteJobs([]);
+            setTotalRemoteJobs(0);
         } finally {
             setIsRefreshing(false);
         }
@@ -672,14 +699,19 @@ function Marketplace() {
         ? Math.max(1, Math.ceil(totalRemoteJobs / itemsPerPage))
         : Math.ceil(currentData.length / itemsPerPage);
 
+    // Determine if backend correctly paginated, or if we need to manually slice it.
+    // If backend returns more items than itemsPerPage, it means backend pagination failed or returned all items.
+    const isBackendPaginated = activeSubTab === 'Jobs' && isMaritimeLinkTab && currentData.length <= itemsPerPage;
+    const totalItems = (activeSubTab === 'Jobs' && isMaritimeLinkTab) ? totalRemoteJobs : currentData.length;
+
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
+    const endIndex = isBackendPaginated
         ? startIndex + currentData.length
         : startIndex + itemsPerPage;
 
-    const paginatedData = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
-        ? currentData
-        : currentData.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedData = isBackendPaginated
+        ? currentData // Backend handled pagination correctly
+        : currentData.slice(startIndex, startIndex + itemsPerPage); // Frontend handled pagination fallback
 
     const handlePageChange = (page) => {
         if (page >= 1 && page <= totalPages) {
@@ -719,7 +751,10 @@ function Marketplace() {
                     {mainTabs.map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveMainTab(tab)}
+                            onClick={() => {
+                                setActiveMainTab(tab);
+                                setCurrentPage(1);
+                            }}
                             className={`pb-3 text-sm font-semibold transition-colors relative ${activeMainTab === tab
                                 ? 'text-[#1e5a8f]'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -736,7 +771,10 @@ function Marketplace() {
                 {/* Sub Tabs (Jobs / Training Courses) */}
                 <div className="flex items-center gap-4 mb-6">
                     <button
-                        onClick={() => setActiveSubTab('Jobs')}
+                        onClick={() => {
+                            setActiveSubTab('Jobs');
+                            setCurrentPage(1);
+                        }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeSubTab === 'Jobs'
                             ? 'bg-[#1e5a8f] text-white'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -746,7 +784,10 @@ function Marketplace() {
                         Jobs
                     </button>
                     <button
-                        onClick={() => setActiveSubTab('Training Courses')}
+                        onClick={() => {
+                            setActiveSubTab('Training Courses');
+                            setCurrentPage(1);
+                        }}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeSubTab === 'Training Courses'
                             ? 'bg-[#1e5a8f] text-white'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -1228,7 +1269,7 @@ function Marketplace() {
                 {/* Pagination */}
                 <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 flex items-center justify-between bg-white">
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-semibold">{Math.min(startIndex + 1, (activeSubTab === 'Jobs' && isMaritimeLinkTab) ? totalRemoteJobs : currentData.length)}</span> - <span className="font-semibold">{Math.min(startIndex + paginatedData.length, (activeSubTab === 'Jobs' && isMaritimeLinkTab) ? totalRemoteJobs : currentData.length)}</span> of <span className="font-semibold">{(activeSubTab === 'Jobs' && isMaritimeLinkTab) ? totalRemoteJobs : currentData.length}</span> entries
+                        Showing <span className="font-semibold">{totalItems === 0 ? 0 : startIndex + 1}</span> - <span className="font-semibold">{Math.min(startIndex + paginatedData.length, totalItems)}</span> of <span className="font-semibold">{totalItems}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
                         <button

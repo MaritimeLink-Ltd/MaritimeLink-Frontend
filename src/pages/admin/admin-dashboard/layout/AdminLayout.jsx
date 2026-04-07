@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     LayoutDashboard,
     Users,
@@ -20,6 +20,57 @@ function AdminLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [userData, setUserData] = useState({
+        name: 'User Profile',
+        email: '',
+        photo: '/images/login-image.webp'
+    });
+
+    useEffect(() => {
+        const updateUserData = () => {
+            const savedProfile = localStorage.getItem('userProfile');
+            const savedPhoto = localStorage.getItem('profileImage');
+            const userEmail = localStorage.getItem('userEmail');
+            
+            if (savedProfile) {
+                try {
+                    const profile = JSON.parse(savedProfile);
+                    const name = (profile.firstName || profile.lastName) 
+                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+                        : profile.fullName || 'Admin User';
+                    
+                    setUserData({
+                        name: name,
+                        email: profile.email || userEmail || '',
+                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
+                    });
+                } catch (e) {
+                    console.error('Error parsing userProfile in layout:', e);
+                }
+            } else if (savedPhoto || userEmail) {
+                setUserData(prev => ({ 
+                    ...prev, 
+                    photo: savedPhoto || prev.photo,
+                    email: userEmail || prev.email
+                }));
+            }
+        };
+
+        updateUserData();
+        window.addEventListener('storage', updateUserData);
+        
+        const handleCustomPhotoUpdate = (e) => {
+            if (e.detail && e.detail.url) {
+                setUserData(prev => ({ ...prev, photo: e.detail.url }));
+            }
+        };
+        window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        
+        return () => {
+            window.removeEventListener('storage', updateUserData);
+            window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        };
+    }, []);
 
     const handleLogout = () => {
         // Clear any stored user data
@@ -157,11 +208,16 @@ function AdminLayout() {
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50"
                                 >
                                     <img
-                                        src="/images/login-image.webp"
-                                        alt="Musharof"
+                                        src={userData.photo}
+                                        alt="User avatar"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />
-                                    <span className="text-sm font-semibold text-gray-900">Musharof</span>
+                                    <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
+                                        <span className="text-sm font-semibold text-gray-900 leading-none mb-1 mr-2">{userData.name}</span>
+                                        {userData.email && (
+                                            <span className="text-xs text-gray-500 leading-none">{userData.email}</span>
+                                        )}
+                                    </div>
                                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
 

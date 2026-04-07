@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
@@ -9,6 +9,7 @@ import resumeService from '../../services/resumeService';
 
 const CVResume = ({ isReadOnly = false }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [userData, setUserData] = useState({
         name: '',
         category: '',
@@ -158,6 +159,21 @@ const CVResume = ({ isReadOnly = false }) => {
         };
 
         const fetchResume = async () => {
+            if (location.state?.resumeData) {
+                // Synthesize missing fields if passed from admin
+                const rd = location.state.resumeData;
+                processData({
+                    personalInfo: rd.personalInfo || {
+                        firstName: rd.name?.split(' ')[0] || '',
+                        lastName: rd.name?.split(' ').slice(1).join(' ') || '',
+                        email: rd.emailAddress || '',
+                        contactNumber: rd.phoneNumber || ''
+                    },
+                    ...rd
+                });
+                return;
+            }
+
             setIsLoading(true);
             try {
                 const data = await resumeService.getResume();

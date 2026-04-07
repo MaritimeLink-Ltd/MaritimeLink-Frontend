@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutGrid,
@@ -19,6 +19,57 @@ function TrainingProviderLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [userData, setUserData] = useState({
+        name: 'User Profile',
+        email: '',
+        photo: '/images/login-image.webp'
+    });
+
+    useEffect(() => {
+        const updateUserData = () => {
+            const savedProfile = localStorage.getItem('userProfile');
+            const savedPhoto = localStorage.getItem('profileImage');
+            const userEmail = localStorage.getItem('userEmail');
+            
+            if (savedProfile) {
+                try {
+                    const profile = JSON.parse(savedProfile);
+                    const name = (profile.firstName || profile.lastName) 
+                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+                        : profile.fullName || 'Training Provider User';
+                    
+                    setUserData({
+                        name: name,
+                        email: profile.email || userEmail || '',
+                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
+                    });
+                } catch (e) {
+                    console.error('Error parsing userProfile in layout:', e);
+                }
+            } else if (savedPhoto || userEmail) {
+                setUserData(prev => ({ 
+                    ...prev, 
+                    photo: savedPhoto || prev.photo,
+                    email: userEmail || prev.email
+                }));
+            }
+        };
+
+        updateUserData();
+        window.addEventListener('storage', updateUserData);
+        
+        const handleCustomPhotoUpdate = (e) => {
+            if (e.detail && e.detail.url) {
+                setUserData(prev => ({ ...prev, photo: e.detail.url }));
+            }
+        };
+        window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        
+        return () => {
+            window.removeEventListener('storage', updateUserData);
+            window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
+        };
+    }, []);
 
     const isTrainingProviderVerified = typeof window !== 'undefined' && localStorage.getItem('trainingProviderAdminVerified') === 'true';
     const isRestrictedTrainingRoute = ['/trainingprovider/demand', '/trainingprovider/courses', '/trainingprovider/bookings', '/trainingprovider/chats'].some(
@@ -140,11 +191,16 @@ function TrainingProviderLayout() {
                                 >
                                     <img
                                         className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src="/images/login-image.webp"
+                                        src={userData.photo}
                                         alt="User avatar"
                                     />
+                                    <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
+                                        <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2">{userData.name}</span>
+                                        {userData.email && (
+                                            <span className="text-xs text-gray-500 leading-none">{userData.email}</span>
+                                        )}
+                                    </div>
                                     <div className="flex items-center">
-                                        <span className="text-sm font-bold text-gray-700 mr-2">Musharof</span>
                                         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                                     </div>
                                 </button>

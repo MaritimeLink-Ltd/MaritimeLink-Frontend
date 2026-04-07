@@ -102,10 +102,8 @@ function RecruiterProfileCompletion() {
                 personalRole: finalRole
             });
 
-            // Navigate to phone verification
-            navigate('/agent/phone-verification', {
-                state: { phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}` }
-            });
+            // Skip phone verification for now and go directly to company details
+            navigate('/agent/company-details');
         } catch (err) {
             console.error('Profile completion error:', err);
             setError(err.data?.message || err.message || 'Failed to complete profile. Please try again.');

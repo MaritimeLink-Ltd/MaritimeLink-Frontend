@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 import {
     FileText,
     Wallet,
@@ -85,8 +87,41 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
     const nextStageInfo = getNextStageInfo();
 
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+    const handleStatusUpdate = async (newInternalStage, apiStatusValue) => {
+        if (!isAdmin) {
+            // If not admin, just use local state for now
+            setApplicationStage(newInternalStage);
+            return;
+        }
+
+        try {
+            setIsUpdatingStatus(true);
+            await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_APPLICANT_STATUS(candidateId), { status: apiStatusValue });
+            setApplicationStage(newInternalStage);
+        } catch (error) {
+            console.error("Failed to update status:", error);
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    };
+
     const moveToNextStage = () => {
-        if (nextStageInfo.nextStage) {
+        if (!nextStageInfo.nextStage || isUpdatingStatus) return;
+
+        const stageToApiMap = {
+            'applied': 'APPLIED',
+            'shortlisted': 'SHORTLISTED',
+            'interviewing': 'INTERVIEWING',
+            'offer-sent': 'OFFERED',
+            'hired': 'HIRED'
+        };
+
+        const apiValue = stageToApiMap[nextStageInfo.nextStage];
+        if (apiValue) {
+            handleStatusUpdate(nextStageInfo.nextStage, apiValue);
+        } else {
             setApplicationStage(nextStageInfo.nextStage);
         }
     };
@@ -99,76 +134,114 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         }
     };
 
-    const candidate = {
-        name: "Ali Shahzaib",
-        rank: "Deck Officer",
-        image: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400&h=400&fit=crop",
-        vesselTypes: ["LNG Tanker", "Offshore Support Vessel"],
-        seaTime: "8 years 9 months sea time",
-        compliant: true,
-        experience: [
-            "8 years 9 months total sea service",
-            "8 years 9 months on LNG Tankers",
-            "5 years 9 months on Offshore Support tankers",
-            "Rank Progression: Second Engineer to Chief Engineer"
-        ],
-        skills: [
-            { name: "Man B&W Engines", rating: 5 },
-            { name: "Seamanship", rating: 5 },
-            { name: "Navigation", rating: 4 },
-            { name: "Safety Management", rating: 5 }
-        ]
+    const [fetchedCandidate, setFetchedCandidate] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCandidateDetails = async () => {
+            if (!candidateId || !isAdmin) {
+                // Future consideration: Add endpoints for recruiters/training providers if needed
+                setIsLoading(false);
+                return;
+            }
+            try {
+                setIsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(candidateId));
+                const responseData = response?.data?.data || response?.data;
+                
+                if (responseData) {
+                    setFetchedCandidate(responseData);
+                    
+                    if (responseData.application?.status) {
+                        const stageMap = {
+                            'APPLIED': 'applied',
+                            'SHORTLISTED': 'shortlisted',
+                            'INTERVIEWING': 'interviewing',
+                            'OFFERED': 'offer-sent',
+                            'HIRED': 'hired',
+                        };
+                        const mappedStatus = stageMap[responseData.application.status];
+                        if (mappedStatus) {
+                            setApplicationStage(mappedStatus);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch candidate details:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchCandidateDetails();
+    }, [candidateId, isAdmin]);
+
+    const getMappedCandidate = () => {
+        if (!fetchedCandidate) {
+            const fallback = location.state?.candidateData || {};
+            return {
+                name: fallback.name || "Unknown",
+                rank: fallback.rank || "Unknown",
+                image: fallback.avatar || "https://i.pravatar.cc/150?img=12",
+                vesselTypes: [],
+                seaTime: "0 months sea time",
+                compliant: fallback.compliance === "Ready",
+                experience: [],
+                skills: []
+            };
+        }
+
+        const derived = fetchedCandidate.derived || {};
+        const application = fetchedCandidate.application || {};
+        const professional = application.professional || {};
+        const resume = professional.resume || {};
+             
+        return {
+             name: professional.fullname || "Unknown",
+             rank: professional.profession || resume.category || resume.subcategory || "N/A",
+             image: professional.avatarUrl || "https://i.pravatar.cc/150?img=12",
+             vesselTypes: resume.seaService ? [...new Set(resume.seaService.map(s => s.vesselType))] : [],
+             seaTime: derived.totalSeaTime ? `${derived.totalSeaTime.years || 0} years ${derived.totalSeaTime.months || 0} months sea time` : "0 months sea time",
+             compliant: derived.isVerified || false,
+             experience: derived.experienceSummary || [],
+             skills: resume.skills ? resume.skills.map(s => ({ name: s.skillName, rating: s.rating })) : []
+        };
     };
 
-    // Document Wallet Structure - Restricted View for Browsing Recruiters
-    const documentWallet = {
-        folders: [
-            {
-                id: 1,
-                name: "Certificates of Competency (CoC)",
-                documents: [
-                    { id: 1, name: "Officer of Watch (OOW) Certificate", expiryDate: "2025-08-15", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 2, name: "Chief Mate Certificate", expiryDate: "2025-11-20", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 3, name: "Master Mariner Certificate", expiryDate: "2024-02-10", status: "expired", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
-                ]
-            },
-            {
-                id: 2,
-                name: "Training Certificates",
-                documents: [
-                    { id: 4, name: "Basic Safety Training (BST)", expiryDate: "2025-06-30", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 5, name: "Advanced Fire Fighting", expiryDate: "2025-09-18", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 6, name: "Medical First Aid", expiryDate: "2024-12-01", status: "expiring-soon", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 7, name: "Ship Security Officer (SSO)", expiryDate: "2026-03-25", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
-                ]
-            },
-            {
-                id: 3,
-                name: "Medical Certificates",
-                documents: [
-                    { id: 8, name: "Seafarer Medical Examination Certificate (SMEC)", expiryDate: "2025-07-10", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 9, name: "Eyesight Test Report", expiryDate: "2025-07-10", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
-                ]
-            },
-            {
-                id: 4,
-                name: "Passport & Visa",
-                documents: [
-                    { id: 10, name: "Passport", expiryDate: "2028-04-15", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 11, name: "Schengen Visa", expiryDate: "2024-03-20", status: "expired", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 12, name: "US C1/D Visa", expiryDate: "2026-12-30", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
-                ]
-            },
-            {
-                id: 5,
-                name: "Seamans Book & Discharge Book",
-                documents: [
-                    { id: 13, name: "Seaman's Book", expiryDate: "2027-05-22", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
-                    { id: 14, name: "Discharge Book", expiryDate: "N/A", status: "valid", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
-                ]
-            }
-        ]
+    const getMappedWallet = () => {
+        if (!fetchedCandidate) return { folders: [] };
+
+        const docs = fetchedCandidate.application?.professional?.documents || [];
+        const categories = [...new Set(docs.map(d => d.category))];
+        const folders = categories.map((cat, i) => {
+             return {
+                  id: i + 1,
+                  name: (cat || '').split('_').filter(Boolean).map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') || 'Other',
+                  documents: docs.filter(d => d.category === cat).map((d, j) => {
+                       const expiryDateStr = d.expiryDate ? new Date(d.expiryDate).toLocaleDateString('en-GB') : "N/A";
+                       const diffTime = d.expiryDate ? new Date(d.expiryDate).getTime() - new Date().getTime() : 0;
+                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                       let status = 'valid';
+                       if(d.expiryDate) {
+                           if(diffDays < 0) status = 'expired';
+                           else if(diffDays < 60) status = 'expiring-soon';
+                       }
+
+                       return {
+                           id: d.id || j + 1,
+                           name: d.name || 'Untitled Document',
+                           expiryDate: expiryDateStr,
+                           status: status,
+                           url: d.fileUrl || ""
+                       };
+                  })
+             };
+        });
+
+        return { folders };
     };
+
+    const candidate = getMappedCandidate();
+    const documentWallet = getMappedWallet();
 
     // Handle Request Documents
     const handleRequestDocuments = () => {
@@ -223,6 +296,38 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
     // Calculate current stage index - if no stage, index is -1 (before first stage)
     const currentStageIndex = applicationStage ? stages.findIndex(s => s.id === applicationStage) : -1;
+
+    const handleViewResume = () => {
+        if (onViewResume) {
+            onViewResume(candidateId);
+            return;
+        }
+
+        const cvUrl = fetchedCandidate?.application?.cvUrl;
+        if (cvUrl) {
+            window.open(cvUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        const resumeSnapshot = fetchedCandidate?.application?.resumeSnapshot;
+        
+        if (location.pathname.includes('/trainingprovider/')) {
+            navigate('/trainingprovider/cv-resume', { state: { resumeData: resumeSnapshot } });
+        } else if (isAdmin) {
+            navigate('/admin/admin-cv-resume', { state: { resumeData: resumeSnapshot } });
+        } else {
+            navigate('/admin/cv-resume', { state: { resumeData: resumeSnapshot } });
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
+                <div className="w-10 h-10 border-4 border-[#003971] border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-500 font-medium">Loading candidate details...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 p-6">
@@ -284,7 +389,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                         {/* Show View Resume for recruiter/admin profile pages (hide for training provider) */}
                         {!location.pathname.includes('/trainingprovider/') && (
                             <button
-                                onClick={() => onViewResume ? onViewResume(candidateId) : navigate(location.pathname.includes('/trainingprovider/') ? '/trainingprovider/cv-resume' : isAdmin ? '/admin/admin-cv-resume' : '/admin/cv-resume')}
+                                onClick={handleViewResume}
                                 className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                             >
                                 <FileText className="h-5 w-5" />
@@ -438,9 +543,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 <button
                                     onClick={moveToNextStage}
                                     className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                    disabled={applicationStage === 'hired'}
+                                    disabled={applicationStage === 'hired' || isUpdatingStatus}
                                 >
-                                    {nextStageInfo.buttonText}
+                                    {isUpdatingStatus ? 'Updating...' : nextStageInfo.buttonText}
                                 </button>
                             </div>
                         </div>
@@ -546,14 +651,16 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 <button
                                     onClick={() => {
                                         if (!rejectReason.trim()) return;
-                                        setShowRejectModal(false);
-                                        setRejectReason('');
-                                        navigate(-1);
+                                        handleStatusUpdate('rejected', 'REJECTED').then(() => {
+                                            setShowRejectModal(false);
+                                            setRejectReason('');
+                                            navigate(-1);
+                                        });
                                     }}
-                                    disabled={!rejectReason.trim()}
+                                    disabled={!rejectReason.trim() || isUpdatingStatus}
                                     className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Reject Candidate
+                                    {isUpdatingStatus ? 'Rejecting...' : 'Reject Candidate'}
                                 </button>
                             </div>
                         </div>

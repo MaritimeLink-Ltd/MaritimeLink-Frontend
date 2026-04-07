@@ -69,24 +69,35 @@ const Jobs = () => {
         const fetchJobs = async () => {
             try {
                 setIsLoading(true);
-                const response = await jobService.getProfessionalJobs();
-                // The API actually returns response.data.jobs (from the user's sample) 
-                // But let's check response structure:
-                if (response.status === 'success' && response.data?.jobs) {
-                    const mappedJobs = response.data.jobs.map(apiJob => ({
-                        id: apiJob.id,
-                        title: apiJob.title,
-                        company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
-                        location: apiJob.location || 'Global',
-                        salary: apiJob.salary,
-                        category: apiJob.category,
-                        jobType: apiJob.contractType,
-                        datePosted: new Date(apiJob.createdAt),
-                        jobDescription: apiJob.description,
-                        aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
-                        whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
-                        responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
-                    }));
+                const [jobsRes, appsRes] = await Promise.all([
+                    jobService.getProfessionalJobs().catch(() => null),
+                    jobService.getApplications().catch(() => null)
+                ]);
+
+                let appliedSet = new Set();
+                if (appsRes?.status === 'success' && appsRes.data?.applications) {
+                    const appliedIds = appsRes.data.applications.map(app => app.jobId);
+                    appliedSet = new Set(appliedIds);
+                    setAppliedJobs(appliedSet);
+                }
+
+                if (jobsRes?.status === 'success' && jobsRes.data?.jobs) {
+                    const mappedJobs = jobsRes.data.jobs
+                        .filter(apiJob => !appliedSet.has(apiJob.id))
+                        .map(apiJob => ({
+                            id: apiJob.id,
+                            title: apiJob.title,
+                            company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                            location: apiJob.location || 'Global',
+                            salary: apiJob.salary,
+                            category: apiJob.category,
+                            jobType: apiJob.contractType,
+                            datePosted: new Date(apiJob.createdAt),
+                            jobDescription: apiJob.description,
+                            aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
+                            whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
+                            responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
+                        }));
                     setAllJobs(mappedJobs);
                 }
             } catch (error) {

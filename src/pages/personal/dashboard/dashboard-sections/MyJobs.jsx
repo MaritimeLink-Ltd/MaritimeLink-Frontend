@@ -33,8 +33,21 @@ const MyJobs = () => {
                         setLocalSavedJobs(mappedJobs);
                     }
                 } else {
-                    // Placeholder for applied jobs
-                    setLocalAppliedJobs([]);
+                    const res = await jobService.getApplications();
+                    if (res.status === 'success' && res.data) {
+                        const apps = res.data.applications || [];
+                        const mappedJobs = apps.map(app => {
+                            const jobObj = app.job || {};
+                            return {
+                                id: jobObj.id || app.jobId,
+                                title: jobObj.title || 'Unknown Title',
+                                company: jobObj.recruiter?.organizationName || 'MaritimeLink Admin',
+                                salary: jobObj.salary || 'N/A',
+                                location: jobObj.location || 'Global',
+                            };
+                        });
+                        setLocalAppliedJobs(mappedJobs);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch My Jobs:", error);

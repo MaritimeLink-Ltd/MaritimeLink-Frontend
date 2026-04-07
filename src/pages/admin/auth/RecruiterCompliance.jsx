@@ -81,8 +81,12 @@ function RecruiterCompliance() {
                 howDidYouHear: formData.hearAboutUs === 'Other' ? formData.otherHearAboutUs : formData.hearAboutUs
             });
 
-            // Navigate to under review page
-            navigate('/agent/under-review');
+            // Navigate straight to dashboard so the KYC popup can be shown
+            if (userType === 'training-provider') {
+                navigate('/trainingprovider-dashboard');
+            } else {
+                navigate('/recruiter-dashboard');
+            }
         } catch (err) {
             console.error('Compliance submission error:', err);
             setError(err.data?.message || err.message || 'Failed to submit compliance. Please try again.');

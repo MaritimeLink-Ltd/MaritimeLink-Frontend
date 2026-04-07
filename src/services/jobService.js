@@ -292,6 +292,23 @@ class JobService {
     }
 
     /**
+     * Get all applications for Professional
+     * GET /api/professional/applications
+     * @param {number} page - Page number
+     * @param {number} limit - Items per page
+     * @returns {Promise<Object>} Response with paginated list of applications
+     */
+    async getApplications(page = 1, limit = 20) {
+        try {
+            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.APPLICATIONS}?page=${page}&limit=${limit}`);
+            return response;
+        } catch (error) {
+            console.error('Get Applications error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get a single job by ID
      * GET /api/jobs/:id
      * @param {string} id - Job ID

@@ -55,19 +55,24 @@ const ApplyToJob = () => {
                     setPlatformResume({
                         id: 'platform',
                         title: 'MaritimeLink Profile CV',
-                        createdDate: `Updated ${new Date(resumeResponse.updatedAt).toLocaleDateString()}`
+                        createdDate: `Updated ${new Date(resumeResponse.updatedAt).toLocaleDateString()}`,
+                        cvUrl: resumeResponse.cvUrl || resumeResponse.resumeUrl || null
                     });
                 } else {
                     setPlatformResume({
                         id: 'platform',
                         title: 'MaritimeLink Profile CV',
-                        createdDate: 'Up-to-date'
+                        createdDate: 'Up-to-date',
+                        cvUrl: resumeResponse?.cvUrl || resumeResponse?.resumeUrl || null
                     });
                 }
 
                 if (docResponse?.status === 'success' && docResponse.data?.documents) {
+                    const filteredDocs = docResponse.data.documents.filter(d => 
+                        d.category !== 'CV_RESUME' && d.category !== 'COVER_LETTER'
+                    );
                     setDocumentWalletItems(
-                        docResponse.data.documents.map(d => ({
+                        filteredDocs.map(d => ({
                             id: d.id,
                             title: d.name,
                             expiry: d.expiryDate ? new Date(d.expiryDate).toLocaleDateString() : 'N/A',
@@ -129,6 +134,8 @@ const ApplyToJob = () => {
                 if (cvRes.status === 'success' && cvRes.data?.url) {
                     cvUrl = cvRes.data.url;
                 }
+            } else if (selectedResume === 'platform') {
+                cvUrl = platformResume?.cvUrl;
             }
 
             let coverLetterUrl = undefined;
