@@ -39,12 +39,13 @@ function PersonalDashboardLayout() {
                     const profile = JSON.parse(savedProfile);
                     const name = (profile.firstName || profile.lastName) 
                         ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
-                        : profile.fullName || 'User Profile';
+                        : profile.fullName || profile.fullname || 'User Profile';
+                    const apiPhoto = profile.profilePhotoUrl || profile.profilePhoto || profile.photo;
                     
                     setUserData({
                         name: name,
                         email: profile.email || userEmail || '',
-                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
+                        photo: apiPhoto || savedPhoto || '/images/login-image.webp'
                     });
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);

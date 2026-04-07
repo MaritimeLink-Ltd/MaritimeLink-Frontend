@@ -140,19 +140,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     useEffect(() => {
         const fetchCandidateDetails = async () => {
             if (!candidateId || !isAdmin) {
-                // Future consideration: Add endpoints for recruiters/training providers if needed
                 setIsLoading(false);
                 return;
             }
             try {
                 setIsLoading(true);
-                const response = await httpClient.get(API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(candidateId));
+                
+                // If viewing a general professional profile (Accounts tab) vs a job applicant
+                const isProfessionalView = location.state?.isProfessionalView;
+                const endpoint = isProfessionalView 
+                    ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
+                    : API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(candidateId);
+                    
+                const response = await httpClient.get(endpoint);
                 const responseData = response?.data?.data || response?.data;
                 
                 if (responseData) {
-                    setFetchedCandidate(responseData);
+                    // Extract candidate object. If professional view, it's responseData.professional. Otherwise it's candidate or self
+                    const candidateObj = isProfessionalView && responseData.professional ? responseData.professional : responseData;
+                    setFetchedCandidate(candidateObj);
                     
-                    if (responseData.application?.status) {
+                    if (candidateObj.application?.status) {
                         const stageMap = {
                             'APPLIED': 'applied',
                             'SHORTLISTED': 'shortlisted',
@@ -160,7 +168,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             'OFFERED': 'offer-sent',
                             'HIRED': 'hired',
                         };
-                        const mappedStatus = stageMap[responseData.application.status];
+                        const mappedStatus = stageMap[candidateObj.application.status];
                         if (mappedStatus) {
                             setApplicationStage(mappedStatus);
                         }
@@ -173,7 +181,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             }
         };
         fetchCandidateDetails();
-    }, [candidateId, isAdmin]);
+    }, [candidateId, isAdmin, location.state]);
 
     const getMappedCandidate = () => {
         if (!fetchedCandidate) {
@@ -190,18 +198,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             };
         }
 
-        const derived = fetchedCandidate.derived || {};
-        const application = fetchedCandidate.application || {};
-        const professional = application.professional || {};
-        const resume = professional.resume || {};
-             
+        const isDirectProfessional = location.state?.isProfessionalView || !!fetchedCandidate.fullname;
+        let derived, professional, resume;
+
+        if (isDirectProfessional) {
+            professional = fetchedCandidate;
+            resume = professional.resume || {};
+            derived = professional.derived || {};
+        } else {
+            derived = fetchedCandidate.derived || {};
+            const application = fetchedCandidate.application || {};
+            professional = application.professional || {};
+            resume = professional.resume || {};
+        }
+
         return {
-             name: professional.fullname || "Unknown",
-             rank: professional.profession || resume.category || resume.subcategory || "N/A",
-             image: professional.avatarUrl || "https://i.pravatar.cc/150?img=12",
+             name: professional.fullname || [professional.firstName, professional.lastName].filter(Boolean).join(' ') || "Unknown",
+             rank: professional.profession || professional.subcategory || resume.category || resume.subcategory || "N/A",
+             image: professional.profilePhotoUrl || professional.avatarUrl || "https://i.pravatar.cc/150?img=12",
              vesselTypes: resume.seaService ? [...new Set(resume.seaService.map(s => s.vesselType))] : [],
              seaTime: derived.totalSeaTime ? `${derived.totalSeaTime.years || 0} years ${derived.totalSeaTime.months || 0} months sea time` : "0 months sea time",
-             compliant: derived.isVerified || false,
+             compliant: professional.isVerified || derived.isVerified || false,
              experience: derived.experienceSummary || [],
              skills: resume.skills ? resume.skills.map(s => ({ name: s.skillName, rating: s.rating })) : []
         };
@@ -210,7 +227,14 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const getMappedWallet = () => {
         if (!fetchedCandidate) return { folders: [] };
 
-        const docs = fetchedCandidate.application?.professional?.documents || [];
+        const isDirectProfessional = location.state?.isProfessionalView || !!fetchedCandidate.fullname;
+        let docs = [];
+        if (isDirectProfessional) {
+            docs = fetchedCandidate.documents || [];
+        } else {
+            docs = fetchedCandidate.application?.professional?.documents || [];
+        }
+
         const categories = [...new Set(docs.map(d => d.category))];
         const folders = categories.map((cat, i) => {
              return {
@@ -303,13 +327,67 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             return;
         }
 
-        const cvUrl = fetchedCandidate?.application?.cvUrl;
-        if (cvUrl) {
-            window.open(cvUrl, '_blank', 'noopener,noreferrer');
-            return;
+        const isDirectProfessional = location.state?.isProfessionalView || !!fetchedCandidate?.fullname;
+
+        if (!isDirectProfessional) {
+            const cvUrl = fetchedCandidate?.application?.cvUrl;
+            if (cvUrl) {
+                window.open(cvUrl, '_blank', 'noopener,noreferrer');
+                return;
+            }
         }
 
-        const resumeSnapshot = fetchedCandidate?.application?.resumeSnapshot;
+        let resumeSnapshot;
+        
+        if (isDirectProfessional && fetchedCandidate) {
+            resumeSnapshot = {
+                ...fetchedCandidate.resume,
+                category: fetchedCandidate.subcategory || fetchedCandidate.profession,
+                userType: 'officer', // Defaults to officer, UI logic handles variations
+                personalInfo: {
+                    firstName: fetchedCandidate.firstName,
+                    lastName: fetchedCandidate.lastName,
+                    email: fetchedCandidate.email,
+                    contactNumber: fetchedCandidate.resume?.phoneNumber,
+                    countryCode: fetchedCandidate.resume?.phoneCode
+                },
+                name: fetchedCandidate.fullname,
+                profilePhoto: fetchedCandidate.profilePhotoUrl,
+                skills: fetchedCandidate.resume?.skills || [],
+                licenses: (fetchedCandidate.documents || []).filter(d => d.category === 'LICENSES_ENDORSEMENTS').map(d => ({
+                    name: d.name,
+                    number: d.number,
+                    country: d.issuingCountry,
+                    issueDate: d.issueDate,
+                    expiryDate: d.expiryDate,
+                    isEndorsement: false
+                })),
+                education: fetchedCandidate.resume?.education || [],
+                medicalTravelDocuments: (fetchedCandidate.documents || []).filter(d => ['MEDICAL_CERTIFICATES', 'TRAVEL_DOCUMENTS'].includes(d.category)).map(d => ({
+                    type: d.category === 'MEDICAL_CERTIFICATES' ? 'MEDICAL' : 'TRAVEL',
+                    name: d.name,
+                    documentNumber: d.number,
+                    issuingCountry: d.issuingCountry,
+                    issueDate: d.issueDate,
+                    expiryDate: d.expiryDate
+                })),
+                seaService: fetchedCandidate.resume?.seaService || [],
+                stcwCertificates: fetchedCandidate.resume?.stcwCertificates || [],
+                nextOfKin: fetchedCandidate.resume?.nextOfKin || [],
+                referees: fetchedCandidate.resume?.referees || [],
+                biometrics: {
+                    gender: fetchedCandidate.resume?.gender,
+                    height: fetchedCandidate.resume?.height,
+                    weight: fetchedCandidate.resume?.weight,
+                    bmi: fetchedCandidate.resume?.bmi,
+                    eyeColor: fetchedCandidate.resume?.eyeColor,
+                    overallSize: fetchedCandidate.resume?.overallSize,
+                    shoeSize: fetchedCandidate.resume?.shoeSize
+                }
+            };
+        } else {
+            resumeSnapshot = fetchedCandidate?.application?.resumeSnapshot;
+        }
         
         if (location.pathname.includes('/trainingprovider/')) {
             navigate('/trainingprovider/cv-resume', { state: { resumeData: resumeSnapshot } });

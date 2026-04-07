@@ -14,6 +14,16 @@ const Profile = () => {
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [profileImage, setProfileImage] = useState(() => {
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+            try {
+                const userData = JSON.parse(savedProfile);
+                const photoFromProfile = userData?.profilePhotoUrl || userData?.profilePhoto || userData?.photo;
+                if (photoFromProfile) return photoFromProfile;
+            } catch (e) {
+                console.error('Error parsing userProfile for profile image:', e);
+            }
+        }
         return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
     });
     const [isAvailable, setIsAvailable] = useState(false);
@@ -53,13 +63,13 @@ const Profile = () => {
             if (savedProfile) {
                 try {
                     const userData = JSON.parse(savedProfile);
-                    const name = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.fullName || 'User' : 'User';
+                    const name = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.fullName || userData.fullname || 'User' : 'User';
                     setUserName(name);
                     setUserEmail(userData?.email || localStorage.getItem('userEmail') || '');
                     
                     // Update profile photo from userProfile if resume fetch failed
-                    if (userData?.profilePhoto || userData?.photo) {
-                        const photoUrl = userData.profilePhoto || userData.photo;
+                    if (userData?.profilePhotoUrl || userData?.profilePhoto || userData?.photo) {
+                        const photoUrl = userData.profilePhotoUrl || userData.profilePhoto || userData.photo;
                         setProfileImage(photoUrl);
                         localStorage.setItem('profileImage', photoUrl);
                     }
@@ -145,7 +155,9 @@ const Profile = () => {
                 if (savedProfile) {
                     try {
                         const profile = JSON.parse(savedProfile);
+                        profile.profilePhotoUrl = photoUrl;
                         profile.profilePhoto = photoUrl;
+                        profile.photo = photoUrl;
                         localStorage.setItem('userProfile', JSON.stringify(profile));
                     } catch (e) { /* ignore */ }
                 }

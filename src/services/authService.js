@@ -533,15 +533,30 @@ class AuthService {
 
             // Persist user profile for use across the app
             if (response?.data?.user) {
-                localStorage.setItem('userProfile', JSON.stringify(response.data.user));
+                const user = response.data.user;
+                const profilePhoto = user.profilePhotoUrl || user.profilePhoto || user.photo || null;
+                const normalizedUser = {
+                    ...user,
+                    fullName: user.fullName || user.fullname || '',
+                    profilePhoto,
+                    photo: user.photo || profilePhoto,
+                };
+
+                localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
+
+                if (profilePhoto) {
+                    // Keep legacy consumers in sync while API photo remains the source of truth.
+                    localStorage.setItem('profileImage', profilePhoto);
+                }
+
                 // Save professionalId so KYC and other flows can resolve it
-                const id = response.data.user.id || response.data.user.professionalId || response.data.user._id;
+                const id = normalizedUser.id || normalizedUser.professionalId || normalizedUser._id;
                 if (id) {
                     localStorage.setItem('professionalId', id);
                 }
 
                 // Persist admin verification status for dashboard access control
-                const userStatus = response.data.user.status;
+                const userStatus = normalizedUser.status;
                 if (userStatus) {
                     localStorage.setItem('professionalVerificationStatus', userStatus);
                     // Also set the adminVerified flag if status is VERIFIED

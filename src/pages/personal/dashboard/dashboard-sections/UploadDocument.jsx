@@ -40,6 +40,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     const [uploadedDocId, setUploadedDocId] = useState(null);     // ID from OCR upload
     const [ocrCompleted, setOcrCompleted] = useState(false);    // True after OCR upload succeeds
     const [uploadedFileUrl, setUploadedFileUrl] = useState(null); // URL from API after upload
+    const [ocrMatchStatus, setOcrMatchStatus] = useState(null); // API matchStatus details for OCR mismatch UI
     const [showFullPreview, setShowFullPreview] = useState(false); // Full-screen preview modal
     const [localPreviewUrl, setLocalPreviewUrl] = useState(null);  // Local blob URL for preview
 
@@ -85,7 +86,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     const getCategoryEnum = (tabName) => {
         const normalized = String(tabName).toLowerCase();
         if (normalized.includes('license')) return 'LICENSES_ENDORSEMENTS';
-        if (normalized.includes('stcw')) return 'LICENSES_ENDORSEMENTS';
+        if (normalized.includes('stcw')) return 'STCW_CERTIFICATES';
         if (normalized.includes('medical')) return 'MEDICAL_CERTIFICATES';
         if (normalized.includes('seaman')) return 'SEAMANS_BOOK';
         if (normalized.includes('travel')) return 'TRAVEL_DOCUMENTS';
@@ -117,6 +118,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         setOcrCompleted(false);
         setUploadedDocId(null);
         setUploadedFileUrl(null);
+        setOcrMatchStatus(null);
         setLocalPreviewUrl(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         setFormData({ certificateName: '', certificateNumber: '', issuingCountry: '', dateOfIssue: '', validTill: '' });
@@ -137,10 +139,17 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                 file,
                 category: getCategoryEnum(activeTab),
                 name: file.name.split('.')[0], // Temporary name; user updates in form
+                number: '',
+                issuingCountry: '',
+                issueDate: '',
+                expiryDate: '',
             };
 
             const response = await documentService.uploadDocument(uploadData);
-            const { document: savedDoc, ocrData } = response.data;
+            const payload = response?.data || {};
+            const savedDoc = payload.document || response?.document || null;
+            const ocrData = payload.ocrData || response?.ocrData || null;
+            const matchStatus = payload.matchStatus || response?.matchStatus || null;
 
             // Pre-fill form with REAL extracted data from the API
             if (ocrData) {
@@ -160,6 +169,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
             // Store the doc ID and file URL so we can PATCH with confirmed data
             setUploadedDocId(savedDoc?.id || null);
             setUploadedFileUrl(savedDoc?.fileUrl || savedDoc?.url || null);
+            setOcrMatchStatus(matchStatus);
             setOcrCompleted(true);
             setOcrState('completed');
 
@@ -175,6 +185,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
             console.error('OCR upload error:', error);
             setOcrState('idle');
             setOcrCompleted(false);
+            setOcrMatchStatus(null);
             toast.error('OCR scanning failed. Please fill in the details manually.', {
                 position: 'top-right',
             });
@@ -193,6 +204,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         setOcrCompleted(false);
         setUploadedDocId(null);
         setUploadedFileUrl(null);
+        setOcrMatchStatus(null);
 
         if (isOcrRequired) {
             await runRealOCR(file);
@@ -211,6 +223,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         setOcrCompleted(false);
         setUploadedDocId(null);
         setUploadedFileUrl(null);
+        setOcrMatchStatus(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
 
         if (isOcrRequired) {
@@ -259,7 +272,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                 };
 
                 const response = await documentService.updateDocument(uploadedDocId, updatePayload);
-                finalDoc = response.data?.document;
+                finalDoc = response?.data?.document || response?.document;
 
             } else {
                 /**
@@ -277,7 +290,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                 };
 
                 const response = await documentService.uploadDocument(uploadData);
-                finalDoc = response.data?.document;
+                finalDoc = response?.data?.document || response?.document;
             }
 
             toast.success('Document uploaded successfully!', { position: 'top-right' });
@@ -298,6 +311,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
             setOcrCompleted(false);
             setUploadedDocId(null);
             setUploadedFileUrl(null);
+            setOcrMatchStatus(null);
             setLocalPreviewUrl(null);
             setShowFullPreview(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -441,6 +455,34 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                 The fields above have been pre-filled using OCR extraction.
                                 Please review and correct any inaccuracies before confirming.
                             </p>
+                        </div>
+                    )}
+
+                    {/* OCR mismatch details from API */}
+                    {isOcrRequired && ocrCompleted && ocrMatchStatus?.details && ocrMatchStatus?.isFullyMatched === false && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                            <p className="font-semibold mb-2">OCR mismatch found</p>
+                            <ul className="space-y-1.5 list-disc pl-5">
+                                {Object.entries(ocrMatchStatus.details)
+                                    .filter(([, detail]) => detail && detail.isMatched === false)
+                                    .map(([key, detail]) => {
+                                        const labelMap = {
+                                            name: 'Name',
+                                            number: 'Certificate Number',
+                                            issuingCountry: 'Issuing Country',
+                                            issueDate: 'Date Of Issue',
+                                            expiryDate: 'Valid Till',
+                                        };
+                                        const label = labelMap[key] || key;
+                                        return (
+                                            <li key={key}>
+                                                <span className="font-medium">{label}:</span>{' '}
+                                                Entered: <span className="font-medium">{detail.entered || 'empty'}</span>,
+                                                Extracted: <span className="font-medium">{detail.extracted || 'empty'}</span>
+                                            </li>
+                                        );
+                                    })}
+                            </ul>
                         </div>
                     )}
 

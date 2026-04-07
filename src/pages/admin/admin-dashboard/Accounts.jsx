@@ -52,6 +52,16 @@ function Accounts() {
         flagged: 0
     });
 
+    const [trainers, setTrainers] = useState([]);
+    const [isLoadingTrainers, setIsLoadingTrainers] = useState(false);
+    const [trainersError, setTrainersError] = useState('');
+    const [trainersSummary, setTrainersSummary] = useState({
+        total: 0,
+        pending: 0,
+        verified: 0,
+        flagged: 0
+    });
+
     useEffect(() => {
         if (location.state?.successMessage) {
             setSuccessMessage(location.state.successMessage);
@@ -109,44 +119,99 @@ function Accounts() {
         setIsLoadingKyc(true);
         setKycError('');
         try {
-            const response = await httpClient.get(API_ENDPOINTS.ADMIN.KYC_SUBMISSIONS);
-            const submissions = response?.data?.submissions || [];
+            const [recruiterResponse, professionalResponse] = await Promise.all([
+                httpClient.get(API_ENDPOINTS.ADMIN.KYC_PENDING).catch(e => {
+                    console.error('Failed to load recruiter KYC:', e);
+                    return null;
+                }),
+                httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_PENDING).catch(e => {
+                    console.error('Failed to load professional KYC:', e);
+                    return null;
+                })
+            ]);
 
-            const mappedSubmissions = submissions.map((item) => ({
-                id: item.id,
-                userType: item.userType, // PROFESSIONAL | RECRUITER | TRAINING_PROVIDER
-                name: item.name || 'Unknown',
-                company: item.companyName || (item.userType === 'PROFESSIONAL' ? 'Individual' : 'N/A'),
-                domain: item.email || 'N/A',
-                country: item.userType || 'N/A',
-                tier: item.riskLevel || 'N/A',
-                lastActive: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : 'N/A',
-                status: mapKycStatusLabel(item.status),
-                statusColor: mapKycStatusColor(item.status),
-            }));
+            const extractKycList = (res) => {
+                if (!res) return [];
+                if (res?.data?.kycs && Array.isArray(res.data.kycs)) return res.data.kycs;
+                if (res?.data?.submissions && Array.isArray(res.data.submissions)) return res.data.submissions;
+                if (Array.isArray(res?.data)) return res.data;
+                if (Array.isArray(res)) return res;
+                return [];
+            };
+
+            const kycList = [...extractKycList(recruiterResponse), ...extractKycList(professionalResponse)];
+
+            const getTimeAgo = (dateString) => {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+                const diffMs = new Date() - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 60) return `${Math.max(1, diffMins)} mins ago`;
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `${diffHours} hours ago`;
+                const diffDays = Math.floor(diffHours / 24);
+                if (diffDays < 7) return `${diffDays} days ago`;
+                const diffWeeks = Math.floor(diffDays / 7);
+                return `${diffWeeks} weeks ago`;
+            };
+
+            let computedPending = 0, computedHighRisk = 0, computedVerified = 0;
+
+            const mappedSubmissions = kycList.map((item) => {
+                const isProfessional = Boolean(item.professional);
+                const professionalInfo = item.professional || {};
+                const recruiterInfo = item.recruiter || {};
+
+                const fullName = professionalInfo.fullname || [item.firstName, item.lastName].filter(Boolean).join(' ') || item.name || 'Unknown';
+                const email = recruiterInfo.email || professionalInfo.email || item.email || 'N/A';
+                const company = isProfessional ? (professionalInfo.subcategory || 'Individual') : (recruiterInfo.organizationName || item.companyName || 'N/A');
+
+                // Count stats
+                const upperStatus = (item.status || '').toUpperCase();
+                if (upperStatus === 'PENDING' || upperStatus === 'UNDER_REVIEW') computedPending++;
+                if (upperStatus === 'APPROVED') computedVerified++;
+                if ((item.riskLevel || '').toUpperCase() === 'HIGH') computedHighRisk++;
+
+                return {
+                    id: item.id,
+                    recruiterId: item.recruiterId, // Optional, depending on userType
+                    userType: item.userType || (isProfessional ? 'PROFESSIONAL' : 'RECRUITER'),
+                    name: fullName,
+                    company: company,
+                    domain: email,
+                    country: item.issueCountry || 'N/A',
+                    tier: item.riskLevel || 'N/A',
+                    lastActive: getTimeAgo(item.updatedAt || item.createdAt),
+                    status: mapKycStatusLabel(item.status),
+                    statusColor: mapKycStatusColor(item.status),
+                    documentType: item.documentType,
+                    documentNumber: item.documentNumber,
+                };
+            });
 
             setKycSubmissions(mappedSubmissions);
 
-            const total = typeof response.total === 'number' ? response.total : submissions.length;
+            const total = typeof response.results === 'number' ? response.results : kycList.length;
 
-            // Fetch consolidated stats (pending, high risk, verified)
+            // Try to fetch stats from dedicated stats endpoint, fallback to computed
             try {
                 const statsResponse = await httpClient.get(API_ENDPOINTS.ADMIN.KYC_STATS);
                 const statsData = statsResponse?.data || statsResponse || {};
 
                 setKycSummary({
                     total,
-                    pending: statsData.pending || 0,
-                    highRisk: statsData.highRisk || 0,
-                    verified: statsData.verified || 0,
+                    pending: statsData.pending ?? computedPending,
+                    highRisk: statsData.highRisk ?? computedHighRisk,
+                    verified: statsData.verified ?? computedVerified,
                 });
             } catch (statsError) {
                 console.error('Failed to load KYC stats:', statsError);
                 setKycSummary({
                     total,
-                    pending: 0,
-                    highRisk: 0,
-                    verified: 0,
+                    pending: computedPending,
+                    highRisk: computedHighRisk,
+                    verified: computedVerified,
                 });
             }
         } catch (error) {
@@ -337,6 +402,88 @@ function Accounts() {
         }
     };
 
+    const fetchTrainers = async () => {
+        setIsLoadingTrainers(true);
+        setTrainersError('');
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.ADMIN.TRAINERS);
+
+            let trainersList = [];
+            if (response?.data?.trainers && Array.isArray(response.data.trainers)) {
+                trainersList = response.data.trainers;
+            } else if (response?.data && Array.isArray(response.data)) {
+                trainersList = response.data;
+            } else if (response?.trainers && Array.isArray(response.trainers)) {
+                trainersList = response.trainers;
+            } else if (Array.isArray(response)) {
+                trainersList = response;
+            }
+
+            const getTimeAgo = (dateString) => {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'N/A';
+                const diffMs = new Date() - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 60) return `${Math.max(1, diffMins)} mins ago`;
+                const diffHours = Math.floor(diffMins / 60);
+                if (diffHours < 24) return `${diffHours} hours ago`;
+                const diffDays = Math.floor(diffHours / 24);
+                if (diffDays < 7) return `${diffDays} days ago`;
+                const diffWeeks = Math.floor(diffDays / 7);
+                return `${diffWeeks} weeks ago`;
+            };
+
+            let computedPending = 0, computedVerified = 0, computedFlagged = 0;
+
+            const mappedTrainers = trainersList.map((item) => {
+                const fullName = [item.firstName, item.middleName, item.lastName]
+                    .filter(Boolean).join(' ') || item.organizationName || 'Unknown';
+
+                let statusLabel = item.status || 'PENDING';
+                if (statusLabel === 'APPROVED') statusLabel = 'Approved';
+                else if (statusLabel === 'REJECTED') statusLabel = 'Rejected';
+                else if (statusLabel === 'PENDING') statusLabel = 'Pending';
+
+                if (statusLabel === 'Approved') computedVerified++;
+                if (statusLabel === 'Pending') computedPending++;
+                if (statusLabel === 'Rejected' || statusLabel === 'Flagged') computedFlagged++;
+
+                let statusColor = 'text-orange-500';
+                if (statusLabel === 'Approved') statusColor = 'text-green-500';
+                if (statusLabel === 'Rejected' || statusLabel === 'Flagged') statusColor = 'text-red-500';
+
+                return {
+                    id: item.id,
+                    name: fullName,
+                    company: item.organizationName || 'N/A',
+                    domain: item.email || 'N/A',
+                    country: item.companyCountry || 'N/A',
+                    tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    lastActive: getTimeAgo(item.lastActive || item.createdAt),
+                    status: statusLabel,
+                    statusColor: statusColor,
+                    isVerified: item.isVerified,
+                };
+            });
+
+            setTrainersSummary({
+                total: trainersList.length,
+                pending: computedPending,
+                verified: computedVerified,
+                flagged: computedFlagged,
+            });
+
+            setTrainers(mappedTrainers);
+        } catch (error) {
+            console.error('Failed to load trainers:', error);
+            setTrainersError(error.message || 'Failed to load trainers');
+            setTrainers([]);
+        } finally {
+            setIsLoadingTrainers(false);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'KYC Status') {
             fetchKycSubmissions();
@@ -344,80 +491,15 @@ function Accounts() {
             fetchProfessionals();
         } else if (activeTab === 'Recruiters') {
             fetchRecruiters();
+        } else if (activeTab === 'Training Providers') {
+            fetchTrainers();
         }
     }, [activeTab]);
 
     // Tab-specific data
     const recruitersData = recruiters;
 
-    const trainingProvidersData = [
-        {
-            id: 'TP001',
-            name: 'Maritime Academy Pro',
-            company: 'Maritime Academy',
-            domain: 'maritimeacademy.com',
-            country: 'United Kingdom',
-            tier: 'Pro',
-            lastActive: '1 hour ago',
-            status: 'Approved',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'TP002',
-            name: 'Ocean Training Institute',
-            company: 'Ocean Training',
-            domain: 'oceantraining.com',
-            country: 'USA',
-            tier: 'Pro',
-            lastActive: '3 hours ago',
-            status: 'Approved',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'TP003',
-            name: 'Seafarer Skills Center',
-            company: 'Seafarer Skills',
-            domain: 'seafarerskills.org',
-            country: 'Philippines',
-            tier: 'Free',
-            lastActive: '1 day ago',
-            status: 'Pending',
-            statusColor: 'text-orange-500'
-        },
-        {
-            id: 'TP004',
-            name: 'Marine Safety Training',
-            company: 'Marine Safety',
-            domain: 'marinesafety.com',
-            country: 'Norway',
-            tier: 'Pro',
-            lastActive: '2 days ago',
-            status: 'Approved',
-            statusColor: 'text-green-500'
-        },
-        {
-            id: 'TP005',
-            name: 'Nautical Education Hub',
-            company: 'Nautical Education',
-            domain: 'nauticaledu.com',
-            country: 'Singapore',
-            tier: 'Free',
-            lastActive: '4 days ago',
-            status: 'Rejected',
-            statusColor: 'text-red-500'
-        },
-        ...Array(8).fill(null).map((_, i) => ({
-            id: `TP${String(i + 6).padStart(3, '0')}`,
-            name: `Training Provider ${i + 6}`,
-            company: `Training Provider ${i + 6}`,
-            domain: `training${i + 6}.com`,
-            country: ['USA', 'UK', 'Philippines', 'Norway', 'Singapore'][i % 5],
-            tier: i % 3 === 0 ? 'Pro' : 'Free',
-            lastActive: `${i + 5} days ago`,
-            status: ['Pending', 'Approved', 'Rejected'][i % 3],
-            statusColor: ['text-orange-500', 'text-green-500', 'text-red-500'][i % 3]
-        }))
-    ];
+    const trainingProvidersData = trainers;
 
     const professionalsData = professionals;
 
@@ -482,33 +564,33 @@ function Accounts() {
             case 'Training Providers':
                 return [
                     {
-                        value: '156',
+                        value: trainersSummary.total.toString(),
                         label: 'Total Providers',
-                        sublabel: '+5 today',
+                        sublabel: 'Updated now',
                         icon: UserCheck,
                         iconColor: 'text-purple-500',
                         iconBg: 'bg-purple-50'
                     },
                     {
-                        value: '3',
+                        value: trainersSummary.pending.toString(),
                         label: 'Pending',
-                        sublabel: 'Today (3)',
+                        sublabel: 'Requires action',
                         icon: UserCheck,
                         iconColor: 'text-blue-500',
                         iconBg: 'bg-blue-50'
                     },
                     {
-                        value: '148',
+                        value: trainersSummary.verified.toString(),
                         label: 'Approved',
-                        sublabel: 'Last 7 days',
+                        sublabel: 'Verified',
                         icon: Shield,
                         iconColor: 'text-green-500',
                         iconBg: 'bg-green-50'
                     },
                     {
-                        value: '2',
+                        value: trainersSummary.flagged.toString(),
                         label: 'Rejected',
-                        sublabel: 'Older',
+                        sublabel: 'Review needed',
                         icon: AlertTriangle,
                         iconColor: 'text-red-500',
                         iconBg: 'bg-red-50'
@@ -616,6 +698,13 @@ function Accounts() {
 
         if (activeTab === 'Recruiters') {
             fetchRecruiters().finally(() => {
+                setIsRefreshing(false);
+            });
+            return;
+        }
+
+        if (activeTab === 'Training Providers') {
+            fetchTrainers().finally(() => {
                 setIsRefreshing(false);
             });
             return;
@@ -1111,6 +1200,18 @@ function Accounts() {
                                         {recruitersError}
                                     </td>
                                 </tr>
+                            ) : activeTab === 'Training Providers' && isLoadingTrainers ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                                        Loading training providers...
+                                    </td>
+                                </tr>
+                            ) : activeTab === 'Training Providers' && trainersError ? (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-red-500">
+                                        {trainersError}
+                                    </td>
+                                </tr>
                             ) : paginatedAccounts.length > 0 ? (
                                 paginatedAccounts.map((account, index) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
@@ -1144,9 +1245,10 @@ function Accounts() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">
-                                            {account.id.toString().startsWith('PRO') && activeTab !== 'KYC Status' ? (
+                                            {activeTab === 'Professionals' ? (
                                                 <Link
                                                     to={`/admin/candidate/${account.id}`}
+                                                    state={{ isProfessionalView: true }}
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >
                                                     View Profile
@@ -1161,7 +1263,9 @@ function Accounts() {
                                                     state={
                                                         activeTab === 'KYC Status' && account.userType
                                                             ? { userType: account.userType }
-                                                            : undefined
+                                                            : activeTab === 'Training Providers'
+                                                                ? { accountType: 'trainer' }
+                                                                : undefined
                                                     }
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >

@@ -24,13 +24,13 @@ class DocumentService {
         try {
             const formData = new FormData();
             formData.append('document', uploadData.file);
-            formData.append('category', uploadData.category);
-            formData.append('name', uploadData.name);
-            
-            if (uploadData.number) formData.append('number', uploadData.number);
-            if (uploadData.issuingCountry) formData.append('issuingCountry', uploadData.issuingCountry);
-            if (uploadData.issueDate) formData.append('issueDate', uploadData.issueDate);
-            if (uploadData.expiryDate) formData.append('expiryDate', uploadData.expiryDate);
+            formData.append('category', uploadData.category || '');
+            formData.append('name', uploadData.name || '');
+            // Keep all multipart keys present to match backend contract.
+            formData.append('number', uploadData.number || '');
+            formData.append('issuingCountry', uploadData.issuingCountry || '');
+            formData.append('issueDate', uploadData.issueDate || '');
+            formData.append('expiryDate', uploadData.expiryDate || '');
 
             const response = await httpClient.request(API_ENDPOINTS.DOCUMENTS.UPLOAD, {
                 method: 'POST',

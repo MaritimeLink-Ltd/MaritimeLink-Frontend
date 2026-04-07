@@ -70,16 +70,17 @@ const CVResume = ({ isReadOnly = false }) => {
 
                 return {
                     ...prevData,
-                    userType: (() => {
+                    userType: data.userType || (() => {
                         const stored = sessionStorage.getItem('professionType');
                         if (stored === 'ratings') return 'rating';
                         if (stored === 'catering') return 'medical';
                         return stored || 'officer';
                     })(),
-                    name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : prevData.name,
-                    phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : prevData.phone,
-                    email: pi.email || pi.emailAddress || prevData.email,
-                    address: [pi.streetAddress || pi.address, pi.city, pi.state, pi.zipCode || pi.postcode, pi.country].filter(Boolean).join(', ') || prevData.address,
+                    category: data.category || data.profession || data.subcategory || prevData.category,
+                    name: (pi.firstName || pi.lastName) ? `${pi.firstName || ''} ${pi.lastName || ''}`.trim() : (data.name || prevData.name),
+                    phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : (data.phoneNumber || prevData.phone),
+                    email: pi.email || pi.emailAddress || data.emailAddress || prevData.email,
+                    address: [pi.streetAddress || pi.address || data.address, pi.city || data.city, pi.state || data.state, pi.zipCode || pi.postcode || data.postcode, pi.country || data.country].filter(Boolean).join(', ') || prevData.address,
                     image: data.profilePhoto || prevData.image,
                     professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
                     skills: getArray(sk).map(s => ({ name: s.skillName, rating: s.rating })),

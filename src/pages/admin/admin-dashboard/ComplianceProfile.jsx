@@ -228,20 +228,17 @@ function ComplianceProfile() {
 
     // Action Handlers
     const handleApprove = async () => {
-        const userType = resolveUserType();
         try {
-            const payload = {
-                userType,
+            const userType = resolveUserType();
+            const endpoint = userType === 'PROFESSIONAL' 
+                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id)
+                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+
+            const response = await httpClient.patch(endpoint, {
                 status: 'APPROVED',
-                reviewStep: 0,
-                riskLevel: kycData?.riskLevel || 'LOW',
-                mismatchDetails: kycData?.mismatchDetails || '',
-            };
+            });
 
-            const endpoint = API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
-            const response = await httpClient.patch(endpoint, payload);
-
-            const updated = response?.data?.updated || response;
+            const updated = response?.data?.kyc || response?.data?.updated || response;
             if (updated) {
                 setKycData((prev) => ({ ...(prev || {}), ...updated }));
             }
@@ -263,20 +260,17 @@ function ComplianceProfile() {
     const handleReject = async () => {
         if (!rejectReason.trim()) return;
 
-        const userType = resolveUserType();
         try {
-            const payload = {
-                userType,
+            const userType = resolveUserType();
+            const endpoint = userType === 'PROFESSIONAL' 
+                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id)
+                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+
+            const response = await httpClient.patch(endpoint, {
                 status: 'REJECTED',
-                reviewStep: 0,
-                riskLevel: 'HIGH',
-                mismatchDetails: rejectReason.trim(),
-            };
+            });
 
-            const endpoint = API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
-            const response = await httpClient.patch(endpoint, payload);
-
-            const updated = response?.data?.updated || response;
+            const updated = response?.data?.kyc || response?.data?.updated || response;
             if (updated) {
                 setKycData((prev) => ({ ...(prev || {}), ...updated }));
             }

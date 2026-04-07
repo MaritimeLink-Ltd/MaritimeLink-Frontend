@@ -73,24 +73,24 @@ function Marketplace() {
         try {
             const formData = new FormData();
             formData.append('file', uploadFile);
-            
+
             // Adjust to the newly added API endpoint
             await httpClient.post(API_ENDPOINTS.JOBS.ADMIN_BULK_UPLOAD, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            
+
             setIsUploading(false);
             setUploadComplete(true);
-            
+
             // Reload the jobs table so new jobs show up
             if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
                 loadJobsData(1);
                 setCurrentPage(1);
             }
             loadStatsData();
-            
+
             // Close modal after brief success message
             setTimeout(() => {
                 setShowUploadModal(false);
@@ -121,11 +121,11 @@ function Marketplace() {
         try {
             setIsRefreshing(true);
             const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_LISTINGS}?page=${page}&limit=${itemsPerPage}`);
-            
+
             // Always update state even if listings are empty to prevent stale data
             const listings = res?.data?.listings || res?.listings || [];
             const total = res?.data?.total || res?.total || listings.length || 0;
-            
+
             setRemoteJobs(listings);
             setTotalRemoteJobs(total);
         } catch (error) {
