@@ -230,9 +230,12 @@ function ComplianceProfile() {
     const handleApprove = async () => {
         try {
             const userType = resolveUserType();
+            const subjectId = userType === 'PROFESSIONAL'
+                ? (kycData?.professionalId || id)
+                : (kycData?.recruiterId || id);
             const endpoint = userType === 'PROFESSIONAL' 
-                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id)
-                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(subjectId)
+                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(subjectId);
 
             const response = await httpClient.patch(endpoint, {
                 status: 'APPROVED',
@@ -262,9 +265,12 @@ function ComplianceProfile() {
 
         try {
             const userType = resolveUserType();
+            const subjectId = userType === 'PROFESSIONAL'
+                ? (kycData?.professionalId || id)
+                : (kycData?.recruiterId || id);
             const endpoint = userType === 'PROFESSIONAL' 
-                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id)
-                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(id);
+                ? API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(subjectId)
+                : API_ENDPOINTS.ADMIN.KYC_UPDATE_STATUS(subjectId);
 
             const response = await httpClient.patch(endpoint, {
                 status: 'REJECTED',

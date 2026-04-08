@@ -8,7 +8,7 @@ function RecruiterCompanyVerification() {
 
     // Get company details from navigation state (would come from API in real app)
     const companyData = location.state?.companyData || {
-        logo: 'https://via.placeholder.com/150/7C3AED/FFFFFF?text=Z', // Placeholder, would be actual logo
+        logo: '',
         name: 'Zyntrify',
         website: 'www.zyntrify.com'
     };
@@ -59,15 +59,13 @@ function RecruiterCompanyVerification() {
                     {/* Company Info Card */}
                     <div className="bg-gray-50 rounded-2xl p-8 mb-6 flex flex-col items-center">
                         {/* Company Logo */}
-                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center mb-4">
-                            <div className="text-white text-center">
-                                <svg className="w-16 h-16 mx-auto mb-1" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm13 0h5v3h-5v-3zm0 5h5v3h-5v-3z" />
-                                </svg>
-                                <p className="text-xs font-semibold">ZYNTRIFY</p>
-                                <p className="text-[10px] opacity-75">CREATE • CONVERT • GROW</p>
-                            </div>
-                        </div>
+                        {companyData.logo && (
+                            <img
+                                src={companyData.logo}
+                                alt={`${companyData.name || 'Company'} logo`}
+                                className="w-32 h-32 object-contain mb-4"
+                            />
+                        )}
 
                         {/* Company Name */}
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">{companyData.name}</h2>

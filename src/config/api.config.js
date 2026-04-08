@@ -33,8 +33,8 @@ export const API_ENDPOINTS = {
     SELECT_PROFESSION: '/api/professional/profession',
     SELECT_ROLE: '/api/professional/role',
     // KYC Endpoints
-    KYC_UPLOAD_FRONT: '/api/professional/kyc/upload-front',
-    KYC_UPLOAD_BACK: '/api/professional/kyc/upload-back',
+    KYC_UPLOAD_FRONT: '/api/professional/kyc/upload-document-front',
+    KYC_UPLOAD_BACK: '/api/professional/kyc/upload-document-back',
     KYC_SUBMIT: '/api/professional/kyc/submit',
     KYC_UPLOAD_SELFIE: '/api/professional/kyc/upload-selfie',
   },

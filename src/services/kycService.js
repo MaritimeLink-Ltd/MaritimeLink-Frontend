@@ -37,10 +37,11 @@ class KycService {
      * @param {File} document - Identity document file (front side)
      * @returns {Promise<Object>} Upload response with extraction results
      */
-    async uploadFrontDocument(document) {
+    async uploadFrontDocument(professionalId, document) {
         try {
             const formData = new FormData();
-            formData.append('document', document);
+            formData.append('professionalId', professionalId);
+            formData.append('documentFront', document);
 
             const response = await httpClient.request(API_ENDPOINTS.PROFESSIONAL.KYC_UPLOAD_FRONT, {
                 method: 'POST',
@@ -59,10 +60,11 @@ class KycService {
      * @param {File} document - Identity document file (back side)
      * @returns {Promise<Object>} Upload response with URLs
      */
-    async uploadBackDocument(document) {
+    async uploadBackDocument(professionalId, document) {
         try {
             const formData = new FormData();
-            formData.append('document', document);
+            formData.append('professionalId', professionalId);
+            formData.append('documentBack', document);
 
             const response = await httpClient.request(API_ENDPOINTS.PROFESSIONAL.KYC_UPLOAD_BACK, {
                 method: 'POST',

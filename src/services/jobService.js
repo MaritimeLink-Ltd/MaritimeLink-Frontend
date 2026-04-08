@@ -167,9 +167,18 @@ class JobService {
      * @param {number} limit - Items per page
      * @returns {Promise<Object>} Response with paginated list of professional jobs
      */
-    async getProfessionalJobs(page = 1, limit = 10) {
+    async getProfessionalJobs(page = 1, limit = 100) {
         try {
-            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.PROFESSIONAL_ALL}?page=${page}&limit=${limit}`);
+            const params = new URLSearchParams();
+            if (page !== null && page !== undefined) params.set('page', String(page));
+            if (limit !== null && limit !== undefined) params.set('limit', String(limit));
+
+            const query = params.toString();
+            const url = query
+                ? `${API_ENDPOINTS.JOBS.PROFESSIONAL_ALL}?${query}`
+                : API_ENDPOINTS.JOBS.PROFESSIONAL_ALL;
+
+            const response = await httpClient.get(url);
             return response;
         } catch (error) {
             console.error('Get Professional Jobs error:', error);

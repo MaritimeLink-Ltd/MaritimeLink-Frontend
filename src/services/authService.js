@@ -5,6 +5,7 @@
 
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
+import { clearAuthStorage } from '../utils/sessionManager';
 
 class AuthService {
     /**
@@ -647,9 +648,7 @@ class AuthService {
      * Clears all authentication data
      */
     logout() {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('professionalId');
-        localStorage.removeItem('userProfile');
+        clearAuthStorage();
     }
 
     /**

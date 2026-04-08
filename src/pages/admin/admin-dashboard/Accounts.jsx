@@ -132,11 +132,21 @@ function Accounts() {
 
             const extractKycList = (res) => {
                 if (!res) return [];
+                if (res?.data?.data?.kycs && Array.isArray(res.data.data.kycs)) return res.data.data.kycs;
+                if (res?.data?.data?.submissions && Array.isArray(res.data.data.submissions)) return res.data.data.submissions;
                 if (res?.data?.kycs && Array.isArray(res.data.kycs)) return res.data.kycs;
                 if (res?.data?.submissions && Array.isArray(res.data.submissions)) return res.data.submissions;
                 if (Array.isArray(res?.data)) return res.data;
                 if (Array.isArray(res)) return res;
                 return [];
+            };
+
+            const extractResultsCount = (res) => {
+                if (!res) return 0;
+                if (typeof res?.results === 'number') return res.results;
+                if (typeof res?.data?.results === 'number') return res.data.results;
+                if (typeof res?.data?.data?.results === 'number') return res.data.data.results;
+                return 0;
             };
 
             const kycList = [...extractKycList(recruiterResponse), ...extractKycList(professionalResponse)];
@@ -180,7 +190,7 @@ function Accounts() {
                     name: fullName,
                     company: company,
                     domain: email,
-                    country: item.issueCountry || 'N/A',
+                    country: item.issueCountry || professionalInfo?.resume?.country || 'N/A',
                     tier: item.riskLevel || 'N/A',
                     lastActive: getTimeAgo(item.updatedAt || item.createdAt),
                     status: mapKycStatusLabel(item.status),
@@ -192,7 +202,9 @@ function Accounts() {
 
             setKycSubmissions(mappedSubmissions);
 
-            const total = typeof response.results === 'number' ? response.results : kycList.length;
+            const recruiterTotal = extractResultsCount(recruiterResponse);
+            const professionalTotal = extractResultsCount(professionalResponse);
+            const total = recruiterTotal + professionalTotal || kycList.length;
 
             // Try to fetch stats from dedicated stats endpoint, fallback to computed
             try {

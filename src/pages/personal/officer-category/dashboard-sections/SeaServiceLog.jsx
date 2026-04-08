@@ -30,10 +30,33 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
   };
 
   const validateForm = (entry) => {
-    if (!entry.companyName || !entry.vesselName || !entry.role || !entry.imoNo || !entry.flag || !entry.type || !entry.joiningDate || !entry.till) {
-      return 'Please fill in all mandatory fields before adding.';
+    const requiredFields = [
+      { key: 'companyName', label: 'Company Name' },
+      { key: 'role', label: 'Role' },
+      { key: 'vesselName', label: 'Vessel Name' },
+      { key: 'imoNo', label: 'IMO No.' },
+      { key: 'flag', label: 'Flag' },
+      { key: 'type', label: 'Type' },
+      { key: 'joiningDate', label: 'Joining Date' },
+      { key: 'till', label: 'Till' }
+    ];
+
+    const missingFields = requiredFields
+      .filter(({ key }) => !String(entry[key] ?? '').trim())
+      .map(({ label }) => label);
+
+    if (missingFields.length > 0) {
+      return `Please complete these mandatory fields: ${missingFields.join(', ')}.`;
     }
-    if (new Date(entry.joiningDate) > new Date(entry.till)) {
+
+    const joiningDate = new Date(entry.joiningDate);
+    const tillDate = new Date(entry.till);
+
+    if (Number.isNaN(joiningDate.getTime()) || Number.isNaN(tillDate.getTime())) {
+      return 'Please enter valid Joining Date and Till values.';
+    }
+
+    if (joiningDate > tillDate) {
       return 'Till date must be after or equal to Joining date.';
     }
     return null;

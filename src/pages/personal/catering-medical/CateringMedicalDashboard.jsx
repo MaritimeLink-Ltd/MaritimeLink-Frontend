@@ -145,8 +145,8 @@ const CateringMedicalDashboard = () => {
       if (sectionData.certificates?.length > 0) {
         sectionData.certificates.forEach(cert => promises.push(resumeService.addLicense({ 
           ...cert,
-          licenseName: cert.certificateName,
-          licenseNumber: cert.number,
+          licenseName: cert.licenseName || cert.certificateName,
+          licenseNumber: cert.licenseNumber || cert.number || cert.certificateNumber,
           isCertificate: true 
         })));
       }

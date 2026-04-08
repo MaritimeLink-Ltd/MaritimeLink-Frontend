@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import SignIn from './pages/personal/auth/SignIn';
@@ -105,8 +106,51 @@ import ChangePassword from './pages/personal/dashboard/dashboard-sections/Change
 import ManageSubscription from './pages/personal/dashboard/dashboard-sections/ManageSubscription';
 import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
+import { expireSessionAndRedirect, parseJwtExpiryMs } from './utils/sessionManager';
 
 function App() {
+  useEffect(() => {
+    let timeoutId;
+
+    const scheduleExpiryLogout = () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const expiryMs = parseJwtExpiryMs(token);
+      if (!expiryMs) return;
+
+      const delay = expiryMs - Date.now();
+
+      if (delay <= 0) {
+        expireSessionAndRedirect();
+        return;
+      }
+
+      timeoutId = setTimeout(() => {
+        expireSessionAndRedirect();
+      }, delay);
+    };
+
+    scheduleExpiryLogout();
+
+    const handleStorage = (event) => {
+      if (!event || event.key === 'authToken') {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
+        scheduleExpiryLogout();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
   return (
     <div className="min-w-0 w-full max-w-full overflow-x-hidden">
       <Router>

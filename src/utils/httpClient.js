@@ -4,6 +4,7 @@
  */
 
 import { API_CONFIG } from '../config/api.config';
+import { expireSessionAndRedirect, isAuthTokenExpired } from './sessionManager';
 
 class HttpClient {
     constructor(baseURL = API_CONFIG.BASE_URL) {
@@ -38,6 +39,14 @@ class HttpClient {
 
         const data = isJson ? await response.json() : await response.text();
 
+        if (response.status === 401) {
+            const message = expireSessionAndRedirect();
+            const error = new Error(message);
+            error.status = 401;
+            error.data = data;
+            throw error;
+        }
+
         if (!response.ok) {
             const error = new Error(data.message || 'An error occurred');
             error.status = response.status;
@@ -53,6 +62,12 @@ class HttpClient {
      */
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+
+        const token = localStorage.getItem('authToken');
+        if (token && isAuthTokenExpired(token)) {
+            const message = expireSessionAndRedirect();
+            throw new Error(message);
+        }
 
         // Check if body is FormData - if so, don't set Content-Type header
         const isFormData = options.body instanceof FormData;
