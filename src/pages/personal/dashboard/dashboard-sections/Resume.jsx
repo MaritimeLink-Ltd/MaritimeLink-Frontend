@@ -103,11 +103,13 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     ...prevData,
                     userType: newUserType,
                     name: (firstName || middleName || lastName) ? `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim() : (fullName || prevData.name),
-                    category: pi.category || prevData.category,
+                    category: pi.category || data.category || data.subcategory || data.profession || prevData.category,
                     phone: pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number ? `${pi.countryCode || pi.phoneCode || pi.country_code || pi.phone_code || ''} ${pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number}`.trim() : prevData.phone,
                     email: pi.email || pi.emailAddress || pi.email_address || prevData.email,
                     address: [pi.streetAddress || pi.address || pi.street_address, pi.city, pi.state, pi.zipCode || pi.postcode || pi.zip_code || pi.post_code, pi.country].filter(Boolean).join(', ') || prevData.address,
-                    image: (isApiPayload && data.profilePhoto) ? data.profilePhoto : (localStorage.getItem('profileImage') || prevData.image),
+                    image: isApiPayload
+                        ? (data.profilePhotoUrl || data.profilePhoto || data.profile_photo || localStorage.getItem('profileImage') || prevData.image)
+                        : (localStorage.getItem('profileImage') || prevData.image),
                     professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
                     
                     skills: isApiPayload 
@@ -251,8 +253,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     console.log("Resume Fetch Result:", data);
                     if (data) {
                         processData(data, true);
-                        if (data.profilePhoto || data.profile_photo) {
-                            const photo = data.profilePhoto || data.profile_photo;
+                        if (data.profilePhotoUrl || data.profilePhoto || data.profile_photo) {
+                            const photo = data.profilePhotoUrl || data.profilePhoto || data.profile_photo;
                             localStorage.setItem('profileImage', photo);
                         }
                     } else {
