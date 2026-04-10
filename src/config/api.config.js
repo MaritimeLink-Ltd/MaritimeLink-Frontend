@@ -75,6 +75,7 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: '/api/recruiter/forgot-password',
     RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
     UPDATE_PASSWORD: '/api/recruiter/update-password',
+    UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
   },
   // Recruiter KYC Endpoints
   RECRUITER_KYC: {

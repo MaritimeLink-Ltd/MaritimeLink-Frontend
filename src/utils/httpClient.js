@@ -15,15 +15,15 @@ class HttpClient {
     /**
      * Create request headers
      */
-    createHeaders(customHeaders = {}) {
+    createHeaders(customHeaders = {}, includeAuth = true) {
         const headers = {
             ...API_CONFIG.HEADERS,
             ...customHeaders,
         };
 
-        // Add authorization token if available
+        // Add authorization token if available and the request allows it
         const token = localStorage.getItem('authToken');
-        if (token) {
+        if (includeAuth && token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
@@ -62,9 +62,10 @@ class HttpClient {
      */
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        const includeAuth = options.skipAuth !== true;
 
         const token = localStorage.getItem('authToken');
-        if (token && isAuthTokenExpired(token)) {
+        if (includeAuth && token && isAuthTokenExpired(token)) {
             const message = expireSessionAndRedirect();
             throw new Error(message);
         }
@@ -76,9 +77,9 @@ class HttpClient {
         if (isFormData) {
             // For FormData, only add authorization, let browser set Content-Type with boundary
             const token = localStorage.getItem('authToken');
-            headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            headers = includeAuth && token ? { 'Authorization': `Bearer ${token}` } : {};
         } else {
-            headers = this.createHeaders(options.headers);
+            headers = this.createHeaders(options.headers, includeAuth);
         }
 
         const controller = new AbortController();
@@ -87,6 +88,7 @@ class HttpClient {
         try {
             const response = await fetch(url, {
                 ...options,
+                skipAuth: undefined,
                 headers,
                 signal: controller.signal,
             });

@@ -143,11 +143,21 @@ function App() {
       }
     };
 
+    const handleAuthTokenChanged = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+      scheduleExpiryLogout();
+    };
+
     window.addEventListener('storage', handleStorage);
+    window.addEventListener('authTokenChanged', handleAuthTokenChanged);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('authTokenChanged', handleAuthTokenChanged);
     };
   }, []);
 

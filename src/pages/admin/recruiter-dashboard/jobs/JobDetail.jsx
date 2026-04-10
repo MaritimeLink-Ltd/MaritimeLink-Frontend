@@ -18,6 +18,11 @@ function JobDetail({ onBack }) {
     const { jobId } = useParams();
     const location = useLocation();
     const jobData = location.state?.jobData;
+    const currentUserType = typeof window !== 'undefined'
+        ? (localStorage.getItem('userType') || localStorage.getItem('adminUserType'))
+        : null;
+    const isRecruiterRoute = location.pathname === '/admin/jobs' || location.pathname.startsWith('/admin/jobs/');
+    const isRecruiterContext = currentUserType === 'recruiter' || (!currentUserType && isRecruiterRoute);
     const [job, setJob] = useState(jobData || null);
     const [isLoadingJob, setIsLoadingJob] = useState(!jobData); // Only load if no jobData provided initially, or always load to get fresh data
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
@@ -107,7 +112,7 @@ function JobDetail({ onBack }) {
              if (!jobId) return;
              try {
                  setIsLoadingApplicants(true);
-                 const isAdminPath = location.pathname.includes('/admin/');
+                 const isAdminPath = !isRecruiterContext && location.pathname.includes('/admin/');
                  const [applicantsRes, matchesRes] = await Promise.all([
                      isAdminPath ? jobService.getAdminJobApplicants(jobId) : jobService.getJobApplicants(jobId),
                      isAdminPath ? jobService.getAdminJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; }) : jobService.getJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; })
@@ -238,7 +243,10 @@ function JobDetail({ onBack }) {
         const matchesTab = activeTab === 'all' || applicant.status === activeTab;
         const applicationDate = new Date(applicant.applicationDate);
         const cutoffDate = getTimeFilterDate();
-        const matchesTime = activeTab === 'all' ? true : applicationDate >= cutoffDate;
+        const hasValidApplicationDate = !Number.isNaN(applicationDate.getTime());
+        const matchesTime = activeTab === 'all' || activeTab === 'matches'
+            ? true
+            : hasValidApplicationDate && applicationDate >= cutoffDate;
         return matchesTab && matchesTime;
     });
 

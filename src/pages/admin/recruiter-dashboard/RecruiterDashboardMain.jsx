@@ -80,7 +80,7 @@ const RecruiterDashboardMain = () => {
         }
 
         if (viewingResume) {
-            return <CVResume />;
+            return <CVResume isReadOnly={true} resumeData={viewingResume.resumeData} />;
         }
 
         if (creatingJob) {
@@ -92,7 +92,7 @@ const RecruiterDashboardMain = () => {
                 candidateId={viewingCandidate.id}
                 onBack={() => setViewingCandidate(null)}
                 showApplicationStatus={viewingCandidate.fromJobApplicants}
-                onViewResume={(candidateId) => setViewingResume(candidateId)}
+                onViewResume={(candidateId, resumeData) => setViewingResume({ candidateId, resumeData })}
                 onMessage={(candidateId, candidateName) => {
                     setMessagingCandidate({ id: candidateId, name: candidateName });
                     setActiveTab('chats');

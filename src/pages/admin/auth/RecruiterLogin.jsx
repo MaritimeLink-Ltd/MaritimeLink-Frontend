@@ -49,6 +49,9 @@ function RecruiterLogin() {
                 status === 'active' ||
                 status === 'approved';
 
+            localStorage.setItem('userType', 'recruiter');
+            localStorage.setItem('adminUserType', 'recruiter');
+
             if (approved) {
                 // Set KYC keys so the dashboard skips the KYC wizard/popup
                 localStorage.setItem('recruiterKycStatus', 'completed');

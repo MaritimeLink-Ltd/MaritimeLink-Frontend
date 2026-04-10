@@ -7,6 +7,12 @@ import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
 
+const emitAuthTokenChanged = () => {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('authTokenChanged'));
+    }
+};
+
 class AuthService {
     /**
      * Register a new professional
@@ -24,7 +30,7 @@ class AuthService {
                 lastName: userData.lastName,
                 email: userData.email,
                 password: userData.password,
-            });
+            }, { skipAuth: true });
 
             // Response shape: { status, message, data: { professionalId } }
             const professionalId = response?.data?.professionalId;
@@ -55,7 +61,7 @@ class AuthService {
                 password: recruiterData.password,
                 confirmPassword: recruiterData.confirmPassword,
                 role: recruiterData.role,
-            });
+            }, { skipAuth: true });
 
             // Store temporary recruiterId
             const recruiterId = response?.data?.recruiterId;
@@ -82,7 +88,7 @@ class AuthService {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
                 professionalId: otpData.professionalId,
                 code: otpData.code,
-            });
+            }, { skipAuth: true });
 
             // Response shape: { status, message, data: { registrationStep } }
             return response;
@@ -104,7 +110,7 @@ class AuthService {
             const response = await httpClient.post(API_ENDPOINTS.RECRUITER.VERIFY_OTP, {
                 recruiterId: otpData.recruiterId,
                 code: otpData.code,
-            });
+            }, { skipAuth: true });
 
             // Expected response shape: { status, data: { registrationStep } }
             return response;
@@ -123,7 +129,7 @@ class AuthService {
         try {
             const response = await httpClient.post(API_ENDPOINTS.RECRUITER.RESEND_OTP, {
                 email,
-            });
+            }, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Recruiter Resend OTP error:', error);
@@ -146,7 +152,7 @@ class AuthService {
      */
     async setRecruiterPersonalInfo(infoData) {
         try {
-            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.PERSONAL_INFO, infoData);
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.PERSONAL_INFO, infoData, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Recruiter Personal Info error:', error);
@@ -166,7 +172,7 @@ class AuthService {
             const response = await httpClient.post(API_ENDPOINTS.RECRUITER.VERIFY_PHONE, {
                 recruiterId: otpData.recruiterId,
                 code: otpData.code,
-            });
+            }, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Recruiter Phone Verification error:', error);
@@ -181,7 +187,7 @@ class AuthService {
      */
     async getCompanyPreview(url) {
         try {
-            const response = await httpClient.get(`${API_ENDPOINTS.RECRUITER.COMPANY_PREVIEW}?url=${encodeURIComponent(url)}`);
+            const response = await httpClient.get(`${API_ENDPOINTS.RECRUITER.COMPANY_PREVIEW}?url=${encodeURIComponent(url)}`, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Get Company Preview error:', error);
@@ -205,7 +211,7 @@ class AuthService {
      */
     async setRecruiterCompanyDetails(detailsData) {
         try {
-            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPANY_DETAILS, detailsData);
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPANY_DETAILS, detailsData, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Recruiter Company Details error:', error);
@@ -224,7 +230,7 @@ class AuthService {
      */
     async setRecruiterCompliance(complianceData) {
         try {
-            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPLIANCE, complianceData);
+            const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPLIANCE, complianceData, { skipAuth: true });
             
             // On successful final step, backend optionally returns a token
             const token = response?.token || response?.data?.token;
@@ -236,6 +242,7 @@ class AuthService {
                 }
                 // Cleanup temp registration id
                 localStorage.removeItem('recruiterId');
+                emitAuthTokenChanged();
             }
 
             return response;
@@ -254,11 +261,14 @@ class AuthService {
      */
     async loginRecruiter(credentials) {
         try {
-            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.LOGIN, credentials);
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.LOGIN, credentials, { skipAuth: true });
 
             if (response.token || response.data?.token) {
                 const token = response.token || response.data.token;
                 localStorage.setItem('authToken', token);
+                localStorage.setItem('userType', 'recruiter');
+                localStorage.setItem('adminUserType', 'recruiter');
+                emitAuthTokenChanged();
                 
                 // Store user profile info for frontend use
                 const profile = response.data?.recruiter || response.data;
@@ -485,6 +495,7 @@ class AuthService {
             if (response.token) {
                 localStorage.setItem('authToken', response.token);
                 localStorage.removeItem('professionalId'); // Clear temp ID
+                emitAuthTokenChanged();
             }
 
             return response;
@@ -525,11 +536,12 @@ class AuthService {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.LOGIN, {
                 email: credentials.email,
                 password: credentials.password,
-            });
+            }, { skipAuth: true });
 
             // Response shape: { status, token, data: { user } }
             if (response?.token) {
                 localStorage.setItem('authToken', response.token);
+                emitAuthTokenChanged();
             }
 
             // Persist user profile for use across the app
@@ -588,12 +600,13 @@ class AuthService {
             const response = await httpClient.post(API_ENDPOINTS.ADMIN.LOGIN, {
                 email: credentials.email,
                 password: credentials.password,
-            });
+            }, { skipAuth: true });
 
             if (response?.token || response?.data?.token) {
                 const token = response.token || response.data.token;
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('adminUserType', 'admin');
+                emitAuthTokenChanged();
             }
 
             return response;
@@ -614,7 +627,7 @@ class AuthService {
         try {
             const response = await httpClient.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
                 email,
-            });
+            }, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Forgot password error:', error);
@@ -635,7 +648,7 @@ class AuthService {
         try {
             const response = await httpClient.patch(`${API_ENDPOINTS.AUTH.RESET_PASSWORD}/${token}`, {
                 password: newPassword,
-            });
+            }, { skipAuth: true });
             return response;
         } catch (error) {
             console.error('Reset password error:', error);
@@ -649,6 +662,7 @@ class AuthService {
      */
     logout() {
         clearAuthStorage();
+        emitAuthTokenChanged();
     }
 
     /**

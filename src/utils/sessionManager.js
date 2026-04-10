@@ -65,15 +65,49 @@ export function isAuthTokenExpired(token) {
 
 export function clearAuthStorage() {
     AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('authTokenChanged'));
+    }
 }
 
-export function getLoginRouteFromStorage() {
+export function getLoginRouteFromStorage(pathname = typeof window !== 'undefined' ? window.location.pathname : '') {
     const adminUserType = localStorage.getItem('adminUserType');
     const userType = localStorage.getItem('userType');
 
     if (adminUserType === 'admin' || userType === 'admin') return '/admin/login';
     if (adminUserType === 'training-provider' || userType === 'training-provider') return '/training-provider/login';
     if (adminUserType === 'recruiter' || userType === 'recruiter') return '/recruiter/login';
+
+    // Fallback to route-based inference when role keys are missing/stale.
+    if (pathname) {
+        const recruiterPaths = [
+            '/recruiter',
+            '/agent',
+            '/admin/search',
+            '/admin/jobs',
+            '/admin/chats',
+            '/admin/settings',
+            '/admin/upload-job',
+            '/admin/job-created-success',
+        ];
+        const trainingProviderPaths = [
+            '/training-provider',
+            '/trainingprovider',
+        ];
+
+        if (recruiterPaths.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'))) {
+            return '/recruiter/login';
+        }
+
+        if (trainingProviderPaths.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'))) {
+            return '/training-provider/login';
+        }
+
+        if (pathname === '/admin/login' || pathname.startsWith('/admin-dashboard') || pathname.startsWith('/admin/marketplace') || pathname.startsWith('/admin/accounts') || pathname.startsWith('/admin/companies') || pathname.startsWith('/admin/compliance') || pathname.startsWith('/admin/operations') || pathname.startsWith('/admin/profile') || pathname.startsWith('/admin/notifications') || pathname.startsWith('/admin/transaction-history') || pathname.startsWith('/admin/platform-activity') || pathname.startsWith('/admin/flagged-accounts')) {
+            return '/admin/login';
+        }
+    }
 
     return '/signin';
 }
@@ -89,10 +123,10 @@ export function isPublicPath(pathname) {
 }
 
 export function expireSessionAndRedirect(reason = 'Session expired. Please sign in again.') {
-    const loginRoute = getLoginRouteFromStorage();
+    const currentPath = window.location.pathname;
+    const loginRoute = getLoginRouteFromStorage(currentPath);
     clearAuthStorage();
 
-    const currentPath = window.location.pathname;
     if (!isPublicPath(currentPath) && currentPath !== loginRoute) {
         window.location.replace(loginRoute);
     }

@@ -7,7 +7,7 @@ import { FaStar } from 'react-icons/fa';
 import resumeService from '../../services/resumeService';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
-const CVResume = ({ isReadOnly = false }) => {
+const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [userData, setUserData] = useState({
@@ -160,6 +160,19 @@ const CVResume = ({ isReadOnly = false }) => {
         };
 
         const fetchResume = async () => {
+            if (resumeData) {
+                processData({
+                    personalInfo: resumeData.personalInfo || {
+                        firstName: resumeData.name?.split(' ')[0] || '',
+                        lastName: resumeData.name?.split(' ').slice(1).join(' ') || '',
+                        email: resumeData.emailAddress || '',
+                        contactNumber: resumeData.phoneNumber || ''
+                    },
+                    ...resumeData
+                });
+                return;
+            }
+
             if (location.state?.resumeData) {
                 // Synthesize missing fields if passed from admin
                 const rd = location.state.resumeData;
