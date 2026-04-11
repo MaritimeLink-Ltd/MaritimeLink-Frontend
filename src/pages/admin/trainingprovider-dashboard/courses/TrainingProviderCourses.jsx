@@ -8,44 +8,14 @@ import {
     Search,
     ChevronDown
 } from 'lucide-react';
-import { mockCourses } from '../../../../data/publishedCoursesData';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
 const statusStyles = {
     success: 'bg-emerald-50 text-emerald-700',
     warning: 'bg-amber-50 text-amber-700',
     neutral: 'bg-gray-100 text-gray-600'
 };
-
-const overviewCards = [
-    {
-        id: 1,
-        label: 'Course Management',
-        value: '12',
-        icon: BookOpen,
-        accent: 'bg-blue-50 text-blue-600'
-    },
-    {
-        id: 2,
-        label: 'Total Sessions',
-        value: '46',
-        icon: Calendar,
-        accent: 'bg-amber-50 text-amber-600'
-    },
-    {
-        id: 3,
-        label: 'Bookings',
-        value: '625',
-        icon: Users,
-        accent: 'bg-emerald-50 text-emerald-600'
-    },
-    {
-        id: 4,
-        label: 'Revenue',
-        value: '$124,800',
-        icon: DollarSign,
-        accent: 'bg-emerald-50 text-emerald-600'
-    }
-];
 
 const PAGE_SIZE = 8;
 
@@ -54,22 +24,122 @@ function TrainingProviderCourses() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState('all');
+    const [coursesList, setCoursesList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const dynamicOverviewCards = useMemo(() => {
+        const totalCourses = coursesList.length;
+        const totalSessions = coursesList.reduce((acc, course) => acc + course.sessions, 0);
+        const totalBookings = coursesList.reduce((acc, course) => acc + course.bookings, 0);
+        const totalRevenue = coursesList.reduce((acc, course) => acc + (course.revenueValue || 0), 0);
+
+        return [
+            {
+                id: 1,
+                label: 'Course Management',
+                value: totalCourses.toString(),
+                icon: BookOpen,
+                accent: 'bg-blue-50 text-blue-600'
+            },
+            {
+                id: 2,
+                label: 'Total Sessions',
+                value: totalSessions.toString(),
+                icon: Calendar,
+                accent: 'bg-amber-50 text-amber-600'
+            },
+            {
+                id: 3,
+                label: 'Bookings',
+                value: totalBookings.toString(),
+                icon: Users,
+                accent: 'bg-emerald-50 text-emerald-600'
+            },
+            {
+                id: 4,
+                label: 'Revenue',
+                value: `$${totalRevenue.toLocaleString()}`,
+                icon: DollarSign,
+                accent: 'bg-emerald-50 text-emerald-600'
+            }
+        ];
+    }, [coursesList]);
+
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                setIsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.COURSES.MY);
+                if (response.status === 'success' && response.data?.courses) {
+                    const formattedCourses = response.data.courses.map(course => {
+                        const sessions = course.sessions || [];
+                        const sessionsCount = sessions.length;
+                        
+                        let totalSeats = course.capacity || 0;
+                        if (totalSeats === 0 && sessionsCount > 0) {
+                            totalSeats = sessions.reduce((sum, s) => sum + (Number(s.totalSeats) || 0), 0);
+                        }
+
+                        let bookings = course.enrolledCount || 0;
+                        if (bookings === 0 && sessionsCount > 0) {
+                            bookings = sessions.reduce((sum, s) => {
+                                const t = Number(s.totalSeats) || 0;
+                                const a = Number(s.availableSeats) || 0;
+                                return sum + (t > a ? t - a : 0);
+                            }, 0);
+                        }
+
+                        const numericPrice = Number(course.price || 0);
+                        const revenueValue = numericPrice * bookings;
+
+                        return {
+                            id: course.id,
+                            name: course.title,
+                            instructor: 'TBD',
+                            certificateType: course.category || course.courseType,
+                            sessions: sessionsCount,
+                            totalSeats: totalSeats,
+                            bookings: bookings,
+                            createdAt: course.createdAt,
+                            bookingsTag: null,
+                            revenueValue: revenueValue,
+                            revenue: `${course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : ''}${revenueValue.toLocaleString()}`,
+                            status: course.status === 'ACTIVE' ? 'Published' : course.status === 'DRAFT' ? 'Draft' : course.status,
+                            statusVariant: course.status === 'ACTIVE' ? 'success' : course.status === 'DRAFT' ? 'neutral' : 'warning',
+                            icon: BookOpen,
+                            iconBg: 'bg-blue-50 text-blue-600',
+                            iconColor: 'fill-[#1e5a8f]'
+                        };
+                    });
+                    // Sort by newest first
+                    formattedCourses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    setCoursesList(formattedCourses);
+                }
+            } catch (err) {
+                console.error("Failed to fetch courses:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCourses();
+    }, []);
 
     const filteredCourses = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
 
-        return mockCourses.filter((course) => {
+        return coursesList.filter((course) => {
             const matchesSearch =
                 !term ||
-                course.name.toLowerCase().includes(term) ||
-                course.certificateType.toLowerCase().includes(term);
+                course.name?.toLowerCase().includes(term) ||
+                course.certificateType?.toLowerCase().includes(term);
 
             const matchesStatus =
                 statusFilter === 'all' ? true : course.status === statusFilter;
 
             return matchesSearch && matchesStatus;
         });
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, coursesList]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -170,7 +240,7 @@ function TrainingProviderCourses() {
 
             {/* Overview Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-                {overviewCards.map((card) => (
+                {dynamicOverviewCards.map((card) => (
                     <div
                         key={card.id}
                         className="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 px-5 py-4 shadow-sm"
@@ -318,7 +388,17 @@ function TrainingProviderCourses() {
                                         colSpan={8}
                                         className="px-5 py-10 text-center text-sm text-gray-500"
                                     >
-                                        No courses match your search.
+                                        {isLoading ? (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <svg className="animate-spin h-5 w-5 text-[#003971]" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Loading courses...
+                                            </div>
+                                        ) : (
+                                            'No courses match your search or you have not created any courses.'
+                                        )}
                                     </td>
                                 </tr>
                             )}

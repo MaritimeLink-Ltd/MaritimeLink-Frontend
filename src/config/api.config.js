@@ -141,6 +141,17 @@ export const API_ENDPOINTS = {
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
   },
+  // Courses Endpoints
+  COURSES: {
+    CREATE: '/api/courses',
+    CREATE_SESSION: (courseId) => `/api/courses/${courseId}/sessions`,
+    GET_SESSIONS: (courseId) => `/api/courses/${courseId}/sessions`,
+    DELETE_SESSION: (sessionId) => `/api/courses/sessions/${sessionId}`,
+    MY: '/api/courses/my',
+    GET_BY_ID: (id) => `/api/courses/${id}`,
+    UPDATE: (id) => `/api/courses/${id}`,
+    DELETE: (id) => `/api/courses/${id}`,
+  },
 };
 
 export default API_CONFIG;

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import httpClient from '../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../config/api.config';
 import { countryCodes } from '../../../utils/countryCodes';
 
 const courseTitleOptions = [
@@ -27,8 +29,10 @@ function CreateCourse() {
         category: editData?.type || 'STCW',
         courseType: 'Initial',
         issuingAuthority: 'United Kingdom',
-        description: ''
+        description: '',
+        price: ''
     });
+    const [isLoading, setIsLoading] = useState(false);
 
     const categories = ['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'];
     const courseTypes = ['Refresher', 'Upgrade', 'Initial', 'Other'];
@@ -45,9 +49,32 @@ function CreateCourse() {
         }
     };
 
-    const handlePublish = () => {
-        console.log('Publishing course:', formData);
-        navigate('/admin-dashboard');
+    const handlePublish = async () => {
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const payload = {
+                title: formData.courseTitle === 'Other' ? formData.otherCourseTitle : formData.courseTitle,
+                location: formData.location || 'N/A',
+                category: formData.category, // e.g. STCW, Safety & Security
+                contractType: 'Full-time', // Defaulting as form doesn't capture
+                description: formData.description,
+                price: Number(formData.price) || 0,
+                currency: 'USD',
+                courseType: 'INTERNAL' // Backend expects INTERNAL or EXTERNAL
+            };
+
+            await httpClient.post(
+                API_ENDPOINTS.COURSES.CREATE,
+                payload
+            );
+            navigate('/admin-dashboard');
+        } catch (error) {
+            console.error('Error creating course:', error);
+            alert(error.message || 'Failed to create course');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -174,6 +201,20 @@ function CreateCourse() {
                                 </select>
                             </div>
 
+                            {/* Price */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                    Price (USD)
+                                </label>
+                                <input
+                                    type="number"
+                                    placeholder="Enter course price"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                />
+                            </div>
+
                             {/* Next Button */}
                             <button
                                 onClick={handleNext}
@@ -201,9 +242,16 @@ function CreateCourse() {
                             {/* Publish Button */}
                             <button
                                 onClick={handlePublish}
-                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm"
+                                disabled={isLoading}
+                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                                {isEditMode ? 'Update Course' : 'Publish Course'}
+                                {isLoading ? (
+                                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                ) : null}
+                                {isLoading ? 'Publishing...' : (isEditMode ? 'Update Course' : 'Publish Course')}
                             </button>
                         </div>
                     )}

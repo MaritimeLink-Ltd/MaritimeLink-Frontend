@@ -1,66 +1,75 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, CheckCircle } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import {
+    ChevronLeft,
+    ChevronDown,
+    CheckCircle,
+    BookOpen,
+    Loader2
+} from 'lucide-react';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
+import { countryCodes } from '../../../../utils/countryCodes';
+
+const courseTitleOptions = [
+    'STCW Basic Safety Training',
+    'Advanced Firefighting',
+    'Medical First Aid',
+    'Bridge Resource Management',
+    'STCW Refresher Course',
+    'Other'
+];
 
 export default function EditCourse() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isAdmin = location.pathname.includes('/admin/');
     const { courseId } = useParams();
-    const [step, setStep] = useState(1);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
+
     const [isLoading, setIsLoading] = useState(true);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+
     const [form, setForm] = useState({
-        title: '',
-        location: '',
+        title: 'STCW Basic Safety Training',
+        otherCourseTitle: '',
         category: 'STCW',
-        certification: 'Mandatory',
-        fee: '',
+        courseType: 'Initial',
+        issuingAuthority: 'United Kingdom',
+        defaultDuration: '3 Days',
+        price: '',
         description: ''
     });
 
-    // Mock course data - in real app, fetch from API based on courseId
     useEffect(() => {
-        // Simulate API call to fetch course data
-        const mockCourseData = {
-            'STCW-BST-001': {
-                title: 'STCW Basic Safety Training',
-                location: 'Aberdeen, UK',
-                category: 'STCW',
-                certification: 'Mandatory',
-                fee: '450',
-                description: 'This comprehensive 5-day course covers all aspects of basic safety training as required by the STCW Convention. Topics include personal survival techniques, fire prevention and firefighting, elementary first aid, and personal safety and social responsibilities.'
-            },
-            '000001': {
-                title: 'STCW Basic Safety',
-                location: 'Aberdeen, UK',
-                category: 'STCW',
-                certification: 'Mandatory',
-                fee: '450',
-                description: 'Basic safety training course covering all STCW requirements.'
-            },
-            '000002': {
-                title: 'Advanced Firefighting',
-                location: 'London, UK',
-                category: 'STCW',
-                certification: 'Mandatory',
-                fee: '650',
-                description: 'Advanced firefighting techniques and fire team management.'
-            },
-            '000003': {
-                title: 'Fast Rescue Boat Operator',
-                location: 'Southampton, UK',
-                category: 'STCW',
-                certification: 'Mandatory',
-                fee: '550',
-                description: 'Training for fast rescue boat operations and crew management.'
+        const fetchCourseData = async () => {
+            try {
+                setIsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId));
+                if (response.status === 'success' && response.data?.course) {
+                    const course = response.data.course;
+                    const isStandardTitle = courseTitleOptions.includes(course.title);
+                    setForm({
+                        title: isStandardTitle ? course.title : 'Other',
+                        otherCourseTitle: isStandardTitle ? '' : (course.title || ''),
+                        category: course.category || 'STCW',
+                        courseType: course.courseType || 'Initial',
+                        issuingAuthority: course.issuingAuthority || 'United Kingdom',
+                        defaultDuration: course.duration || '3 Days',
+                        price: course.price?.toString() || '',
+                        description: course.description || ''
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to fetch course data for editing:', err);
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        // Simulate loading
-        setTimeout(() => {
-            const courseData = mockCourseData[courseId] || mockCourseData['STCW-BST-001'];
-            setForm(courseData);
-            setIsLoading(false);
-        }, 500);
+        if (courseId) {
+            fetchCourseData();
+        }
     }, [courseId]);
 
     const handleChange = (e) => {
@@ -68,186 +77,267 @@ export default function EditCourse() {
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleUpdate = () => {
-        setShowSuccessModal(true);
-        // Auto redirect to courses page after 2 seconds
-        setTimeout(() => {
-            navigate('/trainingprovider/courses');
-        }, 2000);
+    const handleUpdate = async () => {
+        try {
+            setIsUpdating(true);
+            const payload = {
+                title: form.title === 'Other' ? form.otherCourseTitle : form.title,
+                category: form.category,
+                courseType: form.courseType,
+                issuingAuthority: form.issuingAuthority,
+                duration: form.defaultDuration,
+                description: form.description,
+                price: Number(form.price) || 0,
+                currency: 'USD',
+                contractType: 'Full-time'
+            };
+
+            const response = await httpClient.put(API_ENDPOINTS.COURSES.UPDATE(courseId), payload);
+            if (response.status === 'success') {
+                setShowSuccessModal(true);
+                setTimeout(() => {
+                    navigate(isAdmin ? `/admin/marketplace` : `/trainingprovider/courses/${courseId}`);
+                }, 2000);
+            }
+        } catch (err) {
+            console.error('Failed to update course:', err);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleCancel = () => {
+        navigate(isAdmin ? '/admin/marketplace' : `/trainingprovider/courses/${courseId}`);
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-transparent p-6 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-[#003971] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">Loading course data...</p>
-                </div>
+            <div className="min-h-[400px] bg-transparent p-6 flex flex-col items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[#003971] mb-4" />
+                <p className="text-gray-500 font-medium">Loading course specifics...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-transparent p-6">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
+        <div className="flex flex-col min-h-full">
+            <div className="max-w-4xl mx-auto w-full p-6">
+                {/* Breadcrumb */}
+                <div className="flex items-center text-xs text-gray-500 mb-3">
                     <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+                        type="button"
+                        onClick={handleCancel}
+                        className="hover:text-[#003971] font-medium flex items-center gap-1"
                     >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Back to Course
+                        <ChevronLeft className="h-4 w-4" />
+                        {isAdmin ? 'Marketplace' : 'Course Details'}
                     </button>
-                    <h1 className="text-[28px] font-bold text-gray-900 mb-2">Edit Course</h1>
-                    <p className="text-gray-500 text-sm">Update your course listing details</p>
+                    <span className="mx-2">/</span>
+                    <span className="font-medium text-gray-700">Edit Course</span>
+                </div>
+
+                {/* Header */}
+                <div className="mb-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="h-11 w-11 rounded-xl bg-[#EBF3FF] flex items-center justify-center">
+                            <BookOpen className="h-5 w-5 text-[#003971]" />
+                        </div>
+                        <div>
+                            <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900">
+                                Edit Course
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                                Modify and update properties of your existing course.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Main Form Card */}
-                <div className="bg-white rounded-[20px] p-8 shadow-sm border border-gray-100 min-h-[600px] flex flex-col relative">
-                    {step === 1 ? (
-                        <div className="flex flex-col h-full">
-                            <div className="space-y-6 flex-1">
-                                {/* Course Title */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-2 text-base">Course Title</label>
-                                    <input
-                                        type="text"
-                                        name="title"
-                                        placeholder="Enter your course title"
-                                        value={form.title}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent placeholder-gray-400"
-                                    />
-                                </div>
-
-                                {/* Location */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-2 text-base">Location</label>
-                                    <input
-                                        type="text"
-                                        name="location"
-                                        placeholder="Enter your location"
-                                        value={form.location}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent placeholder-gray-400"
-                                    />
-                                </div>
-
-                                {/* Category */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-3 text-base">Category</label>
-                                    <div className="flex flex-wrap gap-3">
-                                        {['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'].map((cat) => (
-                                            <button
-                                                type="button"
-                                                key={cat}
-                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.category === cat
-                                                    ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
-                                                    : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
-                                                    }`}
-                                                onClick={() => setForm((prev) => ({ ...prev, category: cat }))}
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Certification Type */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-3 text-base">Certification Type</label>
-                                    <div className="flex flex-wrap gap-3">
-                                        {['Mandatory', 'Optional'].map((type) => (
-                                            <button
-                                                type="button"
-                                                key={type}
-                                                className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.certification === type
-                                                    ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
-                                                    : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
-                                                    }`}
-                                                onClick={() => setForm((prev) => ({ ...prev, certification: type }))}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Course Fee */}
-                                <div>
-                                    <label className="block text-gray-900 font-medium mb-2 text-base">Course Fee</label>
-                                    <input
-                                        type="text"
-                                        name="fee"
-                                        placeholder="Enter your course fee"
-                                        value={form.fee}
-                                        onChange={handleChange}
-                                        className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent placeholder-gray-400"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Next Button */}
-                            <div className="pt-6 mt-auto">
-                                <button
-                                    type="button"
-                                    className="w-full py-3.5 rounded-lg bg-[#003971] text-white font-bold text-base hover:bg-[#002855] transition-all shadow-sm"
-                                    onClick={() => setStep(2)}
+                <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 min-h-[400px] flex flex-col">
+                    <div className="space-y-6 flex-1">
+                        {/* Course Title */}
+                        <div>
+                            <label className="block text-gray-900 font-medium mb-2 text-base">
+                                Course Title
+                            </label>
+                            <div className="relative">
+                                <select
+                                    name="title"
+                                    value={form.title}
+                                    onChange={handleChange}
+                                    className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
                                 >
-                                    Next
-                                </button>
+                                    {courseTitleOptions.map((title) => (
+                                        <option key={title} value={title}>
+                                            {title}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            </div>
+                            {form.title === 'Other' && (
+                                <input
+                                    type="text"
+                                    name="otherCourseTitle"
+                                    placeholder="Enter custom course title"
+                                    value={form.otherCourseTitle}
+                                    onChange={handleChange}
+                                    className="w-full mt-3 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                />
+                            )}
+                        </div>
+
+                        {/* Category */}
+                        <div>
+                            <label className="block text-gray-900 font-medium mb-3 text-base">
+                                Category
+                            </label>
+                            <div className="flex flex-wrap gap-3">
+                                {['STCW', 'Safety & Security', 'Medical & First Aid', 'Navigation', 'Engineering', 'Offshore', 'Management'].map((cat) => (
+                                    <button
+                                        type="button"
+                                        key={cat}
+                                        className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.category === cat
+                                                ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
+                                                : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
+                                            }`}
+                                        onClick={() =>
+                                            setForm((prev) => ({ ...prev, category: cat }))
+                                        }
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex flex-col h-full">
-                            <div className="space-y-6 flex-1">
-                                {/* Description */}
-                                <div className="flex-1 flex flex-col h-full">
-                                    <label className="block text-gray-900 font-medium mb-3 text-base">Enter course description</label>
-                                    <textarea
-                                        name="description"
-                                        placeholder="Enter your course description"
-                                        value={form.description}
-                                        onChange={handleChange}
-                                        className="w-full flex-1 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none placeholder-gray-400 min-h-[300px]"
-                                    />
-                                </div>
-                            </div>
 
-                            {/* Button Row */}
-                            <div className="pt-6 mt-auto flex gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(1)}
-                                    className="flex-1 py-3.5 rounded-lg border border-gray-300 text-gray-700 font-bold text-base hover:bg-gray-50 transition-all"
-                                >
-                                    Back
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleUpdate}
-                                    className="flex-1 py-3.5 rounded-lg bg-[#003971] text-white font-bold text-base hover:bg-[#002855] transition-all shadow-sm"
-                                >
-                                    Update Course
-                                </button>
+                        {/* Course Type */}
+                        <div>
+                            <label className="block text-gray-900 font-medium mb-3 text-base">
+                                Course Type
+                            </label>
+                            <div className="flex flex-wrap gap-3">
+                                {['Refresher', 'Upgrade', 'Initial', 'Other'].map((type) => (
+                                    <button
+                                        type="button"
+                                        key={type}
+                                        className={`px-6 py-2 rounded-full font-medium text-sm transition-all border ${form.courseType === type
+                                                ? 'bg-[#003971] text-white border-[#003971] shadow-sm'
+                                                : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'
+                                            }`}
+                                        onClick={() =>
+                                            setForm((prev) => ({ ...prev, courseType: type }))
+                                        }
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    )}
+
+                        {/* Issuing Authority */}
+                        <div>
+                            <label className="block text-gray-900 font-medium mb-2 text-base">
+                                Issuing Authority
+                            </label>
+                            <div className="relative">
+                                <select
+                                    name="issuingAuthority"
+                                    value={form.issuingAuthority}
+                                    onChange={handleChange}
+                                    className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
+                                >
+                                    {countryCodes.map((item) => (
+                                        <option key={item.country} value={item.country}>
+                                            {item.country}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            </div>
+                        </div>
+
+                        {/* Duration & Course Price */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-gray-900 font-medium mb-2 text-base">
+                                    Duration
+                                </label>
+                                <input
+                                    type="text"
+                                    name="defaultDuration"
+                                    placeholder="e.g. 3 Days"
+                                    value={form.defaultDuration}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-gray-900 font-medium mb-2 text-base">
+                                    Course Price | USD
+                                </label>
+                                <input
+                                    type="text"
+                                    name="price"
+                                    placeholder="e.g. 750"
+                                    value={form.price}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Course Description & Requirements */}
+                        <div>
+                            <label className="block text-gray-900 font-medium mb-2 text-base">
+                                Course Description & Requirements
+                            </label>
+                            <textarea
+                                name="description"
+                                placeholder="Provide a detailed description for the course. Include any prerequisites, required equipment, or important info."
+                                value={form.description}
+                                onChange={handleChange}
+                                rows={6}
+                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] resize-none placeholder-gray-400"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-8 mt-6 border-t border-gray-100 flex flex-wrap gap-3 justify-end">
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            disabled={isUpdating}
+                            className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleUpdate}
+                            disabled={isUpdating}
+                            className="px-5 py-2.5 flex items-center justify-center rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm min-w-[120px] disabled:opacity-75"
+                        >
+                            {isUpdating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            {isUpdating ? 'Saving...' : 'Update Course'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Success Modal */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200">
                         <div className="text-center">
-                            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                                <CheckCircle className="h-8 w-8 text-green-600" />
+                            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 mb-4">
+                                <CheckCircle className="h-8 w-8 text-emerald-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Course Updated Successfully!</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Course Updated!</h3>
                             <p className="text-sm text-gray-500">
-                                Your course "{form.title}" has been updated successfully.
+                                The course features have been modified successfully.
                             </p>
                         </div>
                     </div>

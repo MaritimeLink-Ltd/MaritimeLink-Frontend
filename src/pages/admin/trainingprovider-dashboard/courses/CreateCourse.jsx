@@ -9,6 +9,8 @@ import {
     MapPin,
     Users
 } from 'lucide-react';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 import { countryCodes } from '../../../../utils/countryCodes';
 
 const courseTitleOptions = [
@@ -28,6 +30,7 @@ export default function CreateCourse() {
     const [addSessionChoice, setAddSessionChoice] = useState(null); // null | 'add' | 'skip'
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successConfig, setSuccessConfig] = useState({ mode: 'published', title: '' });
+    const [isLoading, setIsLoading] = useState(false);
 
     const [form, setForm] = useState({
         title: 'STCW Basic Safety Training',
@@ -97,14 +100,72 @@ export default function CreateCourse() {
         setSessionForm(emptySessionForm);
     };
 
-    const handleSavePublish = () => {
-        // Publish course - include current form if filled, plus all saved sessions
-        setSuccessConfig({ mode: 'published', title: form.title || 'New Course' });
-        setShowSuccessModal(true);
-        setTimeout(() => {
-            setShowSuccessModal(false);
-            navigate(isAdmin ? '/admin/marketplace' : '/trainingprovider/courses');
-        }, 1500);
+    const handleSavePublish = async () => {
+        setIsLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const locationStr = sessionForm.location || 'N/A';
+
+            const payload = {
+                title: form.title === 'Other' ? form.otherCourseTitle : form.title,
+                location: locationStr,
+                category: form.category,
+                contractType: 'Full-time', // Default since it's not captured in form
+                description: form.description,
+                price: Number(form.price) || 0,
+                currency: 'USD',
+                courseType: 'INTERNAL' // Backend expects INTERNAL or EXTERNAL
+            };
+
+            const response = await httpClient.post(
+                API_ENDPOINTS.COURSES.CREATE,
+                payload
+            );
+            
+            const courseId = response.data?.course?.id;
+            
+            if (courseId && addSessionChoice === 'add') {
+                const sessionsToCreate = [...savedSessions];
+                if (sessionForm.startDate) {
+                    sessionsToCreate.push({ ...sessionForm, id: Date.now() });
+                }
+
+                for (const s of sessionsToCreate) {
+                    const sessionPayload = {
+                        startDate: s.startDate ? new Date(s.startDate).toISOString() : new Date().toISOString(),
+                        endDate: s.endDate ? new Date(s.endDate).toISOString() : new Date().toISOString(),
+                        startTime: "09:00",
+                        endTime: "17:00",
+                        location: s.location || locationStr,
+                        instructor: "TBD", // Defaulting as form doesn't capture instructor
+                        totalSeats: Number(s.seatCapacity) || 10
+                    };
+                    
+                    try {
+                        await httpClient.post(
+                            API_ENDPOINTS.COURSES.CREATE_SESSION(courseId),
+                            sessionPayload
+                        );
+                    } catch (sessionErr) {
+                        console.error('Failed to create session:', sessionErr);
+                        // Continuing to attempt next sessions even if one fails
+                    }
+                }
+            }
+
+            setSuccessConfig({ mode: 'published', title: form.title === 'Other' ? form.otherCourseTitle : form.title });
+            setShowSuccessModal(true);
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                navigate(isAdmin ? '/admin/marketplace' : '/trainingprovider/courses');
+            }, 1500);
+
+        } catch (error) {
+            console.error('Error creating course:', error);
+            alert(error.message || 'Failed to publish course');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleCancel = () => {
@@ -544,9 +605,16 @@ export default function CreateCourse() {
                                             <button
                                                 type="button"
                                                 onClick={handleSavePublish}
-                                                className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
+                                                disabled={isLoading}
+                                                className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
                                             >
-                                                Save & Publish
+                                                {isLoading ? (
+                                                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                ) : null}
+                                                {isLoading ? 'Publishing...' : 'Save & Publish'}
                                             </button>
                                         </>
                                     )}

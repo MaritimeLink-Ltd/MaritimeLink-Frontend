@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,20 +9,12 @@ import {
   Users,
   DollarSign,
   ChevronRight,
-  CheckCircle
+  CheckCircle,
+  Loader2,
+  Trash2
 } from 'lucide-react';
-
-const courseSummary = {
-  id: 'STCW-BST-001',
-  title: 'STCW Basic Safety',
-  categoryTag: 'STCW Basic Safety',
-  totalSeats: 160,
-  sessions: 10,
-  bookings: 123,
-  revenue: '$18,450',
-  description:
-    'Comprehensive entry-level safety training essential for all seafarers. Covers basic firefighting, personal survival techniques, elementary first aid, and personal safety and social responsibilities as per IMO standards. Duration per session: 3 days.'
-};
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
 const courseHighlights = [
   'Firefighting',
@@ -31,41 +23,6 @@ const courseHighlights = [
   'Social Responsibilities',
   'Duration: 3 Days',
   'Summary Included'
-];
-
-const sessionData = [
-  {
-    id: 'S1',
-    dates: '15–17 May',
-    location: 'Liverpool',
-    seats: '14 / 16',
-    status: 'Filling Fast',
-    statusVariant: 'warning'
-  },
-  {
-    id: 'S2',
-    dates: '30 May – 1 Jun',
-    location: 'Aberdeen',
-    seats: '12 / 16',
-    status: 'Filling Fast',
-    statusVariant: 'warning'
-  },
-  {
-    id: 'S3',
-    dates: '10–12 Jun',
-    location: 'Aberdeen',
-    seats: '12 / 16',
-    status: 'Moderate',
-    statusVariant: 'info'
-  },
-  {
-    id: 'S4',
-    dates: '24–26 Jun',
-    location: 'Newcastle',
-    seats: '8 / 16',
-    status: 'Open',
-    statusVariant: 'success'
-  }
 ];
 
 const statusPillStyles = {
@@ -80,12 +37,95 @@ const PAGE_SIZE = 4;
 export default function CourseDetail() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const resolvedCourseId = courseId || courseSummary.id;
+  const resolvedCourseId = courseId; // Use the path param
+
+  const [courseSummary, setCourseSummary] = useState(null);
+  const [sessionData, setSessionData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
   const [status, setStatus] = useState('Published');
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      try {
+        setIsLoading(true);
+        const [courseResponse, sessionsResponse] = await Promise.all([
+          httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(resolvedCourseId)),
+          httpClient.get(API_ENDPOINTS.COURSES.GET_SESSIONS(resolvedCourseId))
+        ]);
+
+        let fetchedSessions = [];
+        if (sessionsResponse.status === 'success' && sessionsResponse.data?.sessions) {
+          fetchedSessions = sessionsResponse.data.sessions;
+        }
+
+        if (courseResponse.status === 'success' && courseResponse.data?.course) {
+          const course = courseResponse.data.course;
+          const currencySymbol = course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : '';
+          
+          let computedTotalSeats = course.capacity || 0;
+          if (fetchedSessions.length > 0 && computedTotalSeats === 0) {
+              computedTotalSeats = fetchedSessions.reduce((acc, s) => acc + (Number(s.totalSeats) || 0), 0);
+          }
+
+          setCourseSummary({
+            id: course.id,
+            title: course.title,
+            categoryTag: course.category || course.courseType,
+            totalSeats: computedTotalSeats,
+            sessions: fetchedSessions.length,
+            bookings: course.enrolledCount || 0,
+            revenue: `${currencySymbol}${(Number(course.price || 0) * (course.enrolledCount || 0)).toLocaleString()}`,
+            description: course.description || 'No description provided.',
+          });
+          
+          setStatus(course.status === 'ACTIVE' ? 'Published' : course.status === 'DRAFT' ? 'Draft' : 'Archived');
+          
+          if (fetchedSessions.length > 0) {
+            const mappedSessions = fetchedSessions.map((s, idx) => {
+               const startDate = new Date(s.startDate);
+               const endDate = new Date(s.endDate);
+               const datesStr = `${startDate.getDate()} ${startDate.toLocaleString('default', { month: 'short' })} - ${endDate.getDate()} ${endDate.toLocaleString('default', { month: 'short' })}, ${endDate.getFullYear()}`;
+               
+               const total = Number(s.totalSeats) || 0;
+               const available = Number(s.availableSeats) || 0;
+               const enrolled = total - available;
+
+               return {
+                 id: s.id || `S${idx}`,
+                 dates: datesStr,
+                 location: s.location || 'Online',
+                 seats: `${enrolled} / ${total}`,
+                 status: available > 0 ? (available <= 2 ? 'Filling Fast' : 'Open') : 'Full',
+                 statusVariant: available > 0 ? (available <= 2 ? 'warning' : 'success') : 'default',
+                 rawStartDate: startDate // for robust sorting
+               };
+            });
+            // Sort sessions by chronologically earliest start date
+            mappedSessions.sort((a, b) => a.rawStartDate - b.rawStartDate);
+            setSessionData(mappedSessions);
+          } else {
+            setSessionData([]);
+          }
+        }
+      } catch (err) {
+         console.error('Failed to fetch course details or sessions:', err);
+      } finally {
+         setIsLoading(false);
+      }
+    };
+    if (resolvedCourseId) {
+       fetchCourseDetails();
+    }
+  }, [resolvedCourseId]);
 
   const statusConfig = {
     Published: {
@@ -139,7 +179,7 @@ export default function CourseDetail() {
       startIndex: start,
       endIndex: end
     };
-  }, [safeCurrentPage]);
+  }, [safeCurrentPage, sessionData]);
 
   const handleChangePage = (page) => {
     if (page < 1 || page > pageCount || page === safeCurrentPage) return;
@@ -181,6 +221,63 @@ export default function CourseDetail() {
   const handleCancelStatusChange = () => {
     setStatusDialogOpen(false);
   };
+
+  const handleDeleteCourse = async () => {
+    try {
+      setIsDeleting(true);
+      const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE(resolvedCourseId));
+      if (response.status === 'success') {
+        navigate('/trainingprovider/courses');
+      }
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleDeleteSession = async () => {
+    if (!sessionToDelete) return;
+    try {
+      setIsDeletingSession(true);
+      const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE_SESSION(sessionToDelete.id));
+      if (response.status === 'success') {
+          // Remove session from sessionData natively to reflect immediately
+          setSessionData(prev => prev.filter(s => s.id !== sessionToDelete.id));
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+    } finally {
+      setIsDeletingSession(false);
+      setSessionToDelete(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-500">
+          <Loader2 className="h-6 w-6 animate-spin text-[#003971]" />
+          <span className="font-medium">Loading course details...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!courseSummary) {
+    return (
+      <div className="flex h-[400px] flex-col items-center justify-center">
+        <p className="text-gray-500">Course not found.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 text-[#003971] hover:underline"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -226,6 +323,14 @@ export default function CourseDetail() {
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <span>Edit Course</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-red-100 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Delete</span>
           </button>
           {currentStatusConfig && (
             <button
@@ -415,13 +520,22 @@ export default function CourseDetail() {
                           </span>
                         </td>
                         <td className="px-5 py-3 align-middle text-right">
-                          <button
-                            type="button"
-                            onClick={handleManageSessionList}
-                            className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff]"
-                          >
-                            View Attendees
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={handleManageSessionList}
+                                className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff]"
+                            >
+                                View Attendees
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSessionToDelete(session)}
+                                className="inline-flex items-center justify-center rounded-xl bg-red-50 p-2 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -510,6 +624,70 @@ export default function CourseDetail() {
                 className="px-4 py-2.5 rounded-xl bg-[#003971] text-sm font-semibold text-white hover:bg-[#002455]"
               >
                 {currentStatusConfig.actionLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Course Confirmation Modal */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete Course?
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete this course? This action is permanent and cannot be undone. All sessions under this course will also be removed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCourse}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-red-600 text-sm font-semibold text-white hover:bg-red-700 inline-flex items-center disabled:opacity-75"
+              >
+                {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Session Confirmation Modal */}
+      {sessionToDelete && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Cancel Session?
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to cancel and delete the session for <span className="font-semibold">{sessionToDelete.dates}</span>? All enrolled bookings for this session will be removed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSessionToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Keep Session
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSession}
+                disabled={isDeletingSession}
+                className="px-4 py-2.5 rounded-xl bg-red-600 text-sm font-semibold text-white hover:bg-red-700 inline-flex items-center disabled:opacity-75"
+              >
+                {isDeletingSession && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {isDeletingSession ? 'Deleting...' : 'Delete Session'}
               </button>
             </div>
           </div>
