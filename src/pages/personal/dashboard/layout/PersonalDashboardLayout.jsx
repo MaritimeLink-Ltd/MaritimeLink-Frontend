@@ -99,7 +99,7 @@ function PersonalDashboardLayout() {
     }, []);
 
     // Check if current page is my-jobs or saved-courses page
-    const isFullScreenPage = location.pathname === '/personal/my-jobs' || location.pathname === '/personal/saved-courses';
+    const isFullScreenPage = location.pathname === '/personal/my-jobs' || location.pathname === '/personal/saved-courses' || location.pathname === '/personal/my-bookings' || location.pathname.startsWith('/personal/bookings/');
 
     // Pages that are always allowed even before admin verification
     const isAlwaysAllowedPath = useMemo(() => {

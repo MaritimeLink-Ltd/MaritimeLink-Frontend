@@ -70,27 +70,63 @@ export default function CreateCourse() {
         setSessionForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSaveDraft = () => {
-        setSuccessConfig({ mode: 'draft', title: form.title || 'New Course' });
-        setShowSuccessModal(true);
-        setTimeout(() => {
-            setShowSuccessModal(false);
-            navigate(isAdmin ? '/admin/marketplace' : '/trainingprovider/courses');
-        }, 1500);
+    const saveCourseAsDraft = async () => {
+        let formattedCategory = form.category;
+        if (form.category === 'STCW') formattedCategory = 'STCW_CERTIFICATES';
+        else formattedCategory = form.category.toUpperCase().replace(/ & /g, '_').replace(/ /g, '_');
+
+        const payload = {
+            title: form.title === 'Other' ? form.otherCourseTitle : form.title,
+            location: 'N/A', // Location is typically set in session, defaulting to N/A for draft
+            category: formattedCategory,
+            contractType: 'Full-time',
+            description: form.description,
+            price: Number(form.price) || 0,
+            courseType: 'INTERNAL'
+        };
+
+        return await httpClient.post(API_ENDPOINTS.COURSES.DRAFTS, payload);
+    };
+
+    const handleSaveDraft = async () => {
+        setIsLoading(true);
+        try {
+            await saveCourseAsDraft();
+            setSuccessConfig({ mode: 'draft', title: form.title === 'Other' ? form.otherCourseTitle : form.title || 'New Course' });
+            setShowSuccessModal(true);
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                navigate(isAdmin ? '/admin/marketplace' : '/trainingprovider/courses');
+            }, 1500);
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            alert(error.message || 'Failed to save draft');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleContinue = () => {
         setStep(2);
     };
 
-    const handleSkipToDashboard = () => {
+    const handleSkipToDashboard = async () => {
         // Save course as draft, no session
-        setSuccessConfig({ mode: 'draft', title: form.title || 'New Course' });
-        setShowSuccessModal(true);
-        setTimeout(() => {
-            setShowSuccessModal(false);
-            navigate(isAdmin ? '/admin-dashboard' : '/trainingprovider-dashboard');
-        }, 1500);
+        setIsLoading(true);
+        try {
+            await saveCourseAsDraft();
+            setSuccessConfig({ mode: 'draft', title: form.title === 'Other' ? form.otherCourseTitle : form.title || 'New Course' });
+            setShowSuccessModal(true);
+            setTimeout(() => {
+                setShowSuccessModal(false);
+                navigate(isAdmin ? '/admin-dashboard' : '/trainingprovider-dashboard');
+            }, 1500);
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            alert(error.message || 'Failed to save draft');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSaveSession = () => {
@@ -103,40 +139,29 @@ export default function CreateCourse() {
     const handleSavePublish = async () => {
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const locationStr = sessionForm.location || 'N/A';
-
-            const payload = {
-                title: form.title === 'Other' ? form.otherCourseTitle : form.title,
-                location: locationStr,
-                category: form.category,
-                contractType: 'Full-time', // Default since it's not captured in form
-                description: form.description,
-                price: Number(form.price) || 0,
-                currency: 'USD',
-                courseType: 'INTERNAL' // Backend expects INTERNAL or EXTERNAL
-            };
-
-            const response = await httpClient.post(
-                API_ENDPOINTS.COURSES.CREATE,
-                payload
-            );
-            
+            // 1. Create Draft Course
+            const response = await saveCourseAsDraft();
             const courseId = response.data?.course?.id;
+
+            if (!courseId) {
+                throw new Error("Failed to get draft course ID");
+            }
             
-            if (courseId && addSessionChoice === 'add') {
+            // 2. Add Sessions (if any)
+            if (addSessionChoice === 'add') {
                 const sessionsToCreate = [...savedSessions];
                 if (sessionForm.startDate) {
                     sessionsToCreate.push({ ...sessionForm, id: Date.now() });
                 }
 
                 for (const s of sessionsToCreate) {
+                    const locationStr = s.location || 'N/A';
                     const sessionPayload = {
                         startDate: s.startDate ? new Date(s.startDate).toISOString() : new Date().toISOString(),
                         endDate: s.endDate ? new Date(s.endDate).toISOString() : new Date().toISOString(),
                         startTime: "09:00",
                         endTime: "17:00",
-                        location: s.location || locationStr,
+                        location: locationStr,
                         instructor: "TBD", // Defaulting as form doesn't capture instructor
                         totalSeats: Number(s.seatCapacity) || 10
                     };
@@ -148,10 +173,13 @@ export default function CreateCourse() {
                         );
                     } catch (sessionErr) {
                         console.error('Failed to create session:', sessionErr);
-                        // Continuing to attempt next sessions even if one fails
+                        // Continue to next sessions even if one fails
                     }
                 }
             }
+
+            // 3. Publish the Course
+            await httpClient.patch(API_ENDPOINTS.COURSES.PUBLISH(courseId));
 
             setSuccessConfig({ mode: 'published', title: form.title === 'Other' ? form.otherCourseTitle : form.title });
             setShowSuccessModal(true);
@@ -161,7 +189,7 @@ export default function CreateCourse() {
             }, 1500);
 
         } catch (error) {
-            console.error('Error creating course:', error);
+            console.error('Error creating/publishing course:', error);
             alert(error.message || 'Failed to publish course');
         } finally {
             setIsLoading(false);

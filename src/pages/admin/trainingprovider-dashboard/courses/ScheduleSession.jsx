@@ -3,6 +3,8 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search } from 'lucide-react';
 import { saveOrUpdateSession } from '../../../../utils/trainingSessionsStore';
 import { publishedCourses } from '../../../../data/publishedCoursesData';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
 export default function ScheduleSession() {
   const navigate = useNavigate();
@@ -10,8 +12,9 @@ export default function ScheduleSession() {
   const { courseId } = useParams();
   const isEdit = location.state?.isEdit || false;
   const sessionData = location.state?.sessionData || null;
+  const passedCourseTitle = location.state?.courseTitle || '';
 
-  const [selectedCourse, setSelectedCourse] = useState(sessionData?.courseId || '');
+  const [selectedCourse, setSelectedCourse] = useState(courseId || sessionData?.courseId || '');
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
   const courseDropdownRef = useRef(null);
@@ -48,7 +51,7 @@ export default function ScheduleSession() {
     c.name.toLowerCase().includes(courseSearch.toLowerCase())
   );
 
-  const selectedCourseName = publishedCourses.find((c) => String(c.id) === String(selectedCourse))?.name || '';
+  const selectedCourseName = passedCourseTitle || publishedCourses.find((c) => String(c.id) === String(selectedCourse))?.name || '';
 
   const handleSelectCourse = (course) => {
     setSelectedCourse(course.id);
@@ -61,24 +64,42 @@ export default function ScheduleSession() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    const eventDate = [form.startDate, form.endDate].filter(Boolean).join(' - ');
-    const targetCourseId = selectedCourse || courseId;
+  const [isLoading, setIsLoading] = useState(false);
 
-    saveOrUpdateSession(
-      targetCourseId,
-      {
-        eventDate,
-        location: form.location,
-        totalSeats: form.seatCapacity,
-        bookedSeats: sessionData?.bookedSeats || 0
-      },
-      {
-        sessionId: isEdit ? sessionData?.id : null
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      const targetCourseId = selectedCourse || courseId;
+
+      const sessionPayload = {
+          startDate: form.startDate ? new Date(form.startDate).toISOString() : new Date().toISOString(),
+          endDate: form.endDate ? new Date(form.endDate).toISOString() : new Date().toISOString(),
+          startTime: "09:00",
+          endTime: "17:00",
+          location: form.location || 'Online',
+          instructor: "TBD",
+          totalSeats: Number(form.seatCapacity) || 0
+      };
+
+      if (isEdit) {
+          await httpClient.patch(
+              API_ENDPOINTS.COURSES.UPDATE_SESSION(sessionData.id),
+              sessionPayload
+          );
+      } else {
+          await httpClient.post(
+              API_ENDPOINTS.COURSES.CREATE_SESSION(targetCourseId),
+              sessionPayload
+          );
       }
-    );
 
-    navigate(`/trainingprovider/courses/${targetCourseId || '1'}/sessions`);
+      navigate(-1);
+    } catch (error) {
+      console.error('Failed to schedule session', error);
+      alert('Failed to schedule session');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -262,16 +283,18 @@ export default function ScheduleSession() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
+                disabled={isLoading}
+                className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all disabled:opacity-75"
               >
-                Save
+                {isLoading ? 'Saving...' : 'Save'}
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
+                disabled={isLoading}
+                className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm disabled:opacity-75"
               >
-                Save & Publish
+                {isLoading ? 'Saving...' : 'Save & Publish'}
               </button>
             </div>
           </div>

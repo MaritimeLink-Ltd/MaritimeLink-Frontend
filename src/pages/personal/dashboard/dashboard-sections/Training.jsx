@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, MessageCircle } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, MessageCircle, Loader2, CalendarCheck } from 'lucide-react';
 import { getAvailableSpaces, getSessionsForCourse } from '../../../../utils/trainingSessionsStore';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
 const Training = () => {
     const navigate = useNavigate();
@@ -19,75 +21,38 @@ const Training = () => {
     const [isFilterActive, setIsFilterActive] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Sample training courses data
-    const allCourses = [
-        {
-            id: 1,
-            title: 'STCW Basic Safety Training',
-            provider: 'Ocean Maritime Training Centre',
-            price: 'GBP 850',
-            priceValue: 850,
-            location: 'London, United Kingdom',
-            category: 'STCW',
-            duration: '5 Days',
-            durationValue: 5,
-            description: `The STCW Basic Safety Training course is designed to provide seafarers with essential knowledge and practical skills required to respond effectively to onboard emergencies. This course meets international STCW requirements and is mandatory for all personnel working at sea.
+    const [allCourses, setAllCourses] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-Participants will receive hands-on training in personal survival techniques, fire prevention and firefighting, elementary first aid, and personal safety and social responsibilities. The course focuses on real-life scenarios to ensure participants can act confidently and responsibly in emergency situations.
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                setIsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_ALL);
+                if (response.status === 'success' && response.data?.courses) {
+                    const mappedCourses = response.data.courses.map(course => ({
+                        id: course.id,
+                        title: course.title,
+                        provider: course.recruiter?.organizationName || course.admin?.email || 'System Admin',
+                        price: (course.currency || 'GBP') + ' ' + course.price,
+                        priceValue: Number(course.price),
+                        location: course.location || 'Online / TBA',
+                        category: course.category,
+                        duration: course.duration ? `${course.duration} Days` : 'N/A',
+                        durationValue: Number(course.duration) || 0,
+                        description: course.description
+                    }));
+                    setAllCourses(mappedCourses);
+                }
+            } catch (error) {
+                console.error("Failed to fetch courses:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-Upon successful completion, participants will be awarded an STCW-compliant certificate, recognized by maritime authorities and employers worldwide.
-
-This training is suitable for new entrants to the maritime industry as well as experienced seafarers requiring recertification.`
-        },
-        {
-            id: 2,
-            title: 'Advanced Firefighting',
-            provider: 'Maritime Safety Institute',
-            price: 'GBP 1200',
-            priceValue: 1200,
-            location: 'Southampton, United Kingdom',
-            category: 'Safety',
-            duration: '3 Days',
-            durationValue: 3,
-            description: `Advanced training in firefighting techniques for maritime professionals.`
-        },
-        {
-            id: 3,
-            title: 'Medical First Aid',
-            provider: 'Ocean Maritime Training Centre',
-            price: 'GBP 450',
-            priceValue: 450,
-            location: 'London, United Kingdom',
-            category: 'Medical',
-            duration: '2 Days',
-            durationValue: 2,
-            description: `Comprehensive medical first aid training for seafarers.`
-        },
-        {
-            id: 4,
-            title: 'Bridge Resource Management',
-            provider: 'Navigation Training Academy',
-            price: 'GBP 1500',
-            priceValue: 1500,
-            location: 'Liverpool, United Kingdom',
-            category: 'Navigation',
-            duration: '7 Days',
-            durationValue: 7,
-            description: `Advanced bridge management and navigation skills.`
-        },
-        {
-            id: 5,
-            title: 'STCW Refresher Course',
-            provider: 'Ocean Maritime Training Centre',
-            price: 'GBP 650',
-            priceValue: 650,
-            location: 'London, United Kingdom',
-            category: 'STCW',
-            duration: '3 Days',
-            durationValue: 3,
-            description: `Refresher training for STCW certificates.`
-        }
-    ];
+        fetchCourses();
+    }, []);
 
     // Filter courses based on active filters and search
     const courses = allCourses.filter(course => {
@@ -115,9 +80,48 @@ This training is suitable for new entrants to the maritime industry as well as e
         return true;
     });
 
-    const selectedCourseSessions = selectedCourse
-        ? getSessionsForCourse(selectedCourse.id, selectedCourse.title)
-        : [];
+    const [selectedCourseSessions, setSelectedCourseSessions] = useState([]);
+    const [isSessionsLoading, setIsSessionsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!selectedCourse) {
+            setSelectedCourseSessions([]);
+            return;
+        }
+
+        const fetchSessions = async () => {
+            try {
+                setIsSessionsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SESSIONS(selectedCourse.id));
+                if (response.status === 'success' && response.data?.sessions) {
+                    const mappedSessions = response.data.sessions.map(session => {
+                        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
+                        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
+                        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
+                        const total = Number(session.totalSeats) || 0;
+                        const enrolled = Number(session.enrolledCount) || 0;
+                        const availableSpaces = Math.max(0, total - enrolled);
+                        
+                        return {
+                            id: session.id,
+                            eventDate: eventDate,
+                            availableSpaces: availableSpaces
+                        };
+                    });
+                    setSelectedCourseSessions(mappedSessions);
+                } else {
+                    setSelectedCourseSessions([]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch sessions:", error);
+                setSelectedCourseSessions([]);
+            } finally {
+                setIsSessionsLoading(false);
+            }
+        };
+
+        fetchSessions();
+    }, [selectedCourse]);
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
@@ -142,6 +146,13 @@ This training is suitable for new entrants to the maritime industry as well as e
                         </div>
 
                         <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                                onClick={() => navigate('/personal/my-bookings')}
+                                className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                            >
+                                <CalendarCheck size={18} />
+                                My Bookings
+                            </button>
                             <button
                                 onClick={() => navigate('/personal/saved-courses')}
                                 className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
@@ -176,23 +187,36 @@ This training is suitable for new entrants to the maritime industry as well as e
             <div className="flex-1 flex lg:overflow-hidden">
                 {/* Course List - Left Sidebar - Hidden on mobile when course is selected */}
                 <div className={`${selectedCourse && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide`}>
-                    {courses.map((course) => (
-                        <div
-                            key={course.id}
-                            onClick={() => setSelectedCourse(course)}
-                            className={`p-5 border-b border-gray-200 cursor-pointer transition-colors ${selectedCourse?.id === course.id
-                                ? 'bg-[#003971]/5 border-l-4 border-l-[#003971]'
-                                : 'hover:bg-gray-50'
-                                }`}
-                        >
-                            <h3 className="font-semibold text-gray-800 mb-2">{course.title}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                <Building2 size={14} />
-                                <span>{course.provider}</span>
-                            </div>
-                            <div className="text-sm font-medium text-gray-800">{course.price}</div>
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                            <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
+                            <p>Loading courses...</p>
                         </div>
-                    ))}
+                    ) : courses.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
+                            <Award size={48} className="text-gray-300 mb-4" strokeWidth={1.5} />
+                            <p className="text-lg font-medium text-gray-700">No courses found</p>
+                            <p className="text-sm mt-1">Adjust your filters or try a different search</p>
+                        </div>
+                    ) : (
+                        courses.map((course) => (
+                            <div
+                                key={course.id}
+                                onClick={() => setSelectedCourse(course)}
+                                className={`p-5 border-b border-gray-200 cursor-pointer transition-colors ${selectedCourse?.id === course.id
+                                    ? 'bg-[#003971]/5 border-l-4 border-l-[#003971]'
+                                    : 'hover:bg-gray-50'
+                                    }`}
+                            >
+                                <h3 className="font-semibold text-gray-800 mb-2">{course.title}</h3>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                    <Building2 size={14} />
+                                    <span>{course.provider}</span>
+                                </div>
+                                <div className="text-sm font-medium text-gray-800">{course.price}</div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Course Detail - Right Side - Full width on mobile when course selected */}
@@ -291,7 +315,12 @@ This training is suitable for new entrants to the maritime industry as well as e
                             {/* Sessions */}
                             <div className="mb-6">
                                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Sessions</h3>
-                                {selectedCourseSessions.length > 0 ? (
+                                {isSessionsLoading ? (
+                                    <div className="flex items-center gap-2 text-gray-500 py-4">
+                                        <Loader2 size={20} className="animate-spin text-[#003971]" />
+                                        <p className="text-sm">Loading sessions...</p>
+                                    </div>
+                                ) : selectedCourseSessions.length > 0 ? (
                                     <div className="space-y-3">
                                         {selectedCourseSessions.map((session) => (
                                             <div
@@ -302,7 +331,7 @@ This training is suitable for new entrants to the maritime industry as well as e
                                                     <p className="text-sm text-gray-500">Event Date</p>
                                                     <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
                                                     <p className="text-sm text-gray-500 mt-1">
-                                                        Available Spaces: <span className="font-semibold text-gray-700">{getAvailableSpaces(session)}</span>
+                                                        Available Spaces: <span className="font-semibold text-gray-700">{session.availableSpaces}</span>
                                                     </p>
                                                 </div>
                                             </div>

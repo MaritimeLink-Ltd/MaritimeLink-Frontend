@@ -144,8 +144,18 @@ export const API_ENDPOINTS = {
   // Courses Endpoints
   COURSES: {
     CREATE: '/api/courses',
+    LIST: '/api/courses',
+    PROFESSIONAL_ALL: '/api/professional/courses',
+    PROFESSIONAL_SESSIONS: (courseId) => `/api/professional/courses/${courseId}/sessions`,
+    PROFESSIONAL_CHECKOUT: '/api/professional/course-bookings/checkout',
+    PROFESSIONAL_BOOKINGS: '/api/professional/bookings',
+    PROFESSIONAL_BOOKING_DETAIL: (bookingId) => `/api/professional/bookings/${bookingId}`,
+    DRAFTS: '/api/courses/drafts',
+    PUBLISH: (courseId) => `/api/courses/${courseId}/publish`,
     CREATE_SESSION: (courseId) => `/api/courses/${courseId}/sessions`,
     GET_SESSIONS: (courseId) => `/api/courses/${courseId}/sessions`,
+    GET_SESSION_BY_ID: (sessionId) => `/api/courses/sessions/${sessionId}`,
+    UPDATE_SESSION: (sessionId) => `/api/courses/sessions/${sessionId}`,
     DELETE_SESSION: (sessionId) => `/api/courses/sessions/${sessionId}`,
     MY: '/api/courses/my',
     GET_BY_ID: (id) => `/api/courses/${id}`,

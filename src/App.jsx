@@ -100,6 +100,8 @@ import MyJobs from './pages/personal/dashboard/dashboard-sections/MyJobs';
 import Training from './pages/personal/dashboard/dashboard-sections/Training';
 import BookCourse from './pages/personal/dashboard/dashboard-sections/BookCourse';
 import SavedCourses from './pages/personal/dashboard/dashboard-sections/SavedCourses';
+import MyBookings from './pages/personal/dashboard/dashboard-sections/MyBookings';
+import BookingConfirmation from './pages/personal/dashboard/dashboard-sections/BookingConfirmation';
 import Chats from './pages/personal/dashboard/dashboard-sections/Chats';
 import Profile from './pages/personal/dashboard/dashboard-sections/Profile';
 import ChangePassword from './pages/personal/dashboard/dashboard-sections/ChangePassword';
@@ -290,6 +292,8 @@ function App() {
             <Route path="/personal/training" element={<Training />} />
             <Route path="/personal/training/book/:courseId" element={<BookCourse />} />
             <Route path="/personal/saved-courses" element={<SavedCourses />} />
+            <Route path="/personal/my-bookings" element={<MyBookings />} />
+            <Route path="/personal/bookings/:bookingId" element={<BookingConfirmation />} />
             <Route path="/personal/chats" element={<Chats />} />
             <Route path="/personal/profile" element={<Profile />} />
             <Route path="/personal/profile/change-password" element={<ChangePassword />} />

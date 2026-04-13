@@ -199,7 +199,9 @@ export default function CourseDetail() {
   };
 
   const handleAddSession = () => {
-    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions/schedule`);
+    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions/schedule`, {
+      state: { courseTitle: courseSummary?.title }
+    });
   };
 
   const handleManageSessionList = () => {
