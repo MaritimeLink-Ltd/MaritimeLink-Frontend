@@ -98,6 +98,7 @@ import JobDetailPersonal from './pages/personal/dashboard/dashboard-sections/Job
 import ApplyToJob from './pages/personal/dashboard/dashboard-sections/ApplyToJob';
 import MyJobs from './pages/personal/dashboard/dashboard-sections/MyJobs';
 import Training from './pages/personal/dashboard/dashboard-sections/Training';
+import BookCourse from './pages/personal/dashboard/dashboard-sections/BookCourse';
 import SavedCourses from './pages/personal/dashboard/dashboard-sections/SavedCourses';
 import Chats from './pages/personal/dashboard/dashboard-sections/Chats';
 import Profile from './pages/personal/dashboard/dashboard-sections/Profile';
@@ -287,6 +288,7 @@ function App() {
             <Route path="/personal/jobs/apply/:jobId" element={<ApplyToJob />} />
             <Route path="/personal/my-jobs" element={<MyJobs />} />
             <Route path="/personal/training" element={<Training />} />
+            <Route path="/personal/training/book/:courseId" element={<BookCourse />} />
             <Route path="/personal/saved-courses" element={<SavedCourses />} />
             <Route path="/personal/chats" element={<Chats />} />
             <Route path="/personal/profile" element={<Profile />} />

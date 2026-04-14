@@ -130,7 +130,7 @@ const Training = () => {
                 <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Training Courses</h1>
-                        <p className="text-gray-500 mt-1 text-base sm:text-lg">Find maritime training courses</p>
+                        <p className="text-gray-500 mt-1 text-base sm:text-lg">Find and book maritime training</p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1 max-w-2xl justify-end">
                         {/* Search Bar */}
@@ -146,7 +146,6 @@ const Training = () => {
                         </div>
 
                         <div className="flex items-center gap-2 w-full sm:w-auto">
-
                             <button
                                 onClick={() => navigate('/personal/saved-courses')}
                                 className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
@@ -229,7 +228,12 @@ const Training = () => {
                                     <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{selectedCourse.title}</h2>
                                 </div>
                                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-
+                                    <button
+                                        onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
+                                        className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                                    >
+                                        Book now
+                                    </button>
                                     <button
                                         onClick={() => navigate('/personal/chats', {
                                             state: {

@@ -147,7 +147,7 @@ export const API_ENDPOINTS = {
     LIST: '/api/courses',
     PROFESSIONAL_ALL: '/api/professional/courses',
     PROFESSIONAL_SESSIONS: (courseId) => `/api/professional/courses/${courseId}/sessions`,
-
+    PROFESSIONAL_CHECKOUT: '/api/professional/course-bookings/checkout',
     DRAFTS: '/api/courses/drafts',
     PUBLISH: (courseId) => `/api/courses/${courseId}/publish`,
     CREATE_SESSION: (courseId) => `/api/courses/${courseId}/sessions`,
