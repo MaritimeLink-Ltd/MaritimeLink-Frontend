@@ -190,16 +190,17 @@ class KycService {
     }
 
     /**
-     * Training Provider KYC – Step 1a: Upload Identity Document (Front)
-     * POST /api/training-provider/kyc/upload-document-front
-     * @param {string} trainingProviderId - Training Provider ID
+     * Training Provider (trainer) KYC – Step 1a: Upload Identity Document (Front)
+     * POST /api/trainer/kyc/upload-document-front
+     * API expects multipart field `recruiterId` (trainer shares recruiter row id).
+     * @param {string} recruiterOrTrainerId - Recruiter / trainer account UUID
      * @param {File} document - Front side image of the identity document
      * @returns {Promise<Object>} { status, data: { url, ocrData } }
      */
-    async uploadTrainingProviderFrontDocument(trainingProviderId, document) {
+    async uploadTrainingProviderFrontDocument(recruiterOrTrainerId, document) {
         try {
             const formData = new FormData();
-            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('recruiterId', recruiterOrTrainerId);
             formData.append('documentFront', document);
 
             const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_DOCUMENT_FRONT, {
@@ -215,16 +216,16 @@ class KycService {
     }
 
     /**
-     * Training Provider KYC – Step 1b: Upload Identity Document (Back)
-     * POST /api/training-provider/kyc/upload-document-back
-     * @param {string} trainingProviderId - Training Provider ID
+     * Training Provider (trainer) KYC – Step 1b: Upload Identity Document (Back)
+     * POST /api/trainer/kyc/upload-document-back
+     * @param {string} recruiterOrTrainerId - Recruiter / trainer account UUID
      * @param {File} document - Back side image of the identity document
      * @returns {Promise<Object>} { status, data: { url } }
      */
-    async uploadTrainingProviderBackDocument(trainingProviderId, document) {
+    async uploadTrainingProviderBackDocument(recruiterOrTrainerId, document) {
         try {
             const formData = new FormData();
-            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('recruiterId', recruiterOrTrainerId);
             formData.append('documentBack', document);
 
             const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_DOCUMENT_BACK, {
@@ -240,15 +241,17 @@ class KycService {
     }
 
     /**
-     * Training Provider KYC – Step 2: Submit KYC Details
-     * POST /api/training-provider/kyc/submit
+     * Training Provider (trainer) KYC – Step 2: Submit KYC Details
+     * POST /api/trainer/kyc/submit
      */
     async submitTrainingProviderKycDetails(data) {
         try {
             const payload = {
                 ...data,
+                recruiterId: data.recruiterId || data.trainingProviderId,
                 documentType: mapKycDocumentTypeToApi(data.documentType),
             };
+            delete payload.trainingProviderId;
 
             const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.SUBMIT, {
                 method: 'POST',
@@ -310,16 +313,16 @@ class KycService {
     }
 
     /**
-     * Training Provider KYC – Step 3: Upload Selfie
-     * POST /api/training-provider/kyc/upload-selfie
-     * @param {string} trainingProviderId - Training Provider ID
+     * Training Provider (trainer) KYC – Step 3: Upload Selfie
+     * POST /api/trainer/kyc/upload-selfie
+     * @param {string} recruiterOrTrainerId - Recruiter / trainer account UUID
      * @param {File} selfie - Selfie image file
      * @returns {Promise<Object>} Response indicating success
      */
-    async uploadTrainingProviderSelfie(trainingProviderId, selfie) {
+    async uploadTrainingProviderSelfie(recruiterOrTrainerId, selfie) {
         try {
             const formData = new FormData();
-            formData.append('trainingProviderId', trainingProviderId);
+            formData.append('recruiterId', recruiterOrTrainerId);
             formData.append('selfie', selfie);
 
             const response = await httpClient.request(API_ENDPOINTS.TRAINING_PROVIDER_KYC.UPLOAD_SELFIE, {

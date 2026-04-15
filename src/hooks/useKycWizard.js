@@ -86,7 +86,7 @@ export function useKycWizard({ userType, storagePrefix }) {
       } else if (userType === 'training-provider') {
         await kycService.submitTrainingProviderKycDetails({
           ...basePayload,
-          trainingProviderId: entityId,
+          recruiterId: entityId,
         });
       } else {
         await kycService.submitKycDetails({

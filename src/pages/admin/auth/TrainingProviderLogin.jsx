@@ -56,11 +56,11 @@ function TrainingProviderLogin() {
                 // Set KYC keys so the dashboard skips the KYC wizard/popup
                 localStorage.setItem('trainingProviderKycStatus', 'completed');
                 localStorage.setItem('trainingProviderAdminVerified', 'true');
-                // Training provider is approved — go to dashboard
                 navigate('/trainingprovider-dashboard');
             } else {
-                // Training provider is pending review — go to under review page
-                navigate('/agent/under-review');
+                // Pending admin approval: still land on dashboard so KYC / onboarding can continue
+                // (authService.loginRecruiter already sets trainingProviderKycStatus / AdminVerified for this session)
+                navigate('/trainingprovider-dashboard');
             }
         } catch (err) {
             console.error('Login error:', err);

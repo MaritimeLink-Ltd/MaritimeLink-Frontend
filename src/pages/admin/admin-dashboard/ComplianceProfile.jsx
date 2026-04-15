@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileText, X, Download } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
@@ -446,9 +446,27 @@ function ComplianceProfile() {
                 <div className="flex items-start justify-between">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                {isLoading ? 'Loading...' : userData.name}
-                            </h1>
+                            {isLoading ? (
+                                <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
+                            ) : kycData?.professional && (kycData.professional.id || kycData.professionalId) ? (
+                                <Link
+                                    to={`/admin/candidate/${kycData.professional.id || kycData.professionalId}`}
+                                    state={{
+                                        isProfessionalView: true,
+                                        candidateData: {
+                                            rawApplicant: {
+                                                ...kycData.professional,
+                                                kyc: kycData.professional.kyc || { status: kycData.status },
+                                            },
+                                        },
+                                    }}
+                                    className="text-2xl font-bold text-gray-900 hover:text-[#1e5a8f] hover:underline decoration-2 underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1e5a8f] rounded"
+                                >
+                                    {userData.name}
+                                </Link>
+                            ) : (
+                                <h1 className="text-2xl font-bold text-gray-900">{userData.name}</h1>
+                            )}
                             {!isLoading && (
                                 <span className="px-3 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-md">
                                     {userData.status}

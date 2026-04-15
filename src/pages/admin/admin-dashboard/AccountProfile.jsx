@@ -521,9 +521,8 @@ function AccountProfile() {
 
         if (isUUID) {
             setIsSubmittingAction(true);
-            const statusEndpoint = isTrainerAccount
-                ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
-                : API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
+            // Backend updates login status for both RECRUITMENT_AGENT and TRAINING_AGENT via recruiters status route
+            const statusEndpoint = API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
             try {
                 await httpClient.patch(statusEndpoint, {
                     status: 'REJECTED'
@@ -571,9 +570,7 @@ function AccountProfile() {
     const confirmApproveAccount = async () => {
         if (isUUID) {
             setIsSubmittingAction(true);
-            const statusEndpoint = isTrainerAccount
-                ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
-                : API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
+            const statusEndpoint = API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
             try {
                 await httpClient.patch(statusEndpoint, {
                     status: 'APPROVED'

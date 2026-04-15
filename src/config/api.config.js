@@ -120,6 +120,7 @@ export const API_ENDPOINTS = {
     RECRUITERS: '/api/admin/recruiters',
     RECRUITERS_STATS: '/api/admin/recruiters/stats',
     RECRUITER_DETAIL: (id) => `/api/admin/recruiters/${id}`,
+    /** Login/account status for both recruiters and training agents (same route). */
     UPDATE_RECRUITER_STATUS: (id) => `/api/admin/recruiters/${id}/status`,
     TRAINERS: '/api/admin/trainers',
     TRAINER_DETAIL: (id) => `/api/admin/trainers/${id}`,

@@ -263,25 +263,47 @@ class AuthService {
         try {
             const response = await httpClient.post(API_ENDPOINTS.RECRUITER.LOGIN, credentials, { skipAuth: true });
 
-            if (response.token || response.data?.token) {
-                const token = response.token || response.data.token;
+            const token =
+                response.token ||
+                response.data?.token ||
+                response.accessToken ||
+                response.data?.accessToken;
+
+            if (token) {
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('userType', 'recruiter');
                 localStorage.setItem('adminUserType', 'recruiter');
                 emitAuthTokenChanged();
                 
                 // Store user profile info for frontend use
-                const profile = response.data?.recruiter || response.data;
+                const profile = response.data?.recruiter || response.data?.user || response.data;
                 if (profile) {
                     localStorage.setItem('userProfile', JSON.stringify(profile));
                     localStorage.setItem('userRole', profile.role);
+                    const email = profile.email || credentials?.email;
+                    if (email) {
+                        localStorage.setItem('userEmail', email);
+                    }
 
                     const isTrainingProvider =
                         profile.role === 'TRAINING_AGENT' ||
                         profile.role === 'training-provider';
 
                     // Save recruiterId (and trainingProviderId for trainers) so KYC flows can resolve it
-                    const id = profile.id || profile.recruiterId || profile._id;
+                    let id = profile.id || profile.recruiterId || profile._id;
+                    if (!id && typeof token === 'string') {
+                        try {
+                            const parts = token.split('.');
+                            if (parts.length >= 2) {
+                                const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                                const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+                                const payload = JSON.parse(atob(padded));
+                                id = payload.id || payload.sub || payload.recruiterId || payload.userId;
+                            }
+                        } catch {
+                            // ignore JWT parse errors
+                        }
+                    }
                     if (id) {
                         localStorage.setItem('recruiterId', id);
                         if (isTrainingProvider) {
@@ -316,7 +338,10 @@ class AuthService {
                         const backendKycStatus = profile.kycStatus || profile.kyc_status;
                         if (backendKycStatus) {
                             localStorage.setItem(`${prefix}KycStatus`, backendKycStatus);
+                        } else {
+                            localStorage.setItem(`${prefix}KycStatus`, 'pending');
                         }
+                        localStorage.setItem(`${prefix}AdminVerified`, 'false');
                     }
                 }
             }

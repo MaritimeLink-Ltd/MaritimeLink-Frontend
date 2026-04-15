@@ -4,6 +4,32 @@ import { Search, ChevronDown, UserCheck, AlertTriangle, Shield, RefreshCw, Downl
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 
+function normalizeUserRole(role) {
+    if (!role) return '';
+    return String(role).toUpperCase().replace(/-/g, '_');
+}
+
+/** Supports `{ data: { recruiters|trainers } }`, nested `data.data`, or a raw array fallback. */
+function extractAdminUserList(apiBody, listKey) {
+    if (!apiBody) return [];
+    if (apiBody?.data?.[listKey] && Array.isArray(apiBody.data[listKey])) {
+        return apiBody.data[listKey];
+    }
+    if (apiBody?.data?.data?.[listKey] && Array.isArray(apiBody.data.data[listKey])) {
+        return apiBody.data.data[listKey];
+    }
+    if (apiBody?.[listKey] && Array.isArray(apiBody[listKey])) {
+        return apiBody[listKey];
+    }
+    if (Array.isArray(apiBody.data)) {
+        return apiBody.data;
+    }
+    if (Array.isArray(apiBody)) {
+        return apiBody;
+    }
+    return [];
+}
+
 function Accounts() {
     const location = useLocation();
     // Parse Query Params
@@ -326,18 +352,14 @@ function Accounts() {
                 httpClient.get(API_ENDPOINTS.ADMIN.RECRUITERS_STATS),
             ]);
 
-            // Parse recruiters list
-            let recruitersList = [];
-            if (response.status === 'fulfilled') {
-                const data = response.value;
-                if (data?.data?.recruiters && Array.isArray(data.data.recruiters)) {
-                    recruitersList = data.data.recruiters;
-                } else if (data?.data && Array.isArray(data.data)) {
-                    recruitersList = data.data;
-                } else if (Array.isArray(data)) {
-                    recruitersList = data;
-                }
-            }
+            // Parse recruiters list (dedicated endpoint; exclude training agents if response is mixed)
+            let recruitersList =
+                response.status === 'fulfilled'
+                    ? extractAdminUserList(response.value, 'recruiters')
+                    : [];
+            recruitersList = recruitersList.filter(
+                (item) => normalizeUserRole(item.role) !== 'TRAINING_AGENT'
+            );
 
             const getTimeAgo = (dateString) => {
                 if (!dateString) return 'N/A';
@@ -420,16 +442,10 @@ function Accounts() {
         try {
             const response = await httpClient.get(API_ENDPOINTS.ADMIN.TRAINERS);
 
-            let trainersList = [];
-            if (response?.data?.trainers && Array.isArray(response.data.trainers)) {
-                trainersList = response.data.trainers;
-            } else if (response?.data && Array.isArray(response.data)) {
-                trainersList = response.data;
-            } else if (response?.trainers && Array.isArray(response.trainers)) {
-                trainersList = response.trainers;
-            } else if (Array.isArray(response)) {
-                trainersList = response;
-            }
+            let trainersList = extractAdminUserList(response, 'trainers');
+            trainersList = trainersList.filter(
+                (item) => normalizeUserRole(item.role) !== 'RECRUITMENT_AGENT'
+            );
 
             const getTimeAgo = (dateString) => {
                 if (!dateString) return 'N/A';

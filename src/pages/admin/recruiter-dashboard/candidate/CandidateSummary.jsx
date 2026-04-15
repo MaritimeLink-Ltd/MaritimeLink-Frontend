@@ -148,9 +148,26 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 return;
             }
 
+            const isProfessionalView = location.state?.isProfessionalView;
+            if (
+                isProfessionalView &&
+                rawApplicant &&
+                candidateId &&
+                String(rawApplicant.id) === String(candidateId)
+            ) {
+                setFetchedCandidate(rawApplicant);
+                if (rawApplicant.application?.status || rawApplicant.status) {
+                    setApplicationStage(mapApiStatusToStage(rawApplicant.application?.status || rawApplicant.status));
+                } else {
+                    setApplicationStage(null);
+                }
+                setStatusUpdatedBy(extractUpdatedByRole(rawApplicant));
+                setIsLoading(false);
+                return;
+            }
+
             try {
                 setIsLoading(true);
-                const isProfessionalView = location.state?.isProfessionalView;
                 const endpoint = isProfessionalView
                     ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
                     : API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(candidateId);
