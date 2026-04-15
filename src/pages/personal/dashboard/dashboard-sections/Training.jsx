@@ -4,12 +4,31 @@ import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowL
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
+/** Matches GET /api/professional/courses (browse) response shape: providerName, isSaved, etc. */
+const resolveCourseProvider = (course) =>
+    course?.providerName ||
+    course?.recruiter?.organizationName ||
+    course?.admin?.email ||
+    'Training provider';
+
+const buildProfessionalCoursesUrl = ({ page = 1, limit = 50, search, category, priceRange, duration } = {}) => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (search?.trim()) params.set('search', search.trim());
+    if (category) params.set('category', category);
+    if (priceRange) params.set('priceRange', priceRange);
+    if (duration) params.set('duration', duration);
+    return `${API_ENDPOINTS.COURSES.PROFESSIONAL_ALL}?${params.toString()}`;
+};
+
 const Training = () => {
     const navigate = useNavigate();
 
 
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [savedCourses, setSavedCourses] = useState(new Set());
+    const [saveToggleLoading, setSaveToggleLoading] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
     const [filters, setFilters] = useState({
         category: null,
@@ -29,21 +48,33 @@ const Training = () => {
         const fetchCourses = async () => {
             try {
                 setIsLoading(true);
-                const response = await httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_ALL);
+                const listUrl = buildProfessionalCoursesUrl({ page: 1, limit: 50 });
+                const [response, savedRes] = await Promise.all([
+                    httpClient.get(listUrl),
+                    httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SAVED_COURSES).catch(() => null),
+                ]);
                 if (response.status === 'success' && response.data?.courses) {
-                    const mappedCourses = response.data.courses.map(course => ({
+                    const mappedCourses = response.data.courses.map((course) => ({
                         id: course.id,
                         title: course.title,
-                        provider: course.recruiter?.organizationName || course.admin?.email || 'System Admin',
-                        price: (course.currency || 'GBP') + ' ' + course.price,
+                        provider: resolveCourseProvider(course),
+                        price: `${course.currency || 'GBP'} ${course.price}`,
                         priceValue: Number(course.price),
                         location: course.location || 'Online / TBA',
                         category: course.category,
                         duration: course.duration ? `${course.duration} Days` : 'N/A',
                         durationValue: Number(course.duration) || 0,
-                        description: course.description
+                        description: course.description,
                     }));
                     setAllCourses(mappedCourses);
+
+                    const savedFromList = new Set(
+                        response.data.courses.filter((c) => c.isSaved).map((c) => c.id)
+                    );
+                    if (savedRes?.status === 'success' && Array.isArray(savedRes.data?.courses)) {
+                        savedRes.data.courses.forEach((c) => savedFromList.add(c.id));
+                    }
+                    setSavedCourses(savedFromList);
                 }
             } catch (error) {
                 console.error("Failed to fetch courses:", error);
@@ -87,7 +118,7 @@ const Training = () => {
     const mapCourseFromApi = (course) => ({
         id: course.id,
         title: course.title,
-        provider: course.recruiter?.organizationName || course.admin?.email || 'System Admin',
+        provider: resolveCourseProvider(course),
         price: `${course.currency || 'GBP'} ${course.price}`,
         priceValue: Number(course.price),
         currency: course.currency || 'GBP',
@@ -148,6 +179,29 @@ const Training = () => {
         } finally {
             setIsCourseLoading(false);
             setIsSessionsLoading(false);
+        }
+    };
+
+    const handleToggleSaveCourse = async () => {
+        if (!selectedCourse?.id || saveToggleLoading) return;
+        setSaveToggleLoading(true);
+        try {
+            const res = await httpClient.post(
+                API_ENDPOINTS.COURSES.PROFESSIONAL_TOGGLE_SAVE(selectedCourse.id),
+                {}
+            );
+            if (res?.status === 'success' && typeof res.data?.saved === 'boolean') {
+                setSavedCourses((prev) => {
+                    const next = new Set(prev);
+                    if (res.data.saved) next.add(selectedCourse.id);
+                    else next.delete(selectedCourse.id);
+                    return next;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to toggle saved course:', error);
+        } finally {
+            setSaveToggleLoading(false);
         }
     };
 
@@ -281,23 +335,19 @@ const Training = () => {
                                         Chat
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            setSavedCourses(prev => {
-                                                const newSaved = new Set(prev);
-                                                if (newSaved.has(selectedCourse.id)) {
-                                                    newSaved.delete(selectedCourse.id);
-                                                } else {
-                                                    newSaved.add(selectedCourse.id);
-                                                }
-                                                return newSaved;
-                                            });
-                                        }}
-                                        className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial ${savedCourses.has(selectedCourse.id)
+                                        type="button"
+                                        onClick={handleToggleSaveCourse}
+                                        disabled={saveToggleLoading || isCourseLoading}
+                                        className={`flex items-center justify-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-initial disabled:opacity-60 ${savedCourses.has(selectedCourse.id)
                                             ? 'bg-[#003971] border-[#003971] text-white'
                                             : 'border-[#003971] text-[#003971] hover:bg-blue-50'
                                             }`}
                                     >
-                                        <Bookmark size={16} fill={savedCourses.has(selectedCourse.id) ? 'white' : 'none'} />
+                                        {saveToggleLoading ? (
+                                            <Loader2 size={16} className="animate-spin shrink-0" />
+                                        ) : (
+                                            <Bookmark size={16} fill={savedCourses.has(selectedCourse.id) ? 'white' : 'none'} />
+                                        )}
                                         {savedCourses.has(selectedCourse.id) ? 'Saved' : 'Save'}
                                     </button>
                                 </div>

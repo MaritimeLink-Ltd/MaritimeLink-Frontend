@@ -98,8 +98,8 @@ function PersonalDashboardLayout() {
         return false;
     }, []);
 
-    // Check if current page is my-jobs or saved-courses page
-    const isFullScreenPage = location.pathname === '/personal/my-jobs' || location.pathname === '/personal/saved-courses';
+    // Full-width pages without sidebar (e.g. focused job lists)
+    const isFullScreenPage = location.pathname === '/personal/my-jobs';
 
     // Pages that are always allowed even before admin verification
     const isAlwaysAllowedPath = useMemo(() => {

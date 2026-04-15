@@ -151,6 +151,8 @@ export const API_ENDPOINTS = {
     PROFESSIONAL_CHECKOUT: '/api/professional/course-bookings/checkout',
     PROFESSIONAL_BOOKING: (bookingId) => `/api/professional/bookings/${bookingId}`,
     PROFESSIONAL_BOOKINGS: '/api/professional/bookings',
+    PROFESSIONAL_SAVED_COURSES: '/api/professional/saved-courses',
+    PROFESSIONAL_TOGGLE_SAVE: (courseId) => `/api/professional/courses/${courseId}/toggle-save`,
     DRAFTS: '/api/courses/drafts',
     PUBLISH: (courseId) => `/api/courses/${courseId}/publish`,
     CREATE_SESSION: (courseId) => `/api/courses/${courseId}/sessions`,

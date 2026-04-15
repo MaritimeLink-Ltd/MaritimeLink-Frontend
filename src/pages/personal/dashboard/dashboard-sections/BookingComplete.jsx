@@ -67,6 +67,9 @@ const BookingComplete = () => {
                             <CheckCircle2 size={32} className="text-green-600" />
                         </div>
                         <h1 className="text-xl font-semibold text-gray-800 mb-2">Booking confirmed</h1>
+                        {booking?.course?.title && (
+                            <p className="text-base font-medium text-gray-800 mb-2">{booking.course.title}</p>
+                        )}
                         <p className="text-sm text-gray-600 mb-4">
                             Your payment was received. You can view this booking anytime from your account.
                         </p>
