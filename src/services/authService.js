@@ -275,10 +275,18 @@ class AuthService {
                 if (profile) {
                     localStorage.setItem('userProfile', JSON.stringify(profile));
                     localStorage.setItem('userRole', profile.role);
-                    // Save recruiterId so KYC and other flows can resolve it
+
+                    const isTrainingProvider =
+                        profile.role === 'TRAINING_AGENT' ||
+                        profile.role === 'training-provider';
+
+                    // Save recruiterId (and trainingProviderId for trainers) so KYC flows can resolve it
                     const id = profile.id || profile.recruiterId || profile._id;
                     if (id) {
                         localStorage.setItem('recruiterId', id);
+                        if (isTrainingProvider) {
+                            localStorage.setItem('trainingProviderId', id);
+                        }
                     }
                     // Persist approval/account status for routing decisions
                     if (profile.status) {
@@ -298,10 +306,6 @@ class AuthService {
                         profile.status === 'active' ||
                         profile.status === 'approved';
 
-                    // Determine the storage prefix based on role
-                    const isTrainingProvider =
-                        profile.role === 'TRAINING_AGENT' ||
-                        profile.role === 'training-provider';
                     const prefix = isTrainingProvider ? 'trainingProvider' : 'recruiter';
 
                     if (isApproved) {

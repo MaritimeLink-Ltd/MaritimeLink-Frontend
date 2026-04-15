@@ -1,8 +1,202 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader } from 'lucide-react';
+import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
+
+function countActiveJobs(jobs) {
+    if (!Array.isArray(jobs) || jobs.length === 0) return 0;
+    const withStatus = jobs.filter((j) => j?.status != null && String(j.status).length > 0);
+    if (withStatus.length === 0) return 0;
+    return jobs.filter((j) => String(j?.status || '').toUpperCase() === 'ACTIVE').length;
+}
+
+function countActiveCourses(courses) {
+    if (!Array.isArray(courses) || courses.length === 0) return 0;
+    const withStatus = courses.filter((c) => c?.status != null && String(c.status).length > 0);
+    if (withStatus.length === 0) return 0;
+    return courses.filter((c) => {
+        const s = String(c?.status || '').toUpperCase();
+        return s === 'ACTIVE' || s === 'PUBLISHED' || c?.isPublished === true;
+    }).length;
+}
+
+/**
+ * Candidates hired — prefers explicit API counters. If the recruiter detail
+ * response does not include any of these fields, the UI shows 0 until the
+ * backend adds one (e.g. candidatesHired, placementsCount).
+ */
+function resolveCandidatesHired(r) {
+    const raw =
+        r.candidatesHired ??
+        r.candidates_hired ??
+        r.hiredCandidates ??
+        r.hired_count ??
+        r.placementsCount ??
+        r.placements_count;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+/** Training provider: students trained — same pattern as hired count. */
+function resolveStudentsTrained(r) {
+    const raw = r.studentsTrained ?? r.students_trained ?? r.traineesCount ?? r.trainees_count;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function companyDetailsSubmitted(r) {
+    const org = (r.organizationName || '').trim();
+    if (!org) return false;
+    if (Number(r.registrationStep) >= 5) return true;
+    return Boolean(
+        (r.address || '').trim() ||
+            (r.companyCity || '').trim() ||
+            (r.website || '').trim() ||
+            (r.companyCountry || '').trim()
+    );
+}
+
+function hasKycIdDocuments(kyc, recruiter) {
+    if (recruiter?.idPassportUrl) return true;
+    if (!kyc || typeof kyc !== 'object') return false;
+    return Boolean(kyc.documentFrontUrl || kyc.documentUrl || kyc.documentBackUrl);
+}
+
+function formatKycDate(value) {
+    if (!value) return 'N/A';
+    try {
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return String(value);
+        return d.toLocaleDateString();
+    } catch {
+        return String(value);
+    }
+}
+
+/** Build document object for DocViewerModal from a KYC asset URL. */
+function kycViewerDocument(label, url) {
+    if (!url) return null;
+    const lower = String(url).toLowerCase();
+    const isPdf = lower.endsWith('.pdf') || lower.includes('.pdf?');
+    return {
+        name: label,
+        url,
+        type: isPdf ? 'pdf' : 'image',
+        size: '—',
+        date: 'KYC submission',
+        iconBg: 'bg-blue-50',
+        iconColor: 'text-blue-500',
+        Icon: FileText,
+    };
+}
+
+function recruiterKycSubmitted(kyc) {
+    if (!kyc || typeof kyc !== 'object') return false;
+    return Boolean(
+        kyc.documentFrontUrl ||
+            kyc.documentUrl ||
+            kyc.documentBackUrl ||
+            kyc.selfieUrl ||
+            (kyc.documentNumber && String(kyc.documentNumber).trim())
+    );
+}
+
+function kycStatusBadgeClass(status) {
+    const u = String(status || 'PENDING').toUpperCase();
+    if (u === 'APPROVED' || u === 'VERIFIED') return 'bg-green-50 text-green-700 border border-green-200';
+    if (u === 'REJECTED') return 'bg-red-50 text-red-700 border border-red-200';
+    return 'bg-orange-50 text-orange-700 border border-orange-200';
+}
+
+function formatDocumentTypeLabel(raw) {
+    if (!raw) return '—';
+    return String(raw)
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Risk tier row from KYC / account; IP row when API sends ipReputation. */
+function buildRiskAnalysisDisplay(profileData) {
+    const kyc = profileData?.kyc;
+    const explicitIp = profileData?.ipReputation || profileData?.ipReputationStatus;
+    if (explicitIp) {
+        const s = String(explicitIp).toLowerCase();
+        const tone =
+            s.includes('high') || s.includes('poor') || s.includes('bad')
+                ? 'bad'
+                : s.includes('medium') || s.includes('warn')
+                  ? 'warn'
+                  : s.includes('clean') || s.includes('good') || s.includes('low')
+                    ? 'good'
+                    : 'muted';
+        return {
+            row1Label: 'IP reputation',
+            row1Value: String(explicitIp),
+            row1Tone: tone,
+            row2Label: 'Email domain',
+            row2Value: profileData?.isVerified ? 'Verified' : 'Not verified',
+            row2Tone: profileData?.isVerified ? 'good' : 'warn',
+            dotClass: tone === 'bad' ? 'bg-red-500' : tone === 'warn' ? 'bg-orange-500' : tone === 'good' ? 'bg-green-500' : 'bg-gray-400',
+        };
+    }
+
+    if (kyc?.mismatchDetected) {
+        return {
+            row1Label: 'Risk tier',
+            row1Value: 'Mismatch flagged',
+            row1Tone: 'bad',
+            row2Label: 'Email domain',
+            row2Value: profileData?.isVerified ? 'Verified' : 'Not verified',
+            row2Tone: profileData?.isVerified ? 'good' : 'warn',
+            dotClass: 'bg-red-500',
+        };
+    }
+
+    const tier = String(kyc?.riskLevel || profileData?.riskLevel || '').toUpperCase();
+    let row1Value = 'Not assessed';
+    let row1Tone = 'muted';
+    if (tier === 'HIGH') {
+        row1Value = 'High';
+        row1Tone = 'bad';
+    } else if (tier === 'MEDIUM') {
+        row1Value = 'Medium';
+        row1Tone = 'warn';
+    } else if (tier === 'LOW') {
+        row1Value = 'Low';
+        row1Tone = 'good';
+    }
+
+    const dotClass =
+        tier === 'HIGH' ? 'bg-red-500' : tier === 'MEDIUM' ? 'bg-orange-500' : tier === 'LOW' ? 'bg-green-500' : 'bg-gray-400';
+
+    return {
+        row1Label: 'Risk tier',
+        row1Value,
+        row1Tone,
+        row2Label: 'Email domain',
+        row2Value: profileData?.isVerified ? 'Verified' : 'Not verified',
+        row2Tone: profileData?.isVerified ? 'good' : 'warn',
+        dotClass,
+    };
+}
+
+function riskValueToneClass(tone) {
+    if (tone === 'good') return 'font-semibold text-green-600';
+    if (tone === 'bad') return 'font-semibold text-red-600';
+    if (tone === 'warn') return 'font-semibold text-orange-600';
+    return 'font-semibold text-gray-500';
+}
+
+/** Address verification tick — uses KYC proof URLs or flags if the API sends them. */
+function hasKycAddressVerified(kyc) {
+    if (!kyc || typeof kyc !== 'object') return false;
+    if (kyc.addressVerified === true) return true;
+    const st = String(kyc.addressVerificationStatus || kyc.address_verification_status || '').toUpperCase();
+    if (st === 'VERIFIED' || st === 'APPROVED') return true;
+    return Boolean(kyc.addressProofUrl || kyc.addressDocumentUrl || kyc.utilityBillUrl);
+}
 
 function AccountProfile() {
     const navigate = useNavigate();
@@ -71,12 +265,28 @@ function AccountProfile() {
                             companyWeb: r.website || 'N/A',
                             address: r.address || [r.companyCity, r.companyState, r.companyCountry].filter(Boolean).join(', ') || 'N/A',
                             plan: r.tier ? `${r.tier.charAt(0).toUpperCase()}${r.tier.slice(1).toLowerCase()} Plan` : 'Free Plan',
-                            stats: { activeJobs: (r.jobs || r.courses || []).length, candidatesHired: 0 },
+                            stats: {
+                                activeJobs: isTrainerAccount
+                                    ? countActiveCourses(r.courses || [])
+                                    : countActiveJobs(r.jobs || []),
+                                candidatesHired: isTrainerAccount
+                                    ? resolveStudentsTrained(r)
+                                    : resolveCandidatesHired(r),
+                            },
                             statsLabels: isTrainerAccount
                                 ? { stat1: 'Active Courses', stat2: 'Students Trained' }
                                 : { stat1: 'Active Jobs', stat2: 'Candidates Hired' },
                             stage1Status: r.status === 'APPROVED' ? 'COMPLETED' : 'PENDING',
                             stage2Status: r.kyc ? (r.kyc.status === 'APPROVED' ? 'COMPLETED' : 'PENDING') : 'PENDING',
+                            stage1Checks: {
+                                email: Boolean(r.isVerified),
+                                phone: Boolean(r.phoneVerified),
+                                company: companyDetailsSubmitted(r),
+                            },
+                            stage2Checks: {
+                                idDocuments: hasKycIdDocuments(r.kyc, r),
+                                addressVerified: hasKycAddressVerified(r.kyc),
+                            },
                             // Extra raw fields for Submitted Details
                             personalRole: r.personalRole || 'N/A',
                             isVerified: r.isVerified,
@@ -95,6 +305,8 @@ function AccountProfile() {
                             jobs: r.jobs || [],
                             courses: r.courses || [],
                             kyc: r.kyc,
+                            riskLevel: r.kyc?.riskLevel ?? r.riskLevel ?? null,
+                            ipReputation: r.ipReputation || r.ipReputationStatus || null,
                         });
                         
                         // Extract and set admin notes from API response
@@ -167,11 +379,21 @@ function AccountProfile() {
             stats: { activeJobs: 0, candidatesHired: 0 },
             statsLabels: { stat1: 'Active Jobs', stat2: 'Candidates Hired' },
             stage1Status: 'PENDING',
-            stage2Status: 'PENDING'
+            stage2Status: 'PENDING',
+            stage1Checks: { email: false, phone: false, company: false },
+            stage2Checks: { idDocuments: false, addressVerified: false },
+            riskLevel: null,
+            ipReputation: null,
+            isVerified: false,
         };
     };
 
     const profileData = getProfileData();
+    const stage1BadgeDone = profileData.stage1Status === 'COMPLETED';
+    const stage2BadgeDone = profileData.stage2Status === 'COMPLETED';
+    const s1 = profileData.stage1Checks || { email: false, phone: false, company: false };
+    const s2 = profileData.stage2Checks || { idDocuments: false, addressVerified: false };
+    const riskAnalysis = buildRiskAnalysisDisplay(profileData);
 
     // Use API documents if available, otherwise empty array (no mock data)
     const documents = apiDocuments || [];
@@ -755,8 +977,7 @@ function AccountProfile() {
                                             <Briefcase className="h-5 w-5 text-blue-500" />
                                         </div>
                                     </div>
-                                    <div className="text-3xl font-bold text-gray-900 mb-1">{profileData.stats.activeJobs}</div>
-                                    <div className="text-xs font-semibold text-green-600">+2 this week</div>
+                                    <div className="text-3xl font-bold text-gray-900">{profileData.stats.activeJobs}</div>
                                 </div>
 
                                 {/* Stat 2 */}
@@ -789,24 +1010,44 @@ function AccountProfile() {
                                                     <div className="text-xs text-gray-600">Basic Account Setup</div>
                                                 </div>
                                             </div>
-                                            <span className="flex items-center gap-1 text-xs font-bold text-green-600">
-                                                <CheckCircle className="h-3.5 w-3.5" />
+                                            <span
+                                                className={`flex items-center gap-1 text-xs font-bold ${
+                                                    stage1BadgeDone ? 'text-green-600' : 'text-orange-600'
+                                                }`}
+                                            >
+                                                {stage1BadgeDone ? (
+                                                    <CheckCircle className="h-3.5 w-3.5" />
+                                                ) : (
+                                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                                )}
                                                 {profileData.stage1Status}
                                             </span>
                                         </div>
 
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2 text-sm">
-                                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                                <span className="text-gray-700">Email Verified</span>
+                                                {s1.email ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                                ) : (
+                                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" aria-hidden />
+                                                )}
+                                                <span className={s1.email ? 'text-gray-700' : 'text-gray-500'}>Email Verified</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm">
-                                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                                <span className="text-gray-700">Phone Verified</span>
+                                                {s1.phone ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                                ) : (
+                                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" aria-hidden />
+                                                )}
+                                                <span className={s1.phone ? 'text-gray-700' : 'text-gray-500'}>Phone Verified</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm">
-                                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                                <span className="text-gray-700">Company Details Submitted</span>
+                                                {s1.company ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                                ) : (
+                                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" aria-hidden />
+                                                )}
+                                                <span className={s1.company ? 'text-gray-700' : 'text-gray-500'}>Company Details Submitted</span>
                                             </div>
                                         </div>
                                     </div>
@@ -823,20 +1064,36 @@ function AccountProfile() {
                                                     <div className="text-xs text-gray-600">Identity Verification</div>
                                                 </div>
                                             </div>
-                                            <span className="flex items-center gap-1 text-xs font-bold text-orange-600">
-                                                <AlertTriangle className="h-3.5 w-3.5" />
+                                            <span
+                                                className={`flex items-center gap-1 text-xs font-bold ${
+                                                    stage2BadgeDone ? 'text-green-600' : 'text-orange-600'
+                                                }`}
+                                            >
+                                                {stage2BadgeDone ? (
+                                                    <CheckCircle className="h-3.5 w-3.5" />
+                                                ) : (
+                                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                                )}
                                                 {profileData.stage2Status}
                                             </span>
                                         </div>
 
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2 text-sm">
-                                                <div className="h-4 w-4 border-2 border-gray-300 rounded-full" />
-                                                <span className="text-gray-500">ID Document Upload</span>
+                                                {s2.idDocuments ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                                ) : (
+                                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" aria-hidden />
+                                                )}
+                                                <span className={s2.idDocuments ? 'text-gray-700' : 'text-gray-500'}>ID Document Upload</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm">
-                                                <div className="h-4 w-4 border-2 border-gray-300 rounded-full" />
-                                                <span className="text-gray-500">Address Verification</span>
+                                                {s2.addressVerified ? (
+                                                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                                ) : (
+                                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" aria-hidden />
+                                                )}
+                                                <span className={s2.addressVerified ? 'text-gray-700' : 'text-gray-500'}>Address Verification</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1238,11 +1495,19 @@ function AccountProfile() {
                         </>
                     )}
 
-                    {activeTab === 'KYC' && (
+                    {activeTab === 'KYC' && (() => {
+                        const kyc = profileData.kyc;
+                        const kycSubmitted = recruiterKycSubmitted(kyc);
+                        const frontUrl = kyc?.documentFrontUrl || kyc?.documentUrl || '';
+                        const backUrl = kyc?.documentBackUrl || '';
+                        const selfieUrl = kyc?.selfieUrl || '';
+                        const kycStatusLabel = String(kyc?.status || (kycSubmitted ? 'SUBMITTED' : 'AWAITING SUBMISSION')).toUpperCase();
+
+                        return (
                         <>
                             {/* KYC Header */}
                             <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
-                                <div className="flex items-start justify-between mb-6">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
                                             <span className="text-gray-500 font-bold text-sm">02</span>
@@ -1252,18 +1517,102 @@ function AccountProfile() {
                                             <p className="text-xs text-gray-500">Identity verification process</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="px-3 py-1.5 bg-orange-50 text-orange-600 text-xs font-bold rounded-md">
-                                            AWAITING SUBMISSION
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`px-3 py-1.5 text-xs font-bold rounded-md ${kycStatusBadgeClass(kyc?.status)}`}>
+                                            {kycStatusLabel}
                                         </span>
-                                        <span className="px-3 py-1.5 bg-gray-100 text-gray-500 text-xs font-semibold rounded-md">
-                                            Not yet submitted
+                                        <span className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
+                                            kycSubmitted ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                            {kycSubmitted ? 'Documents on file' : 'Not yet submitted'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Warning Message */}
+                            {kycSubmitted ? (
+                                <>
+                                    {/* KYC documents & extracted data */}
+                                    <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <FileText className="w-5 h-5 text-gray-400" />
+                                            <h3 className="text-base font-bold text-gray-900">ID Document & Photo</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                                            {[
+                                                { label: 'ID — Front', url: frontUrl, key: 'front' },
+                                                { label: 'ID — Back', url: backUrl, key: 'back' },
+                                                { label: 'Selfie', url: selfieUrl, key: 'selfie' },
+                                            ].map(({ label, url, key }) => (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    disabled={!url}
+                                                    onClick={() => {
+                                                        const doc = kycViewerDocument(label, url);
+                                                        if (doc) handleViewDocument(doc);
+                                                    }}
+                                                    className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-left hover:shadow-md transition-shadow disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
+                                                >
+                                                    <div className="aspect-[3/2] bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                                        {url ? (
+                                                            <>
+                                                                <img src={url} alt={label} className="w-full h-full object-cover" />
+                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+                                                                    <Eye className="opacity-0 group-hover:opacity-100 text-white w-7 h-7 drop-shadow-md" />
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-500 px-2 text-center">Not provided</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-2 text-xs font-medium text-gray-600">{label}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <h4 className="text-sm font-bold text-gray-900 mb-3">Submitted identity details</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Document type</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">{formatDocumentTypeLabel(kyc?.documentType)}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Document number</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">{kyc?.documentNumber || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Legal name (KYC)</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                                                    {[kyc?.firstName, kyc?.lastName].filter(Boolean).join(' ') || '—'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Date of birth</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">{formatKycDate(kyc?.dateOfBirth)}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Expiry date</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">{formatKycDate(kyc?.expiryDate)}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Issuing country</span>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">{kyc?.issueCountry || '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        {kyc?.mismatchDetected && (
+                                            <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
+                                                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="text-sm font-bold text-amber-900">Data mismatch flagged</p>
+                                                    <p className="text-sm text-amber-800 mt-1">{kyc.mismatchDetails || 'Review submitted details against documents.'}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
                             <div className="bg-white rounded-xl border border-gray-100 p-6">
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-5">
                                     <div className="flex items-start gap-3">
@@ -1278,7 +1627,6 @@ function AccountProfile() {
                                                 When this user completes their KYC submission, you will be able to review and verify their identity documents here.
                                             </p>
 
-                                            {/* Required Documents Badges */}
                                             <div className="flex items-center gap-2">
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
                                                     <FileText className="h-3.5 w-3.5" />
@@ -1296,10 +1644,12 @@ function AccountProfile() {
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* Action Buttons */}
                             <div className="flex items-center justify-between pt-6">
                                 <button
+                                    type="button"
                                     onClick={handleCancelReview}
                                     className="text-sm font-semibold text-gray-500 hover:text-gray-700"
                                 >
@@ -1312,12 +1662,14 @@ function AccountProfile() {
                                 ) : (
                                     <div className="flex items-center gap-3">
                                         <button
+                                            type="button"
                                             onClick={handleRejectAccount}
                                             className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
                                         >
                                             Reject Account
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={handleApproveAccount}
                                             className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
                                         >
@@ -1328,7 +1680,8 @@ function AccountProfile() {
                                 )}
                             </div>
                         </>
-                    )}
+                        );
+                    })()}
 
                     {activeTab === 'Activity Log' && (
                         <>
@@ -1495,22 +1848,25 @@ function AccountProfile() {
 
                 {/* Right Column - 1/3 width */}
                 <div className="space-y-6">
-                    {/* Risk Analysis */}
+                    {/* Risk Analysis — KYC risk tier, optional IP field, email verification */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Risk Analysis</h3>
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <div className={`w-2 h-2 rounded-full ${riskAnalysis.dotClass}`} title="Summary risk signal" />
                         </div>
 
-                        {/* Risk Factors */}
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">IP Reputation</span>
-                                <span className="font-semibold text-green-600">Clean</span>
+                            <div className="flex items-center justify-between text-sm gap-3">
+                                <span className="text-gray-600 shrink-0">{riskAnalysis.row1Label}</span>
+                                <span className={`text-right ${riskValueToneClass(riskAnalysis.row1Tone)}`}>
+                                    {riskAnalysis.row1Value}
+                                </span>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600">Email Domain</span>
-                                <span className="font-semibold text-green-600">Verified</span>
+                            <div className="flex items-center justify-between text-sm gap-3">
+                                <span className="text-gray-600 shrink-0">{riskAnalysis.row2Label}</span>
+                                <span className={`text-right ${riskValueToneClass(riskAnalysis.row2Tone)}`}>
+                                    {riskAnalysis.row2Value}
+                                </span>
                             </div>
                         </div>
                     </div>

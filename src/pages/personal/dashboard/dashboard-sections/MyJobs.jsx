@@ -62,7 +62,7 @@ const MyJobs = () => {
     const displayJobs = activeTab === 'applied' ? localAppliedJobs : localSavedJobs;
 
     return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-4 sm:p-8 relative">
+        <div className="w-full min-h-full flex items-center justify-center bg-gray-50 p-4 sm:p-8 relative">
             {/* Logo in top-left corner */}
             <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
                 <img src="/images/logo.png" alt="Maritime Link Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />

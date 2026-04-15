@@ -1,50 +1,6 @@
 import { useState, useMemo } from 'react';
 import kycService from '../services/kycService';
-
-const DEFAULT_PROFESSIONAL_ID_KEYS = [
-  'professionalId',
-  'professional_id',
-  'userId',
-  'user_id',
-  'id',
-];
-
-const DEFAULT_RECRUITER_ID_KEYS = [
-  'recruiterId',
-  'recruiter_id',
-  'userId',
-  'user_id',
-  'id',
-];
-
-const DEFAULT_TRAINING_PROVIDER_ID_KEYS = [
-  'trainingProviderId',
-  'training_provider_id',
-  'userId',
-  'user_id',
-  'id',
-];
-
-function resolveIdFromLocalStorage(candidateKeys) {
-  for (const key of candidateKeys) {
-    const value = localStorage.getItem(key);
-    if (value) return value;
-  }
-  // Fallback: try to extract from the stored userProfile JSON
-  try {
-    const profile = JSON.parse(localStorage.getItem('userProfile'));
-    if (profile) {
-      for (const key of candidateKeys) {
-        if (profile[key]) return profile[key];
-      }
-      // Last resort: common id fields
-      return profile.id || profile._id || null;
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return null;
-}
+import resolveKycEntityId from '../utils/resolveKycEntityId';
 
 export function useKycWizard({ userType, storagePrefix }) {
   const userProfile = useMemo(() => {
@@ -81,17 +37,7 @@ export function useKycWizard({ userType, storagePrefix }) {
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
   const [kycData, setKycData] = useState(null);
 
-  const resolveEntityId = () => {
-    switch (userType) {
-      case 'recruiter':
-        return resolveIdFromLocalStorage(DEFAULT_RECRUITER_ID_KEYS);
-      case 'training-provider':
-        return resolveIdFromLocalStorage(DEFAULT_TRAINING_PROVIDER_ID_KEYS);
-      case 'professional':
-      default:
-        return resolveIdFromLocalStorage(DEFAULT_PROFESSIONAL_ID_KEYS);
-    }
-  };
+  const resolveEntityId = () => resolveKycEntityId(userType);
 
   const handleStartVerification = () => {
     setShowVerifyIdentityModal(false);
@@ -224,6 +170,11 @@ export function useKycWizard({ userType, storagePrefix }) {
       handleVerificationComplete,
       handleSkipVerification,
       setShowVerifyIdentityModal,
+      setShowSelectDocumentModal,
+      setShowUploadDocumentModal,
+      setShowVerifyDetailsModal,
+      setShowTakeSelfieModal,
+      setShowProcessingModal,
       setShowVerificationSubmittedModal,
     },
   };

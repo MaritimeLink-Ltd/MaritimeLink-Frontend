@@ -49,6 +49,10 @@ function TrainingProviderDashboard() {
             handleSelfieTaken,
             handleVerificationComplete,
             handleSkipVerification,
+            setShowSelectDocumentModal,
+            setShowUploadDocumentModal,
+            setShowVerifyDetailsModal,
+            setShowTakeSelfieModal,
         },
     } = useKycWizard({ userType: 'training-provider', storagePrefix: 'trainingProvider' });
 

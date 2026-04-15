@@ -133,8 +133,8 @@ function ComplianceProfile() {
             lastName: kycData.lastName || profile.lastName || '',
             ocrConfidence: kycData.ocrConfidence ? `${kycData.ocrConfidence}%` : '—',
             type: isProfessional ? 'INDIVIDUAL' : 'COMPANY',
-            documentFrontUrl: kycData.documentFrontUrl,
-            documentBackUrl: kycData.documentBackUrl,
+            documentFrontUrl: kycData.documentFrontUrl || kycData.documentUrl || '',
+            documentBackUrl: kycData.documentBackUrl || '',
             selfieUrl: kycData.selfieUrl,
         };
     })();
@@ -599,9 +599,10 @@ function ComplianceProfile() {
                                     </button>
                                 </div>
                                 <button
-                                    onClick={handleViewDocument}
+                                    type="button"
+                                    onClick={() => handleViewDocument('front')}
                                     className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
-                                    title="View Document"
+                                    title="View front document"
                                 >
                                     <Eye className="h-4 w-4 text-gray-600" />
                                 </button>
@@ -615,8 +616,8 @@ function ComplianceProfile() {
                             </div>
                         </div>
 
-                        {/* Document Images */}
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Document Images — front, back, selfie when URLs exist */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {/* ID Front */}
                             <button
                                 type="button"
@@ -641,6 +642,32 @@ function ComplianceProfile() {
                                     )}
                                 </div>
                                 <div className="mt-2 text-xs font-medium text-gray-600">ID Document - Front</div>
+                            </button>
+
+                            {/* ID Back */}
+                            <button
+                                type="button"
+                                className="bg-gray-50 rounded-xl p-6 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group relative overflow-hidden text-left"
+                                onClick={() => handleViewDocument('back')}
+                                disabled={!userData.documentBackUrl}
+                            >
+                                <div className="aspect-[3/2] bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                                    {userData.documentBackUrl ? (
+                                        <img
+                                            src={userData.documentBackUrl}
+                                            alt="ID back"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs text-gray-500">No back document uploaded</span>
+                                    )}
+                                    {userData.documentBackUrl && (
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <Eye className="opacity-0 group-hover:opacity-100 text-white w-8 h-8 drop-shadow-md transition-opacity" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-2 text-xs font-medium text-gray-600">ID Document - Back</div>
                             </button>
 
                             {/* Selfie */}

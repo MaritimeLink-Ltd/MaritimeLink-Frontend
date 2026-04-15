@@ -57,6 +57,10 @@ function RecruiterDashboard({ onNavigate }) {
             handleSelfieTaken,
             handleVerificationComplete,
             handleSkipVerification,
+            setShowSelectDocumentModal,
+            setShowUploadDocumentModal,
+            setShowVerifyDetailsModal,
+            setShowTakeSelfieModal,
         },
     } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
 

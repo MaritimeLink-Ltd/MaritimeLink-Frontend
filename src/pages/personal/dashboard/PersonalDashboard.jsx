@@ -9,30 +9,8 @@ import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import kycService from '../../../services/kycService';
+import resolveKycEntityId from '../../../utils/resolveKycEntityId';
 import { AlertTriangle } from 'lucide-react';
-
-// ─── Resolve Professional ID ──────────────────────────────────────────────────
-// The payload showed professionalId: null because localStorage.getItem('professionalId')
-// returned null — meaning the key used during login/registration is different.
-// This helper tries every common key name your backend might use so the ID is
-// always found regardless of what the auth service stored it as.
-// ✅ To permanently fix: search your login/register response handler and confirm
-//    the exact key (e.g. 'id', 'userId', 'professional_id') then keep only that one.
-const resolveProfessionalId = () => {
-  const candidates = [
-    'professionalId',
-    'professional_id',
-    'userId',
-    'user_id',
-    'id',
-  ];
-  for (const key of candidates) {
-    const value = localStorage.getItem(key);
-    if (value) return value;
-  }
-  console.warn('[KYC] Could not resolve professionalId from localStorage. Check your auth login handler.');
-  return null;
-};
 
 const PersonalDashboard = () => {
   const navigate = useNavigate();
@@ -82,7 +60,7 @@ const PersonalDashboard = () => {
 
   const handleDetailsVerified = async (verifiedData) => {
     // Resolve the ID at call-time so it's always fresh
-    const professionalId = resolveProfessionalId();
+    const professionalId = resolveKycEntityId('professional');
 
     if (!professionalId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
@@ -114,7 +92,7 @@ const PersonalDashboard = () => {
   };
 
   const handleSelfieTaken = async (selfieFile) => {
-    const professionalId = resolveProfessionalId();
+    const professionalId = resolveKycEntityId('professional');
 
     if (!professionalId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
@@ -191,6 +169,7 @@ const PersonalDashboard = () => {
         onClose={() => setShowUploadDocumentModal(false)}
         onUploadComplete={handleDocumentUploaded}
         documentType={selectedDocumentType}
+        userType="professional"
       />
       <VerifyDetailsModal
         isOpen={showVerifyDetailsModal}

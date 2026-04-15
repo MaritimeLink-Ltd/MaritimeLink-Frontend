@@ -207,7 +207,7 @@ function PersonalDashboardLayout() {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 {/* Top Header */}
                 <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4">
                     <div className="flex items-center justify-between gap-4">
@@ -276,8 +276,8 @@ function PersonalDashboardLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-hidden bg-white">
-                    <div className="h-full overflow-y-auto scrollbar-hide">
+                <main className="flex-1 min-h-0 overflow-hidden bg-white">
+                    <div className="h-full min-h-0 overflow-y-auto scrollbar-hide">
                         {isRestrictedRoute ? (
                             <div className="h-full flex items-center justify-center p-6">
                                 <div className="max-w-lg text-center space-y-4">

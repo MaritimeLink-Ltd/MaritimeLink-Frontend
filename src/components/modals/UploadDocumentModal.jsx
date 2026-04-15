@@ -1,29 +1,7 @@
 import { X, Upload, Info } from 'lucide-react';
 import { useState } from 'react';
 import kycService from '../../services/kycService';
-
-const resolveProfessionalId = () => {
-    const candidateKeys = ['professionalId', 'professional_id', 'userId', 'user_id', 'id'];
-
-    for (const key of candidateKeys) {
-        const value = localStorage.getItem(key);
-        if (value) return value;
-    }
-
-    return null;
-};
-
-const resolveEntityId = (userType) => {
-    if (userType === 'recruiter') {
-        return localStorage.getItem('recruiterId') || localStorage.getItem('userId') || localStorage.getItem('id');
-    }
-
-    if (userType === 'training-provider') {
-        return localStorage.getItem('trainingProviderId') || localStorage.getItem('training_provider_id') || localStorage.getItem('userId') || localStorage.getItem('id');
-    }
-
-    return resolveProfessionalId();
-};
+import resolveKycEntityId from '../../utils/resolveKycEntityId';
 
 function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, userType }) {
     const [frontSide, setFrontSide] = useState(null);
@@ -61,7 +39,7 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
         setUploadError(null);
 
         try {
-            const entityId = resolveEntityId(userType);
+            const entityId = resolveKycEntityId(userType || 'professional');
 
             if (!entityId) {
                 throw new Error('Session error: your account ID could not be found. Please log out and log back in.');
@@ -102,22 +80,35 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
         }
     };
 
+    const handleBackdropMouseDown = (e) => {
+        if (e.target === e.currentTarget) onClose?.();
+    };
+
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+            role="presentation"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onMouseDown={handleBackdropMouseDown}
+        >
             {/*
              * KEY CHANGE: Added max-h-[90vh] + flex flex-col so the modal
              * never exceeds 90% of the viewport height.
              * The inner scroll container (overflow-y-auto + flex-1) handles
              * overflow independently of the sticky header/footer areas.
              */}
-            <div className="bg-white rounded-2xl max-w-md w-full relative flex flex-col max-h-[90vh]">
+            <div
+                className="bg-white rounded-2xl max-w-md w-full relative flex flex-col max-h-[90vh]"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
 
                 {/* ── STICKY HEADER (never scrolls away) ── */}
                 <div className="p-6 pb-0 flex-shrink-0">
                     {/* Close Button */}
                     <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        type="button"
+                        onClick={() => onClose?.()}
+                        className="absolute top-4 right-4 z-20 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                        aria-label="Close"
                     >
                         <X className="h-5 w-5" />
                     </button>
