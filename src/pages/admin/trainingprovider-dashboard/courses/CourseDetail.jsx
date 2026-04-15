@@ -101,6 +101,8 @@ export default function CourseDetail() {
 
                return {
                  id: s.id || `S${idx}`,
+                 /** Real session UUID for trainer APIs; null when backend omitted id */
+                 apiSessionId: s.id || null,
                  dates: datesStr,
                  location: s.location || 'Online',
                  seats: `${enrolled} / ${total}`,
@@ -204,8 +206,15 @@ export default function CourseDetail() {
     });
   };
 
-  const handleManageSessionList = () => {
-    navigate(`/trainingprovider/sessions/attendance`);
+  const handleViewSessionAttendees = (session) => {
+    if (!session?.apiSessionId) return;
+    navigate('/trainingprovider/sessions/attendance', {
+      state: {
+        sessionId: session.apiSessionId,
+        courseId: resolvedCourseId,
+        courseTitle: courseSummary?.title || 'Course',
+      },
+    });
   };
 
   const handleStatusActionClick = () => {
@@ -525,8 +534,14 @@ export default function CourseDetail() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                                 type="button"
-                                onClick={handleManageSessionList}
-                                className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff]"
+                                onClick={() => handleViewSessionAttendees(session)}
+                                disabled={!session.apiSessionId}
+                                title={
+                                  session.apiSessionId
+                                    ? 'View attendees for this session'
+                                    : 'Session id missing — cannot load attendees'
+                                }
+                                className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#EBF3FF]"
                             >
                                 View Attendees
                             </button>

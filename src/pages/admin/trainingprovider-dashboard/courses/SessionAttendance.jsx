@@ -1,118 +1,223 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Users,
   Calendar,
-  DollarSign,
   Search,
   CheckCircle,
   XCircle,
   Mail,
+  Loader2,
+  X,
+  UserCheck,
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
-const sessionMeta = {
-  courseName: 'STCW Basic Safety',
-  dates: '15 – 17 May',
-  seats: '14 / 16',
-  revenue: '$3,150',
-};
+function normalizeBookingStatus(raw) {
+  const s = String(raw || '').toUpperCase();
+  if (s === 'CONFIRMED' || s === 'APPROVED' || s === 'COMPLETED') return 'confirmed';
+  if (s === 'CANCELLED' || s === 'REJECTED' || s === 'DECLINED') return 'cancelled';
+  return 'pending';
+}
 
-const attendeesMock = [
-  {
-    id: 1,
-    name: 'James Wilson',
-    role: 'Third Officer',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Pending',
-  },
-  {
-    id: 2,
-    name: 'Sarah Evans',
-    role: 'Able Seaman',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Pending',
-  },
-  {
-    id: 3,
-    name: 'Michael Brown',
-    role: 'Second Officer',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Approved',
-  },
-  {
-    id: 4,
-    name: 'Laura Harris',
-    role: 'Deck Cadet',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Pending',
-  },
-  {
-    id: 5,
-    name: 'Dr David Smith',
-    role: 'Ship Doctor',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Approved',
-  },
-  {
-    id: 6,
-    name: 'Andrew Morris',
-    role: 'Chief Officer',
-    payment: 'Paid',
-    paymentOk: true,
-    status: 'Approved',
-  },
-  {
-    id: 7,
-    name: 'Olivia Taylor',
-    role: 'Able Seaman',
-    payment: 'Paid',
-    paymentOk: false,
-    status: 'Cancelled',
-  },
-];
+function bookingStatusLabel(raw) {
+  const s = String(raw || '').toUpperCase();
+  if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'APPROVED') return 'Approved';
+  if (s === 'COMPLETED') return 'Completed';
+  if (s === 'CANCELLED') return 'Cancelled';
+  if (s === 'REJECTED' || s === 'DECLINED') return 'Rejected';
+  if (s === 'PENDING') return 'Pending';
+  return raw ? String(raw) : 'Unknown';
+}
 
-const statusChipClasses = {
-  Pending: 'bg-amber-50 text-amber-700',
-  Approved: 'bg-emerald-50 text-emerald-700',
-  Cancelled: 'bg-rose-50 text-rose-700',
-};
+function paymentLabel(raw) {
+  const s = String(raw || '').toUpperCase();
+  if (s === 'SUCCEEDED' || s === 'PAID') return 'Paid';
+  if (s === 'PENDING') return 'Pending';
+  if (s === 'FAILED') return 'Failed';
+  return raw ? String(raw) : '—';
+}
+
+function paymentOk(raw) {
+  const s = String(raw || '').toUpperCase();
+  return s === 'SUCCEEDED' || s === 'PAID';
+}
+
+function chipClassForStatus(canonical) {
+  if (canonical === 'confirmed') return 'bg-emerald-50 text-emerald-700';
+  if (canonical === 'cancelled') return 'bg-rose-50 text-rose-700';
+  return 'bg-amber-50 text-amber-700';
+}
+
+function mapAttendeeRow(a, index) {
+  const canonical = normalizeBookingStatus(a.status);
+  return {
+    key: a.bookingId || `${a.professionalId}-${index}`,
+    bookingId: a.bookingId,
+    professionalId: a.professionalId,
+    name: a.fullname || '—',
+    email: a.email || '',
+    photo: a.photo || null,
+    statusRaw: a.status,
+    statusLabel: bookingStatusLabel(a.status),
+    canonical,
+    paymentRaw: a.paymentStatus,
+    paymentLabel: paymentLabel(a.paymentStatus),
+    paymentOk: paymentOk(a.paymentStatus),
+  };
+}
 
 export default function SessionAttendance() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const sessionId =
+    location.state?.sessionId || searchParams.get('sessionId') || null;
+  const courseTitle = location.state?.courseTitle || 'Session';
+
+  const [attendees, setAttendees] = useState([]);
+  const [resultsTotal, setResultsTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(!!sessionId);
+  const [error, setError] = useState(null);
+
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedAttendee, setSelectedAttendee] = useState(null);
+  const [approvingBookingId, setApprovingBookingId] = useState(null);
 
-  const pendingCount = attendeesMock.filter((a) => a.status === 'Pending').length;
-  const approvedCount = attendeesMock.filter((a) => a.status === 'Approved').length;
-  const cancelledCount = attendeesMock.filter((a) => a.status === 'Cancelled').length;
-
-  const filteredAttendees = attendeesMock.filter((attendee) => {
-    if (activeTab === 'pending' && attendee.status !== 'Pending') return false;
-    if (activeTab === 'approved' && attendee.status !== 'Approved') return false;
-    if (activeTab === 'cancelled' && attendee.status !== 'Cancelled') return false;
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      return (
-        attendee.name.toLowerCase().includes(term) ||
-        attendee.role.toLowerCase().includes(term)
-      );
+  const loadAttendees = useCallback(async () => {
+    if (!sessionId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await httpClient.get(API_ENDPOINTS.TRAINER.SESSION_ATTENDEES(sessionId));
+      const list = Array.isArray(res?.data?.attendees) ? res.data.attendees : [];
+      setAttendees(list.map(mapAttendeeRow));
+      setResultsTotal(typeof res?.results === 'number' ? res.results : list.length);
+    } catch (e) {
+      console.error('Failed to load session attendees', e);
+      setError(e?.message || 'Failed to load attendees');
+      setAttendees([]);
+      setResultsTotal(0);
+    } finally {
+      setIsLoading(false);
     }
+  }, [sessionId]);
 
-    return true;
-  });
+  useEffect(() => {
+    loadAttendees();
+  }, [loadAttendees]);
+
+  const handleApproveAttendee = async (bookingId) => {
+    if (!sessionId || !bookingId) return;
+    setApprovingBookingId(bookingId);
+    try {
+      const res = await httpClient.post(
+        API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(sessionId, bookingId),
+        {}
+      );
+      const booking = res?.data?.booking;
+      if (booking?.id) {
+        setAttendees((prev) =>
+          prev.map((row) => {
+            if (row.bookingId !== booking.id) return row;
+            return {
+              ...row,
+              statusRaw: booking.bookingStatus,
+              statusLabel: bookingStatusLabel(booking.bookingStatus),
+              canonical: normalizeBookingStatus(booking.bookingStatus),
+              paymentRaw: booking.paymentStatus,
+              paymentLabel: paymentLabel(booking.paymentStatus),
+              paymentOk: paymentOk(booking.paymentStatus),
+            };
+          })
+        );
+      } else {
+        await loadAttendees();
+      }
+      toast.success(res?.message || 'Attendee approved successfully.');
+    } catch (e) {
+      console.error('Approve attendee failed', e);
+      toast.error(e?.message || 'Could not approve attendee.');
+    } finally {
+      setApprovingBookingId(null);
+    }
+  };
+
+  const pendingCount = useMemo(
+    () => attendees.filter((a) => a.canonical === 'pending').length,
+    [attendees]
+  );
+  const approvedCount = useMemo(
+    () => attendees.filter((a) => a.canonical === 'confirmed').length,
+    [attendees]
+  );
+  const cancelledCount = useMemo(
+    () => attendees.filter((a) => a.canonical === 'cancelled').length,
+    [attendees]
+  );
+
+  const filteredAttendees = useMemo(() => {
+    return attendees.filter((attendee) => {
+      if (activeTab === 'pending' && attendee.canonical !== 'pending') return false;
+      if (activeTab === 'approved' && attendee.canonical !== 'confirmed') return false;
+      if (activeTab === 'cancelled' && attendee.canonical !== 'cancelled') return false;
+
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        return (
+          attendee.name.toLowerCase().includes(term) ||
+          attendee.email.toLowerCase().includes(term) ||
+          attendee.bookingId.toLowerCase().includes(term)
+        );
+      }
+
+      return true;
+    });
+  }, [attendees, activeTab, searchTerm]);
+
+  const sessionIdShort =
+    sessionId && sessionId.length > 12 ? `…${sessionId.slice(-8)}` : sessionId || '—';
+
+  if (!sessionId) {
+    return (
+      <div className="flex flex-col min-h-full max-w-lg">
+        <div className="flex items-center text-xs text-gray-500 mb-3">
+          <button
+            type="button"
+            onClick={() => navigate('/trainingprovider/bookings')}
+            className="hover:text-[#003971] font-medium"
+          >
+            Session Management
+          </button>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+          <p className="text-gray-700 font-medium mb-2">No session selected</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Open this page from Session Management (View Attendees), or add{' '}
+            <code className="text-xs bg-gray-100 px-1 rounded">?sessionId=</code> to the URL.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/trainingprovider/bookings')}
+            className="text-sm font-semibold text-[#003971] hover:underline"
+          >
+            Go to Session Management
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Breadcrumb */}
+      <Toaster position="top-right" />
       <div className="flex items-center text-xs text-gray-500 mb-3">
         <button
           type="button"
@@ -125,73 +230,72 @@ export default function SessionAttendance() {
         <span className="font-medium text-gray-700">Manage Attendees</span>
       </div>
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900 mb-1">
-            Manage Attendees
-          </h1>
+          <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900 mb-1">Manage Attendees</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="inline-flex items-center rounded-full bg-orange-50 text-orange-700 px-3 py-1 text-xs font-semibold">
-              {sessionMeta.courseName}
+            <span className="inline-flex items-center rounded-full bg-orange-50 text-orange-700 px-3 py-1 text-xs font-semibold max-w-[280px] truncate">
+              {courseTitle}
             </span>
-            <span className="inline-flex items-center rounded-full bg-gray-50 text-gray-700 px-3 py-1 text-xs font-semibold">
-              <Calendar className="h-3.5 w-3.5 mr-1" />
-              {sessionMeta.dates}
+            <span className="inline-flex items-center rounded-full bg-gray-50 text-gray-700 px-3 py-1 text-xs font-semibold font-mono">
+              Session {sessionIdShort}
             </span>
             <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold">
               <Users className="h-3.5 w-3.5 mr-1" />
-              {sessionMeta.seats}
+              {resultsTotal || attendees.length} attendee{(resultsTotal || attendees.length) !== 1 ? 's' : ''}
             </span>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-semibold">
-              <DollarSign className="h-3.5 w-3.5 mr-1" />
-              {sessionMeta.revenue}
+            <span className="inline-flex items-center rounded-full bg-gray-50 text-gray-500 px-3 py-1 text-xs font-medium">
+              <Calendar className="h-3.5 w-3.5 mr-1" />
+              Bookings for this session
             </span>
           </div>
         </div>
       </div>
 
-      {/* Tabs + Search */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">
         <div className="px-5 pt-4 pb-3 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex flex-wrap gap-2 text-xs">
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'all'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              className={`px-3 py-1.5 rounded-full font-semibold ${
+                activeTab === 'all'
+                  ? 'bg-[#003971] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
               All
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('pending')}
-              className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'pending'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              className={`px-3 py-1.5 rounded-full font-semibold ${
+                activeTab === 'pending'
+                  ? 'bg-[#003971] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
               Pending ({pendingCount})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('approved')}
-              className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'approved'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              className={`px-3 py-1.5 rounded-full font-semibold ${
+                activeTab === 'approved'
+                  ? 'bg-[#003971] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
-              Approved ({approvedCount})
+              Confirmed ({approvedCount})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('cancelled')}
-              className={`px-3 py-1.5 rounded-full font-semibold ${activeTab === 'cancelled'
-                ? 'bg-[#003971] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+              className={`px-3 py-1.5 rounded-full font-semibold ${
+                activeTab === 'cancelled'
+                  ? 'bg-[#003971] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
             >
               Cancelled ({cancelledCount})
             </button>
@@ -208,118 +312,165 @@ export default function SessionAttendance() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                <th className="px-5 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Payment</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAttendees.map((attendee, index) => {
-                const isLast = index === filteredAttendees.length - 1;
-                const statusClass =
-                  statusChipClasses[attendee.status] || statusChipClasses.Pending;
+        <div className="flex-1 overflow-auto min-h-[160px]">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-500 gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-[#003971]" />
+              <p className="text-sm">Loading attendees…</p>
+            </div>
+          ) : error ? (
+            <div className="px-5 py-12 text-center">
+              <p className="text-sm text-red-600 mb-3">{error}</p>
+              <button
+                type="button"
+                onClick={loadAttendees}
+                className="text-sm font-semibold text-[#003971] hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                  <th className="px-5 py-3 text-left">Attendee</th>
+                  <th className="px-4 py-3 text-left">Email</th>
+                  <th className="px-4 py-3 text-left">Payment</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Booking ID</th>
+                  <th className="px-4 py-3 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAttendees.map((attendee, index) => {
+                  const isLast = index === filteredAttendees.length - 1;
+                  const statusClass = chipClassForStatus(attendee.canonical);
+                  const initials = attendee.name
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map((p) => p[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase() || '?';
 
-                return (
-                  <tr
-                    key={attendee.id}
-                    className={`text-sm ${!isLast ? 'border-b border-gray-50' : ''
-                      } hover:bg-gray-50/60 transition-colors`}
-                  >
-                    <td className="px-5 py-3 align-middle">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-700">
-                          {attendee.name
-                            .split(' ')
-                            .map((p) => p[0])
-                            .join('')
-                            .slice(0, 2)}
+                  return (
+                    <tr
+                      key={attendee.key}
+                      className={`text-sm ${!isLast ? 'border-b border-gray-50' : ''} hover:bg-gray-50/60 transition-colors`}
+                    >
+                      <td className="px-5 py-3 align-middle">
+                        <div className="flex items-center gap-3">
+                          {attendee.photo ? (
+                            <img
+                              src={attendee.photo}
+                              alt=""
+                              className="h-9 w-9 rounded-full object-cover border border-gray-100 shrink-0"
+                            />
+                          ) : (
+                            <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-700 shrink-0">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{attendee.name}</p>
+                            <p className="text-xs text-gray-500 truncate">Professional · {attendee.professionalId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {attendee.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {attendee.role}
-                          </p>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-gray-700">
+                        <span className="break-all">{attendee.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-800">{attendee.paymentLabel}</span>
+                          {attendee.paymentOk ? (
+                            <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-800">{attendee.payment}</span>
-                        {attendee.paymentOk ? (
-                          <CheckCircle className="h-4 w-4 text-emerald-500" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-rose-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusClass}`}
-                      >
-                        {attendee.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/trainingprovider/candidate/${attendee.id}`, { state: { fromAttendance: true } })}
-                          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <span
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusClass}`}
                         >
-                          View Profile
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate('/trainingprovider/chats')}
-                          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                        >
-                          <Mail className="h-3.5 w-3.5" />
-                          Message
-                        </button>
-                      </div>
+                          {attendee.statusLabel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <span className="font-mono text-[11px] text-gray-500 break-all">{attendee.bookingId}</span>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {attendee.canonical === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleApproveAttendee(attendee.bookingId)}
+                              disabled={approvingBookingId === attendee.bookingId}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-wait"
+                            >
+                              {approvingBookingId === attendee.bookingId ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <UserCheck className="h-3.5 w-3.5" />
+                              )}
+                              Approve
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/trainingprovider/candidate/${attendee.professionalId}`, {
+                                state: { fromAttendance: true },
+                              })
+                            }
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/trainingprovider/chats')}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            <Mail className="h-3.5 w-3.5" />
+                            Message
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {!isLoading && !error && filteredAttendees.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-500">
+                      {attendees.length === 0
+                        ? 'No attendees for this session yet.'
+                        : 'No attendees match your filters.'}
                     </td>
                   </tr>
-                );
-              })}
-
-              {filteredAttendees.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-5 py-10 text-center text-sm text-gray-500"
-                  >
-                    No attendees match your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 text-xs text-gray-500">
           <p>
-            Showing{' '}
-            <span className="font-semibold">
-              {filteredAttendees.length ? 1 : 0}
-            </span>{' '}
-            to{' '}
-            <span className="font-semibold">
-              {filteredAttendees.length}
-            </span>{' '}
-            of{' '}
-            <span className="font-semibold">
-              {attendeesMock.length}
-            </span>{' '}
-            attendees
+            <span className="font-semibold">{filteredAttendees.length}</span> shown
+            {filteredAttendees.length !== attendees.length ? (
+              <>
+                {' '}
+                · <span className="font-semibold">{attendees.length}</span> total loaded
+              </>
+            ) : null}
+            {resultsTotal > 0 && resultsTotal !== attendees.length ? (
+              <>
+                {' '}
+                · API reported <span className="font-semibold">{resultsTotal}</span> results
+              </>
+            ) : null}
           </p>
         </div>
       </div>
@@ -328,6 +479,7 @@ export default function SessionAttendance() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
             <button
+              type="button"
               onClick={() => {
                 setShowRejectModal(false);
                 setRejectReason('');
@@ -335,13 +487,14 @@ export default function SessionAttendance() {
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
-              <XCircle className="h-5 w-5" />
+              <X className="h-5 w-5" />
             </button>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">
-              Reject Attendee?
-            </h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Reject Attendee?</h3>
             <p className="text-gray-600 mb-6">
               This will mark the attendee as rejected for this session.
+              {selectedAttendee ? (
+                <span className="block mt-2 font-medium text-gray-900">{selectedAttendee.name}</span>
+              ) : null}
             </p>
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -357,6 +510,7 @@ export default function SessionAttendance() {
             </div>
             <div className="flex items-center justify-end gap-3">
               <button
+                type="button"
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectReason('');
@@ -367,12 +521,12 @@ export default function SessionAttendance() {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (!rejectReason.trim()) return;
                   setShowRejectModal(false);
                   setRejectReason('');
                   setSelectedAttendee(null);
-                  // Action to reject the attendee would go here
                 }}
                 disabled={!rejectReason.trim()}
                 className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -386,4 +540,3 @@ export default function SessionAttendance() {
     </div>
   );
 }
-

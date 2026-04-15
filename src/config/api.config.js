@@ -91,6 +91,12 @@ export const API_ENDPOINTS = {
     SUBMIT: '/api/trainer/kyc/submit',
     UPLOAD_SELFIE: '/api/trainer/kyc/upload-selfie',
   },
+  // Training provider (trainer) session / booking management
+  TRAINER: {
+    SESSION_ATTENDEES: (sessionId) => `/api/trainer/sessions/${sessionId}/attendees`,
+    APPROVE_ATTENDEE: (sessionId, bookingId) =>
+      `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/approve`,
+  },
   // Job Endpoints
   JOBS: {
     CREATE: '/api/jobs',
