@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, MessageCircle, Loader2 } from 'lucide-react';
-import { getAvailableSpaces, getSessionsForCourse } from '../../../../utils/trainingSessionsStore';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
@@ -23,6 +22,8 @@ const Training = () => {
 
     const [allCourses, setAllCourses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isCourseLoading, setIsCourseLoading] = useState(false);
+    const [courseLoadError, setCourseLoadError] = useState(null);
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -83,45 +84,72 @@ const Training = () => {
     const [selectedCourseSessions, setSelectedCourseSessions] = useState([]);
     const [isSessionsLoading, setIsSessionsLoading] = useState(false);
 
-    useEffect(() => {
-        if (!selectedCourse) {
+    const mapCourseFromApi = (course) => ({
+        id: course.id,
+        title: course.title,
+        provider: course.recruiter?.organizationName || course.admin?.email || 'System Admin',
+        price: `${course.currency || 'GBP'} ${course.price}`,
+        priceValue: Number(course.price),
+        currency: course.currency || 'GBP',
+        location: course.location || 'Online / TBA',
+        category: course.category,
+        duration: course.duration ? `${course.duration} Days` : 'N/A',
+        durationValue: Number(course.duration) || 0,
+        description: course.description
+    });
+
+    const mapSessionsList = (sessions) => {
+        if (!Array.isArray(sessions)) return [];
+        return sessions.map((session) => {
+            const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
+            const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
+            const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
+            const total = Number(session.totalSeats) || 0;
+            const enrolled = Number(session.enrolledCount) || 0;
+            const availableSpaces = Math.max(0, total - enrolled);
+
+            return { id: session.id, eventDate, availableSpaces };
+        });
+    };
+
+    const mapSessionsFromCourse = (course) => mapSessionsList(course?.sessions);
+
+    const handleSelectCourse = async (courseId) => {
+        try {
+            setCourseLoadError(null);
+            setIsCourseLoading(true);
+            setIsSessionsLoading(true);
+
+            // Optimistic: keep list selection highlight while loading real data
+            setSelectedCourse((prev) => (prev?.id === courseId ? prev : { id: courseId }));
             setSelectedCourseSessions([]);
-            return;
-        }
 
-        const fetchSessions = async () => {
-            try {
-                setIsSessionsLoading(true);
-                const response = await httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SESSIONS(selectedCourse.id));
-                if (response.status === 'success' && response.data?.sessions) {
-                    const mappedSessions = response.data.sessions.map(session => {
-                        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
-                        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
-                        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
-                        const total = Number(session.totalSeats) || 0;
-                        const enrolled = Number(session.enrolledCount) || 0;
-                        const availableSpaces = Math.max(0, total - enrolled);
-                        
-                        return {
-                            id: session.id,
-                            eventDate: eventDate,
-                            availableSpaces: availableSpaces
-                        };
-                    });
-                    setSelectedCourseSessions(mappedSessions);
-                } else {
-                    setSelectedCourseSessions([]);
-                }
-            } catch (error) {
-                console.error("Failed to fetch sessions:", error);
-                setSelectedCourseSessions([]);
-            } finally {
-                setIsSessionsLoading(false);
+            const [response, sessionsRes] = await Promise.all([
+                httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId)),
+                httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SESSIONS(courseId)).catch(() => null)
+            ]);
+            const apiCourse = response?.data?.course;
+
+            if (response?.status !== 'success' || !apiCourse?.id) {
+                throw new Error(response?.message || 'Failed to load course');
             }
-        };
 
-        fetchSessions();
-    }, [selectedCourse]);
+            const mappedCourse = mapCourseFromApi(apiCourse);
+            setSelectedCourse(mappedCourse);
+            const sessionsFromProfessional =
+                sessionsRes?.status === 'success' && Array.isArray(sessionsRes.data?.sessions)
+                    ? mapSessionsList(sessionsRes.data.sessions)
+                    : mapSessionsFromCourse(apiCourse);
+            setSelectedCourseSessions(sessionsFromProfessional);
+        } catch (error) {
+            console.error('Failed to fetch course:', error);
+            setCourseLoadError(error?.message || 'Failed to load course');
+            setSelectedCourseSessions([]);
+        } finally {
+            setIsCourseLoading(false);
+            setIsSessionsLoading(false);
+        }
+    };
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
@@ -195,7 +223,7 @@ const Training = () => {
                         courses.map((course) => (
                             <div
                                 key={course.id}
-                                onClick={() => setSelectedCourse(course)}
+                                onClick={() => handleSelectCourse(course.id)}
                                 className={`p-5 border-b border-gray-200 cursor-pointer transition-colors ${selectedCourse?.id === course.id
                                     ? 'bg-[#003971]/5 border-l-4 border-l-[#003971]'
                                     : 'hover:bg-gray-50'
@@ -229,7 +257,13 @@ const Training = () => {
                                 </div>
                                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                     <button
-                                        onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`)}
+                                        onClick={() => navigate(`/personal/training/book/${selectedCourse.id}`, {
+                                            state: {
+                                                bookingCourse: selectedCourse,
+                                                bookingSessions: selectedCourseSessions
+                                            }
+                                        })}
+                                        disabled={isCourseLoading}
                                         className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial"
                                     >
                                         Book now
@@ -270,7 +304,20 @@ const Training = () => {
                             </div>
 
                             {/* Course Info */}
-                            <div className="space-y-3 mb-6">
+                            {courseLoadError && (
+                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                                    {courseLoadError}
+                                </div>
+                            )}
+
+                            {isCourseLoading ? (
+                                <div className="flex items-center gap-2 text-gray-500 py-6">
+                                    <Loader2 size={20} className="animate-spin text-[#003971]" />
+                                    <p className="text-sm">Loading course details...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-3 mb-6">
                                 <div className="flex items-center gap-2 text-gray-600">
                                     <Building2 size={18} />
                                     <span>{selectedCourse.provider}</span>
@@ -304,6 +351,8 @@ const Training = () => {
                                     {selectedCourse.description}
                                 </div>
                             </div>
+                                </>
+                            )}
 
                             {/* Sessions */}
                             <div className="mb-6">

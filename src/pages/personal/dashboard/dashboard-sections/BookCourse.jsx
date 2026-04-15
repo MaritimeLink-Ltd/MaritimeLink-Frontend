@@ -1,15 +1,108 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, CheckCircle2, Check, Folder, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { ArrowLeft, MapPin, Building2, Check, Folder, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import documentService from '../../../../services/documentService';
-// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
+import { stripePromise } from '../../../../lib/stripeClient';
+
+const mapSessionsArray = (sessions) => {
+    if (!Array.isArray(sessions)) return [];
+    return sessions.map((session) => {
+        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
+        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
+        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
+        const total = Number(session.totalSeats) || 0;
+        const enrolled = Number(session.enrolledCount) || 0;
+        const availableSpaces = Math.max(0, total - enrolled);
+        return { id: session.id, eventDate, availableSpaces };
+    });
+};
+
+function CoursePaymentForm({ clientSecret, bookingId, payLabel, onAbandon }) {
+    const navigate = useNavigate();
+    const stripe = useStripe();
+    const elements = useElements();
+    const [localError, setLocalError] = useState(null);
+    const [busy, setBusy] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!stripe || !elements) return;
+        const card = elements.getElement(CardElement);
+        if (!card) {
+            setLocalError('Card field is not ready. Please try again.');
+            return;
+        }
+        setBusy(true);
+        setLocalError(null);
+        const returnUrl = `${window.location.origin}/personal/training/booking-complete?bookingId=${encodeURIComponent(bookingId)}`;
+        const { error } = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: { card },
+            return_url: returnUrl,
+        });
+        setBusy(false);
+        if (error) {
+            setLocalError(error.message || 'Payment failed.');
+            return;
+        }
+        navigate(`/personal/training/booking-complete?bookingId=${encodeURIComponent(bookingId)}`);
+    };
+
+    const cardElementOptions = {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#1f2937',
+                '::placeholder': { color: '#9ca3af' },
+            },
+            invalid: { color: '#dc2626' },
+        },
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Card details</label>
+                <div className="p-3 sm:p-4 border border-gray-200 rounded-xl bg-white">
+                    <CardElement options={cardElementOptions} />
+                </div>
+            </div>
+            {localError && (
+                <p className="text-sm text-red-600">{localError}</p>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                    type="button"
+                    onClick={onAbandon}
+                    className="px-4 py-3 rounded-full border-2 border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 min-h-[44px]"
+                >
+                    Change selection
+                </button>
+                <button
+                    type="submit"
+                    disabled={!stripe || busy}
+                    className="flex-1 py-3 rounded-full bg-[#003971] text-white text-sm font-medium hover:bg-[#003971]/90 disabled:bg-gray-300 min-h-[44px] flex items-center justify-center gap-2"
+                >
+                    {busy ? (
+                        <>
+                            <Loader2 size={18} className="animate-spin" />
+                            Processing…
+                        </>
+                    ) : (
+                        payLabel
+                    )}
+                </button>
+            </div>
+        </form>
+    );
+}
 
 const BookCourse = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { courseId } = useParams();
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [selectedFolder, setSelectedFolder] = useState(null);
     const [selectedSessions, setSelectedSessions] = useState([]);
@@ -21,58 +114,72 @@ const BookCourse = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
     const [checkoutError, setCheckoutError] = useState(null);
+    const [checkoutSession, setCheckoutSession] = useState(null);
 
-    // Fetch course details, sessions, and documents
+    // From Training: course + sessions come in navigation state; only documents are fetched here.
+    // Direct URL / refresh: one GET course-by-id (includes sessions); documents.
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setIsLoading(true);
 
-                // Fetch all courses and find the matching one
-                const [coursesRes, sessionsRes, docsRes] = await Promise.all([
-                    httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_ALL).catch(() => null),
+                const bookingCourse = location.state?.bookingCourse;
+                const bookingSessions = location.state?.bookingSessions;
+
+                if (bookingCourse?.id === courseId) {
+                    setCourse({
+                        id: bookingCourse.id,
+                        title: bookingCourse.title,
+                        provider: bookingCourse.provider,
+                        price: bookingCourse.price,
+                        priceValue: Number(bookingCourse.priceValue) || 0,
+                        currency: bookingCourse.currency || 'GBP',
+                        location: bookingCourse.location,
+                        category: bookingCourse.category,
+                        duration: bookingCourse.duration
+                    });
+                    setAvailableSessions(Array.isArray(bookingSessions) ? bookingSessions : []);
+
+                    const docsRes = await documentService.getDocuments().catch(() => null);
+                    if (docsRes?.status === 'success' && docsRes.data?.documents) {
+                        const mapped = docsRes.data.documents.map(doc => ({
+                            id: doc.id,
+                            title: doc.name || doc.title || 'Untitled Document',
+                            expiry: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
+                            type: doc.category || 'Other'
+                        }));
+                        setDocumentWalletItems(mapped);
+                    }
+                    return;
+                }
+
+                const [courseRes, sessionsRes, docsRes] = await Promise.all([
+                    httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId)).catch(() => null),
                     httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SESSIONS(courseId)).catch(() => null),
                     documentService.getDocuments().catch(() => null)
                 ]);
 
-                // Map the course
-                if (coursesRes?.status === 'success' && coursesRes.data?.courses) {
-                    const found = coursesRes.data.courses.find(c => c.id === courseId);
-                    if (found) {
-                        setCourse({
-                            id: found.id,
-                            title: found.title,
-                            provider: found.recruiter?.organizationName || found.admin?.email || 'System Admin',
-                            price: `${found.currency || 'GBP'} ${found.price}`,
-                            priceValue: Number(found.price) || 0,
-                            currency: found.currency || 'GBP',
-                            location: found.location || 'Online / TBA',
-                            category: found.category,
-                            duration: found.duration ? `${found.duration} Days` : 'N/A'
-                        });
-                    }
-                }
+                const apiCourse = courseRes?.data?.course;
 
-                // Map sessions
-                if (sessionsRes?.status === 'success' && sessionsRes.data?.sessions) {
-                    const mapped = sessionsRes.data.sessions.map(session => {
-                        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
-                        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
-                        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
-                        const total = Number(session.totalSeats) || 0;
-                        const enrolled = Number(session.enrolledCount) || 0;
-                        const availableSpaces = Math.max(0, total - enrolled);
-
-                        return {
-                            id: session.id,
-                            eventDate,
-                            availableSpaces
-                        };
+                if (courseRes?.status === 'success' && apiCourse?.id) {
+                    setCourse({
+                        id: apiCourse.id,
+                        title: apiCourse.title,
+                        provider: apiCourse.recruiter?.organizationName || apiCourse.admin?.email || 'System Admin',
+                        price: `${apiCourse.currency || 'GBP'} ${apiCourse.price}`,
+                        priceValue: Number(apiCourse.price) || 0,
+                        currency: apiCourse.currency || 'GBP',
+                        location: apiCourse.location || 'Online / TBA',
+                        category: apiCourse.category,
+                        duration: apiCourse.duration ? `${apiCourse.duration} Days` : 'N/A'
                     });
-                    setAvailableSessions(mapped);
+                    const professionalSessions =
+                        sessionsRes?.status === 'success' && Array.isArray(sessionsRes.data?.sessions)
+                            ? sessionsRes.data.sessions
+                            : apiCourse.sessions;
+                    setAvailableSessions(mapSessionsArray(professionalSessions));
                 }
 
-                // Map documents
                 if (docsRes?.status === 'success' && docsRes.data?.documents) {
                     const mapped = docsRes.data.documents.map(doc => ({
                         id: doc.id,
@@ -90,10 +197,11 @@ const BookCourse = () => {
         };
 
         fetchData();
-    }, [courseId]);
+    }, [courseId, location.state]);
 
     const selectedSessionCount = selectedSessions.length;
     const totalAmount = selectedSessionCount * (course?.priceValue || 0);
+    const paymentLocked = !!checkoutSession;
 
     const documentFolders = Object.entries(
         documentWalletItems.reduce((folders, document) => {
@@ -110,8 +218,13 @@ const BookCourse = () => {
     }));
 
 
-    const handlePayNow = async () => {
+    const handleStartCheckout = async () => {
         if (!selectedSessionCount) {
+            return;
+        }
+
+        if (!stripePromise) {
+            setCheckoutError('Card payments are not configured. Add VITE_STRIPE_PUBLISHABLE_KEY to your environment.');
             return;
         }
 
@@ -130,16 +243,16 @@ const BookCourse = () => {
                 checkoutPayload
             );
 
-            if (response.status === 'success' && response.data) {
-                console.log('Checkout successful:', response.data);
-                // response.data contains bookingId, amount, currency, paymentIntentId, clientSecret, paymentStatus
-                setShowSuccessModal(true);
-                setTimeout(() => {
-                    setShowSuccessModal(false);
-                    navigate('/personal/training');
-                }, 2000);
+            const data = response?.data;
+            if (response?.status === 'success' && data?.clientSecret && data?.bookingId) {
+                setCheckoutSession({
+                    clientSecret: data.clientSecret,
+                    bookingId: data.bookingId,
+                    amount: data.amount,
+                    currency: data.currency || course?.currency || 'GBP'
+                });
             } else {
-                setCheckoutError(response.message || 'Checkout failed. Please try again.');
+                setCheckoutError(response?.message || 'Checkout did not return payment details. Please try again.');
             }
         } catch (error) {
             console.error('Checkout error:', error);
@@ -233,13 +346,14 @@ const BookCourse = () => {
                                     <div
                                         key={session.id}
                                         onClick={() => {
+                                            if (paymentLocked) return;
                                             setSelectedSessions((prev) => (
                                                 prev.includes(session.id)
                                                     ? prev.filter((id) => id !== session.id)
                                                     : [...prev, session.id]
                                             ));
                                         }}
-                                        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${isSelected ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                        className={`flex items-center p-4 border rounded-xl transition-colors ${paymentLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${isSelected ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
                                             {isSelected && <Check size={14} className="text-white" strokeWidth={3} />}
@@ -280,8 +394,8 @@ const BookCourse = () => {
                             {documentFolders.map((folder) => (
                                 <div
                                     key={folder.id}
-                                    onClick={() => setSelectedFolder(folder)}
-                                    className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
+                                    onClick={() => { if (!paymentLocked) setSelectedFolder(folder); }}
+                                    className={`flex items-center justify-between p-4 border rounded-xl transition-colors ${paymentLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${folder.documents.some((doc) => selectedDocuments.includes(doc.id))
                                         ? 'border-[#003971] bg-[#003971]/5'
                                         : 'border-gray-200 hover:border-gray-300'
                                         }`}
@@ -325,13 +439,14 @@ const BookCourse = () => {
                                     <div
                                         key={doc.id}
                                         onClick={() => {
+                                            if (paymentLocked) return;
                                             if (selectedDocuments.includes(doc.id)) {
                                                 setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
                                             } else {
                                                 setSelectedDocuments([...selectedDocuments, doc.id]);
                                             }
                                         }}
-                                        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-colors ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                        className={`flex items-center p-4 border rounded-xl transition-colors ${paymentLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${selectedDocuments.includes(doc.id) ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${selectedDocuments.includes(doc.id) ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
                                             {selectedDocuments.includes(doc.id) && <Check size={14} className="text-white" strokeWidth={3} />}
@@ -358,37 +473,54 @@ const BookCourse = () => {
                     </div>
                 )}
 
-                {/* Pay Now Button */}
-                <button
-                    onClick={handlePayNow}
-                    disabled={!selectedSessionCount || isCheckoutLoading}
-                    className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 flex items-center justify-center gap-2 ${selectedSessionCount && !isCheckoutLoading ? 'bg-[#003971] hover:bg-[#003971]/90' : 'bg-gray-300 cursor-not-allowed'}`}
-                >
-                    {isCheckoutLoading ? (
-                        <>
-                            <Loader2 size={18} className="animate-spin" />
-                            Processing...
-                        </>
-                    ) : selectedSessionCount ? (
-                        'Pay Now'
-                    ) : (
-                        'Select Session(s) to Continue'
-                    )}
-                </button>
+                {!checkoutSession && (
+                    <button
+                        type="button"
+                        onClick={handleStartCheckout}
+                        disabled={!selectedSessionCount || isCheckoutLoading}
+                        className={`w-full py-3 rounded-full text-white font-medium transition-colors min-h-[44px] mt-4 flex items-center justify-center gap-2 ${selectedSessionCount && !isCheckoutLoading ? 'bg-[#003971] hover:bg-[#003971]/90' : 'bg-gray-300 cursor-not-allowed'}`}
+                    >
+                        {isCheckoutLoading ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" />
+                                Starting checkout…
+                            </>
+                        ) : selectedSessionCount ? (
+                            'Pay now'
+                        ) : (
+                            'Select session(s) to continue'
+                        )}
+                    </button>
+                )}
+
+                {checkoutSession && stripePromise && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h3 className="text-base font-semibold text-gray-800 mb-2">Card payment</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Complete payment with Stripe. After 3D Secure (if required), you will return here to confirm your booking.
+                        </p>
+                        <Elements
+                            key={checkoutSession.clientSecret}
+                            stripe={stripePromise}
+                            options={{
+                                clientSecret: checkoutSession.clientSecret,
+                                appearance: { theme: 'stripe' },
+                            }}
+                        >
+                            <CoursePaymentForm
+                                clientSecret={checkoutSession.clientSecret}
+                                bookingId={checkoutSession.bookingId}
+                                payLabel={`Pay ${checkoutSession.currency} ${checkoutSession.amount}`}
+                                onAbandon={() => {
+                                    setCheckoutSession(null);
+                                    setCheckoutError(null);
+                                }}
+                            />
+                        </Elements>
+                    </div>
+                )}
             </div>
 
-            {/* Success Modal */}
-            {showSuccessModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 size={32} className="text-green-600" />
-                        </div>
-                        <h3 className="text-2xl font-semibold text-gray-800 mb-2">Payment Successful!</h3>
-                        <p className="text-gray-600">Your course has been booked successfully.</p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
