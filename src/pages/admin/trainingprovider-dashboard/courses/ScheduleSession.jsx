@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search } from 'lucide-react';
-import { saveOrUpdateSession } from '../../../../utils/trainingSessionsStore';
 import { publishedCourses } from '../../../../data/publishedCoursesData';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
@@ -13,6 +12,13 @@ export default function ScheduleSession() {
   const isEdit = location.state?.isEdit || false;
   const sessionData = location.state?.sessionData || null;
   const passedCourseTitle = location.state?.courseTitle || '';
+  const returnPath = location.state?.returnPath;
+  const lockCourseSelection = Boolean(courseId);
+
+  const goBack = () => {
+    if (returnPath) navigate(returnPath);
+    else navigate(-1);
+  };
 
   const [selectedCourse, setSelectedCourse] = useState(courseId || sessionData?.courseId || '');
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
@@ -93,7 +99,7 @@ export default function ScheduleSession() {
           );
       }
 
-      navigate(-1);
+      goBack();
     } catch (error) {
       console.error('Failed to schedule session', error);
       alert('Failed to schedule session');
@@ -108,11 +114,11 @@ export default function ScheduleSession() {
         <div className="mb-6">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="flex items-center text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Sessions
+            {lockCourseSelection ? 'Back to course' : 'Back to Sessions'}
           </button>
           <h1 className="text-[28px] font-bold text-gray-900 mb-2">
             {isEdit ? 'Edit Session' : 'Schedule New Session'}
@@ -126,59 +132,65 @@ export default function ScheduleSession() {
           <div className="space-y-6 flex-1">
             {/* Select Course — Searchable Dropdown */}
             <div ref={courseDropdownRef} className="relative">
-              <label className="block text-gray-900 font-medium mb-2 text-base">Select Course</label>
-              {/* Trigger */}
-              <button
-                type="button"
-                id="select-course"
-                onClick={() => setCourseDropdownOpen((prev) => !prev)}
-                className={`w-full flex items-center border rounded-xl pl-10 pr-10 py-3 text-sm text-left bg-white cursor-pointer transition-all ${courseDropdownOpen
-                    ? 'border-[#003971] ring-2 ring-[#003971]/15'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <BookOpen className="absolute left-3 top-[46px] h-4 w-4 text-gray-400" />
-                <span className={selectedCourseName ? 'text-gray-900' : 'text-gray-400'}>
-                  {selectedCourseName || '-- Select a Course --'}
-                </span>
-                <ChevronDown className={`absolute right-3 top-[46px] h-4 w-4 text-gray-400 transition-transform ${courseDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Dropdown Panel */}
-              {courseDropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                  {/* Search Input */}
-                  <div className="relative px-3 pt-3 pb-2">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      ref={courseSearchRef}
-                      type="text"
-                      placeholder="Search courses..."
-                      value={courseSearch}
-                      onChange={(e) => setCourseSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
-                    />
-                  </div>
-                  {/* Options */}
-                  <ul className="max-h-48 overflow-y-auto py-1">
-                    {filteredCourses.length > 0 ? (
-                      filteredCourses.map((course) => (
-                        <li
-                          key={course.id}
-                          onClick={() => handleSelectCourse(course)}
-                          className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${String(course.id) === String(selectedCourse)
-                              ? 'bg-[#EBF3FF] text-[#003971] font-medium'
-                              : 'text-gray-700 hover:bg-gray-50'
-                            }`}
-                        >
-                          {course.name}
-                        </li>
-                      ))
-                    ) : (
-                      <li className="px-4 py-3 text-sm text-gray-400 text-center">No courses found</li>
-                    )}
-                  </ul>
+              <label className="block text-gray-900 font-medium mb-2 text-base">Course</label>
+              {lockCourseSelection ? (
+                <div className="w-full flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 text-gray-900">
+                  <BookOpen className="h-4 w-4 text-gray-400 shrink-0" />
+                  <span className="font-medium">{selectedCourseName || 'This course'}</span>
+                  <span className="text-xs text-gray-500 ml-auto">Sessions are added for this listing</span>
                 </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    id="select-course"
+                    onClick={() => setCourseDropdownOpen((prev) => !prev)}
+                    className={`relative w-full flex items-center border rounded-xl pl-10 pr-10 py-3 text-sm text-left bg-white cursor-pointer transition-all ${courseDropdownOpen
+                        ? 'border-[#003971] ring-2 ring-[#003971]/15'
+                        : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <span className={selectedCourseName ? 'text-gray-900' : 'text-gray-400'}>
+                      {selectedCourseName || '-- Select a Course --'}
+                    </span>
+                    <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-transform ${courseDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {courseDropdownOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                      <div className="relative px-3 pt-3 pb-2">
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                          ref={courseSearchRef}
+                          type="text"
+                          placeholder="Search courses..."
+                          value={courseSearch}
+                          onChange={(e) => setCourseSearch(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                        />
+                      </div>
+                      <ul className="max-h-48 overflow-y-auto py-1">
+                        {filteredCourses.length > 0 ? (
+                          filteredCourses.map((course) => (
+                            <li
+                              key={course.id}
+                              onClick={() => handleSelectCourse(course)}
+                              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${String(course.id) === String(selectedCourse)
+                                  ? 'bg-[#EBF3FF] text-[#003971] font-medium'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                              {course.name}
+                            </li>
+                          ))
+                        ) : (
+                          <li className="px-4 py-3 text-sm text-gray-400 text-center">No courses found</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -267,7 +279,7 @@ export default function ScheduleSession() {
           <div className="pt-8 mt-6 border-t border-gray-100 flex flex-wrap gap-3 justify-between">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={goBack}
               className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
             >
               Back
@@ -275,7 +287,7 @@ export default function ScheduleSession() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={goBack}
                 className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
               >
                 Cancel

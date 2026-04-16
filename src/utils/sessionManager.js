@@ -104,7 +104,7 @@ export function getLoginRouteFromStorage(pathname = typeof window !== 'undefined
             return '/training-provider/login';
         }
 
-        if (pathname === '/admin/login' || pathname.startsWith('/admin-dashboard') || pathname.startsWith('/admin/marketplace') || pathname.startsWith('/admin/accounts') || pathname.startsWith('/admin/companies') || pathname.startsWith('/admin/compliance') || pathname.startsWith('/admin/operations') || pathname.startsWith('/admin/profile') || pathname.startsWith('/admin/notifications') || pathname.startsWith('/admin/transaction-history') || pathname.startsWith('/admin/platform-activity') || pathname.startsWith('/admin/flagged-accounts')) {
+        if (pathname === '/admin/login' || pathname.startsWith('/admin-dashboard') || pathname.startsWith('/admin/marketplace') || pathname.startsWith('/admin/sessions') || pathname.startsWith('/admin/accounts') || pathname.startsWith('/admin/companies') || pathname.startsWith('/admin/compliance') || pathname.startsWith('/admin/operations') || pathname.startsWith('/admin/profile') || pathname.startsWith('/admin/notifications') || pathname.startsWith('/admin/transaction-history') || pathname.startsWith('/admin/platform-activity') || pathname.startsWith('/admin/flagged-accounts')) {
             return '/admin/login';
         }
     }

@@ -266,8 +266,15 @@ function App() {
             <Route path="/admin/marketplace" element={<Marketplace />} />
             <Route path="/admin/marketplace/internal/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/marketplace/internal/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/admin/marketplace/internal/courses/:courseId/edit" element={<EditCourse />} />
+            <Route path="/admin/marketplace/internal/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
+            <Route path="/admin/marketplace/internal/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
             <Route path="/admin/marketplace/oversight/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/marketplace/oversight/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/admin/marketplace/oversight/courses/:courseId/edit" element={<EditCourse />} />
+            <Route path="/admin/marketplace/oversight/courses/:courseId/sessions/schedule" element={<ScheduleSession />} />
+            <Route path="/admin/marketplace/oversight/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
+            <Route path="/admin/sessions/attendance" element={<SessionAttendance />} />
             <Route path="/admin/marketplace/oversight/recruiter/:recruiterId/jobs" element={<OversightRecruiterJobs />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />

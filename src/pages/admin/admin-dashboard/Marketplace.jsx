@@ -21,6 +21,10 @@ function Marketplace() {
     const [totalRemoteJobs, setTotalRemoteJobs] = useState(0);
     const [marketplaceStats, setMarketplaceStats] = useState(null);
     const [oversightData, setOversightData] = useState([]);
+    const [coursesList, setCoursesList] = useState([]);
+    const [totalCourses, setTotalCourses] = useState(0);
+    /** Admin-owned courses from GET /api/courses/my — MaritimeLink Listings → Training */
+    const [myMaritimeCourses, setMyMaritimeCourses] = useState([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -161,17 +165,58 @@ function Marketplace() {
         }
     };
 
+    const loadCoursesData = async (page) => {
+        try {
+            setIsRefreshing(true);
+            const res = await httpClient.get(
+                `${API_ENDPOINTS.COURSES.LIST}?page=${page}&limit=${itemsPerPage}`
+            );
+            const courses = res?.data?.courses ?? [];
+            const total = typeof res?.total === 'number' ? res.total : courses.length;
+            setCoursesList(courses);
+            setTotalCourses(total);
+        } catch (error) {
+            console.error('Failed to load courses:', error);
+            setCoursesList([]);
+            setTotalCourses(0);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const loadMyMaritimeCourses = async () => {
+        try {
+            setIsRefreshing(true);
+            const res = await httpClient.get(API_ENDPOINTS.COURSES.MY);
+            const raw = res?.data?.courses ?? [];
+            const adminOnly = raw.filter((c) => Boolean(c?.adminId));
+            setMyMaritimeCourses(adminOnly);
+        } catch (error) {
+            console.error('Failed to load my courses:', error);
+            setMyMaritimeCourses([]);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     useEffect(() => {
         loadStatsData();
     }, []);
 
     useEffect(() => {
+        if (activeMainTab !== 'MaritimeLink Listings' || activeSubTab !== 'Training Courses') return;
+        loadMyMaritimeCourses();
+    }, [activeMainTab, activeSubTab]);
+
+    useEffect(() => {
         if (activeMainTab === 'Oversight') {
-            loadOversightData(activeSubTab);
-        } else if (activeMainTab === 'MaritimeLink Listings') {
-            if (activeSubTab === 'Jobs') {
-                loadJobsData(currentPage);
+            if (activeSubTab === 'Training Courses') {
+                loadCoursesData(currentPage);
+            } else {
+                loadOversightData(activeSubTab);
             }
+        } else if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
+            loadJobsData(currentPage);
         }
     }, [currentPage, activeSubTab, activeMainTab]);
 
@@ -183,9 +228,15 @@ function Marketplace() {
         setCurrentPage(1);
         loadStatsData();
         if (activeMainTab === 'Oversight') {
-            loadOversightData(activeSubTab);
+            if (activeSubTab === 'Training Courses') {
+                loadCoursesData(1);
+            } else {
+                loadOversightData(activeSubTab);
+            }
         } else if (activeSubTab === 'Jobs') {
             loadJobsData(1);
+        } else {
+            loadMyMaritimeCourses();
         }
     };
 
@@ -195,10 +246,10 @@ function Marketplace() {
         const headers = isMaritimeLinkTab
             ? (activeSubTab === 'Jobs'
                 ? ['ID', 'Job Title', 'Type', 'Location', 'Status', 'Applications', 'Views', 'Posted']
-                : ['ID', 'Course Name', 'Type', 'Location', 'Status', 'Bookings', 'Views', 'Posted'])
+                : ['ID', 'Title', 'Category', 'Location', 'Price', 'Bookings', 'Status', 'Risk', 'Posted'])
             : (activeSubTab === 'Jobs'
                 ? ['ID', 'Recruiter/Company', 'Total Live Jobs', 'Jobs Posted', 'Total Applications', 'Flagged Jobs', 'Risk Level']
-                : ['ID', 'Course Name', 'Type', 'Company/Provider', 'Status', 'Bookings', 'Posted']);
+                : ['ID', 'Title', 'Category', 'Location', 'Price', 'Provider', 'Status', 'Flagged', 'Risk Level']);
 
         const csvRows = [headers.join(',')];
 
@@ -217,15 +268,20 @@ function Marketplace() {
                         `"${record.posted}"`
                     ];
                 } else {
+                    const price = [record.currency, record.price].filter(Boolean).join(' ');
+                    const posted = record.createdAt
+                        ? new Date(record.createdAt).toLocaleDateString()
+                        : '';
                     row = [
                         record.id,
-                        `"${record.courseName}"`,
-                        `"${record.type}"`,
-                        `"${record.location}"`,
+                        `"${(record.title || '').replace(/"/g, '""')}"`,
+                        `"${(record.category || '').replace(/"/g, '""')}"`,
+                        `"${(record.location || '').replace(/"/g, '""')}"`,
+                        `"${price.replace(/"/g, '""')}"`,
+                        record.enrolledCount ?? 0,
                         record.status,
-                        record.bookings,
-                        record.views,
-                        `"${record.posted}"`
+                        record.riskLevel || '',
+                        `"${posted}"`
                     ];
                 }
             } else {
@@ -240,14 +296,21 @@ function Marketplace() {
                         record.riskLevel
                     ];
                 } else {
+                    const provider =
+                        record.recruiter?.organizationName ||
+                        record.recruiter?.email ||
+                        record.admin?.email ||
+                        '';
                     row = [
                         record.id,
-                        `"${record.courseName}"`,
-                        `"${record.type}"`,
-                        `"${record.company}"`,
+                        `"${(record.title || '').replace(/"/g, '""')}"`,
+                        `"${(record.category || '').replace(/"/g, '""')}"`,
+                        `"${(record.location || '').replace(/"/g, '""')}"`,
+                        `"${record.currency || ''} ${record.price || ''}"`.trim(),
+                        `"${provider.replace(/"/g, '""')}"`,
                         record.status,
-                        record.bookings,
-                        `"${record.posted}"`
+                        record.isFlagged ? 'Yes' : 'No',
+                        record.riskLevel || ''
                     ];
                 }
             }
@@ -406,93 +469,6 @@ function Marketplace() {
         }
     ];
 
-    // Oversight Training Data - Generated Dummy Data
-    const generateTrainingData = () => {
-        const baseData = [
-            {
-                id: '1',
-                courseName: 'Basic Safety Training (BST)',
-                courseProvider: 'by SeamanShip',
-                type: 'STCW',
-                typeColor: 'text-blue-600',
-                company: 'SeamanShip',
-                status: 'Active',
-                statusColor: 'text-green-600',
-                bookings: 24,
-                posted: '1 month ago',
-                riskLevel: 'Low',
-                riskColor: 'text-green-600'
-            },
-            {
-                id: '2',
-                courseName: 'Advanced Fire Fighting',
-                courseProvider: 'by Global Marine',
-                type: 'SAFETY',
-                typeColor: 'text-blue-600',
-                company: 'Global Marine',
-                status: 'Flagged',
-                statusColor: 'text-red-600',
-                bookings: 12,
-                posted: '2 weeks ago',
-                riskLevel: 'High',
-                riskColor: 'text-red-600'
-            }
-        ];
-
-        const courseTypes = ['STCW', 'SAFETY', 'REFRESHER', 'TECHNICAL', 'MEDICAL'];
-        const companies = ['Maersk Training', 'V.Ships', 'Anglo-Eastern', 'Wilhelmsen', 'Bernhard Schulte', 'Columbia Shipmanagement'];
-        const statuses = ['Active', 'Flagged', 'Draft', 'Paused'];
-        const riskLevels = ['Low', 'Medium', 'High'];
-
-        const dummyData = Array.from({ length: 122 }, (_, i) => {
-            const type = courseTypes[Math.floor(Math.random() * courseTypes.length)];
-            const company = companies[Math.floor(Math.random() * companies.length)];
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
-            const risk = riskLevels[Math.floor(Math.random() * riskLevels.length)];
-
-            let statusColor = 'text-gray-600';
-            if (status === 'Active') statusColor = 'text-green-600';
-            if (status === 'Flagged') statusColor = 'text-red-600';
-            if (status === 'Draft') statusColor = 'text-gray-400';
-            if (status === 'Paused') statusColor = 'text-orange-600';
-
-            let riskColor = 'text-green-600';
-            if (risk === 'Medium') riskColor = 'text-orange-600';
-            if (risk === 'High') riskColor = 'text-red-600';
-
-            // Generate realistic posted times including "Today"
-            const daysAgo = Math.floor(Math.random() * 30); // 0 to 29
-            let postedTime;
-            if (daysAgo === 0) {
-                const hoursAgo = Math.floor(Math.random() * 23) + 1;
-                postedTime = `${hoursAgo} hours ago`; // Counts as 'Today'
-            } else if (daysAgo === 1) {
-                postedTime = 'Yesterday';
-            } else {
-                postedTime = `${daysAgo} days ago`;
-            }
-
-            return {
-                id: (i + 3).toString(),
-                courseName: `${type} Course ${i + 1}`,
-                courseProvider: `by ${company}`,
-                type: type,
-                typeColor: 'text-blue-600',
-                company: company,
-                status: status,
-                statusColor: statusColor,
-                bookings: Math.floor(Math.random() * 50) + 5,
-                posted: postedTime,
-                riskLevel: risk,
-                riskColor: riskColor
-            };
-        });
-
-        return [...baseData, ...dummyData];
-    };
-
-    const oversightTrainingData = generateTrainingData();
-
     // MaritimeLink Jobs Data
     const maritimeLinkJobsData = [
         {
@@ -562,49 +538,6 @@ function Marketplace() {
         }
     ];
 
-    // MaritimeLink Training Data
-    const maritimeLinkTrainingData = [
-        {
-            id: '1',
-            courseName: 'OSHA Course for Mariners',
-            courseSubtext: 'Official MaritimeLink Course',
-            type: 'SAFETY',
-            typeColor: 'text-blue-600',
-            location: '2 Days',
-            status: 'Active',
-            statusColor: 'text-green-600',
-            bookings: 61,
-            views: '-',
-            posted: '1 month ago'
-        },
-        {
-            id: '2',
-            courseName: 'Deck Cadet Training',
-            courseSubtext: 'Official MaritimeLink Course',
-            type: 'CADET',
-            typeColor: 'text-blue-600',
-            location: '6 Months',
-            status: 'Paused',
-            statusColor: 'text-orange-600',
-            bookings: 73,
-            views: '-',
-            posted: '2 months ago'
-        },
-        {
-            id: '3',
-            courseName: 'Advanced Fire Fighting',
-            courseSubtext: 'Official MaritimeLink Course',
-            type: 'SAFETY',
-            typeColor: 'text-blue-600',
-            location: '5 Days',
-            status: 'Draft',
-            statusColor: 'text-gray-600',
-            bookings: 0,
-            views: '-',
-            posted: 'Today'
-        }
-    ];
-
     // Determine current stats and data based on active tab
     const getCurrentStats = () => {
         return activeSubTab === 'Jobs' ? apiJobsStats : apiCoursesStats;
@@ -613,49 +546,77 @@ function Marketplace() {
     const getCurrentData = () => {
         let data;
         if (activeMainTab === 'Oversight') {
-            data = oversightData;
+            data = activeSubTab === 'Training Courses' ? coursesList : oversightData;
         } else {
             if (activeSubTab === 'Jobs') {
                 data = remoteJobs.filter(job => job.adminId);
             } else {
-                data = maritimeLinkTrainingData;
+                data = myMaritimeCourses;
             }
         }
+
+        const isOversightCourses = activeMainTab === 'Oversight' && activeSubTab === 'Training Courses';
+        const onMaritimeLinkListings = activeMainTab === 'MaritimeLink Listings';
 
         // Apply search filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            data = data.filter(record => {
-                if (isMaritimeLinkTab) {
+            data = data.filter((record) => {
+                if (onMaritimeLinkListings) {
                     if (activeSubTab === 'Jobs') {
                         return record.jobTitle?.toLowerCase().includes(query) ||
                             record.type?.toLowerCase().includes(query) ||
                             record.location?.toLowerCase().includes(query);
-                    } else {
-                        return record.courseName?.toLowerCase().includes(query) ||
-                            record.type?.toLowerCase().includes(query) ||
-                            record.location?.toLowerCase().includes(query);
                     }
-                } else {
-                    return record.name?.toLowerCase().includes(query) ||
-                        record.company?.toLowerCase().includes(query);
+                    const loc = (record.location || '').toLowerCase();
+                    const cat = (record.category || '').toLowerCase();
+                    const title = (record.title || '').toLowerCase();
+                    return title.includes(query) || cat.includes(query) || loc.includes(query);
                 }
+                if (isOversightCourses) {
+                    const loc = (record.location || '').toLowerCase();
+                    const cat = (record.category || '').toLowerCase();
+                    const title = (record.title || '').toLowerCase();
+                    const org = (record.recruiter?.organizationName || '').toLowerCase();
+                    const email = (record.recruiter?.email || record.admin?.email || '').toLowerCase();
+                    return title.includes(query) || cat.includes(query) || loc.includes(query) ||
+                        org.includes(query) || email.includes(query);
+                }
+                return record.name?.toLowerCase().includes(query) ||
+                    record.company?.toLowerCase().includes(query);
             });
         }
 
         // Apply Status Filter
         if (statusFilter !== 'Status' && statusFilter !== 'All') {
-            data = data.filter(record => record.status === statusFilter);
+            data = data.filter((record) => {
+                if (isOversightCourses || (onMaritimeLinkListings && activeSubTab === 'Training Courses')) {
+                    if (statusFilter === 'Flagged') return record.isFlagged === true;
+                    const map = { Active: 'ACTIVE', Draft: 'DRAFT', Paused: 'PAUSED' };
+                    const want = (map[statusFilter] || statusFilter).toString().toUpperCase();
+                    return (record.status || '').toUpperCase() === want;
+                }
+                return record.status === statusFilter;
+            });
         }
 
-        // Apply Risk Filter (Only valid for Oversight Jobs usually, but we implement generic check)
+        // Apply Risk Filter (Oversight + MaritimeLink Training API courses)
         if (riskFilter !== 'Risk Level' && riskFilter !== 'All') {
-            data = data.filter(record => record.riskLevel === riskFilter);
+            const want = riskFilter.toUpperCase();
+            data = data.filter((record) => (record.riskLevel || '').toUpperCase() === want);
         }
 
-        // Apply Time Filter based on posted field
+        // Apply Time Filter based on posted field (or createdAt for API courses)
         if (timeFilter !== '30 Days') {
-            data = data.filter(record => {
+            data = data.filter((record) => {
+                if (record.createdAt) {
+                    const daysAgo = Math.floor(
+                        (Date.now() - new Date(record.createdAt).getTime()) / 86400000
+                    );
+                    if (timeFilter === 'Today') return daysAgo === 0;
+                    if (timeFilter === '7 Days') return daysAgo <= 7;
+                    return true;
+                }
                 const posted = record.posted?.toLowerCase() || '';
                 let daysAgo = 0;
 
@@ -667,18 +628,19 @@ function Marketplace() {
                     daysAgo = 0;
                 } else if (posted.includes('day')) {
                     const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1]) : 1;
+                    daysAgo = match ? parseInt(match[1], 10) : 1;
                 } else if (posted.includes('week')) {
                     const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1]) * 7 : 7;
+                    daysAgo = match ? parseInt(match[1], 10) * 7 : 7;
                 } else if (posted.includes('month')) {
                     const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1]) * 30 : 30;
+                    daysAgo = match ? parseInt(match[1], 10) * 30 : 30;
                 }
 
                 if (timeFilter === 'Today') {
                     return daysAgo === 0;
-                } else if (timeFilter === '7 Days') {
+                }
+                if (timeFilter === '7 Days') {
                     return daysAgo <= 7;
                 }
                 return true;
@@ -691,18 +653,26 @@ function Marketplace() {
     const currentStats = getCurrentStats();
     const currentData = getCurrentData();
     const isMaritimeLinkTab = activeMainTab === 'MaritimeLink Listings';
+    const isCoursesOversightApi = activeMainTab === 'Oversight' && activeSubTab === 'Training Courses';
 
     // Pagination Logic
-    // For MaritimeLink Jobs, totalPages comes from backend 'totalRemoteJobs'.
-    // For everything else (Oversight aggregators, or local Courses), use local length.
+    // For MaritimeLink Jobs and Oversight courses, totalPages comes from backend totals.
+    // For everything else, use filtered local length.
     const totalPages = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
         ? Math.max(1, Math.ceil(totalRemoteJobs / itemsPerPage))
-        : Math.ceil(currentData.length / itemsPerPage);
+        : isCoursesOversightApi
+            ? Math.max(1, Math.ceil(totalCourses / itemsPerPage))
+            : Math.max(1, Math.ceil(currentData.length / itemsPerPage));
 
     // Determine if backend correctly paginated, or if we need to manually slice it.
-    // If backend returns more items than itemsPerPage, it means backend pagination failed or returned all items.
-    const isBackendPaginated = activeSubTab === 'Jobs' && isMaritimeLinkTab && currentData.length <= itemsPerPage;
-    const totalItems = (activeSubTab === 'Jobs' && isMaritimeLinkTab) ? totalRemoteJobs : currentData.length;
+    const isBackendPaginated =
+        (activeSubTab === 'Jobs' && isMaritimeLinkTab && currentData.length <= itemsPerPage) ||
+        (isCoursesOversightApi && currentData.length <= itemsPerPage);
+    const totalItems = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
+        ? totalRemoteJobs
+        : isCoursesOversightApi
+            ? totalCourses
+            : currentData.length;
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = isBackendPaginated
@@ -908,8 +878,8 @@ function Marketplace() {
                                 )}
                             </div>
 
-                            {/* Risk Level Dropdown - Now active for both Jobs and Training in Oversight */}
-                            {(!isMaritimeLinkTab) && (
+                            {/* Risk: Oversight tabs + MaritimeLink Training (API courses) */}
+                            {(!isMaritimeLinkTab || activeSubTab === 'Training Courses') && (
                                 <div className="relative">
                                     <button
                                         onClick={() => setShowRiskDropdown(!showRiskDropdown)}
@@ -962,29 +932,61 @@ function Marketplace() {
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 {!isMaritimeLinkTab ? (
-                                    <>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            {activeSubTab === 'Jobs' ? 'Recruiter / Company' : 'Provider / Company'}
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Total Active
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Total Posted
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Interactions
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Flagged
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Risk Level
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </>
+                                    activeSubTab === 'Jobs' ? (
+                                        <>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Recruiter / Company
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Total Active
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Total Posted
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Interactions
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Flagged
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Risk Level
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Actions
+                                            </th>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Course
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Category
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Location
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Price
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Provider
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Status
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Flagged
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Risk Level
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                                Actions
+                                            </th>
+                                        </>
+                                    )
                                 ) : activeSubTab === 'Jobs' ? (
                                     <>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -1015,19 +1017,25 @@ function Marketplace() {
                                 ) : (
                                     <>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Course Name
+                                            Course
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Type
+                                            Category
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Status
+                                            Location
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Price
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                             Bookings
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Views
+                                            Status
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Risk
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                             Posted
@@ -1042,47 +1050,117 @@ function Marketplace() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                             {!isMaritimeLinkTab ? (
-                                paginatedData.map((record) => {
-                                    let riskColor = 'text-green-600';
-                                    if (record.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
-                                    if (record.riskLevel === 'HIGH') riskColor = 'text-red-600';
+                                activeSubTab === 'Jobs' ? (
+                                    paginatedData.map((record) => {
+                                        let riskColor = 'text-green-600';
+                                        if (record.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
+                                        if (record.riskLevel === 'HIGH') riskColor = 'text-red-600';
 
-                                    return (
-                                        <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm font-semibold text-gray-900">{record.name}</div>
-                                                <div className="text-xs text-gray-500">{record.company}</div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.totalActive}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{record.totalPosted}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-[#1e5a8f]">{record.totalInteractions}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm ${record.flaggedCount > 0 ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
-                                                    {record.flaggedCount}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${riskColor}`}>
-                                                    {record.riskLevel || 'LOW'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <Link
-                                                    to={`/admin/marketplace/oversight/recruiter/${record.id}/jobs`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Jobs
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
+                                        return (
+                                            <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-4">
+                                                    <div className="text-sm font-semibold text-gray-900">{record.name}</div>
+                                                    <div className="text-xs text-gray-500">{record.company}</div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-900">{record.totalActive}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-900">{record.totalPosted}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm font-semibold text-[#1e5a8f]">{record.totalInteractions}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`text-sm ${record.flaggedCount > 0 ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
+                                                        {record.flaggedCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`text-sm font-semibold ${riskColor}`}>
+                                                        {record.riskLevel || 'LOW'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <Link
+                                                        to={`/admin/marketplace/oversight/recruiter/${record.id}/jobs`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Jobs
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    paginatedData.map((course) => {
+                                        const rl = (course.riskLevel || 'LOW').toUpperCase();
+                                        let riskColor = 'text-green-600';
+                                        if (rl === 'MEDIUM') riskColor = 'text-orange-600';
+                                        if (rl === 'HIGH') riskColor = 'text-red-600';
+
+                                        const formattedStatus = course.status === 'ACTIVE' ? 'Active'
+                                            : course.status === 'DRAFT' ? 'Draft'
+                                                : course.status === 'PAUSED' ? 'Paused'
+                                                    : (course.status || '—').replace(/_/g, ' ');
+                                        let statusColor = 'text-gray-600';
+                                        if (formattedStatus === 'Active') statusColor = 'text-green-600';
+                                        if (formattedStatus === 'Draft') statusColor = 'text-orange-600';
+                                        if (formattedStatus === 'Paused') statusColor = 'text-orange-600';
+
+                                        const provider =
+                                            course.recruiter?.organizationName ||
+                                            course.recruiter?.email ||
+                                            course.admin?.email ||
+                                            '—';
+                                        const categoryLabel = (course.category || '—').replace(/_/g, ' ');
+                                        const priceLabel = [course.currency, course.price].filter(Boolean).join(' ') || '—';
+
+                                        return (
+                                            <tr key={course.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-4">
+                                                    <div className="text-sm font-semibold text-gray-900">{course.title}</div>
+                                                    <div className="text-xs text-gray-500 truncate max-w-[220px]">{course.description || '—'}</div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-900">{categoryLabel}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-900">{course.location || '—'}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm font-semibold text-[#1e5a8f]">{priceLabel}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-900">{provider}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`text-sm font-semibold ${statusColor}`}>
+                                                        {formattedStatus}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`text-sm ${course.isFlagged ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
+                                                        {course.isFlagged ? 'Yes' : 'No'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`text-sm font-semibold ${riskColor}`}>
+                                                        {rl}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <Link
+                                                        to={`/admin/marketplace/oversight/courses/${course.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )
                             ) : activeSubTab === 'Jobs' ? (
                                 paginatedData.map((job) => {
                                     const creator = job.recruiter?.organizationName || job.admin?.email || (job.adminId ? 'MaritimeLink Admin' : 'Unknown');
@@ -1156,110 +1234,88 @@ function Marketplace() {
                                         </tr>
                                     );
                                 })
-                            ) : isMaritimeLinkTab ? (
-                                paginatedData.map((record) => (
-                                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-4">
-                                            <div className="text-sm font-semibold text-gray-900">{record.courseName}</div>
-                                            <div className="text-xs text-gray-500">{record.courseProvider}</div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`text-sm font-semibold ${record.typeColor}`}>
-                                                {record.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-900">{record.company}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`text-sm font-semibold ${record.statusColor}`}>
-                                                {record.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-900">{record.bookings}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-500">{record.posted}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            {record.status === 'Draft' ? (
-                                                <button
-                                                    onClick={() => navigate('/admin/create-course', {
-                                                        state: {
-                                                            dashboardType: 'admin',
-                                                            isEdit: true,
-                                                            courseData: record,
-                                                            returnPath: '/admin/marketplace'
-                                                        }
-                                                    })}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    Edit Course
-                                                </button>
-                                            ) : (
-                                                <Link
-                                                    to={`/admin/marketplace/oversight/courses/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
                             ) : (
-                                paginatedData.map((record) => (
-                                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-4">
-                                            <div className="text-sm font-semibold text-gray-900">{record.courseName}</div>
-                                            <div className="text-xs text-gray-500">{record.courseProvider}</div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`text-sm font-semibold ${record.typeColor}`}>
-                                                {record.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-900">{record.company}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`text-sm font-semibold ${record.statusColor}`}>
-                                                {record.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-900">{record.bookings}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm text-gray-500">{record.posted}</span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            {record.status === 'Draft' ? (
-                                                <button
-                                                    onClick={() => navigate('/admin/create-course', {
-                                                        state: {
-                                                            dashboardType: 'admin',
-                                                            isEdit: true,
-                                                            courseData: record,
-                                                            returnPath: '/admin/marketplace'
-                                                        }
-                                                    })}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    Edit Course
-                                                </button>
-                                            ) : (
-                                                <Link
-                                                    to={`/admin/marketplace/oversight/courses/${record.id}`}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
+                                paginatedData.map((course) => {
+                                    const formattedStatus = course.status === 'ACTIVE' ? 'Active'
+                                        : course.status === 'DRAFT' ? 'Draft'
+                                            : course.status === 'PAUSED' ? 'Paused'
+                                                : (course.status || '—').replace(/_/g, ' ');
+                                    let statusColor = 'text-gray-600';
+                                    if (formattedStatus === 'Active') statusColor = 'text-green-600';
+                                    if (formattedStatus === 'Draft') statusColor = 'text-orange-600';
+                                    if (formattedStatus === 'Paused') statusColor = 'text-orange-600';
+
+                                    const rl = (course.riskLevel || 'LOW').toUpperCase();
+                                    let riskColor = 'text-green-600';
+                                    if (rl === 'MEDIUM') riskColor = 'text-orange-600';
+                                    if (rl === 'HIGH') riskColor = 'text-red-600';
+
+                                    const categoryLabel = (course.category || '—').replace(/_/g, ' ');
+                                    const priceLabel = [course.currency, course.price].filter(Boolean).join(' ') || '—';
+                                    const postedDate = course.createdAt
+                                        ? new Date(course.createdAt).toLocaleDateString()
+                                        : '—';
+                                    const bookings = course.enrolledCount ?? 0;
+
+                                    return (
+                                        <tr key={course.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-4 py-4">
+                                                <div className="text-sm font-semibold text-gray-900">{course.title}</div>
+                                                <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                                                    {course.description || '—'}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm text-gray-900">{categoryLabel}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm text-gray-900">{course.location || '—'}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm font-semibold text-[#1e5a8f]">{priceLabel}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm text-gray-900">{bookings}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className={`text-sm font-semibold ${statusColor}`}>
+                                                    {formattedStatus}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className={`text-sm font-semibold ${riskColor}`}>{rl}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm text-gray-500">{postedDate}</span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                {course.status === 'DRAFT' ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate('/admin/create-course', {
+                                                            state: {
+                                                                dashboardType: 'admin',
+                                                                isEdit: true,
+                                                                courseData: course,
+                                                                returnPath: '/admin/marketplace'
+                                                            }
+                                                        })}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        Edit Course
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/marketplace/internal/courses/${course.id}`}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )
                             }
                         </tbody>

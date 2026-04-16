@@ -24,6 +24,7 @@ export default function EditCourse() {
     const navigate = useNavigate();
     const location = useLocation();
     const isAdmin = location.pathname.includes('/admin/');
+    const returnPath = location.state?.returnPath;
     const { courseId } = useParams();
 
     const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +97,10 @@ export default function EditCourse() {
             if (response.status === 'success') {
                 setShowSuccessModal(true);
                 setTimeout(() => {
-                    navigate(isAdmin ? `/admin/marketplace` : `/trainingprovider/courses/${courseId}`);
+                    navigate(
+                        returnPath ||
+                            (isAdmin ? `/admin/marketplace` : `/trainingprovider/courses/${courseId}`)
+                    );
                 }, 2000);
             }
         } catch (err) {
@@ -107,7 +111,9 @@ export default function EditCourse() {
     };
 
     const handleCancel = () => {
-        navigate(isAdmin ? '/admin/marketplace' : `/trainingprovider/courses/${courseId}`);
+        navigate(
+            returnPath || (isAdmin ? '/admin/marketplace' : `/trainingprovider/courses/${courseId}`)
+        );
     };
 
     if (isLoading) {

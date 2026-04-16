@@ -144,6 +144,8 @@ export const API_ENDPOINTS = {
     MARKETPLACE_STATS: '/api/admin/marketplace/stats',
     MARKETPLACE_OVERSIGHT: '/api/admin/marketplace/oversight',
     MARKETPLACE_LISTINGS: '/api/admin/marketplace/listings',
+    /** All bookings for a course (attendees / payment summary) — SUPER_ADMIN */
+    COURSE_BOOKINGS: (courseId) => `/api/admin/courses/${courseId}/bookings`,
     APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,

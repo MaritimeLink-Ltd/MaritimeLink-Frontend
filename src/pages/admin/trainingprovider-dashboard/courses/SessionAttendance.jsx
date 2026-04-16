@@ -67,6 +67,46 @@ function mapAttendeeRow(a, index) {
     paymentRaw: a.paymentStatus,
     paymentLabel: paymentLabel(a.paymentStatus),
     paymentOk: paymentOk(a.paymentStatus),
+    sessionHint: null,
+    amountLabel: null,
+  };
+}
+
+function formatSessionHint(sessions) {
+  if (!Array.isArray(sessions) || sessions.length === 0) return null;
+  const s = sessions[0];
+  if (!s?.startDate) return s?.location || null;
+  const start = new Date(s.startDate);
+  const end = s.endDate ? new Date(s.endDate) : null;
+  const loc = s.location ? ` · ${s.location}` : '';
+  if (end && !Number.isNaN(end.getTime()) && !Number.isNaN(start.getTime())) {
+    return `${start.toLocaleDateString()} – ${end.toLocaleDateString()}${loc}`;
+  }
+  if (!Number.isNaN(start.getTime())) return `${start.toLocaleDateString()}${loc}`;
+  return s.location || null;
+}
+
+function mapAdminBookingRow(booking, index) {
+  const prof = booking.professional || {};
+  const pid = prof.id || booking.professionalId;
+  const canonical = normalizeBookingStatus(booking.bookingStatus);
+  const currency = booking.currency === 'GBP' ? '£' : booking.currency === 'USD' ? '$' : '';
+  const amt = booking.amountPaid != null && booking.amountPaid !== '' ? `${currency}${booking.amountPaid}` : null;
+  return {
+    key: booking.id || `admin-b-${index}`,
+    bookingId: booking.id,
+    professionalId: pid,
+    name: prof.fullname || '—',
+    email: prof.email || '',
+    photo: null,
+    statusRaw: booking.bookingStatus,
+    statusLabel: bookingStatusLabel(booking.bookingStatus),
+    canonical,
+    paymentRaw: booking.paymentStatus,
+    paymentLabel: paymentLabel(booking.paymentStatus),
+    paymentOk: paymentOk(booking.paymentStatus),
+    sessionHint: formatSessionHint(booking.sessions),
+    amountLabel: amt,
   };
 }
 
@@ -77,11 +117,17 @@ export default function SessionAttendance() {
 
   const sessionId =
     location.state?.sessionId || searchParams.get('sessionId') || null;
+  const courseId =
+    location.state?.courseId || searchParams.get('courseId') || null;
   const courseTitle = location.state?.courseTitle || 'Session';
+  const returnPath = location.state?.returnPath;
+  const isAdminAttendance = location.pathname.startsWith('/admin/');
+  const bookingsFallback = isAdminAttendance ? '/admin/marketplace' : '/trainingprovider/bookings';
+  const adminCourseBookingsMode = isAdminAttendance && Boolean(courseId);
 
   const [attendees, setAttendees] = useState([]);
   const [resultsTotal, setResultsTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(!!sessionId);
+  const [isLoading, setIsLoading] = useState(!!(sessionId || adminCourseBookingsMode));
   const [error, setError] = useState(null);
 
   const [activeTab, setActiveTab] = useState('all');
@@ -92,6 +138,26 @@ export default function SessionAttendance() {
   const [approvingBookingId, setApprovingBookingId] = useState(null);
 
   const loadAttendees = useCallback(async () => {
+    if (adminCourseBookingsMode) {
+      if (!courseId) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await httpClient.get(API_ENDPOINTS.ADMIN.COURSE_BOOKINGS(courseId));
+        const list = Array.isArray(res?.data?.bookings) ? res.data.bookings : [];
+        setAttendees(list.map(mapAdminBookingRow));
+        setResultsTotal(typeof res?.results === 'number' ? res.results : list.length);
+      } catch (e) {
+        console.error('Failed to load admin course bookings', e);
+        setError(e?.message || 'Failed to load attendees');
+        setAttendees([]);
+        setResultsTotal(0);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (!sessionId) return;
     setIsLoading(true);
     setError(null);
@@ -108,14 +174,14 @@ export default function SessionAttendance() {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, courseId, adminCourseBookingsMode]);
 
   useEffect(() => {
     loadAttendees();
   }, [loadAttendees]);
 
   const handleApproveAttendee = async (bookingId) => {
-    if (!sessionId || !bookingId) return;
+    if (adminCourseBookingsMode || !sessionId || !bookingId) return;
     setApprovingBookingId(bookingId);
     try {
       const res = await httpClient.post(
@@ -174,7 +240,8 @@ export default function SessionAttendance() {
         return (
           attendee.name.toLowerCase().includes(term) ||
           attendee.email.toLowerCase().includes(term) ||
-          attendee.bookingId.toLowerCase().includes(term)
+          String(attendee.bookingId || '').toLowerCase().includes(term) ||
+          (attendee.sessionHint && attendee.sessionHint.toLowerCase().includes(term))
         );
       }
 
@@ -182,30 +249,36 @@ export default function SessionAttendance() {
     });
   }, [attendees, activeTab, searchTerm]);
 
-  const sessionIdShort =
-    sessionId && sessionId.length > 12 ? `…${sessionId.slice(-8)}` : sessionId || '—';
+  const contextIdShort = adminCourseBookingsMode
+    ? courseId && courseId.length > 12
+      ? `…${courseId.slice(-8)}`
+      : courseId || '—'
+    : sessionId && sessionId.length > 12
+      ? `…${sessionId.slice(-8)}`
+      : sessionId || '—';
 
-  if (!sessionId) {
+  if (!sessionId && !adminCourseBookingsMode) {
     return (
       <div className="flex flex-col min-h-full max-w-lg">
         <div className="flex items-center text-xs text-gray-500 mb-3">
           <button
             type="button"
-            onClick={() => navigate('/trainingprovider/bookings')}
+            onClick={() => navigate(returnPath || bookingsFallback)}
             className="hover:text-[#003971] font-medium"
           >
             Session Management
           </button>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-          <p className="text-gray-700 font-medium mb-2">No session selected</p>
+          <p className="text-gray-700 font-medium mb-2">No session or course selected</p>
           <p className="text-sm text-gray-500 mb-4">
-            Open this page from Session Management (View Attendees), or add{' '}
-            <code className="text-xs bg-gray-100 px-1 rounded">?sessionId=</code> to the URL.
+            Open this page from a course (View attendees) or Session Management, or add{' '}
+            <code className="text-xs bg-gray-100 px-1 rounded">?sessionId=</code> or{' '}
+            <code className="text-xs bg-gray-100 px-1 rounded">?courseId=</code> (admin) to the URL.
           </p>
           <button
             type="button"
-            onClick={() => navigate('/trainingprovider/bookings')}
+            onClick={() => navigate(returnPath || bookingsFallback)}
             className="text-sm font-semibold text-[#003971] hover:underline"
           >
             Go to Session Management
@@ -221,7 +294,7 @@ export default function SessionAttendance() {
       <div className="flex items-center text-xs text-gray-500 mb-3">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => (returnPath ? navigate(returnPath) : navigate(-1))}
           className="hover:text-[#003971] font-medium"
         >
           Session Management
@@ -238,7 +311,7 @@ export default function SessionAttendance() {
               {courseTitle}
             </span>
             <span className="inline-flex items-center rounded-full bg-gray-50 text-gray-700 px-3 py-1 text-xs font-semibold font-mono">
-              Session {sessionIdShort}
+              {adminCourseBookingsMode ? 'Course' : 'Session'} {contextIdShort}
             </span>
             <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold">
               <Users className="h-3.5 w-3.5 mr-1" />
@@ -246,7 +319,7 @@ export default function SessionAttendance() {
             </span>
             <span className="inline-flex items-center rounded-full bg-gray-50 text-gray-500 px-3 py-1 text-xs font-medium">
               <Calendar className="h-3.5 w-3.5 mr-1" />
-              Bookings for this session
+              {adminCourseBookingsMode ? 'All bookings for this course' : 'Bookings for this session'}
             </span>
           </div>
         </div>
@@ -374,6 +447,9 @@ export default function SessionAttendance() {
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900 truncate">{attendee.name}</p>
                             <p className="text-xs text-gray-500 truncate">Professional · {attendee.professionalId}</p>
+                            {attendee.sessionHint ? (
+                              <p className="text-xs text-gray-400 truncate mt-0.5">{attendee.sessionHint}</p>
+                            ) : null}
                           </div>
                         </div>
                       </td>
@@ -389,6 +465,9 @@ export default function SessionAttendance() {
                             <XCircle className="h-4 w-4 text-amber-500 shrink-0" />
                           )}
                         </div>
+                        {attendee.amountLabel ? (
+                          <p className="text-xs text-gray-500 mt-1">{attendee.amountLabel}</p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <span
@@ -402,7 +481,7 @@ export default function SessionAttendance() {
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
-                          {attendee.canonical === 'pending' && (
+                          {!adminCourseBookingsMode && attendee.canonical === 'pending' && (
                             <button
                               type="button"
                               onClick={() => handleApproveAttendee(attendee.bookingId)}
@@ -420,9 +499,12 @@ export default function SessionAttendance() {
                           <button
                             type="button"
                             onClick={() =>
-                              navigate(`/trainingprovider/candidate/${attendee.professionalId}`, {
-                                state: { fromAttendance: true },
-                              })
+                              navigate(
+                                isAdminAttendance
+                                  ? `/admin/marketplace/candidate/${attendee.professionalId}`
+                                  : `/trainingprovider/candidate/${attendee.professionalId}`,
+                                { state: { fromAttendance: true } }
+                              )
                             }
                             className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
                           >
@@ -430,7 +512,9 @@ export default function SessionAttendance() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => navigate('/trainingprovider/chats')}
+                            onClick={() =>
+                              navigate(isAdminAttendance ? '/admin/admin-chats' : '/trainingprovider/chats')
+                            }
                             className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                           >
                             <Mail className="h-3.5 w-3.5" />
@@ -446,7 +530,9 @@ export default function SessionAttendance() {
                   <tr>
                     <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-500">
                       {attendees.length === 0
-                        ? 'No attendees for this session yet.'
+                        ? adminCourseBookingsMode
+                          ? 'No bookings for this course yet.'
+                          : 'No attendees for this session yet.'
                         : 'No attendees match your filters.'}
                     </td>
                   </tr>

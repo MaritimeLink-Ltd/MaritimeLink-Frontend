@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -36,8 +36,42 @@ const PAGE_SIZE = 4;
 
 export default function CourseDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { courseId } = useParams();
   const resolvedCourseId = courseId; // Use the path param
+
+  const coursePaths = useMemo(() => {
+    const id = resolvedCourseId || '';
+    const p = location.pathname;
+    if (p.includes('/admin/marketplace/internal/courses/')) {
+      const base = `/admin/marketplace/internal/courses/${id}`;
+      return {
+        base,
+        scheduleSession: `${base}/sessions/schedule`,
+        editSession: `${base}/sessions/edit`,
+        editCourse: `${base}/edit`,
+        attendance: '/admin/sessions/attendance',
+      };
+    }
+    if (p.includes('/admin/marketplace/oversight/courses/')) {
+      const base = `/admin/marketplace/oversight/courses/${id}`;
+      return {
+        base,
+        scheduleSession: `${base}/sessions/schedule`,
+        editSession: `${base}/sessions/edit`,
+        editCourse: `${base}/edit`,
+        attendance: '/admin/sessions/attendance',
+      };
+    }
+    const base = `/trainingprovider/courses/${id}`;
+    return {
+      base,
+      scheduleSession: `${base}/sessions/schedule`,
+      editSession: `${base}/sessions/edit`,
+      editCourse: `${base}/edit`,
+      attendance: '/trainingprovider/sessions/attendance',
+    };
+  }, [location.pathname, resolvedCourseId]);
 
   const [courseSummary, setCourseSummary] = useState(null);
   const [sessionData, setSessionData] = useState([]);
@@ -197,22 +231,46 @@ export default function CourseDetail() {
   }, [pageCount]);
 
   const handleEditCourse = () => {
-    navigate(`/trainingprovider/courses/${resolvedCourseId}/edit`);
+    navigate(coursePaths.editCourse, {
+      state: { returnPath: coursePaths.base },
+    });
   };
 
   const handleAddSession = () => {
-    navigate(`/trainingprovider/courses/${resolvedCourseId}/sessions/schedule`, {
-      state: { courseTitle: courseSummary?.title }
+    navigate(coursePaths.scheduleSession, {
+      state: {
+        courseTitle: courseSummary?.title,
+        returnPath: coursePaths.base,
+      },
+    });
+  };
+
+  const isAdminMarketplaceCourse =
+    location.pathname.includes('/admin/marketplace');
+
+  const handleViewAllCourseAttendees = () => {
+    if (!isAdminMarketplaceCourse) return;
+    navigate(coursePaths.attendance, {
+      state: {
+        courseId: resolvedCourseId,
+        courseTitle: courseSummary?.title || 'Course',
+        returnPath: coursePaths.base,
+      },
     });
   };
 
   const handleViewSessionAttendees = (session) => {
+    if (isAdminMarketplaceCourse) {
+      handleViewAllCourseAttendees();
+      return;
+    }
     if (!session?.apiSessionId) return;
-    navigate('/trainingprovider/sessions/attendance', {
+    navigate(coursePaths.attendance, {
       state: {
         sessionId: session.apiSessionId,
         courseId: resolvedCourseId,
         courseTitle: courseSummary?.title || 'Course',
+        returnPath: coursePaths.base,
       },
     });
   };
@@ -472,17 +530,29 @@ export default function CourseDetail() {
 
           {/* Session List (visible for both tabs) */}
           <div className="rounded-2xl border border-gray-100 bg-white shadow-sm flex flex-col">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">
                 Session List
               </h2>
-              <button
-                type="button"
-                onClick={handleAddSession}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002455]"
-              >
-                <span>Add Session</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {isAdminMarketplaceCourse && (
+                  <button
+                    type="button"
+                    onClick={handleViewAllCourseAttendees}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-gray-50"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>View attendees</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleAddSession}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002455]"
+                >
+                  <span>Add Session</span>
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -535,15 +605,17 @@ export default function CourseDetail() {
                             <button
                                 type="button"
                                 onClick={() => handleViewSessionAttendees(session)}
-                                disabled={!session.apiSessionId}
+                                disabled={!isAdminMarketplaceCourse && !session.apiSessionId}
                                 title={
-                                  session.apiSessionId
-                                    ? 'View attendees for this session'
-                                    : 'Session id missing — cannot load attendees'
+                                  isAdminMarketplaceCourse
+                                    ? 'View all course bookings and attendees'
+                                    : session.apiSessionId
+                                      ? 'View attendees for this session'
+                                      : 'Session id missing — cannot load attendees'
                                 }
                                 className="inline-flex items-center justify-center rounded-xl bg-[#EBF3FF] px-4 py-2 text-xs font-semibold text-[#003971] hover:bg-[#d7e6ff] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#EBF3FF]"
                             >
-                                View Attendees
+                                {isAdminMarketplaceCourse ? 'View attendees' : 'View Attendees'}
                             </button>
                             <button
                                 type="button"
