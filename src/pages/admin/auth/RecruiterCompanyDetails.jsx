@@ -2,6 +2,35 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
 
+/** Unwrap `{ data: T }` or return root (GET lookup). */
+function unwrapApiBody(res) {
+    if (res && typeof res === 'object' && res.data !== undefined && !Array.isArray(res.data)) {
+        return res.data;
+    }
+    return res;
+}
+
+/** Merge nested `data` with top-level fields (PATCH company-details may put flags at either level). */
+function mergeApiEnvelope(res) {
+    if (!res || typeof res !== 'object') return res;
+    const inner =
+        res.data !== undefined && !Array.isArray(res.data) && typeof res.data === 'object'
+            ? res.data
+            : {};
+    return { ...inner, ...res };
+}
+
+/** Map lookup API payload to UI fields (backend shape may vary). */
+function mapLookupToDisplay(lookupPayload) {
+    const d = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
+    return {
+        name: d.organizationName || d.name || d.companyName || '',
+        logo: d.logo || d.logoUrl || d.companyLogo || '',
+        website: d.website || d.url || '',
+        raw: d,
+    };
+}
+
 function RecruiterCompanyDetails() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -29,25 +58,38 @@ function RecruiterCompanyDetails() {
         if (error) setError('');
     };
 
-    const handleWebsiteBlur = async () => {
-        if (!formData.website.trim()) return;
-
+    const runCompanyLookup = async (params) => {
         setPreviewLoading(true);
         try {
-            const response = await authService.getCompanyPreview(formData.website);
-            if (response.data) {
-                setPreviewData(response.data);
-                // Auto-fill company name if it's currently empty and the API returned a name
-                if (!formData.companyName && response.data.name) {
-                    setFormData(prev => ({ ...prev, companyName: response.data.name }));
+            const response = await authService.lookupCompanyDetails(params);
+            const payload = unwrapApiBody(response);
+            if (payload && typeof payload === 'object') {
+                const mapped = mapLookupToDisplay(payload);
+                setPreviewData(mapped);
+                if (!formData.companyName && mapped.name) {
+                    setFormData((prev) => ({ ...prev, companyName: mapped.name }));
                 }
+            } else {
+                setPreviewData(null);
             }
         } catch (err) {
-            console.error('Failed to fetch company preview:', err);
-            // Non-blocking error, so we don't necessarily need to set main error state
+            console.error('Failed to fetch company lookup:', err);
+            setPreviewData(null);
         } finally {
             setPreviewLoading(false);
         }
+    };
+
+    const handleWebsiteBlur = async () => {
+        const url = formData.website.trim();
+        if (!url) return;
+        await runCompanyLookup({ url });
+    };
+
+    const handleCompanyNameBlur = async () => {
+        const name = formData.companyName.trim();
+        if (!name || formData.website.trim()) return;
+        await runCompanyLookup({ organizationName: name });
     };
 
     const handleSubmit = async (e) => {
@@ -69,7 +111,7 @@ function RecruiterCompanyDetails() {
         setLoading(true);
 
         try {
-            await authService.setRecruiterCompanyDetails({
+            const patchRes = await authService.setRecruiterCompanyDetails({
                 recruiterId: recruiterId,
                 organizationName: formData.companyName.trim(),
                 address: formData.address.trim(),
@@ -81,8 +123,26 @@ function RecruiterCompanyDetails() {
                 companyLinkedIn: formData.linkedIn.trim()
             });
 
-            // Navigate to next steps (compliance/document upload)
-            navigate('/agent/company-verification', { state: { companyData: formData } });
+            const patchBody = mergeApiEnvelope(patchRes);
+            const verification = {
+                mismatchDetected: Boolean(patchBody?.mismatchDetected),
+                riskLevel: patchBody?.riskLevel || null,
+            };
+
+            const companyCard = {
+                name: formData.companyName.trim(),
+                website: formData.website.trim(),
+                logo: previewData?.logo || '',
+            };
+
+            navigate('/agent/company-verification', {
+                state: {
+                    formData,
+                    companyData: companyCard,
+                    lookupPreview: previewData,
+                    verification,
+                },
+            });
         } catch (err) {
             console.error('Company details error:', err);
             setError(err.data?.message || err.message || 'Failed to save company details. Please try again.');
@@ -117,9 +177,17 @@ function RecruiterCompanyDetails() {
                             <img src={previewData.logo} alt="Company Logo" className="h-12 object-contain rounded" />
                         </div>
                     )}
+                    {previewData?.name && !previewLoading && (
+                        <p className="mb-2 text-xs text-gray-600">
+                            Suggested match: <span className="font-semibold text-gray-800">{previewData.name}</span>
+                            {previewData.website ? (
+                                <span className="text-gray-500"> · {previewData.website}</span>
+                            ) : null}
+                        </p>
+                    )}
                     {previewLoading && (
                         <div className="mb-4 text-sm text-[#003971] animate-pulse">
-                            Fetching company details...
+                            Looking up company (public sources)...
                         </div>
                     )}
 
@@ -157,6 +225,7 @@ function RecruiterCompanyDetails() {
                                     placeholder="Enter your name"
                                     value={formData.companyName}
                                     onChange={handleChange}
+                                    onBlur={handleCompanyNameBlur}
                                 />
                             </div>
                         </div>

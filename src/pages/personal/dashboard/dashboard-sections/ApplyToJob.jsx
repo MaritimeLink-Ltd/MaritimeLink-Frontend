@@ -138,23 +138,27 @@ const ApplyToJob = () => {
                 cvUrl = platformResume?.cvUrl;
             }
 
-            let coverLetterUrl = undefined;
-            let coverLetterText = undefined;
+            let coverLetterUrl;
             if (coverLetterMode === 'upload' && uploadedCoverLetter) {
                 const clRes = await jobService.uploadCoverLetter(uploadedCoverLetter);
                 if (clRes.status === 'success' && clRes.data?.url) {
                     coverLetterUrl = clRes.data.url;
                 }
-            } else if (coverLetterMode === 'write' && coverLetter.trim()) {
-                coverLetterText = coverLetter;
             }
 
+            const trimmedCoverLetter =
+                coverLetterMode === 'write' ? coverLetter.trim() : '';
+
             const applicationData = {
-                coverLetter: coverLetterText,
-                coverLetterUrl: coverLetterUrl,
                 cvUrl: cvUrl,
-                documentIds: selectedDocuments
+                documentIds: selectedDocuments,
             };
+            if (trimmedCoverLetter) {
+                applicationData.coverLetter = trimmedCoverLetter;
+            }
+            if (coverLetterUrl) {
+                applicationData.coverLetterUrl = coverLetterUrl;
+            }
 
             const applyRes = await jobService.applyToJob(jobId, applicationData);
             if (applyRes.status === 'success') {

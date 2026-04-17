@@ -115,7 +115,7 @@ class JobService {
      * Get applicants for a job (Admin)
      * GET /api/admin/jobs/:id/applicants
      * @param {string} id - Job ID
-     * @returns {Promise<Object>} Response with list of applicants
+     * @returns {Promise<Object>} e.g. `{ status, results, data: { applicants: [...] } }` (root JSON from httpClient)
      */
     async getAdminJobApplicants(id) {
         try {
@@ -424,6 +424,45 @@ class JobService {
             return response;
         } catch (error) {
             console.error('Delete Job error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update job application status (recruiter owns job, or admin).
+     * PATCH /api/recruiter/applicants/:id/status or PATCH /api/admin/applicants/:id/status
+     * @param {string} applicationId - Job application row id (not professional id)
+     * @param {string} status - ApplicationStatus: APPLIED, UNDER_REVIEW, SHORTLISTED, INTERVIEW, OFFER, HIRED, REJECTED, WITHDRAWN
+     * @param {{ asAdmin?: boolean }} [options]
+     */
+    async updateApplicantStatus(applicationId, status, options = {}) {
+        try {
+            const path = options.asAdmin
+                ? API_ENDPOINTS.ADMIN.UPDATE_APPLICANT_STATUS(applicationId)
+                : API_ENDPOINTS.RECRUITER.UPDATE_APPLICANT_STATUS(applicationId);
+            const response = await httpClient.patch(path, { status });
+            return response;
+        } catch (error) {
+            console.error('Update applicant status error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Full job-application bundle (CV, cover letter, attached wallet docs, professional, snapshot).
+     * GET /api/admin/applicants/:id or GET /api/recruiter/applicants/:id
+     * @param {string} applicationId - Job application row id
+     * @param {{ asAdmin?: boolean }} [options]
+     */
+    async getApplicantDetails(applicationId, options = {}) {
+        try {
+            const path = options.asAdmin
+                ? API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(applicationId)
+                : API_ENDPOINTS.RECRUITER.APPLICANT_DETAILS(applicationId);
+            const response = await httpClient.get(path);
+            return response;
+        } catch (error) {
+            console.error('Get applicant details error:', error);
             throw error;
         }
     }

@@ -10,6 +10,25 @@ function normalizeUserRole(role) {
 }
 
 /** Supports `{ data: { recruiters|trainers } }`, nested `data.data`, or a raw array fallback. */
+function accountRiskDisplay(activeTab, account) {
+    if (activeTab === 'Professionals') return { text: '—', mismatch: false };
+    if (activeTab === 'KYC Status') {
+        const raw = account.riskLevel || account.tier;
+        const t = raw != null && raw !== '' && raw !== 'N/A' ? String(raw).toUpperCase() : '';
+        return { text: t || '—', mismatch: false };
+    }
+    const rl = (account.riskLevel || '').toString().toUpperCase();
+    return { text: rl || '—', mismatch: Boolean(account.hasCompanyMismatch) };
+}
+
+function riskCellTextClass(text) {
+    const u = String(text || '').toUpperCase();
+    if (u === 'HIGH') return 'text-red-600 font-semibold';
+    if (u === 'MEDIUM') return 'text-orange-600 font-semibold';
+    if (u === 'LOW') return 'text-green-600 font-semibold';
+    return 'text-sm text-gray-700';
+}
+
 function extractAdminUserList(apiBody, listKey) {
     if (!apiBody) return [];
     if (apiBody?.data?.[listKey] && Array.isArray(apiBody.data[listKey])) {
@@ -218,6 +237,8 @@ function Accounts() {
                     domain: email,
                     country: item.issueCountry || professionalInfo?.resume?.country || 'N/A',
                     tier: item.riskLevel || 'N/A',
+                    riskLevel: item.riskLevel || null,
+                    hasCompanyMismatch: Boolean(item.hasCompanyMismatch),
                     lastActive: getTimeAgo(item.updatedAt || item.createdAt),
                     status: mapKycStatusLabel(item.status),
                     statusColor: mapKycStatusColor(item.status),
@@ -326,6 +347,8 @@ function Accounts() {
                     domain: item.email || 'N/A',
                     country: item.country || 'N/A',
                     tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    riskLevel: null,
+                    hasCompanyMismatch: false,
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
                     status: statusLabel,
                     statusColor: statusColor,
@@ -400,6 +423,8 @@ function Accounts() {
                     domain: item.email || 'N/A',
                     country: item.companyCountry || 'N/A',
                     tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    riskLevel: item.riskLevel || item.kyc?.riskLevel || null,
+                    hasCompanyMismatch: Boolean(item.hasCompanyMismatch ?? item.kyc?.hasCompanyMismatch),
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
                     status: statusLabel,
                     statusColor: statusColor,
@@ -488,6 +513,8 @@ function Accounts() {
                     domain: item.email || 'N/A',
                     country: item.companyCountry || 'N/A',
                     tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
+                    riskLevel: item.riskLevel || item.kyc?.riskLevel || null,
+                    hasCompanyMismatch: Boolean(item.hasCompanyMismatch ?? item.kyc?.hasCompanyMismatch),
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
                     status: statusLabel,
                     statusColor: statusColor,
@@ -550,6 +577,7 @@ function Accounts() {
     };
 
     const accounts = getCurrentTabData();
+    const dataTableColSpan = isProfessionalTab ? 6 : 8;
 
     // Tab-specific stats
     const getTabStats = () => {
@@ -796,7 +824,7 @@ function Accounts() {
         const currentData = getFilteredAccounts();
         const headers = isProfessionalTab
             ? ['ID', 'Name', 'Country', 'Tier', 'Last Active', 'Status']
-            : ['ID', 'Name', 'Company', 'Domain', 'Country', 'Tier', 'Last Active', 'Status'];
+            : ['ID', 'Name', 'Company', 'Domain', 'Country', 'Tier', 'Risk', 'Last Active', 'Status'];
         const csvRows = [headers.join(',')];
 
         currentData.forEach(account => {
@@ -816,6 +844,7 @@ function Accounts() {
                     `"${account.domain}"`,
                     account.country,
                     account.tier,
+                    `"${accountRiskDisplay(activeTab, account).text}${account.hasCompanyMismatch ? ' (company mismatch)' : ''}"`,
                     `"${account.lastActive}"`,
                     account.status
                 ];
@@ -1180,6 +1209,11 @@ function Accounts() {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Tier
                                 </th>
+                                {!isProfessionalTab && (
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                        Risk
+                                    </th>
+                                )}
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Last Active
                                 </th>
@@ -1194,49 +1228,49 @@ function Accounts() {
                         <tbody className="bg-white divide-y divide-gray-100">
                             {activeTab === 'KYC Status' && isLoadingKyc ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-gray-500">
                                         Loading KYC submissions...
                                     </td>
                                 </tr>
                             ) : activeTab === 'KYC Status' && kycError ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-red-500">
                                         {kycError}
                                     </td>
                                 </tr>
                             ) : activeTab === 'Professionals' && isLoadingProfessionals ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-gray-500">
                                         Loading professionals...
                                     </td>
                                 </tr>
                             ) : activeTab === 'Professionals' && professionalsError ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-red-500">
                                         {professionalsError}
                                     </td>
                                 </tr>
                             ) : activeTab === 'Recruiters' && isLoadingRecruiters ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-gray-500">
                                         Loading recruiters...
                                     </td>
                                 </tr>
                             ) : activeTab === 'Recruiters' && recruitersError ? (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-red-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-red-500">
                                         {recruitersError}
                                     </td>
                                 </tr>
                             ) : activeTab === 'Training Providers' && isLoadingTrainers ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-gray-500">
                                         Loading training providers...
                                     </td>
                                 </tr>
                             ) : activeTab === 'Training Providers' && trainersError ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-red-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-red-500">
                                         {trainersError}
                                     </td>
                                 </tr>
@@ -1264,6 +1298,19 @@ function Accounts() {
                                                 {account.tier}
                                             </span>
                                         </td>
+                                        {!isProfessionalTab && (() => {
+                                            const risk = accountRiskDisplay(activeTab, account);
+                                            return (
+                                                <td className="px-4 py-4">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className={`text-sm ${riskCellTextClass(risk.text)}`}>{risk.text}</span>
+                                                        {risk.mismatch && (
+                                                            <span className="text-xs font-semibold text-amber-700">Company mismatch</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })()}
                                         <td className="px-4 py-4">
                                             <span className="text-sm text-gray-600">{account.lastActive}</span>
                                         </td>
@@ -1305,7 +1352,7 @@ function Accounts() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={isProfessionalTab ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan={dataTableColSpan} className="px-4 py-8 text-center text-gray-500">
                                         No accounts found matching your filters.
                                     </td>
                                 </tr>

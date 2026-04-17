@@ -181,16 +181,25 @@ class AuthService {
     }
 
     /**
-     * Get Company Preview (Step 5a)
-     * @param {string} url - The company website URL
-     * @returns {Promise<Object>} Response shape: { status, data: { name, logo } }
+     * Lookup company from public sources (Gemini + Google Search grounding).
+     * @param {{ url?: string, organizationName?: string }} params — provide one of url or organizationName
+     * @returns {Promise<Object>} API JSON (may be nested under `data`)
      */
-    async getCompanyPreview(url) {
+    async lookupCompanyDetails(params = {}) {
+        const q = new URLSearchParams();
+        if (params.url) q.set('url', params.url.trim());
+        if (params.organizationName) q.set('organizationName', params.organizationName.trim());
+        const qs = q.toString();
+        if (!qs) {
+            throw new Error('lookupCompanyDetails requires url or organizationName');
+        }
         try {
-            const response = await httpClient.get(`${API_ENDPOINTS.RECRUITER.COMPANY_PREVIEW}?url=${encodeURIComponent(url)}`, { skipAuth: true });
-            return response;
+            return await httpClient.get(
+                `${API_ENDPOINTS.RECRUITER.COMPANY_DETAILS_LOOKUP}?${qs}`,
+                { skipAuth: true }
+            );
         } catch (error) {
-            console.error('Get Company Preview error:', error);
+            console.error('Company details lookup error:', error);
             throw error;
         }
     }
@@ -207,7 +216,7 @@ class AuthService {
      * @param {string} detailsData.companyCountry
      * @param {string} detailsData.website
      * @param {string} detailsData.companyLinkedIn
-     * @returns {Promise<Object>} Response shape: { status, data: { registrationStep } }
+     * @returns {Promise<Object>} May include `mismatchDetected`, `riskLevel` (LOW | HIGH) from verification
      */
     async setRecruiterCompanyDetails(detailsData) {
         try {

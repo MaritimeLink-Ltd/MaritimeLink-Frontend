@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import jobService from '../../../../services/jobService';
 import {
     AlertCircle,
     Briefcase,
@@ -18,6 +19,7 @@ import {
     Headphones,
     MessageSquare,
     Ship,
+    Sparkles,
     Star,
     Wallet,
     X,
@@ -28,6 +30,18 @@ const toDisplayDate = (value) => {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return 'N/A';
     return d.toLocaleDateString('en-GB');
+};
+
+const isPdfDocument = (url, mimeType) => {
+    if (mimeType && String(mimeType).toLowerCase().includes('pdf')) return true;
+    return typeof url === 'string' && /\.pdf(\?|$)/i.test(url);
+};
+
+const WALLET_APP_CATEGORY = 'APPLICATION_SUBMISSION';
+
+const formatWalletCategoryTitle = (category) => {
+    if (category === WALLET_APP_CATEGORY) return 'This job application';
+    return (category || '').split('_').filter(Boolean).map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') || 'Other';
 };
 
 const getDocStatus = (expiryDate) => {
@@ -52,18 +66,89 @@ const getStatusBadge = (status) => {
     }
 };
 
+/** Maps API `ApplicationStatus` to internal pipeline stage ids (JobDetail tabs / progress UI). */
 const mapApiStatusToStage = (status) => {
     const normalized = String(status || '').toUpperCase();
     const map = {
         APPLIED: null,
+        UNDER_REVIEW: 'under-review',
+        REVIEWING: 'under-review',
         SHORTLISTED: 'shortlisted',
+        INTERVIEW: 'interviewing',
+        INTERVIEWED: 'interviewing',
         INTERVIEWING: 'interviewing',
-        OFFERED: 'offer-sent',
+        OFFER: 'offered',
+        OFFERED: 'offered',
+        ACCEPTED: 'offered',
         HIRED: 'hired',
-        REJECTED: null,
+        REJECTED: 'rejected',
+        WITHDRAWN: 'withdrawn',
     };
     return map[normalized] ?? null;
 };
+
+/** Backend `ApplicationStatus` values — used to detect an application row vs a match/candidate stub. */
+const APPLICATION_STATUS_VALUES = new Set([
+    'APPLIED',
+    'SHORTLISTED',
+    'UNDER_REVIEW',
+    'REVIEWING',
+    'INTERVIEWED',
+    'INTERVIEWING',
+    'INTERVIEW',
+    'OFFERED',
+    'OFFER',
+    'ACCEPTED',
+    'HIRED',
+    'REJECTED',
+    'WITHDRAWN',
+]);
+
+function rawApplicantLooksLikeApplicationRow(raw) {
+    if (!raw || raw.id == null) return false;
+    const st = String(raw.status || '').toUpperCase();
+    if (APPLICATION_STATUS_VALUES.has(st)) return true;
+    if (raw.jobId != null || raw.job?.id != null) return true;
+    return false;
+}
+
+/**
+ * PATCH …/applicants/:id/status expects the job-application row id.
+ * Route `:candidateId` may be a professional id on some entry points — do not assume the URL alone is correct unless other context matches.
+ */
+function resolveApplicantRecordIdForStatusPatch(navState, urlCandidateId, fetchedRecord) {
+    const cd = navState?.candidateData;
+    const raw = cd?.rawApplicant;
+
+    if (navState?.fromJobDetail && cd?.id != null) {
+        return String(cd.id);
+    }
+
+    if (rawApplicantLooksLikeApplicationRow(raw)) {
+        return String(raw.id);
+    }
+
+    if (fetchedRecord?.application?.id != null) {
+        return String(fetchedRecord.application.id);
+    }
+    if (rawApplicantLooksLikeApplicationRow(fetchedRecord)) {
+        return String(fetchedRecord.id);
+    }
+
+    if (urlCandidateId) return String(urlCandidateId);
+    return null;
+}
+
+function formatStatusPatchError(err) {
+    const d = err?.data;
+    if (d && typeof d === 'object') {
+        const m = d.message ?? d.error;
+        if (Array.isArray(m)) return m.filter(Boolean).join('; ');
+        if (typeof m === 'string' && m.trim()) return m.trim();
+    }
+    if (typeof d === 'string' && d.trim()) return d.trim();
+    return err?.message || 'Could not update status';
+}
 
 const extractUpdatedByRole = (source) => {
     if (!source) return null;
@@ -108,11 +193,15 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         const stageMap = {
             new: null,
             matches: null,
+            'under-review': 'under-review',
             shortlisted: 'shortlisted',
             interviewing: 'interviewing',
-            offered: 'offer-sent',
+            offered: 'offered',
+            /** Legacy tab id from older UI */
+            'offer-sent': 'offered',
             hired: 'hired',
-            rejected: null,
+            rejected: 'rejected',
+            withdrawn: 'withdrawn',
         };
 
         return stageMap[status] !== undefined ? stageMap[status] : null;
@@ -123,13 +212,66 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [rejectReason, setRejectReason] = useState('');
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [statusUpdatedBy, setStatusUpdatedBy] = useState(null);
+    const [statusActionError, setStatusActionError] = useState('');
+
+    const statusPatchApplicationId = useMemo(
+        () => resolveApplicantRecordIdForStatusPatch(location.state, candidateId, fetchedCandidate),
+        [location.state, candidateId, fetchedCandidate],
+    );
 
     useEffect(() => {
         const fetchCandidateDetails = async () => {
             const rawApplicant = location.state?.candidateData?.rawApplicant;
+            const fromJobDetail = !!location.state?.fromJobDetail;
+            const rowFromJob = location.state?.candidateData;
+            const isMatchesRow = rowFromJob?.status === 'matches';
 
             if (!candidateId) {
                 setIsLoading(false);
+                return;
+            }
+
+            const recruiterApplicationFetchId =
+                !isAdmin && !isMatchesRow
+                    ? (fromJobDetail && rowFromJob?.id != null
+                        ? String(rowFromJob.id)
+                        : rawApplicantLooksLikeApplicationRow(rawApplicant) && rawApplicant?.id != null
+                            ? String(rawApplicant.id)
+                            : fromJobDetail
+                                ? String(candidateId)
+                                : null)
+                    : null;
+
+            if (!isAdmin && recruiterApplicationFetchId) {
+                try {
+                    setIsLoading(true);
+                    const response = await jobService.getApplicantDetails(recruiterApplicationFetchId, { asAdmin: false });
+                    const responseData = response?.data?.data || response?.data;
+                    if (responseData?.application) {
+                        setFetchedCandidate(responseData);
+                        const app = responseData.application;
+                        if (app?.status) setApplicationStage(mapApiStatusToStage(app.status));
+                        setStatusUpdatedBy(extractUpdatedByRole(responseData));
+                    } else if (responseData) {
+                        setFetchedCandidate({ application: responseData });
+                        const app = responseData;
+                        if (app?.status) setApplicationStage(mapApiStatusToStage(app.status));
+                        setStatusUpdatedBy(extractUpdatedByRole(responseData));
+                    } else if (rawApplicant) {
+                        setFetchedCandidate(rawApplicant);
+                        if (rawApplicant.status) setApplicationStage(mapApiStatusToStage(rawApplicant.status));
+                        setStatusUpdatedBy(extractUpdatedByRole(rawApplicant));
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch recruiter applicant details:', error);
+                    if (rawApplicant) {
+                        setFetchedCandidate(rawApplicant);
+                        if (rawApplicant.status) setApplicationStage(mapApiStatusToStage(rawApplicant.status));
+                        setStatusUpdatedBy(extractUpdatedByRole(rawApplicant));
+                    }
+                } finally {
+                    setIsLoading(false);
+                }
                 return;
             }
 
@@ -168,20 +310,29 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
             try {
                 setIsLoading(true);
-                const endpoint = isProfessionalView
-                    ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
-                    : API_ENDPOINTS.ADMIN.APPLICANT_DETAILS(candidateId);
-
-                const response = await httpClient.get(endpoint);
-                const responseData = response?.data?.data || response?.data;
-                const obj = isProfessionalView && responseData?.professional ? responseData.professional : responseData;
-
-                if (obj) {
-                    setFetchedCandidate(obj);
-                    if (obj.application?.status || obj.status) {
-                        setApplicationStage(mapApiStatusToStage(obj.application?.status || obj.status));
+                if (isProfessionalView) {
+                    const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId));
+                    const responseData = response?.data?.data || response?.data;
+                    const obj = responseData?.professional ? responseData.professional : responseData;
+                    if (obj) {
+                        setFetchedCandidate(obj);
+                        if (obj.application?.status || obj.status) {
+                            setApplicationStage(mapApiStatusToStage(obj.application?.status || obj.status));
+                        }
+                        setStatusUpdatedBy(extractUpdatedByRole(obj));
                     }
-                    setStatusUpdatedBy(extractUpdatedByRole(obj));
+                } else {
+                    const response = await jobService.getApplicantDetails(candidateId, { asAdmin: true });
+                    const responseData = response?.data?.data || response?.data;
+                    const obj = responseData;
+
+                    if (obj) {
+                        setFetchedCandidate(obj);
+                        if (obj.application?.status || obj.status) {
+                            setApplicationStage(mapApiStatusToStage(obj.application?.status || obj.status));
+                        }
+                        setStatusUpdatedBy(extractUpdatedByRole(obj));
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch candidate details:', error);
@@ -202,7 +353,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 professional: null,
                 resume: null,
                 attachedDocuments: [],
+                applicationAttachments: [],
                 cvUrl: null,
+                coverLetter: null,
+                coverLetterUrl: null,
                 fallback,
             };
         }
@@ -213,18 +367,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             return {
                 professional,
                 resume: application.resumeSnapshot || professional?.resume || null,
-                attachedDocuments: source.attachedDocuments || application.attachedDocuments || professional?.documents || [],
+                attachedDocuments:
+                    source.attachedDocuments || application.attachedDocuments || professional?.documents || [],
+                applicationAttachments: Array.isArray(application.attachedDocuments) ? application.attachedDocuments : [],
                 cvUrl: application.cvUrl || professional?.cvUrl || null,
+                coverLetter: application.coverLetter ?? null,
+                coverLetterUrl: application.coverLetterUrl ?? null,
                 fallback,
             };
         }
 
         if (source.professional) {
+            const isApplicationRow = rawApplicantLooksLikeApplicationRow(source);
             return {
                 professional: source.professional,
                 resume: source.resumeSnapshot || source.professional.resume || null,
                 attachedDocuments: source.attachedDocuments || source.professional.documents || [],
+                applicationAttachments:
+                    isApplicationRow && Array.isArray(source.attachedDocuments) ? source.attachedDocuments : [],
                 cvUrl: source.cvUrl || source.professional.cvUrl || null,
+                coverLetter: isApplicationRow ? (source.coverLetter ?? null) : null,
+                coverLetterUrl: isApplicationRow ? (source.coverLetterUrl ?? null) : null,
                 fallback,
             };
         }
@@ -233,12 +396,19 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             professional: source,
             resume: source.resume || null,
             attachedDocuments: source.documents || [],
+            applicationAttachments: [],
             cvUrl: source.cvUrl || null,
+            coverLetter: null,
+            coverLetterUrl: null,
             fallback,
         };
     };
 
-    const { professional, resume, attachedDocuments, cvUrl, fallback } = resolveApplicantData();
+    const { professional, resume, attachedDocuments, applicationAttachments, cvUrl, coverLetter, coverLetterUrl, fallback } =
+        resolveApplicantData();
+
+    /** Job applicant flow (recruiter/admin from job): wallet lists only what was submitted with the application. */
+    const walletJobApplicationOnly = !!location.state?.fromJobDetail || showApplicationStatus === true;
 
     const candidate = useMemo(() => {
         const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
@@ -271,6 +441,89 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     }, [professional, resume, fallback]);
 
     const documentWallet = useMemo(() => {
+        const applicationSubmissionDocs = [];
+
+        if (cvUrl) {
+            applicationSubmissionDocs.push({
+                id: 'wallet-app-cv',
+                category: WALLET_APP_CATEGORY,
+                name: 'CV / resume',
+                walletSubtitle: 'File submitted with this application',
+                expiryDate: '—',
+                status: 'valid',
+                url: cvUrl,
+                mimeType: isPdfDocument(cvUrl, null) ? 'application/pdf' : null,
+                uploadedOn: 'N/A',
+                verificationStatus: 'SUBMITTED',
+                walletKind: 'file',
+            });
+        }
+        if (coverLetterUrl) {
+            applicationSubmissionDocs.push({
+                id: 'wallet-app-cover-file',
+                category: WALLET_APP_CATEGORY,
+                name: 'Cover letter (document)',
+                walletSubtitle: 'Uploaded with this application',
+                expiryDate: '—',
+                status: 'valid',
+                url: coverLetterUrl,
+                mimeType: isPdfDocument(coverLetterUrl, null) ? 'application/pdf' : null,
+                uploadedOn: 'N/A',
+                verificationStatus: 'SUBMITTED',
+                walletKind: 'file',
+            });
+        }
+        if (typeof coverLetter === 'string' && coverLetter.trim()) {
+            const body = coverLetter.trim();
+            applicationSubmissionDocs.push({
+                id: 'wallet-app-cover-text',
+                category: WALLET_APP_CATEGORY,
+                name: 'Cover letter (written)',
+                walletSubtitle: body.length > 100 ? `${body.slice(0, 100)}…` : body,
+                expiryDate: '—',
+                status: 'valid',
+                url: '',
+                mimeType: null,
+                uploadedOn: 'N/A',
+                verificationStatus: 'SUBMITTED',
+                walletKind: 'text',
+                textContent: body,
+            });
+        }
+        (Array.isArray(applicationAttachments) ? applicationAttachments : []).forEach((d, idx) => {
+            applicationSubmissionDocs.push({
+                id: d.id || `wallet-app-attach-${idx}`,
+                category: WALLET_APP_CATEGORY,
+                name: d.name || 'Attached document',
+                walletSubtitle: formatWalletCategoryTitle(d.category),
+                expiryDate: toDisplayDate(d.expiryDate),
+                status: getDocStatus(d.expiryDate),
+                url: d.fileUrl || '',
+                mimeType: d.mimeType || null,
+                uploadedOn: toDisplayDate(d.createdAt),
+                verificationStatus: d.verificationStatus || 'PENDING',
+                walletKind: 'file',
+            });
+        });
+
+        if (walletJobApplicationOnly) {
+            const allDocs = applicationSubmissionDocs;
+            const categories = [...new Set(allDocs.map((d) => d.category))];
+            categories.sort((a, b) => {
+                if (a === WALLET_APP_CATEGORY) return -1;
+                if (b === WALLET_APP_CATEGORY) return 1;
+                return String(a).localeCompare(String(b));
+            });
+            return {
+                folders: categories.map((category) => ({
+                    id: category,
+                    categoryKey: category,
+                    name: formatWalletCategoryTitle(category),
+                    documents: allDocs.filter((d) => d.category === category),
+                })),
+            };
+        }
+
         const docsFromAttached = (Array.isArray(attachedDocuments) ? attachedDocuments : []).map((d) => ({
             id: d.id,
             category: d.category || 'OTHER',
@@ -278,8 +531,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             expiryDate: toDisplayDate(d.expiryDate),
             status: getDocStatus(d.expiryDate),
             url: d.fileUrl || '',
+            mimeType: d.mimeType || null,
             uploadedOn: toDisplayDate(d.createdAt),
             verificationStatus: d.verificationStatus || 'PENDING',
+            walletKind: 'file',
         }));
 
         const resumeDocs = [];
@@ -292,8 +547,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     expiryDate: toDisplayDate(item?.expiryDate),
                     status: getDocStatus(item?.expiryDate),
                     url: item?.fileUrl || '',
+                    mimeType: item?.mimeType || null,
                     uploadedOn: 'N/A',
                     verificationStatus: 'N/A',
+                    walletKind: 'file',
                 });
             });
         };
@@ -303,72 +560,90 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         pushResumeDoc('TRAVEL_DOCUMENTS', resume?.travelDocuments, 'Travel Document');
         pushResumeDoc('STCW_CERTIFICATES', resume?.stcwCertificates, 'STCW Certificate');
 
-        const allDocs = [...docsFromAttached, ...resumeDocs];
+        const allDocs = [...applicationSubmissionDocs, ...docsFromAttached, ...resumeDocs];
         const categories = [...new Set(allDocs.map((d) => d.category))];
+        categories.sort((a, b) => {
+            if (a === WALLET_APP_CATEGORY) return -1;
+            if (b === WALLET_APP_CATEGORY) return 1;
+            return String(a).localeCompare(String(b));
+        });
 
         return {
-            folders: categories.map((category, idx) => ({
-                id: idx + 1,
-                name: (category || '').split('_').filter(Boolean).map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') || 'Other',
+            folders: categories.map((category) => ({
+                id: category,
+                categoryKey: category,
+                name: formatWalletCategoryTitle(category),
                 documents: allDocs.filter((d) => d.category === category),
             })),
         };
-    }, [attachedDocuments, resume]);
+    }, [attachedDocuments, resume, cvUrl, coverLetter, coverLetterUrl, applicationAttachments, walletJobApplicationOnly]);
 
     const shouldShowApplicationStatus = (showApplicationStatus || location.state?.fromJobDetail) && location.state?.applicantStatus !== 'matches';
+    /** Visible stepper only (UNDER_REVIEW / APPLIED use `applicationStage` null or `under-review` — not shown here). */
     const stages = [
         { id: 'shortlisted', label: 'Shortlisted' },
-        { id: 'interviewing', label: 'Interviewing' },
-        { id: 'offer-sent', label: 'Offer Sent' },
+        { id: 'interviewing', label: 'Interview' },
+        { id: 'offered', label: 'Offer' },
         { id: 'hired', label: 'Hired' },
     ];
     const currentStageIndex = applicationStage ? stages.findIndex((stage) => stage.id === applicationStage) : -1;
 
     const getNextStageInfo = () => {
+        if (applicationStage === 'rejected' || applicationStage === 'withdrawn') {
+            return {
+                nextStage: null,
+                buttonText: applicationStage === 'withdrawn' ? 'Withdrawn' : 'Rejected',
+            };
+        }
+
         if (!applicationStage) {
-            return { nextStage: 'shortlisted', buttonText: 'Move To Shortlisted' };
+            return { nextStage: 'under-review', buttonText: 'Start review' };
         }
 
         const stageProgression = {
-            shortlisted: { nextStage: 'interviewing', buttonText: 'Move To Interviewing' },
-            interviewing: { nextStage: 'offer-sent', buttonText: 'Move To Offer Sent' },
-            'offer-sent': { nextStage: 'hired', buttonText: 'Move To Hired' },
+            'under-review': { nextStage: 'shortlisted', buttonText: 'Shortlist candidate' },
+            shortlisted: { nextStage: 'interviewing', buttonText: 'Move to interview' },
+            interviewing: { nextStage: 'offered', buttonText: 'Send offer' },
+            offered: { nextStage: 'hired', buttonText: 'Mark hired' },
             hired: { nextStage: null, buttonText: 'Hired' },
         };
 
-        return stageProgression[applicationStage] || { nextStage: 'hired', buttonText: 'Move To Hired' };
+        return stageProgression[applicationStage] || { nextStage: null, buttonText: 'Hired' };
     };
 
     const nextStageInfo = getNextStageInfo();
 
+    /** Target stage id -> API `ApplicationStatus` for PATCH. */
     const stageToApiStatus = {
+        'under-review': 'UNDER_REVIEW',
         shortlisted: 'SHORTLISTED',
-        interviewing: 'INTERVIEWING',
-        'offer-sent': 'OFFERED',
+        interviewing: 'INTERVIEW',
+        offered: 'OFFER',
         hired: 'HIRED',
         rejected: 'REJECTED',
     };
 
-    const getStatusUpdateEndpoint = () => {
-        if (!candidateId) return null;
-        return isAdmin
-            ? API_ENDPOINTS.ADMIN.UPDATE_APPLICANT_STATUS(candidateId)
-            : API_ENDPOINTS.RECRUITER.UPDATE_APPLICANT_STATUS(candidateId);
-    };
-
-    const updateApplicantStatus = async (nextStage, reason) => {
-        const endpoint = getStatusUpdateEndpoint();
+    const updateApplicantStatus = async (nextStage) => {
         const status = stageToApiStatus[nextStage];
 
-        if (!endpoint || !status) return false;
+        if (!status) {
+            setStatusActionError('Invalid stage update.');
+            return false;
+        }
 
-        const payload = reason
-            ? { status, reason }
-            : { status };
+        if (!statusPatchApplicationId) {
+            setStatusActionError(
+                'Missing job application id. Open this profile from the job’s applicant list (not matches-only) so the correct application can be updated.',
+            );
+            return false;
+        }
 
         setIsUpdatingStatus(true);
+        setStatusActionError('');
         try {
-            const response = await httpClient.patch(endpoint, payload);
+            const response = await jobService.updateApplicantStatus(statusPatchApplicationId, status, {
+                asAdmin: isAdmin,
+            });
             const responseData = response?.data?.data || response?.data || response;
 
             const roleFromResponse = extractUpdatedByRole(responseData);
@@ -376,6 +651,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             return true;
         } catch (error) {
             console.error('Failed to update applicant status:', error);
+            setStatusActionError(formatStatusPatchError(error));
             return false;
         } finally {
             setIsUpdatingStatus(false);
@@ -592,19 +868,35 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 <button
                                     onClick={() => setShowRejectModal(true)}
                                     className="h-8 px-5 rounded-full text-red-600 bg-[#f8e7ea] hover:bg-[#f3dde1] transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                                    disabled={isUpdatingStatus}
+                                    disabled={
+                                        isUpdatingStatus ||
+                                        applicationStage === 'rejected' ||
+                                        applicationStage === 'withdrawn' ||
+                                        applicationStage === 'hired'
+                                    }
                                 >
                                     Reject Candidate
                                 </button>
                                 <button
                                     onClick={moveToNextStage}
                                     className="h-8 bg-[#003971] text-white px-7 rounded-full text-sm font-medium hover:bg-[#002f61] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                    disabled={!nextStageInfo.nextStage || isUpdatingStatus}
+                                    disabled={
+                                        !nextStageInfo.nextStage ||
+                                        isUpdatingStatus ||
+                                        applicationStage === 'rejected' ||
+                                        applicationStage === 'withdrawn'
+                                    }
                                 >
                                     {isUpdatingStatus ? 'Updating...' : nextStageInfo.buttonText}
                                 </button>
                             </div>
                         </div>
+
+                        {statusActionError ? (
+                            <p className="mb-4 text-sm font-medium text-red-600" role="alert">
+                                {statusActionError}
+                            </p>
+                        ) : null}
 
                         <div className="relative px-6 pt-1">
                             <div className="absolute left-10 right-10 top-3.5 h-px bg-[#d4d9df]" />
@@ -613,7 +905,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 style={{ width: currentStageIndex < 0 ? '0%' : `calc((100% - 5rem) * ${(currentStageIndex / Math.max(1, stages.length - 1)).toFixed(4)})` }}
                             />
 
-                            <div className="relative grid grid-cols-4 gap-2">
+                            <div className="relative grid grid-cols-4 gap-1 sm:gap-2">
                                 {stages.map((stage, idx) => {
                                     const isCompleted = idx < currentStageIndex;
                                     const isCurrent = idx === currentStageIndex;
@@ -688,7 +980,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 <button
                                     onClick={() => {
                                         if (!rejectReason.trim()) return;
-                                        updateApplicantStatus('rejected', rejectReason.trim()).then((updated) => {
+                                        updateApplicantStatus('rejected').then((updated) => {
                                             if (!updated) return;
                                             setShowRejectModal(false);
                                             setRejectReason('');
@@ -711,7 +1003,11 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#003971] mb-1">Document Wallet</h3>
-                                    <p className="text-sm text-gray-600">Documents from applicant profile and resume snapshot</p>
+                                    <p className="text-sm text-gray-600">
+                                        {walletJobApplicationOnly
+                                            ? 'Only the CV, cover letter, and files the candidate included when they applied for this job.'
+                                            : 'Documents from this application submission, profile wallet, and resume-linked certificates.'}
+                                    </p>
                                 </div>
                                 <button onClick={() => setShowDocumentWallet(false)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                     <X className="h-6 w-6" />
@@ -719,55 +1015,108 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6">
-                                <div className="space-y-4">
-                                    {documentWallet.folders.length > 0 ? documentWallet.folders.map((folder) => (
-                                        <div key={folder.id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="bg-[#003971] p-2.5 rounded-lg">
-                                                    <Folder className="h-5 w-5 text-white" />
+                                <div className="space-y-5">
+                                    {documentWallet.folders.length > 0 ? documentWallet.folders.map((folder) => {
+                                        const isApplicationFolder = folder.categoryKey === WALLET_APP_CATEGORY;
+                                        return (
+                                            <div
+                                                key={folder.id}
+                                                className={
+                                                    isApplicationFolder
+                                                        ? 'rounded-2xl border-2 border-[#003971]/20 bg-gradient-to-br from-slate-50 via-white to-[#EBF3FF] p-5 shadow-sm'
+                                                        : 'bg-gray-50 rounded-xl p-5 border border-gray-200'
+                                                }
+                                            >
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div
+                                                        className={
+                                                            isApplicationFolder
+                                                                ? 'bg-gradient-to-br from-[#003971] to-[#002855] p-2.5 rounded-xl shadow-md'
+                                                                : 'bg-[#003971] p-2.5 rounded-lg'
+                                                        }
+                                                    >
+                                                        {isApplicationFolder ? (
+                                                            <Sparkles className="h-5 w-5 text-white" />
+                                                        ) : (
+                                                            <Folder className="h-5 w-5 text-white" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900">{folder.name}</h4>
+                                                        <p className="text-sm text-gray-600">
+                                                            {isApplicationFolder
+                                                                ? 'CV, cover letter, and documents included when they applied'
+                                                                : `${folder.documents.length} document(s)`}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-900">{folder.name}</h4>
-                                                    <p className="text-sm text-gray-600">{folder.documents.length} documents</p>
-                                                </div>
-                                            </div>
 
-                                            <div className="space-y-2">
-                                                {folder.documents.map((doc) => {
-                                                    const badge = getStatusBadge(doc.status);
-                                                    return (
-                                                        <div key={doc.id} className="bg-white rounded-lg p-4 border border-gray-200">
-                                                            <div className="flex items-start justify-between gap-4">
-                                                                <div className="flex items-start gap-3 flex-1">
-                                                                    <File className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="font-medium text-gray-900 mb-1">{doc.name}</p>
-                                                                        <div className="text-sm text-gray-600 flex items-center gap-2">
-                                                                            <Calendar className="h-4 w-4" />
-                                                                            <span>Expires: {doc.expiryDate}</span>
+                                                <div className="space-y-2">
+                                                    {folder.documents.map((doc) => {
+                                                        const isSubmitted = doc.verificationStatus === 'SUBMITTED';
+                                                        const badge = isSubmitted
+                                                            ? { label: 'Submitted', cls: 'bg-[#003971]/10 text-[#003971]', icon: <Check className="h-4 w-4" /> }
+                                                            : getStatusBadge(doc.status);
+                                                        const isText = doc.walletKind === 'text';
+                                                        return (
+                                                            <div
+                                                                key={doc.id}
+                                                                className={
+                                                                    isApplicationFolder
+                                                                        ? 'bg-white/95 rounded-xl p-4 border border-[#003971]/10 shadow-sm'
+                                                                        : 'bg-white rounded-lg p-4 border border-gray-200'
+                                                                }
+                                                            >
+                                                                <div className="flex items-start justify-between gap-4">
+                                                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                                        {isText ? (
+                                                                            <FileText className="h-5 w-5 text-[#003971] mt-0.5 flex-shrink-0" />
+                                                                        ) : (
+                                                                            <File className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                                        )}
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="font-medium text-gray-900 mb-0.5">{doc.name}</p>
+                                                                            {doc.walletSubtitle ? (
+                                                                                <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{doc.walletSubtitle}</p>
+                                                                            ) : null}
+                                                                            {!isText ? (
+                                                                                <div className="text-sm text-gray-600 flex items-center gap-2 mt-1.5">
+                                                                                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                                                                                    <span>Expires: {doc.expiryDate}</span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <p className="text-xs text-gray-500 mt-1.5">Written in application form — open to read full text</p>
+                                                                            )}
                                                                         </div>
                                                                     </div>
-                                                                </div>
 
-                                                                <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-                                                                    <div className={`${badge.cls} px-3 py-1.5 rounded-lg font-medium text-sm flex items-center gap-1.5`}>
-                                                                        {badge.icon}
-                                                                        {badge.label}
+                                                                    <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                                                        <div className={`${badge.cls} px-3 py-1.5 rounded-lg font-medium text-sm flex items-center gap-1.5`}>
+                                                                            {badge.icon}
+                                                                            {badge.label}
+                                                                        </div>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setSelectedDocument(doc)}
+                                                                            className="p-2 text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
+                                                                            title={isText ? 'Read cover letter' : 'View document'}
+                                                                        >
+                                                                            <Eye className="h-5 w-5" />
+                                                                        </button>
                                                                     </div>
-
-                                                                    <button onClick={() => setSelectedDocument(doc)} className="p-2 text-[#003971] hover:bg-blue-50 rounded-lg transition-colors" title="View Document">
-                                                                        <Eye className="h-5 w-5" />
-                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )) : (
+                                        );
+                                    }) : (
                                         <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 text-sm text-gray-600">
-                                            No documents available.
+                                            {walletJobApplicationOnly
+                                                ? 'No application documents to show (the candidate may not have attached a CV, cover letter, or extra files for this job).'
+                                                : 'No documents available.'}
                                         </div>
                                     )}
                                 </div>
@@ -786,25 +1135,36 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
                         <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl">
                             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                <div className="flex items-center gap-4">
-                                    <button onClick={() => setSelectedDocument(null)} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <button onClick={() => setSelectedDocument(null)} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
                                         <ChevronLeft className="h-6 w-6" />
                                     </button>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-gray-900">{selectedDocument.name}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-xl font-bold text-gray-900 truncate">{selectedDocument.name}</h3>
                                         <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                            <Calendar className="h-4 w-4" />
-                                            Expiry: {selectedDocument.expiryDate}
+                                            {selectedDocument.walletKind === 'text' ? (
+                                                <>
+                                                    <FileText className="h-4 w-4 flex-shrink-0" />
+                                                    <span>Written cover letter</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                                                    <span>Expires: {selectedDocument.expiryDate}</span>
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-shrink-0">
                                     <button
+                                        type="button"
                                         onClick={() => {
                                             if (selectedDocument.url) window.open(selectedDocument.url, '_blank', 'noopener,noreferrer');
                                         }}
-                                        className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="Download"
+                                        disabled={!selectedDocument.url}
+                                        className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                        title="Open / download file"
                                     >
                                         <Download className="h-5 w-5" />
                                     </button>
@@ -814,26 +1174,38 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 </div>
                             </div>
 
-                            <div className="flex-1 bg-gray-100 p-6 overflow-auto flex items-center justify-center">
-                                <div className="bg-white shadow-lg rounded-xl overflow-hidden max-w-2xl w-full aspect-[3/4] flex flex-col relative">
-                                    <div className="flex-1 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                        {selectedDocument.url ? (
-                                            /\.pdf(\?|$)/i.test(selectedDocument.url) ? (
-                                                <iframe src={selectedDocument.url} title="Document Preview" className="w-full h-full" />
+                            <div className="flex-1 bg-gray-100 p-6 overflow-auto flex items-stretch justify-center">
+                                <div
+                                    className={`bg-white shadow-lg rounded-xl overflow-hidden max-w-2xl w-full flex flex-col relative ${
+                                        selectedDocument.walletKind === 'text' ? 'min-h-[320px] max-h-full' : 'aspect-[3/4] max-h-[calc(85vh-8rem)]'
+                                    }`}
+                                >
+                                    <div className="flex-1 bg-gray-50 flex flex-col min-h-0 overflow-hidden">
+                                        {selectedDocument.walletKind === 'text' && selectedDocument.textContent ? (
+                                            <div className="flex-1 overflow-auto p-6 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                                                {selectedDocument.textContent}
+                                            </div>
+                                        ) : selectedDocument.url ? (
+                                            isPdfDocument(selectedDocument.url, selectedDocument.mimeType) ? (
+                                                <iframe src={selectedDocument.url} title="Document Preview" className="w-full min-h-[50vh] flex-1 border-0" />
                                             ) : (
                                                 <img src={selectedDocument.url} alt="Document Preview" className="w-full h-full object-contain" />
                                             )
                                         ) : (
-                                            <div className="text-sm font-medium text-gray-500">No preview available</div>
+                                            <div className="flex-1 flex items-center justify-center text-sm font-medium text-gray-500 p-6">
+                                                No preview available
+                                            </div>
                                         )}
                                     </div>
 
-                                    <div className="p-4 bg-white flex items-center justify-between border-t border-gray-100">
-                                        <div className="text-xs">
-                                            <p className="font-bold text-gray-900">{selectedDocument.name}</p>
-                                            <p className="text-gray-500">Uploaded on {selectedDocument.uploadedOn || 'N/A'}</p>
+                                    <div className="p-4 bg-white flex items-center justify-between border-t border-gray-100 gap-3">
+                                        <div className="text-xs min-w-0">
+                                            <p className="font-bold text-gray-900 truncate">{selectedDocument.name}</p>
+                                            <p className="text-gray-500 truncate">
+                                                {selectedDocument.walletKind === 'text' ? 'Submitted with application' : `Uploaded on ${selectedDocument.uploadedOn || 'N/A'}`}
+                                            </p>
                                         </div>
-                                        <span className="text-xs font-bold text-[#003971] bg-blue-50 px-2 py-1 rounded">
+                                        <span className="text-xs font-bold text-[#003971] bg-blue-50 px-2 py-1 rounded flex-shrink-0">
                                             {selectedDocument.verificationStatus || 'PENDING'}
                                         </span>
                                     </div>

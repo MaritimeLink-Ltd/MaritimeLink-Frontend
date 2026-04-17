@@ -98,7 +98,7 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
         { id: 'new', label: 'New', count: 2 },
         { id: 'matches', label: 'Matches', count: 2 },
         { id: 'shortlisted', label: 'Shortlisted', count: 2 },
-        { id: 'interviewing', label: 'Interviewing', count: 1 },
+        { id: 'interviewing', label: 'Interviewed', count: 1 },
         { id: 'offered', label: 'Offered', count: 1 },
         { id: 'hired', label: 'Hired', count: 1 }
     ];
@@ -108,7 +108,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 1,
             name: 'Sarah Johnson',
             age: 28,
-            image: 'https://i.pravatar.cc/150?img=45',
             rank: 'Chief Engineer',
             availability: 'Meyer Avance',
             availabilitySubtext: 'Master',
@@ -122,7 +121,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 2,
             name: 'Michael Brown',
             age: 34,
-            image: 'https://i.pravatar.cc/150?img=12',
             rank: 'Chief Engineer',
             availability: 'BW Pavilion Arches',
             availabilitySubtext: '3rd Officer',
@@ -137,7 +135,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 3,
             name: 'Ali Shahzaib',
             age: 31,
-            image: 'https://i.pravatar.cc/150?img=33',
             rank: 'Chief Engineer',
             availability: 'Meyer Avance',
             availabilitySubtext: 'LNG Tanker',
@@ -151,7 +148,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 4,
             name: 'James Wilson',
             age: 45,
-            image: 'https://i.pravatar.cc/150?img=68',
             rank: 'Chief Engineer',
             availability: 'GasLog Genesis',
             availabilitySubtext: 'LNG Tanker',
@@ -165,7 +161,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 5,
             name: 'Omar Farooq',
             age: 29,
-            image: 'https://i.pravatar.cc/150?img=52',
             rank: 'Chief Engineer',
             availability: 'CleanTech Spirit',
             availabilitySubtext: 'Offshore Supply Vessel',
@@ -180,7 +175,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 6,
             name: 'David Chen',
             age: 38,
-            image: 'https://i.pravatar.cc/150?img=15',
             rank: 'Chief Engineer',
             availability: 'Pacific Explorer',
             availabilitySubtext: 'LNG Tanker',
@@ -194,7 +188,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 7,
             name: 'Emma Rodriguez',
             age: 32,
-            image: 'https://i.pravatar.cc/150?img=47',
             rank: 'Chief Engineer',
             availability: 'Atlantic Star',
             availabilitySubtext: 'Container Ship',
@@ -208,7 +201,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 8,
             name: 'John Smith',
             age: 42,
-            image: 'https://i.pravatar.cc/150?img=13',
             rank: 'Chief Engineer',
             availability: 'Nordic Voyager',
             availabilitySubtext: 'LNG Tanker',
@@ -222,7 +214,6 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
             id: 9,
             name: 'Maria Santos',
             age: 35,
-            image: 'https://i.pravatar.cc/150?img=44',
             rank: 'Chief Engineer',
             availability: 'Ocean Princess',
             availabilitySubtext: 'Cruise Ship',
@@ -516,11 +507,13 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
                                 <tr key={applicant.id} className="border-b border-gray-100 hover:bg-[#EBF3FF]/30 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <img
-                                                src={applicant.image}
-                                                alt={applicant.name}
-                                                className="h-10 w-10 rounded-full object-cover"
-                                            />
+                                            {applicant.image ? (
+                                                <img
+                                                    src={applicant.image}
+                                                    alt=""
+                                                    className="h-10 w-10 rounded-full object-cover shrink-0"
+                                                />
+                                            ) : null}
                                             <div>
                                                 <div className="font-bold text-gray-900">{applicant.name}</div>
                                                 <div className="text-xs text-gray-500">Age: {applicant.age}</div>

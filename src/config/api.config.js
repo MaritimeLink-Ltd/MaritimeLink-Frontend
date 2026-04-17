@@ -68,13 +68,15 @@ export const API_ENDPOINTS = {
     RESEND_OTP: '/api/recruiter/resend-otp',
     PERSONAL_INFO: '/api/recruiter/personal-info',
     VERIFY_PHONE: '/api/recruiter/verify-phone',
-    COMPANY_PREVIEW: '/api/recruiter/company-preview',
+    /** Gemini + Google Search grounding preview (registration / optional UI). */
+    COMPANY_DETAILS_LOOKUP: '/api/recruiter/company-details/lookup',
     COMPANY_DETAILS: '/api/recruiter/company-details',
     COMPLIANCE: '/api/recruiter/compliance',
     LOGIN: '/api/recruiter/login',
     FORGOT_PASSWORD: '/api/recruiter/forgot-password',
     RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
     UPDATE_PASSWORD: '/api/recruiter/update-password',
+    APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
   },
   // Recruiter KYC Endpoints

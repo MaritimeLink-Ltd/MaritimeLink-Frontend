@@ -142,7 +142,7 @@ function buildRiskAnalysisDisplay(profileData) {
         };
     }
 
-    if (kyc?.mismatchDetected) {
+    if (kyc?.mismatchDetected || profileData?.hasCompanyMismatch || kyc?.hasCompanyMismatch) {
         return {
             row1Label: 'Risk tier',
             row1Value: 'Mismatch flagged',
@@ -198,6 +198,138 @@ function hasKycAddressVerified(kyc) {
     return Boolean(kyc.addressProofUrl || kyc.addressDocumentUrl || kyc.utilityBillUrl);
 }
 
+/** Structured company vs web-source mismatches (e.g. GEMINI_GOOGLE_SEARCH). */
+function getCompanyMismatchPayload(kyc) {
+    if (!kyc || typeof kyc !== 'object') return null;
+    if (kyc.companyMismatch && typeof kyc.companyMismatch === 'object') return kyc.companyMismatch;
+    const raw = kyc.mismatchDetails;
+    if (raw && typeof raw === 'object' && (raw.source || Array.isArray(raw.mismatches))) return raw;
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && (parsed.source || Array.isArray(parsed.mismatches))) {
+                return parsed;
+            }
+        } catch {
+            return null;
+        }
+    }
+    return null;
+}
+
+function humanizeFieldKey(field) {
+    if (!field) return 'Field';
+    return String(field)
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/_/g, ' ')
+        .replace(/^./, (s) => s.toUpperCase())
+        .trim();
+}
+
+function formatHttpErrorMessage(err) {
+    const d = err?.data;
+    if (d && typeof d === 'object') {
+        const m = d.message ?? d.error;
+        if (Array.isArray(m)) return m.filter(Boolean).join('; ');
+        if (typeof m === 'string' && m.trim()) return m.trim();
+    }
+    if (typeof d === 'string' && d.trim()) return d.trim();
+    return err?.message || 'Request failed';
+}
+
+function extractCreatedNoteFromPostResponse(response) {
+    if (!response || typeof response !== 'object') return null;
+    const inner = response.data && typeof response.data === 'object' ? response.data : null;
+    return (
+        response.note ||
+        inner?.note ||
+        response.adminNote ||
+        inner?.adminNote ||
+        (Array.isArray(response.adminNotes) ? response.adminNotes[0] : null) ||
+        (Array.isArray(inner?.adminNotes) ? inner.adminNotes[0] : null) ||
+        (Array.isArray(response.notes) ? response.notes[0] : null) ||
+        (Array.isArray(inner?.notes) ? inner.notes[0] : null) ||
+        null
+    );
+}
+
+function mapApiNoteToUi(apiNote, fallbackContent) {
+    const c = apiNote?.content ?? apiNote?.text ?? apiNote?.note ?? fallbackContent;
+    const createdAt = apiNote?.createdAt ? new Date(apiNote.createdAt).toLocaleString() : 'Just now';
+    const author = apiNote?.author ?? apiNote?.admin?.email ?? apiNote?.createdBy ?? 'You (Admin)';
+    const initials = (() => {
+        const email = apiNote?.admin?.email;
+        if (email && typeof email === 'string') {
+            return email
+                .split('@')[0]
+                .split(/[.\s_-]/)
+                .filter(Boolean)
+                .map((p) => p[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+        }
+        return String(author).substring(0, 2).toUpperCase() || 'AD';
+    })();
+    return {
+        id: apiNote?.id ?? Date.now(),
+        author,
+        initials,
+        time: createdAt,
+        content: (c || '').trim(),
+    };
+}
+
+/** POST admin note — tries common paths/bodies (backends vary). */
+async function postAccountAdminNote(client, { accountId, isTrainer, content }) {
+    const base = isTrainer
+        ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
+        : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
+    const trimmed = content.trim();
+    const attempts = [
+        { url: `${base}/notes`, body: { content: trimmed } },
+        { url: `${base}/notes`, body: { text: trimmed } },
+        { url: `${base}/notes`, body: { note: trimmed } },
+        { url: `${base}/admin-notes`, body: { content: trimmed } },
+        { url: `${base}/admin-note`, body: { content: trimmed } },
+    ];
+    let lastErr;
+    for (const { url, body } of attempts) {
+        try {
+            return await client.post(url, body);
+        } catch (e) {
+            lastErr = e;
+            if (e.status === 404) continue;
+            throw e;
+        }
+    }
+    throw lastErr;
+}
+
+/** PATCH admin note — tries common paths/bodies. */
+async function patchAccountAdminNote(client, { accountId, isTrainer, noteId, content }) {
+    const base = isTrainer
+        ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
+        : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
+    const trimmed = content.trim();
+    const attempts = [
+        { url: `${base}/notes/${noteId}`, body: { content: trimmed } },
+        { url: `${base}/notes/${noteId}`, body: { text: trimmed } },
+        { url: `${base}/admin-notes/${noteId}`, body: { content: trimmed } },
+    ];
+    let lastErr;
+    for (const { url, body } of attempts) {
+        try {
+            return await client.patch(url, body);
+        } catch (e) {
+            lastErr = e;
+            if (e.status === 404) continue;
+            throw e;
+        }
+    }
+    throw lastErr;
+}
+
 function AccountProfile() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -209,6 +341,8 @@ function AccountProfile() {
     const [newNote, setNewNote] = useState('');
     const [showNoteNotification, setShowNoteNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
+    const [noteNotificationTone, setNoteNotificationTone] = useState('success');
+    const [isPostingNote, setIsPostingNote] = useState(false);
     const noteTextareaRef = useRef(null);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [editNoteContent, setEditNoteContent] = useState('');
@@ -306,6 +440,7 @@ function AccountProfile() {
                             courses: r.courses || [],
                             kyc: r.kyc,
                             riskLevel: r.kyc?.riskLevel ?? r.riskLevel ?? null,
+                            hasCompanyMismatch: Boolean(r.hasCompanyMismatch ?? r.kyc?.hasCompanyMismatch),
                             ipReputation: r.ipReputation || r.ipReputationStatus || null,
                         });
                         
@@ -383,6 +518,7 @@ function AccountProfile() {
             stage1Checks: { email: false, phone: false, company: false },
             stage2Checks: { idDocuments: false, addressVerified: false },
             riskLevel: null,
+            hasCompanyMismatch: false,
             ipReputation: null,
             isVerified: false,
         };
@@ -404,52 +540,62 @@ function AccountProfile() {
 
     // Handle posting a new note
     const handlePostNote = async () => {
-        if (newNote.trim()) {
-            if (isUUID) {
-                try {
-                    // For recruiter/trainer notes, use a generic note endpoint
-                    const noteEndpoint = isTrainerAccount
-                        ? `${API_ENDPOINTS.ADMIN.TRAINER_DETAIL(id)}/notes`
-                        : `${API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(id)}/notes`;
-                    
-                    await httpClient.post(noteEndpoint, {
-                        content: newNote.trim()
-                    });
-                    
-                    const newNoteObj = {
+        const text = newNote.trim();
+        if (!text) {
+            setNoteNotificationTone('error');
+            setNotificationMessage('Please enter a note before posting.');
+            setShowNoteNotification(true);
+            setTimeout(() => setShowNoteNotification(false), 4000);
+            return;
+        }
+        if (isUUID) {
+            setIsPostingNote(true);
+            try {
+                const response = await postAccountAdminNote(httpClient, {
+                    accountId: id,
+                    isTrainer: isTrainerAccount,
+                    content: text,
+                });
+                const apiNote = extractCreatedNoteFromPostResponse(response);
+                const newNoteObj = apiNote
+                    ? mapApiNoteToUi(apiNote, text)
+                    : {
                         id: Date.now(),
                         author: 'You (Admin)',
                         initials: 'AD',
                         time: 'Just now',
-                        content: newNote.trim()
+                        content: text,
                     };
-                    setNotes([newNoteObj, ...notes]);
-                    setNewNote('');
-                    setNotificationMessage('Note posted successfully!');
-                    setShowNoteNotification(true);
-                    setTimeout(() => setShowNoteNotification(false), 3000);
-                } catch (err) {
-                    console.error('Failed to post note:', err);
-                    setNotificationMessage('Failed to post note. Please try again.');
-                    setShowNoteNotification(true);
-                    setTimeout(() => setShowNoteNotification(false), 3000);
-                }
-            } else {
-                // Fallback for non-UUID accounts
-                const newNoteObj = {
-                    id: notes.length + 1,
-                    author: 'You (Admin)',
-                    initials: 'AD',
-                    time: 'Just now',
-                    content: newNote.trim()
-                };
                 setNotes([newNoteObj, ...notes]);
                 setNewNote('');
+                setNoteNotificationTone('success');
                 setNotificationMessage('Note posted successfully!');
                 setShowNoteNotification(true);
                 setTimeout(() => setShowNoteNotification(false), 3000);
+            } catch (err) {
+                console.error('Failed to post note:', err);
+                setNoteNotificationTone('error');
+                setNotificationMessage(`Could not save note: ${formatHttpErrorMessage(err)}`);
+                setShowNoteNotification(true);
+                setTimeout(() => setShowNoteNotification(false), 6000);
+            } finally {
+                setIsPostingNote(false);
             }
+            return;
         }
+        const newNoteObj = {
+            id: notes.length + 1,
+            author: 'You (Admin)',
+            initials: 'AD',
+            time: 'Just now',
+            content: text,
+        };
+        setNotes([newNoteObj, ...notes]);
+        setNewNote('');
+        setNoteNotificationTone('success');
+        setNotificationMessage('Note saved locally (demo account).');
+        setShowNoteNotification(true);
+        setTimeout(() => setShowNoteNotification(false), 3000);
     };
 
     // Handle Add New Note button click
@@ -468,34 +614,36 @@ function AccountProfile() {
 
     // Handle save edited note
     const handleSaveEdit = async (noteId) => {
-        if (editNoteContent.trim()) {
-            if (isUUID) {
-                try {
-                    // For recruiter/trainer notes, call update endpoint if available
-                    const noteUpdateEndpoint = isTrainerAccount
-                        ? `${API_ENDPOINTS.ADMIN.TRAINER_DETAIL(id)}/notes/${noteId}`
-                        : `${API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(id)}/notes/${noteId}`;
-                    
-                    await httpClient.patch(noteUpdateEndpoint, {
-                        content: editNoteContent.trim()
-                    });
-                } catch (err) {
-                    console.error('Failed to update note in API:', err);
-                    // Continue with local update anyway
-                }
+        if (!editNoteContent.trim()) return;
+        if (isUUID) {
+            try {
+                await patchAccountAdminNote(httpClient, {
+                    accountId: id,
+                    isTrainer: isTrainerAccount,
+                    noteId,
+                    content: editNoteContent.trim(),
+                });
+            } catch (err) {
+                console.error('Failed to update note in API:', err);
+                setNoteNotificationTone('error');
+                setNotificationMessage(`Could not update note: ${formatHttpErrorMessage(err)}`);
+                setShowNoteNotification(true);
+                setTimeout(() => setShowNoteNotification(false), 6000);
+                return;
             }
-            
-            setNotes(notes.map(note =>
-                note.id === noteId
-                    ? { ...note, content: editNoteContent.trim() }
-                    : note
-            ));
-            setEditingNoteId(null);
-            setEditNoteContent('');
-            setNotificationMessage('Note updated successfully!');
-            setShowNoteNotification(true);
-            setTimeout(() => setShowNoteNotification(false), 3000);
         }
+
+        setNotes(notes.map((note) =>
+            note.id === noteId
+                ? { ...note, content: editNoteContent.trim() }
+                : note
+        ));
+        setEditingNoteId(null);
+        setEditNoteContent('');
+        setNoteNotificationTone('success');
+        setNotificationMessage('Note updated successfully!');
+        setShowNoteNotification(true);
+        setTimeout(() => setShowNoteNotification(false), 3000);
     };
 
     // Handle cancel edit
@@ -738,9 +886,18 @@ function AccountProfile() {
 
             {/* Note Posted Notification */}
             {showNoteNotification && (
-                <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-fade-in">
-                    <CheckCircle className="h-5 w-5" />
-                    <span className="font-semibold">{notificationMessage}</span>
+                <div
+                    className={`fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-fade-in max-w-md ${
+                        noteNotificationTone === 'error' ? 'bg-red-600' : 'bg-green-600'
+                    }`}
+                    role="status"
+                >
+                    {noteNotificationTone === 'error' ? (
+                        <AlertTriangle className="h-5 w-5 shrink-0" />
+                    ) : (
+                        <CheckCircle className="h-5 w-5 shrink-0" />
+                    )}
+                    <span className="font-semibold text-sm leading-snug">{notificationMessage}</span>
                 </div>
             )}
 
@@ -1494,6 +1651,12 @@ function AccountProfile() {
 
                     {activeTab === 'KYC' && (() => {
                         const kyc = profileData.kyc;
+                        const companyMismatchPayload = getCompanyMismatchPayload(kyc);
+                        const showCompanyMismatchPanel =
+                            Boolean(kyc?.mismatchDetected) ||
+                            Boolean(profileData?.hasCompanyMismatch) ||
+                            Boolean(kyc?.hasCompanyMismatch) ||
+                            (Array.isArray(companyMismatchPayload?.mismatches) && companyMismatchPayload.mismatches.length > 0);
                         const kycSubmitted = recruiterKycSubmitted(kyc);
                         const frontUrl = kyc?.documentFrontUrl || kyc?.documentUrl || '';
                         const backUrl = kyc?.documentBackUrl || '';
@@ -1598,13 +1761,49 @@ function AccountProfile() {
                                             </div>
                                         </div>
 
-                                        {kyc?.mismatchDetected && (
-                                            <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
-                                                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                                                <div>
-                                                    <p className="text-sm font-bold text-amber-900">Data mismatch flagged</p>
-                                                    <p className="text-sm text-amber-800 mt-1">{kyc.mismatchDetails || 'Review submitted details against documents.'}</p>
+                                        {showCompanyMismatchPanel && (
+                                            <div className="mt-5 space-y-4">
+                                                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
+                                                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-amber-900">Data mismatch flagged</p>
+                                                        {companyMismatchPayload?.source === 'GEMINI_GOOGLE_SEARCH' && (
+                                                            <p className="text-xs text-amber-900/80 mt-1">
+                                                                Source: Gemini (Google Search grounding)
+                                                            </p>
+                                                        )}
+                                                        {typeof kyc.mismatchDetails === 'string' && !companyMismatchPayload && (
+                                                            <p className="text-sm text-amber-800 mt-1">{kyc.mismatchDetails}</p>
+                                                        )}
+                                                        {!kyc.mismatchDetails && !companyMismatchPayload?.mismatches?.length && (
+                                                            <p className="text-sm text-amber-800 mt-1">
+                                                                Review submitted company details against public records.
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
+                                                {Array.isArray(companyMismatchPayload?.mismatches) && companyMismatchPayload.mismatches.length > 0 && (
+                                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                        <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                                            Field discrepancies
+                                                        </div>
+                                                        <div className="divide-y divide-gray-100">
+                                                            {companyMismatchPayload.mismatches.map((row, idx) => (
+                                                                <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 py-2.5 text-sm">
+                                                                    <div className="font-medium text-gray-900">{humanizeFieldKey(row.field)}</div>
+                                                                    <div className="text-gray-700">
+                                                                        <span className="text-xs font-semibold text-gray-500 block">Entered</span>
+                                                                        {row.entered ?? '—'}
+                                                                    </div>
+                                                                    <div className="text-gray-700">
+                                                                        <span className="text-xs font-semibold text-gray-500 block">Public record</span>
+                                                                        {row.external ?? '—'}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -1829,11 +2028,12 @@ function AccountProfile() {
                                         ></textarea>
                                         <div className="flex justify-end mt-3">
                                             <button
+                                                type="button"
                                                 onClick={handlePostNote}
-                                                disabled={!newNote.trim()}
+                                                disabled={!newNote.trim() || isPostingNote}
                                                 className="px-5 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                Post Note
+                                                {isPostingNote ? 'Posting…' : 'Post Note'}
                                             </button>
                                         </div>
                                     </div>

@@ -13,16 +13,83 @@ import {
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
 
-function JobDetail({ onBack }) {
+/** Real profile photo URLs only — no placeholders; blocks known dummy hosts. */
+function resolveProfessionalAvatarUrl(prof) {
+    if (!prof || typeof prof !== 'object') return null;
+    const candidates = [
+        prof.avatarUrl,
+        prof.profilePhotoUrl,
+        prof.photoUrl,
+        prof.imageUrl,
+        prof.profileImageUrl,
+    ];
+    for (const u of candidates) {
+        if (typeof u !== 'string') continue;
+        const t = u.trim();
+        if (!t) continue;
+        if (t.includes('i.pravatar.cc')) continue;
+        return t;
+    }
+    return null;
+}
+
+/** GET /api/admin/jobs/:id/applicants — body is `{ status, data: { applicants } }` (httpClient returns JSON root). */
+function extractApplicantsList(res) {
+    if (!res || typeof res !== 'object') return [];
+    const list = res.data?.applicants ?? res.applicants;
+    return Array.isArray(list) ? list : [];
+}
+
+/**
+ * API `ApplicationStatus` -> ATS tab / row `status` id.
+ * Order: APPLIED → UNDER_REVIEW → SHORTLISTED → INTERVIEW → OFFER → HIRED (plus REJECTED / WITHDRAWN).
+ */
+function mapApiStatusToApplicantRowStatus(apiStatus) {
+    const s = String(apiStatus || '').toUpperCase();
+    if (s === 'APPLIED') return 'new';
+    if (s === 'UNDER_REVIEW' || s === 'REVIEWING') return 'under-review';
+    if (s === 'SHORTLISTED') return 'shortlisted';
+    if (s === 'INTERVIEW' || s === 'INTERVIEWED' || s === 'INTERVIEWING') return 'interviewing';
+    if (s === 'OFFER' || s === 'OFFERED' || s === 'ACCEPTED') return 'offered';
+    if (s === 'HIRED') return 'hired';
+    if (s === 'REJECTED') return 'rejected';
+    if (s === 'WITHDRAWN') return 'withdrawn';
+    return 'new';
+}
+
+function mapApiStatusToApplicantUi(appStatus) {
+    return mapApiStatusToApplicantRowStatus(appStatus);
+}
+
+/** Next `ApplicationStatus` sent to PATCH for the row’s primary action. */
+const UI_ROW_STATUS_TO_NEXT_API = {
+    new: 'UNDER_REVIEW',
+    'under-review': 'SHORTLISTED',
+    shortlisted: 'INTERVIEW',
+    interviewing: 'OFFER',
+    offered: 'HIRED',
+};
+
+const ADVANCE_BUTTON_LABEL = {
+    new: 'Start review',
+    'under-review': 'Shortlist',
+    shortlisted: 'Move to interview',
+    interviewing: 'Send offer',
+    offered: 'Mark hired',
+};
+
+function JobDetail({ onBack, jobId: jobIdProp }) {
     const navigate = useNavigate();
-    const { jobId } = useParams();
+    const { jobId: jobIdFromRoute } = useParams();
+    const jobId = jobIdProp || jobIdFromRoute;
     const location = useLocation();
     const jobData = location.state?.jobData;
-    const currentUserType = typeof window !== 'undefined'
+    const sessionRole = typeof window !== 'undefined'
         ? (localStorage.getItem('userType') || localStorage.getItem('adminUserType'))
         : null;
-    const isRecruiterRoute = location.pathname === '/admin/jobs' || location.pathname.startsWith('/admin/jobs/');
-    const isRecruiterContext = currentUserType === 'recruiter' || (!currentUserType && isRecruiterRoute);
+    /** Recruiter dashboard login sets `adminUserType` to `recruiter`; admin login sets `userType` to `admin`. */
+    const isRecruiterContext = sessionRole === 'recruiter';
+    const isAdminPath = location.pathname.includes('/admin/') && !isRecruiterContext;
     const [job, setJob] = useState(jobData || null);
     const [isLoadingJob, setIsLoadingJob] = useState(!jobData); // Only load if no jobData provided initially, or always load to get fresh data
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
@@ -39,7 +106,8 @@ function JobDetail({ onBack }) {
     const [sortBy, setSortBy] = useState('name');
     const [sortOrder, setSortOrder] = useState('asc');
     const [invitedApplicants, setInvitedApplicants] = useState([]);
-    const [scheduledInterviews, setScheduledInterviews] = useState([]);
+    const [applicantStatusPatchingId, setApplicantStatusPatchingId] = useState(null);
+    const [applicantListActionError, setApplicantListActionError] = useState('');
     const [timeFilter, setTimeFilter] = useState('7days');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -112,31 +180,25 @@ function JobDetail({ onBack }) {
              if (!jobId) return;
              try {
                  setIsLoadingApplicants(true);
-                 const isAdminPath = !isRecruiterContext && location.pathname.includes('/admin/');
                  const [applicantsRes, matchesRes] = await Promise.all([
                      isAdminPath ? jobService.getAdminJobApplicants(jobId) : jobService.getJobApplicants(jobId),
                      isAdminPath ? jobService.getAdminJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; }) : jobService.getJobMatches(jobId).catch(e => { console.error(e); return { data: { candidates: [] } }; })
                  ]);
                  
                  let applicantsList = [];
-                 if (applicantsRes?.data?.applicants) {
-                     applicantsList = applicantsRes.data.applicants.map(app => {
+                 const rawApplicants = extractApplicantsList(applicantsRes);
+                 if (rawApplicants.length > 0) {
+                     applicantsList = rawApplicants.map((app) => {
                          const prof = app.professional || {};
-                         const resume = prof?.resume || {};
-                         let uiStatus = 'new';
-                         if (app.status === 'APPLIED') uiStatus = 'new';
-                         else if (app.status === 'SHORTLISTED') uiStatus = 'shortlisted';
-                         else if (app.status === 'INTERVIEWING') uiStatus = 'interviewing';
-                         else if (app.status === 'OFFERED') uiStatus = 'offered';
-                         else if (app.status === 'HIRED') uiStatus = 'hired';
-                         else if (app.status === 'REJECTED') uiStatus = 'rejected';
-                         
+                         const resume = prof?.resume || app.resumeSnapshot || {};
+                         const uiStatus = mapApiStatusToApplicantUi(app.status);
+
                          return {
                              id: app.id,
                              professionalId: app.professionalId || prof.id,
                              name: prof?.fullname || 'Unknown',
                              age: resume?.dateOfBirth ? (new Date().getFullYear() - new Date(resume.dateOfBirth).getFullYear()) : 'N/A',
-                             avatar: prof?.avatarUrl || 'https://i.pravatar.cc/150?img=12', // placeholder
+                             avatar: resolveProfessionalAvatarUrl(prof),
                              rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
                              availability: 'Immediate',
                              availabilitySubtext: prof?.profession || '',
@@ -150,17 +212,18 @@ function JobDetail({ onBack }) {
                  }
                  
                  let matchesList = [];
-                 if (matchesRes?.data?.candidates) {
-                     matchesList = matchesRes.data.candidates.map(candidate => {
+                 const rawMatches = matchesRes?.data?.candidates ?? matchesRes?.candidates;
+                 if (Array.isArray(rawMatches) && rawMatches.length > 0) {
+                     matchesList = rawMatches.map((candidate) => {
                          const prof = candidate.professional || candidate;
-                         const resume = prof?.resume || {};
+                         const resume = prof?.resume || candidate.resumeSnapshot || {};
                          
                          return {
                              id: candidate.id || prof.id,
                              professionalId: candidate.professionalId || prof.id,
                              name: prof?.fullname || 'Unknown',
                              age: resume?.dateOfBirth ? (new Date().getFullYear() - new Date(resume.dateOfBirth).getFullYear()) : 'N/A',
-                             avatar: prof?.avatarUrl || 'https://i.pravatar.cc/150?img=12',
+                             avatar: resolveProfessionalAvatarUrl(prof),
                              rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
                              availability: 'Immediate',
                              availabilitySubtext: prof?.profession || '',
@@ -186,7 +249,7 @@ function JobDetail({ onBack }) {
              }
         };
         fetchApplicants();
-    }, [jobId]);
+    }, [jobId, isAdminPath, isRecruiterContext, location.pathname]);
 
     const stats = [
         {
@@ -283,6 +346,10 @@ function JobDetail({ onBack }) {
         setCurrentPage(1);
     }, [activeTab, timeFilter]);
 
+    useEffect(() => {
+        setApplicantListActionError('');
+    }, [activeTab]);
+
     const handleSort = (field) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -293,9 +360,10 @@ function JobDetail({ onBack }) {
     };
 
     const handleInviteToApply = async (professionalId) => {
+        setInvitedApplicants((prev) => [...prev, professionalId]);
         try {
-            setInvitedApplicants([...invitedApplicants, professionalId]);
-            const isAdminPath = location.pathname.includes('/admin/');
+            // Must use the same `isAdminPath` as applicants fetch (path + not recruiter).
+            // A local `pathname.includes('/admin/')` alone wrongly calls the admin invite API for recruiters on `/admin/jobs/*`, causing 401 and logout.
             if (isAdminPath) {
                 await jobService.inviteAdminMatch(jobId, professionalId);
             } else {
@@ -303,14 +371,40 @@ function JobDetail({ onBack }) {
             }
         } catch (error) {
             console.error("Failed to invite match:", error);
-            // Revert state if failed
-            setInvitedApplicants(invitedApplicants.filter(id => id !== professionalId));
+            setInvitedApplicants((prev) => prev.filter((id) => id !== professionalId));
         }
     };
 
-    const handleScheduleInterview = (applicantId) => {
-        setScheduledInterviews([...scheduledInterviews, applicantId]);
-        // In real app, this would send an API request
+    const patchApplicantListStatus = async (applicant, nextApiStatus) => {
+        if (!applicant?.id || applicant.status === 'matches') return;
+        setApplicantListActionError('');
+        setApplicantStatusPatchingId(applicant.id);
+        try {
+            await jobService.updateApplicantStatus(applicant.id, nextApiStatus, { asAdmin: isAdminPath });
+            setAllApplicants((prev) =>
+                prev.map((a) =>
+                    a.id === applicant.id
+                        ? {
+                              ...a,
+                              status: mapApiStatusToApplicantRowStatus(nextApiStatus),
+                              rawApplicant: a.rawApplicant
+                                  ? { ...a.rawApplicant, status: nextApiStatus }
+                                  : a.rawApplicant,
+                          }
+                        : a,
+                ),
+            );
+        } catch (error) {
+            console.error('Failed to update applicant status:', error);
+            const msg =
+                error?.data?.message ||
+                (Array.isArray(error?.data?.message) ? error.data.message.join('; ') : null) ||
+                error?.message ||
+                'Could not update status';
+            setApplicantListActionError(typeof msg === 'string' ? msg : 'Could not update status');
+        } finally {
+            setApplicantStatusPatchingId(null);
+        }
     };
 
     const handleDeleteJob = async () => {
@@ -326,6 +420,36 @@ function JobDetail({ onBack }) {
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const renderApplicantPipelineButtons = (applicant) => {
+        if (applicant.status === 'matches') return null;
+        const terminal = ['hired', 'rejected', 'withdrawn'].includes(applicant.status);
+        if (terminal) return null;
+        const nextApi = UI_ROW_STATUS_TO_NEXT_API[applicant.status];
+        const busy = applicantStatusPatchingId === applicant.id;
+        return (
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+                {nextApi ? (
+                    <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => patchApplicantListStatus(applicant, nextApi)}
+                        className="px-3 py-1.5 bg-[#003971] text-white rounded-lg text-xs font-semibold hover:bg-[#002855] disabled:opacity-50 transition-colors"
+                    >
+                        {busy ? 'Saving…' : ADVANCE_BUTTON_LABEL[applicant.status] || 'Next'}
+                    </button>
+                ) : null}
+                <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => patchApplicantListStatus(applicant, 'REJECTED')}
+                    className="px-3 py-1.5 border border-red-200 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
+                >
+                    Reject
+                </button>
+            </div>
+        );
     };
 
     return (
@@ -475,7 +599,7 @@ function JobDetail({ onBack }) {
                             <div className="relative" ref={atsDropdownRef}>
                                 <button
                                     onClick={() => setIsATSDropdownOpen(!isATSDropdownOpen)}
-                                    className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${['new', 'shortlisted', 'interviewing', 'offered', 'hired'].includes(activeTab)
+                                    className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${['new', 'under-review', 'shortlisted', 'interviewing', 'offered', 'hired'].includes(activeTab)
                                         ? 'bg-[#003971] text-white'
                                         : 'text-gray-600 hover:bg-gray-50'
                                         }`}
@@ -487,11 +611,12 @@ function JobDetail({ onBack }) {
                                 {isATSDropdownOpen && (
                                     <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
                                         {[
-                                            { id: 'new', label: 'New' },
+                                            { id: 'new', label: 'Applied' },
+                                            { id: 'under-review', label: 'Under review' },
                                             { id: 'shortlisted', label: 'Shortlisted' },
-                                            { id: 'interviewing', label: 'Interviewing' },
-                                            { id: 'offered', label: 'Offered' },
-                                            { id: 'hired', label: 'Hired' }
+                                            { id: 'interviewing', label: 'Interview' },
+                                            { id: 'offered', label: 'Offer' },
+                                            { id: 'hired', label: 'Hired' },
                                         ].map((stage) => (
                                             <button
                                                 key={stage.id}
@@ -518,6 +643,11 @@ function JobDetail({ onBack }) {
                     </div>
 
                     {/* Applicants Table */}
+                    {applicantListActionError ? (
+                        <p className="px-6 pt-4 text-sm font-medium text-red-600" role="alert">
+                            {applicantListActionError}
+                        </p>
+                    ) : null}
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -550,11 +680,13 @@ function JobDetail({ onBack }) {
                                     <tr key={applicant.id} className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <img
-                                                    src={applicant.avatar}
-                                                    alt={applicant.name}
-                                                    className="w-10 h-10 rounded-full object-cover"
-                                                />
+                                                {applicant.avatar ? (
+                                                    <img
+                                                        src={applicant.avatar}
+                                                        alt=""
+                                                        className="w-10 h-10 rounded-full object-cover shrink-0"
+                                                    />
+                                                ) : null}
                                                 <div>
                                                     <button
                                                         onClick={() => {
@@ -597,30 +729,36 @@ function JobDetail({ onBack }) {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 {activeTab === 'all' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            const candidateRoute = location.pathname.includes('/marketplace')
-                                                                ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/recruiter/candidate/${applicant.id}`;
-                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
-                                                        }}
-                                                        className="text-blue-600 font-semibold hover:underline text-sm"
-                                                    >
-                                                        View Profile
-                                                    </button>
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                const candidateRoute = location.pathname.includes('/marketplace')
+                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                    : `/recruiter/candidate/${applicant.id}`;
+                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                            }}
+                                                            className="text-blue-600 font-semibold hover:underline text-sm"
+                                                        >
+                                                            View Profile
+                                                        </button>
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'new' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            const candidateRoute = location.pathname.includes('/marketplace')
-                                                                ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/recruiter/candidate/${applicant.id}`;
-                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
-                                                        }}
-                                                        className="text-blue-600 font-semibold hover:underline text-sm"
-                                                    >
-                                                        View Profile
-                                                    </button>
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                const candidateRoute = location.pathname.includes('/marketplace')
+                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                    : `/recruiter/candidate/${applicant.id}`;
+                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                            }}
+                                                            className="text-blue-600 font-semibold hover:underline text-sm"
+                                                        >
+                                                            View Profile
+                                                        </button>
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'matches' && (
                                                     <div className="flex items-center gap-3">
@@ -649,29 +787,49 @@ function JobDetail({ onBack }) {
                                                         )}
                                                     </div>
                                                 )}
+                                                {activeTab === 'under-review' && (
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const candidateRoute = location.pathname.includes('/marketplace')
+                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
+                                                                    : `/recruiter/candidate/${applicant.id}`;
+                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                            }}
+                                                            className="text-blue-600 font-semibold hover:underline text-sm"
+                                                        >
+                                                            View Profile
+                                                        </button>
+                                                        <span className="px-3 py-1.5 bg-amber-50 text-amber-800 rounded-lg text-sm font-semibold">
+                                                            Under review
+                                                        </span>
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
+                                                )}
                                                 {activeTab === 'shortlisted' && (
-                                                    <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
-                                                        Shortlisted
-                                                    </span>
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
+                                                            Shortlisted
+                                                        </span>
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'interviewing' && (
-                                                    scheduledInterviews.includes(applicant.id) ? (
-                                                        <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold">
-                                                            Scheduled
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-semibold">
+                                                            Interview
                                                         </span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleScheduleInterview(applicant.id)}
-                                                            className="px-3 py-1.5 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors"
-                                                        >
-                                                            Schedule Interview
-                                                        </button>
-                                                    )
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'offered' && (
-                                                    <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
-                                                        Offer Sent
-                                                    </span>
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
+                                                            Offer
+                                                        </span>
+                                                        {renderApplicantPipelineButtons(applicant)}
+                                                    </div>
                                                 )}
                                                 {activeTab === 'hired' && (
                                                     <span className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-sm font-semibold">
