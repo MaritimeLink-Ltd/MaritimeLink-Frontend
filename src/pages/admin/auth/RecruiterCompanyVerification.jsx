@@ -1,15 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import authService from '../../../services/authService';
+
+const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
+
+function mapLookupToDisplay(lookupPayload) {
+    const root = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
+    const d = root.company && typeof root.company === 'object' ? root.company : root;
+
+    return {
+        logo: d.logo || d.logoUrl || d.companyLogo || '',
+        name: d.organizationName || d.name || d.companyName || '',
+        website: d.company_website || d.website || d.url || '',
+        address: [d.address_street, d.address_location].filter(Boolean).join(', '),
+        city: d.address_city || '',
+        state: d.country_region || '',
+        postcode: d.zip_code || '',
+        country: d.country_name || d.country_code || '',
+        linkedin: d.linkedin || '',
+        source: d.source || root.source || '',
+        sources: d.sources || root.sources || [],
+        raw: d,
+    };
+}
+
+function getLookupPayload(response) {
+    if (!response || typeof response !== 'object') return null;
+    return response.data || response;
+}
 
 function RecruiterCompanyVerification() {
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(false);
+    const [lookupLoading, setLookupLoading] = useState(false);
+    const [lookupError, setLookupError] = useState('');
 
     const formData = location.state?.formData;
-    const lookupPreview = location.state?.lookupPreview;
+    const [lookupPreview, setLookupPreview] = useState(location.state?.lookupPreview || null);
     const verification = location.state?.verification;
-    const fromState = location.state?.companyData;
+    const fromState = lookupPreview || location.state?.companyData;
 
     const companyData = fromState || {
         logo: lookupPreview?.logo || '',
@@ -22,17 +52,69 @@ function RecruiterCompanyVerification() {
         formData?.companyName &&
         lookupPreview.name.trim().toLowerCase() !== formData.companyName.trim().toLowerCase();
 
-    const mismatchFromPatch = Boolean(verification?.mismatchDetected);
-    const riskHigh = String(verification?.riskLevel || '').toUpperCase() === 'HIGH';
+    useEffect(() => {
+        const lookupCompany = async () => {
+            if (lookupPreview || !formData?.companyName) return;
+
+            setLookupLoading(true);
+            setLookupError('');
+
+            try {
+                const response = await authService.lookupCompanyDetails({
+                    organizationName: formData.companyName,
+                    url: formData.website,
+                    address: formData.address,
+                    companyCity: formData.city,
+                    companyState: formData.stateProvince,
+                    companyZip: formData.postcode,
+                    companyCountry: formData.country,
+                    companyLinkedIn: formData.linkedIn,
+                });
+                const payload = getLookupPayload(response);
+                const mapped = mapLookupToDisplay(payload);
+                setLookupPreview(mapped);
+            } catch (err) {
+                console.error('Company verification lookup failed:', err);
+                setLookupError('We could not fetch public company details right now. You can continue with your entered details.');
+            } finally {
+                setLookupLoading(false);
+            }
+        };
+
+        lookupCompany();
+    }, [formData, lookupPreview]);
+
+    const saveDecision = ({ organizationVerified, useManualDetails }) => {
+        const decision = {
+            organizationVerified,
+            useManualDetails,
+            riskLevel: organizationVerified ? 'LOW' : 'HIGH',
+            source: organizationVerified ? (verification?.source || lookupPreview?.source || 'GEMINI_GOOGLE_SEARCH') : 'USER_DECLINED_LOOKUP',
+            selectedCompany: organizationVerified ? companyData : null,
+            enteredCompany: formData || null,
+            decidedAt: new Date().toISOString(),
+        };
+
+        localStorage.setItem(COMPANY_VERIFICATION_STORAGE_KEY, JSON.stringify(decision));
+        return decision;
+    };
 
     const handleConfirm = async () => {
         setLoading(true);
         try {
+            const decision = saveDecision({
+                organizationVerified: true,
+                useManualDetails: false,
+            });
+
             navigate('/agent/compliance-declaration', {
                 state: {
-                    companyData: formData || companyData,
+                    companyData,
                     lookupPreview,
-                    verification,
+                    verification: {
+                        ...verification,
+                        ...decision,
+                    },
                 },
             });
         } catch (err) {
@@ -43,12 +125,20 @@ function RecruiterCompanyVerification() {
     };
 
     const handleDecline = () => {
+        const decision = saveDecision({
+            organizationVerified: false,
+            useManualDetails: true,
+        });
+
         navigate('/agent/compliance-declaration', {
             state: {
                 useManualDetails: true,
                 companyData: formData || companyData,
                 lookupPreview,
-                verification,
+                verification: {
+                    ...verification,
+                    ...decision,
+                },
             },
         });
     };
@@ -72,13 +162,16 @@ function RecruiterCompanyVerification() {
                         We use public web sources to help verify company details. Please confirm this is the organization you represent.
                     </p>
 
-                    {(mismatchFromPatch || riskHigh) && (
+                    {lookupLoading && (
+                        <div className="mb-5 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p className="text-sm font-semibold text-[#003971]">Fetching public company details...</p>
+                            <p className="text-sm text-gray-600 mt-1">We are checking the organization name against public web sources.</p>
+                        </div>
+                    )}
+
+                    {lookupError && (
                         <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p className="text-sm font-bold text-amber-900">Possible mismatch with public records</p>
-                            <p className="text-sm text-amber-800 mt-1">
-                                Some fields you entered may differ from what we found online. Your registration can continue; our team may review this during KYC
-                                {verification?.riskLevel ? ` (risk: ${verification.riskLevel})` : ''}.
-                            </p>
+                            <p className="text-sm text-amber-800">{lookupError}</p>
                         </div>
                     )}
 
@@ -108,6 +201,20 @@ function RecruiterCompanyVerification() {
 
                         {companyData.website && (
                             <p className="text-sm text-gray-600 break-all text-center">{companyData.website}</p>
+                        )}
+
+                        {(companyData.address || companyData.city || companyData.country) && (
+                            <p className="mt-3 text-xs text-gray-500 text-center">
+                                {[companyData.address, companyData.city, companyData.state, companyData.postcode, companyData.country]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                            </p>
+                        )}
+
+                        {companyData.source && (
+                            <p className="mt-3 text-[11px] font-semibold text-[#003971] uppercase tracking-wide">
+                                Verified using public search
+                            </p>
                         )}
                     </div>
 

@@ -2,6 +2,19 @@ import { useState, useMemo } from 'react';
 import kycService from '../services/kycService';
 import resolveKycEntityId from '../utils/resolveKycEntityId';
 
+const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
+
+function getStoredCompanyVerificationDecision() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = localStorage.getItem(COMPANY_VERIFICATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useKycWizard({ userType, storagePrefix }) {
   const userProfile = useMemo(() => {
     if (typeof window === 'undefined') return {};
@@ -77,15 +90,29 @@ export function useKycWizard({ userType, storagePrefix }) {
         documentFrontUrl: kycData?.documentFrontUrl || '',
         documentBackUrl: kycData?.documentBackUrl || '',
       };
+      const companyVerificationDecision = getStoredCompanyVerificationDecision();
+      const organizationVerificationPayload =
+        userType === 'recruiter' || userType === 'training-provider'
+          ? {
+              organizationVerified:
+                typeof companyVerificationDecision?.organizationVerified === 'boolean'
+                  ? companyVerificationDecision.organizationVerified
+                  : undefined,
+              organizationRiskLevel: companyVerificationDecision?.riskLevel,
+              organizationVerificationSource: companyVerificationDecision?.source,
+            }
+          : {};
 
       if (userType === 'recruiter') {
         await kycService.submitRecruiterKycDetails({
           ...basePayload,
+          ...organizationVerificationPayload,
           recruiterId: entityId,
         });
       } else if (userType === 'training-provider') {
         await kycService.submitTrainingProviderKycDetails({
           ...basePayload,
+          ...organizationVerificationPayload,
           recruiterId: entityId,
         });
       } else {
@@ -179,4 +206,3 @@ export function useKycWizard({ userType, storagePrefix }) {
     },
   };
 }
-

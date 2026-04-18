@@ -22,11 +22,21 @@ function mergeApiEnvelope(res) {
 
 /** Map lookup API payload to UI fields (backend shape may vary). */
 function mapLookupToDisplay(lookupPayload) {
-    const d = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
+    const root = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
+    const d = root.company && typeof root.company === 'object' ? root.company : root;
+    const website = d.company_website || d.website || d.url || '';
     return {
         name: d.organizationName || d.name || d.companyName || '',
         logo: d.logo || d.logoUrl || d.companyLogo || '',
-        website: d.website || d.url || '',
+        website,
+        address: [d.address_street, d.address_location].filter(Boolean).join(', '),
+        city: d.address_city || '',
+        state: d.country_region || '',
+        postcode: d.zip_code || '',
+        country: d.country_name || d.country_code || '',
+        linkedin: d.linkedin || '',
+        source: d.source || root.source || '',
+        sources: d.sources || root.sources || [],
         raw: d,
     };
 }
@@ -58,6 +68,18 @@ function RecruiterCompanyDetails() {
         if (error) setError('');
     };
 
+    const buildLookupParams = (overrides = {}) => ({
+        organizationName: formData.companyName.trim(),
+        url: formData.website.trim(),
+        address: formData.address.trim(),
+        companyCity: formData.city.trim(),
+        companyState: formData.stateProvince.trim(),
+        companyZip: formData.postcode.trim(),
+        companyCountry: formData.country.trim(),
+        companyLinkedIn: formData.linkedIn.trim(),
+        ...overrides,
+    });
+
     const runCompanyLookup = async (params) => {
         setPreviewLoading(true);
         try {
@@ -69,6 +91,7 @@ function RecruiterCompanyDetails() {
                 if (!formData.companyName && mapped.name) {
                     setFormData((prev) => ({ ...prev, companyName: mapped.name }));
                 }
+                return mapped;
             } else {
                 setPreviewData(null);
             }
@@ -78,18 +101,20 @@ function RecruiterCompanyDetails() {
         } finally {
             setPreviewLoading(false);
         }
+
+        return null;
     };
 
     const handleWebsiteBlur = async () => {
         const url = formData.website.trim();
         if (!url) return;
-        await runCompanyLookup({ url });
+        await runCompanyLookup(buildLookupParams({ url }));
     };
 
     const handleCompanyNameBlur = async () => {
         const name = formData.companyName.trim();
         if (!name || formData.website.trim()) return;
-        await runCompanyLookup({ organizationName: name });
+        await runCompanyLookup(buildLookupParams({ organizationName: name }));
     };
 
     const handleSubmit = async (e) => {
@@ -111,6 +136,10 @@ function RecruiterCompanyDetails() {
         setLoading(true);
 
         try {
+            const lookupResult =
+                previewData ||
+                (await runCompanyLookup(buildLookupParams()));
+
             const patchRes = await authService.setRecruiterCompanyDetails({
                 recruiterId: recruiterId,
                 organizationName: formData.companyName.trim(),
@@ -125,21 +154,30 @@ function RecruiterCompanyDetails() {
 
             const patchBody = mergeApiEnvelope(patchRes);
             const verification = {
-                mismatchDetected: Boolean(patchBody?.mismatchDetected),
-                riskLevel: patchBody?.riskLevel || null,
+                mismatchDetected: Boolean(
+                    patchBody?.companyVerification?.mismatchDetected ?? patchBody?.mismatchDetected
+                ),
+                riskLevel: patchBody?.companyVerification?.riskLevel || patchBody?.riskLevel || null,
+                source: patchBody?.companyVerification?.source || lookupResult?.source || null,
             };
 
             const companyCard = {
-                name: formData.companyName.trim(),
-                website: formData.website.trim(),
-                logo: previewData?.logo || '',
+                name: lookupResult?.name || formData.companyName.trim(),
+                website: lookupResult?.website || formData.website.trim(),
+                logo: lookupResult?.logo || '',
+                address: lookupResult?.address || formData.address.trim(),
+                city: lookupResult?.city || formData.city.trim(),
+                state: lookupResult?.state || formData.stateProvince.trim(),
+                postcode: lookupResult?.postcode || formData.postcode.trim(),
+                country: lookupResult?.country || formData.country.trim(),
+                linkedin: lookupResult?.linkedin || formData.linkedIn.trim(),
             };
 
             navigate('/agent/company-verification', {
                 state: {
                     formData,
                     companyData: companyCard,
-                    lookupPreview: previewData,
+                    lookupPreview: lookupResult,
                     verification,
                 },
             });
