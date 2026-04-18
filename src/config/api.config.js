@@ -25,6 +25,10 @@ export const API_ENDPOINTS = {
   },
   // Professional Endpoints
   PROFESSIONAL: {
+    DASHBOARD_OVERVIEW: '/api/professional/dashboard/overview',
+    DASHBOARD_ALERTS: '/api/professional/dashboard/alerts',
+    DASHBOARD_ALERT_READ: (alertId) => `/api/professional/dashboard/alerts/${alertId}/read`,
+    DASHBOARD_ACTIVITY: '/api/professional/dashboard/activity',
     UPLOAD_ID: '/api/professional/upload-id',
     UPLOAD_PHOTO: '/api/professional/upload-photo',
     UPLOAD_CV: '/api/professional/upload-cv',
@@ -78,6 +82,10 @@ export const API_ENDPOINTS = {
     UPDATE_PASSWORD: '/api/recruiter/update-password',
     APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
+    DASHBOARD_STATS: '/api/recruiter/dashboard/stats',
+    DASHBOARD_ACTION_ITEMS: '/api/recruiter/dashboard/action-items',
+    DASHBOARD_JOBS: '/api/recruiter/dashboard/jobs',
+    DASHBOARD_POPULAR_SEARCHES: '/api/recruiter/dashboard/popular-searches',
   },
   // Recruiter KYC Endpoints
   RECRUITER_KYC: {

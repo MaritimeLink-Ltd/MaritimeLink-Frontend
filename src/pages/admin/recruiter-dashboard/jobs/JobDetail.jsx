@@ -100,7 +100,22 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     // Derived values
     const isPublished = jobStatus === 'Active';
     const isClosed = jobStatus === 'Closed';
-    const [activeTab, setActiveTab] = useState('matches');
+    const allowedInitialAtsTabs = new Set([
+        'matches',
+        'all',
+        'new',
+        'under-review',
+        'shortlisted',
+        'interviewing',
+        'offered',
+        'hired',
+        'rejected',
+        'withdrawn',
+    ]);
+    const initialAtsFromNav = location.state?.initialAtsTab;
+    const [activeTab, setActiveTab] = useState(() =>
+        initialAtsFromNav && allowedInitialAtsTabs.has(initialAtsFromNav) ? initialAtsFromNav : 'matches'
+    );
     const [isATSDropdownOpen, setIsATSDropdownOpen] = useState(false);
     const atsDropdownRef = useRef(null);
     const [sortBy, setSortBy] = useState('name');

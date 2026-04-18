@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Briefcase,
@@ -8,7 +8,8 @@ import {
     Calendar,
     ChevronRight,
     Search,
-    RefreshCw
+    RefreshCw,
+    Bell,
 } from 'lucide-react';
 import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
 import SelectDocumentModal from '../../../components/modals/SelectDocumentModal';
@@ -18,13 +19,105 @@ import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
 import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import { useKycWizard } from '../../../hooks/useKycWizard';
-import jobService from '../../../services/jobService';
+import recruiterDashboardService from '../../../services/recruiterDashboardService';
+
+function toDateInputValue(d) {
+    const x = new Date(d);
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, '0');
+    const day = String(x.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function defaultCustomRange() {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    return { from: toDateInputValue(from), to: toDateInputValue(to) };
+}
+
+function getStatsQueryOptions(timeFilter, customFrom, customTo) {
+    if (timeFilter === 'Today') return { timeframe: 'today' };
+    if (timeFilter === '7 Days') return { timeframe: '7d' };
+    if (timeFilter === '1 Month') return { timeframe: '1m' };
+    if (timeFilter === 'Custom') {
+        if (customFrom && customTo) return { from: customFrom, to: customTo };
+        return { timeframe: '1m' };
+    }
+    return { timeframe: 'today' };
+}
+
+function formatStatsPeriodLabel(timeFilter, customFrom, customTo) {
+    if (timeFilter === 'Today') return 'Today';
+    if (timeFilter === '7 Days') return 'Last 7 days';
+    if (timeFilter === '1 Month') return 'Last 30 days';
+    if (timeFilter === 'Custom' && customFrom && customTo) {
+        try {
+            const a = new Date(`${customFrom}T12:00:00`);
+            const b = new Date(`${customTo}T12:00:00`);
+            if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 'Custom range';
+            const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+            return `${a.toLocaleDateString(undefined, opts)} – ${b.toLocaleDateString(undefined, opts)}`;
+        } catch {
+            return 'Custom range';
+        }
+    }
+    return 'Custom range';
+}
+
+function actionItemButtonLabel(action) {
+    const a = (action || '').toUpperCase();
+    if (a === 'VIEW_APPLICANTS') return 'Review applicants';
+    if (a === 'VIEW_MATCHES') return 'View matches';
+    return 'Open';
+}
+
+function getDashboardJobApplicantCount(job) {
+    if (job == null) return 0;
+    if (typeof job.applicantCount === 'number') return job.applicantCount;
+    if (job._count && typeof job._count.applications === 'number') return job._count.applications;
+    if (Array.isArray(job.applicants)) return job.applicants.length;
+    return 0;
+}
+
+function getDashboardJobMatchedCount(job) {
+    if (job == null || job.matchedCount == null) return 0;
+    const n = Number(job.matchedCount);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function mapDashboardActionItem(item, index) {
+    const type = (item?.type || '').toUpperCase();
+    let icon = Bell;
+    if (type === 'NEW_APPLICANTS') icon = Briefcase;
+    else if (type === 'MATCHED_PROFESSIONALS') icon = Search;
+
+    return {
+        rowKey: `${type}-${item?.jobId || 'no-job'}-${item?.category || 'nc'}-${index}`,
+        message: item?.message || 'Action needed',
+        icon,
+        jobId: item?.jobId,
+        category: item?.category,
+        apiAction: item?.action,
+        actionText: actionItemButtonLabel(item?.action),
+    };
+}
 
 function RecruiterDashboard({ onNavigate }) {
     const navigate = useNavigate();
     const [timeFilter, setTimeFilter] = useState('Today');
     const [isRefreshing, setIsRefreshing] = useState(false);
-    
+    const initialCustom = useMemo(() => defaultCustomRange(), []);
+    const [customRangeApplied, setCustomRangeApplied] = useState(initialCustom);
+    const [customRangeDraft, setCustomRangeDraft] = useState(initialCustom);
+    const [statsError, setStatsError] = useState(null);
+    const [jobsError, setJobsError] = useState(null);
+    const [popularSearchesList, setPopularSearchesList] = useState([]);
+    const [popularSearchesError, setPopularSearchesError] = useState(null);
+    const [actionItemsList, setActionItemsList] = useState([]);
+    const [actionItemsError, setActionItemsError] = useState(null);
+    const [actionItemsLoading, setActionItemsLoading] = useState(false);
+
     // Remote data states
     const [realJobs, setRealJobs] = useState([]);
     const [dashStats, setDashStats] = useState({
@@ -64,52 +157,89 @@ function RecruiterDashboard({ onNavigate }) {
         },
     } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
 
-    // Refresh handler
-    const loadDashboardData = async () => {
+    const loadDashboardData = useCallback(async () => {
         if (!hasFullAccess) return;
         setIsRefreshing(true);
+        setActionItemsLoading(true);
+        setStatsError(null);
+        setJobsError(null);
+        setPopularSearchesError(null);
+        setActionItemsError(null);
         try {
-            const res = await jobService.getMyJobs();
-            if (res?.data?.jobs) {
-                const jobsList = res.data.jobs;
-                setRealJobs(jobsList);
-                
-                // Calculate stats based on actual data
-                const activeCount = jobsList.filter(j => j.status === 'ACTIVE').length;
-                let attentionCount = 0;
-                let newApps = 0;
-                
-                const now = new Date();
-                jobsList.forEach(j => {
-                    if (j.status === 'DRAFT') { 
-                        attentionCount++; 
-                    } else if (j.status === 'ACTIVE' && j.closingDate) {
-                        const daysLeft = (new Date(j.closingDate) - now) / (1000 * 60 * 60 * 24);
-                        if (daysLeft <= 7 && daysLeft >= 0) attentionCount++;
-                    }
-                    
-                    if (j.applicants && Array.isArray(j.applicants)) {
-                        newApps += j.applicants.length;
-                    }
-                });
+            const statsQuery = getStatsQueryOptions(
+                timeFilter,
+                customRangeApplied.from,
+                customRangeApplied.to
+            );
+            const [jobsOutcome, statsOutcome, actionsOutcome, popularOutcome] = await Promise.allSettled([
+                recruiterDashboardService.getDashboardJobs(),
+                recruiterDashboardService.getDashboardStats(statsQuery),
+                recruiterDashboardService.getDashboardActionItems(),
+                recruiterDashboardService.getPopularSearches(),
+            ]);
 
-                setDashStats({
-                    activeJobs: activeCount,
-                    newApplications: newApps,
-                    matchedPros: 0, // Placeholder
-                    jobsNeedingAttention: attentionCount
-                });
+            if (jobsOutcome.status === 'fulfilled') {
+                const res = jobsOutcome.value;
+                const list = res?.data?.jobs;
+                setRealJobs(Array.isArray(list) ? list : []);
+            } else {
+                console.error('Failed to fetch dashboard jobs:', jobsOutcome.reason);
+                setJobsError(jobsOutcome.reason?.message || 'Could not load jobs.');
+                setRealJobs([]);
+            }
+
+            if (statsOutcome.status === 'fulfilled') {
+                const res = statsOutcome.value;
+                const s = res?.data?.stats;
+                if (s && typeof s === 'object') {
+                    setDashStats({
+                        activeJobs: Number(s.activeJobsCount) || 0,
+                        newApplications: Number(s.newApplicationsCount) || 0,
+                        matchedPros: Number(s.matchedProfessionalsCount) || 0,
+                        jobsNeedingAttention: Number(s.jobsNeedingAttentionCount) || 0,
+                    });
+                }
+            } else {
+                console.error('Failed to fetch recruiter stats:', statsOutcome.reason);
+                setStatsError(
+                    statsOutcome.reason?.message || 'Could not load dashboard stats.'
+                );
+            }
+
+            if (actionsOutcome.status === 'fulfilled') {
+                const res = actionsOutcome.value;
+                const list = res?.data?.actionItems;
+                setActionItemsList(Array.isArray(list) ? list : []);
+            } else {
+                console.error('Failed to fetch action items:', actionsOutcome.reason);
+                setActionItemsError(
+                    actionsOutcome.reason?.message || 'Could not load action items.'
+                );
+                setActionItemsList([]);
+            }
+
+            if (popularOutcome.status === 'fulfilled') {
+                const res = popularOutcome.value;
+                const list = res?.data?.popularSearches;
+                setPopularSearchesList(Array.isArray(list) ? list : []);
+            } else {
+                console.error('Failed to fetch popular searches:', popularOutcome.reason);
+                setPopularSearchesError(
+                    popularOutcome.reason?.message || 'Could not load popular searches.'
+                );
+                setPopularSearchesList([]);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
             setIsRefreshing(false);
+            setActionItemsLoading(false);
         }
-    };
+    }, [hasFullAccess, timeFilter, customRangeApplied.from, customRangeApplied.to]);
 
     useEffect(() => {
         loadDashboardData();
-    }, [hasFullAccess]);
+    }, [loadDashboardData]);
 
     const handleRefresh = () => {
         loadDashboardData();
@@ -132,47 +262,99 @@ function RecruiterDashboard({ onNavigate }) {
         }
     };
 
-    // Get current stats using dynamic data
-    const stats = [
-        { id: 1, title: 'Active Jobs', value: dashStats.activeJobs.toString(), subtext: 'Currently open', icon: Briefcase, gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-        { id: 2, title: 'Total Applications', value: dashStats.newApplications.toString(), subtext: 'All time', icon: CheckCircle, gradient: 'from-[#059669] via-[#10b981] to-[#34d399]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'jobs' },
-        { id: 3, title: 'Matched Professionals', value: dashStats.matchedPros.toString(), subtext: 'System matches', icon: Award, gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', iconBg: 'bg-white/20 backdrop-blur-sm', section: 'search' },
-        { id: 4, title: 'Jobs Needing Attention', value: dashStats.jobsNeedingAttention.toString(), subtext: 'Expiring soon / Drafts', icon: AlertTriangle, gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]', iconBg: 'bg-white/20 backdrop-blur-sm', topIcon: Calendar, section: 'jobs' }
-    ];
-
-    // Action Items Data (Static placeholders mapped to generic sections)
-    const actionItems = [
-        {
-            id: 1,
-            text: 'Review new professionals applied through MaritimeLink',
-            type: 'applicants',
-            icon: Briefcase,
-            iconColor: 'text-[#003971]',
-            iconBg: 'bg-[#EBF3FF]',
-            actionText: 'View Dashboard',
-            section: 'jobs',
+    const handleActionItemNavigate = useCallback(
+        (row) => {
+            const act = (row.apiAction || '').toUpperCase();
+            if (act === 'VIEW_APPLICANTS' && row.jobId) {
+                navigate(`/admin/jobs/${row.jobId}`, { state: { initialAtsTab: 'new' } });
+                return;
+            }
+            if (act === 'VIEW_MATCHES' && row.jobId) {
+                navigate(`/admin/jobs/${row.jobId}`, { state: { initialAtsTab: 'matches' } });
+                return;
+            }
+            if (act === 'VIEW_MATCHES' && row.category) {
+                const label = String(row.category).replace(/_/g, ' ');
+                navigate('/admin/search', { state: { searchQuery: label } });
+                return;
+            }
+            if (row.jobId) {
+                navigate(`/admin/jobs/${row.jobId}`);
+                return;
+            }
+            if (onNavigate) {
+                onNavigate('jobs');
+            } else {
+                navigate('/admin/jobs');
+            }
         },
-        {
-            id: 2,
-            text: 'Discover matched professionals for your active jobs',
-            type: 'matches',
-            icon: Search,
-            iconColor: 'text-[#003971]',
-            iconBg: 'bg-[#EBF3FF]',
-            actionText: 'Search Pros',
-            section: 'search'
-        }
-    ];
+        [navigate, onNavigate]
+    );
 
-    // Popular Searches
-    const popularSearches = [
-        'Chief Engineer',
-        '3rd Officer',
-        'Offshore Supply Vessel'
-    ];
+    const derivedActionRows = useMemo(
+        () => actionItemsList.map((item, index) => mapDashboardActionItem(item, index)),
+        [actionItemsList]
+    );
 
-    // Handle popular search click
+    const periodLabel = useMemo(
+        () =>
+            formatStatsPeriodLabel(
+                timeFilter,
+                customRangeApplied.from,
+                customRangeApplied.to
+            ),
+        [timeFilter, customRangeApplied.from, customRangeApplied.to]
+    );
+
+    const stats = useMemo(
+        () => [
+            {
+                id: 1,
+                title: 'Active Jobs',
+                value: dashStats.activeJobs.toString(),
+                subtext: periodLabel,
+                icon: Briefcase,
+                gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]',
+                iconBg: 'bg-white/20 backdrop-blur-sm',
+                section: 'jobs',
+            },
+            {
+                id: 2,
+                title: 'Applications',
+                value: dashStats.newApplications.toString(),
+                subtext: periodLabel,
+                icon: CheckCircle,
+                gradient: 'from-[#059669] via-[#10b981] to-[#34d399]',
+                iconBg: 'bg-white/20 backdrop-blur-sm',
+                section: 'jobs',
+            },
+            {
+                id: 3,
+                title: 'Matched Professionals',
+                value: dashStats.matchedPros.toString(),
+                subtext: periodLabel,
+                icon: Award,
+                gradient: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
+                iconBg: 'bg-white/20 backdrop-blur-sm',
+                section: 'search',
+            },
+            {
+                id: 4,
+                title: 'Jobs Needing Attention',
+                value: dashStats.jobsNeedingAttention.toString(),
+                subtext: periodLabel,
+                icon: AlertTriangle,
+                gradient: 'from-[#dc2626] via-[#ef4444] to-[#f87171]',
+                iconBg: 'bg-white/20 backdrop-blur-sm',
+                topIcon: Calendar,
+                section: 'jobs',
+            },
+        ],
+        [dashStats, periodLabel]
+    );
+
     const handlePopularSearchClick = (searchTerm) => {
+        if (!searchTerm) return;
         if (onNavigate) {
             onNavigate('search');
         } else {
@@ -236,31 +418,86 @@ function RecruiterDashboard({ onNavigate }) {
                 </div>
 
                 {/* Time Filter */}
-                <div className="flex items-center gap-3">
-                    <div className="bg-white p-1 rounded-2xl border border-gray-200 inline-flex shadow-sm">
-                        {['Today', '7 Days', '1 Month', 'Custom'].map((filter) => (
-                            <button
-                                key={filter}
-                                onClick={() => setTimeFilter(filter)}
-                                className={`px-6 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${timeFilter === filter
-                                    ? 'bg-[#003971] text-white shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                <div className="flex flex-col items-stretch sm:items-end gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="bg-white p-1 rounded-2xl border border-gray-200 inline-flex flex-wrap shadow-sm">
+                            {['Today', '7 Days', '1 Month', 'Custom'].map((filter) => (
+                                <button
+                                    key={filter}
+                                    type="button"
+                                    onClick={() => {
+                                        setTimeFilter(filter);
+                                        if (filter === 'Custom') {
+                                            setCustomRangeDraft({ ...customRangeApplied });
+                                        }
+                                    }}
+                                    className={`px-4 sm:px-6 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                                        timeFilter === filter
+                                            ? 'bg-[#003971] text-white shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
                                     }`}
-                            >
-                                {filter}
-                            </button>
-                        ))}
+                                >
+                                    {filter}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 self-start sm:self-center"
+                        >
+                            <RefreshCw className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        </button>
                     </div>
-                    {/* Refresh Button */}
-                    <button
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                        className="p-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    </button>
+                    {timeFilter === 'Custom' && (
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                            <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">
+                                From
+                                <input
+                                    type="date"
+                                    value={customRangeDraft.from}
+                                    onChange={(e) =>
+                                        setCustomRangeDraft((d) => ({ ...d, from: e.target.value }))
+                                    }
+                                    className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900"
+                                />
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">
+                                To
+                                <input
+                                    type="date"
+                                    value={customRangeDraft.to}
+                                    onChange={(e) =>
+                                        setCustomRangeDraft((d) => ({ ...d, to: e.target.value }))
+                                    }
+                                    className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900"
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!customRangeDraft.from || !customRangeDraft.to) return;
+                                    if (customRangeDraft.from > customRangeDraft.to) return;
+                                    setCustomRangeApplied({
+                                        from: customRangeDraft.from,
+                                        to: customRangeDraft.to,
+                                    });
+                                }}
+                                className="sm:ml-1 px-4 py-2.5 rounded-xl bg-[#003971] text-white text-sm font-semibold hover:bg-[#002855] transition-colors self-start"
+                            >
+                                Apply range
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {statsError && hasFullAccess && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                    {statsError}
+                </p>
+            )}
 
             {hasFullAccess ? (
                 <>
@@ -295,37 +532,58 @@ function RecruiterDashboard({ onNavigate }) {
                         {/* Left Column: Action Required */}
                         <div className="flex-1 space-y-5">
                             <h2 className="text-lg font-bold text-gray-900">Action Required</h2>
+                            {actionItemsError && (
+                                <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2">
+                                    {actionItemsError}
+                                </p>
+                            )}
 
                             <div className="space-y-4">
-                                {actionItems.map((item) => (
-                                    <div key={item.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            <div className={`p-3 rounded-xl ${item.iconBg} flex-shrink-0`}>
-                                                <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                                {actionItemsLoading ? (
+                                    [1, 2].map((k) => (
+                                        <div
+                                            key={k}
+                                            className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 animate-pulse"
+                                        >
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                <div className="h-11 w-11 rounded-xl bg-gray-200 shrink-0" />
+                                                <div className="h-4 bg-gray-200 rounded flex-1 max-w-md" />
                                             </div>
-                                            <span className="text-gray-900 font-medium text-sm">{item.text}</span>
+                                            <div className="h-10 w-36 rounded-xl bg-gray-200 shrink-0" />
                                         </div>
-                                        <button
-                                            onClick={() => {
-                                                if (item.jobId) {
-                                                    if (item.isEdit) {
-                                                        navigate('/admin/upload-job', { state: { jobId: item.jobId, isEdit: true, dashboardType: 'recruiter' } });
-                                                    } else {
-                                                        navigate(`/admin/jobs/${item.jobId}`);
-                                                    }
-                                                } else {
-                                                    handleNavigate(item.section);
-                                                }
-                                            }}
-                                            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${item.secondaryAction
-                                                ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
-                                                : 'bg-[#003971] text-white hover:bg-[#002855]'
-                                                } flex items-center gap-2`}>
-                                            {item.actionText}
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                ))}
+                                    ))
+                                ) : derivedActionRows.length === 0 ? (
+                                    <p className="text-sm text-gray-500 bg-white border border-gray-100 rounded-2xl px-5 py-6">
+                                        No urgent actions right now.
+                                    </p>
+                                ) : (
+                                    derivedActionRows.map((item) => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <div
+                                                key={item.rowKey}
+                                                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                    <div className="p-3 rounded-xl bg-[#EBF3FF] flex-shrink-0">
+                                                        <Icon className="h-5 w-5 text-[#003971]" />
+                                                    </div>
+                                                    <span className="text-gray-900 font-medium text-sm">
+                                                        {item.message}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleActionItemNavigate(item)}
+                                                    className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap bg-[#003971] text-white hover:bg-[#002855] flex items-center gap-2"
+                                                >
+                                                    {item.actionText}
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
@@ -340,21 +598,67 @@ function RecruiterDashboard({ onNavigate }) {
                                     </div>
                                     <h2 className="text-sm font-bold text-gray-900">Insight: Popular Searches</h2>
                                 </div>
+                                {popularSearchesError && (
+                                    <p className="text-xs text-red-600 mb-3">{popularSearchesError}</p>
+                                )}
 
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
-                                    {popularSearches.map((search, index) => (
-                                        <div
-                                            key={index}
-                                            onClick={() => handlePopularSearchClick(search)}
-                                            className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-gray-400 font-bold text-sm w-4">{index + 1}.</span>
-                                                <span className="text-gray-900 font-bold text-sm">{search}</span>
+                                    {isRefreshing && popularSearchesList.length === 0 && !popularSearchesError ? (
+                                        [1, 2, 3, 4].map((k) => (
+                                            <div
+                                                key={k}
+                                                className="flex items-center justify-between p-4 animate-pulse"
+                                            >
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <div className="h-4 w-4 bg-gray-200 rounded" />
+                                                    <div className="h-4 bg-gray-200 rounded flex-1 max-w-[180px]" />
+                                                </div>
+                                                <div className="h-4 w-12 bg-gray-200 rounded" />
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-gray-300" />
+                                        ))
+                                    ) : popularSearchesList.length === 0 ? (
+                                        <div className="p-4 text-sm text-gray-500 text-center">
+                                            No popular search data yet.
                                         </div>
-                                    ))}
+                                    ) : (
+                                        popularSearchesList.map((row, index) => {
+                                            const term = row?.term || '';
+                                            const count =
+                                                typeof row?.count === 'number' ? row.count : null;
+                                            return (
+                                                <div
+                                                    key={`${term}-${index}`}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={() => handlePopularSearchClick(term)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            handlePopularSearchClick(term);
+                                                        }
+                                                    }}
+                                                    className="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                        <span className="text-gray-400 font-bold text-sm w-4 shrink-0">
+                                                            {index + 1}.
+                                                        </span>
+                                                        <div className="min-w-0">
+                                                            <span className="text-gray-900 font-bold text-sm block truncate">
+                                                                {term || '—'}
+                                                            </span>
+                                                            {count != null && (
+                                                                <span className="text-xs text-gray-500 font-medium">
+                                                                    {count.toLocaleString()} searches
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -371,6 +675,11 @@ function RecruiterDashboard({ onNavigate }) {
                                 View All Jobs &gt;
                             </button>
                         </div>
+                        {jobsError && (
+                            <div className="px-8 py-3 text-sm text-red-600 bg-red-50 border-b border-red-100">
+                                {jobsError}
+                            </div>
+                        )}
 
                         <div className="divide-y divide-gray-50">
                             <div className="grid grid-cols-12 px-8 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -380,59 +689,108 @@ function RecruiterDashboard({ onNavigate }) {
                             </div>
 
                             {realJobs.slice(0, 5).map((job) => {
-                                const formattedStatus = job.status === 'ACTIVE' ? 'Active' : (job.status === 'DRAFT' ? 'Draft' : 'Closed');
-                                const displayCategory = job.category 
-                                    ? job.category.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) 
+                                const statusRaw = (job.status || '').toUpperCase();
+                                const formattedStatus =
+                                    statusRaw === 'ACTIVE'
+                                        ? 'Active'
+                                        : statusRaw === 'DRAFT'
+                                          ? 'Draft'
+                                          : 'Closed';
+                                const displayCategory = job.category
+                                    ? job.category
+                                          .replace(/_/g, ' ')
+                                          .toLowerCase()
+                                          .replace(/\b\w/g, (l) => l.toUpperCase())
                                     : 'Category';
-                                const contractType = job.contractType 
-                                    ? job.contractType.charAt(0) + job.contractType.slice(1).toLowerCase() 
+                                const contractType = job.contractType
+                                    ? job.contractType.charAt(0) +
+                                      job.contractType.slice(1).toLowerCase()
                                     : 'Permanent';
-                                
+                                const applicantCount = getDashboardJobApplicantCount(job);
+                                const matchedCount = getDashboardJobMatchedCount(job);
+
                                 return (
-                                <div key={job.id} className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors border-b border-gray-50">
-                                    <div className="col-span-6 flex items-center gap-4">
-                                        <div className="h-12 w-12 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-500">
-                                            <Briefcase className="h-5 w-5" />
+                                    <div
+                                        key={job.id}
+                                        className="grid grid-cols-12 px-8 py-5 items-center hover:bg-gray-50/50 transition-colors border-b border-gray-50"
+                                    >
+                                        <div className="col-span-6 flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50 text-gray-500">
+                                                <Briefcase className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate(`/admin/jobs/${job.id}`)}
+                                                    className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
+                                                >
+                                                    {job.title}
+                                                </button>
+                                                <p className="text-xs text-gray-500 font-medium">
+                                                    {contractType} / {displayCategory}
+                                                </p>
+                                                {job.location && (
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        {job.location}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <button
-                                                onClick={() => navigate(`/admin/jobs/${job.id}`)}
-                                                className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
+                                        <div className="col-span-3 flex flex-col gap-2 items-start justify-center">
+                                            <span
+                                                className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${
+                                                    formattedStatus === 'Active'
+                                                        ? 'bg-teal-50 text-teal-600'
+                                                        : formattedStatus === 'Draft'
+                                                          ? 'bg-orange-50 text-orange-600'
+                                                          : 'bg-gray-100 text-gray-600'
+                                                }`}
                                             >
-                                                {job.title}
-                                            </button>
-                                            <p className="text-xs text-gray-500 font-medium">{contractType} / {displayCategory}</p>
+                                                {formattedStatus}
+                                            </span>
+                                            {formattedStatus === 'Draft' ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        navigate('/admin/upload-job', {
+                                                            state: {
+                                                                jobData: job,
+                                                                isEdit: true,
+                                                                dashboardType: 'recruiter',
+                                                            },
+                                                        })
+                                                    }
+                                                    className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
+                                                >
+                                                    Edit Draft
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        navigate(`/admin/jobs/${job.id}`, {
+                                                            state: { initialAtsTab: 'new' },
+                                                        })
+                                                    }
+                                                    className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                                >
+                                                    {applicantCount}{' '}
+                                                    {applicantCount === 1 ? 'applicant' : 'applicants'}
+                                                    <ChevronRight className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="col-span-3 flex flex-col items-end justify-center gap-0.5">
+                                            <span className="text-2xl font-extrabold text-gray-900 tabular-nums">
+                                                {matchedCount}
+                                            </span>
+                                            <span className="text-xs text-gray-500 font-semibold">
+                                                Matches (not applied)
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="col-span-3">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold ${formattedStatus === 'Active'
-                                            ? 'bg-teal-50 text-teal-600'
-                                            : formattedStatus === 'Draft'
-                                                ? 'bg-orange-50 text-orange-600'
-                                                : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {formattedStatus}
-                                        </span>
-                                    </div>
-                                    <div className="col-span-3 flex justify-end">
-                                        {formattedStatus === 'Draft' ? (
-                                            <button
-                                                onClick={() => navigate('/admin/upload-job', { state: { jobData: job, isEdit: true, dashboardType: 'recruiter' } })}
-                                                className="bg-gray-600 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-700 transition-colors"
-                                            >
-                                                Edit Draft
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => navigate(`/admin/jobs/${job.id}`)}
-                                                className="bg-[#003971] text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                            >
-                                                {job.applicants?.length || 0} <ChevronRight className="h-3.5 w-3.5" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )})}
+                                );
+                            })}
                             
                             {realJobs.length === 0 && (
                                 <div className="text-center py-10">
