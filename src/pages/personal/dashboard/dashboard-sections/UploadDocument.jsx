@@ -103,6 +103,19 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         catch { return ''; }
     };
 
+    const formatMismatchValue = (key, value) => {
+        if (!value) return 'empty';
+
+        if (key === 'issueDate' || key === 'expiryDate') {
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) {
+                return date.toISOString().split('T')[0];
+            }
+        }
+
+        return String(value);
+    };
+
     // ─── Handlers ─────────────────────────────────────────────────────────────
 
     const handleInputChange = (e) => {
@@ -477,8 +490,8 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                         return (
                                             <li key={key}>
                                                 <span className="font-medium">{label}:</span>{' '}
-                                                Entered: <span className="font-medium">{detail.entered || 'empty'}</span>,
-                                                Extracted: <span className="font-medium">{detail.extracted || 'empty'}</span>
+                                                Entered: <span className="font-medium">{formatMismatchValue(key, detail.entered)}</span>,
+                                                Extracted: <span className="font-medium">{formatMismatchValue(key, detail.extracted)}</span>
                                             </li>
                                         );
                                     })}
