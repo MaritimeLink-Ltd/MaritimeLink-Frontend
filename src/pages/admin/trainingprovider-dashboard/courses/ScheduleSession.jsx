@@ -5,6 +5,29 @@ import { publishedCourses } from '../../../../data/publishedCoursesData';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
+function openDatePicker(inputRef) {
+  const el = inputRef?.current;
+  if (!el) return;
+  try {
+    if (typeof el.showPicker === 'function') {
+      el.showPicker();
+      return;
+    }
+  } catch {
+    /* showPicker can throw if not user-activated in some environments */
+  }
+  el.click();
+}
+
+function toDateInputValue(value) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const z = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+}
+
 export default function ScheduleSession() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,13 +48,16 @@ export default function ScheduleSession() {
   const [courseSearch, setCourseSearch] = useState('');
   const courseDropdownRef = useRef(null);
   const courseSearchRef = useRef(null);
+  const sessionStartDateRef = useRef(null);
+  const sessionEndDateRef = useRef(null);
+  const sessionEnrollmentDeadlineRef = useRef(null);
 
   const [form, setForm] = useState({
-    startDate: sessionData?.startDate || '',
-    endDate: sessionData?.endDate || '',
+    startDate: toDateInputValue(sessionData?.startDate),
+    endDate: toDateInputValue(sessionData?.endDate),
     location: sessionData?.location || '',
     seatCapacity: sessionData?.totalSeats || '',
-    enrollmentDeadline: ''
+    enrollmentDeadline: toDateInputValue(sessionData?.enrollmentDeadline)
   });
 
   // Close dropdown on outside click
@@ -201,28 +227,42 @@ export default function ScheduleSession() {
                 <label className="block text-gray-900 font-medium mb-2 text-base">Start Date</label>
                 <div className="relative">
                   <input
-                    type="text"
+                    ref={sessionStartDateRef}
+                    type="date"
                     name="startDate"
-                    placeholder="e.g. Jun 10, 2024"
                     value={form.startDate}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <button
+                    type="button"
+                    aria-label="Open calendar for start date"
+                    onClick={() => openDatePicker(sessionStartDateRef)}
+                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
               <div>
                 <label className="block text-gray-900 font-medium mb-2 text-base">End Date</label>
                 <div className="relative">
                   <input
-                    type="text"
+                    ref={sessionEndDateRef}
+                    type="date"
                     name="endDate"
-                    placeholder="e.g. Jun 12, 2024"
                     value={form.endDate}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                   />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <button
+                    type="button"
+                    aria-label="Open calendar for end date"
+                    onClick={() => openDatePicker(sessionEndDateRef)}
+                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -264,14 +304,21 @@ export default function ScheduleSession() {
               <label className="block text-gray-900 font-medium mb-2 text-base">Enrollment Deadline</label>
               <div className="relative">
                 <input
-                  type="text"
+                  ref={sessionEnrollmentDeadlineRef}
+                  type="date"
                   name="enrollmentDeadline"
-                  placeholder="Set deadline for enrollment"
                   value={form.enrollmentDeadline}
                   onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                  className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                 />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <button
+                  type="button"
+                  aria-label="Open calendar for enrollment deadline"
+                  onClick={() => openDatePicker(sessionEnrollmentDeadlineRef)}
+                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                >
+                  <Calendar className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>

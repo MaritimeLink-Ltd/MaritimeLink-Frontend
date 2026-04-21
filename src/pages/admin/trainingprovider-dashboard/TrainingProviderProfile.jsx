@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     User,
     Shield,
@@ -17,22 +17,53 @@ import {
 } from 'lucide-react';
 import { countryCodes } from '../../../utils/countryCodes';
 
+const emptyGeneralForm = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    countryCode: '+44',
+    phone: '',
+    jobTitle: '',
+    department: '',
+    companyName: '',
+    orgId: '',
+    role: '',
+    region: '',
+};
+
+function readStoredTrainingProviderProfileForm() {
+    try {
+        const raw = localStorage.getItem('userProfile');
+        if (!raw) {
+            return {
+                ...emptyGeneralForm,
+                email: localStorage.getItem('userEmail') || '',
+            };
+        }
+        const p = JSON.parse(raw);
+        const phoneRaw = String(p.phone || p.phoneNumber || p.mobile || '').trim();
+        return {
+            firstName: String(p.firstName || '').trim(),
+            lastName: String(p.lastName || '').trim(),
+            email: String(p.email || localStorage.getItem('userEmail') || '').trim(),
+            countryCode: String(p.countryCode || '+44').trim() || '+44',
+            phone: phoneRaw,
+            jobTitle: String(p.jobTitle || p.position || '').trim(),
+            department: String(p.department || '').trim(),
+            companyName: String(p.companyName || p.company || '').trim(),
+            orgId: String(p.organizationId || p.orgId || '').trim(),
+            role: String(p.role || '').trim(),
+            region: String(p.region || p.country || '').trim(),
+        };
+    } catch {
+        return { ...emptyGeneralForm, email: localStorage.getItem('userEmail') || '' };
+    }
+}
+
 const TrainingProviderProfile = () => {
     const [activeTab, setActiveTab] = useState('general');
 
-    const [formData, setFormData] = useState({
-        firstName: 'Kingsley',
-        lastName: 'Osifo',
-        email: 'kingsley@maritimelink.com',
-        countryCode: '+44',
-        phone: '7700900077',
-        jobTitle: 'Training Manager',
-        department: 'Operations',
-        companyName: 'MaritimeLink Training',
-        orgId: 'TP-778291',
-        role: 'Training Provider Admin',
-        region: 'United Kingdom'
-    });
+    const [formData, setFormData] = useState(() => readStoredTrainingProviderProfileForm());
 
     const [passwords, setPasswords] = useState({
         current: '',
@@ -55,7 +86,13 @@ const TrainingProviderProfile = () => {
 
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-    const [profileImage, setProfileImage] = useState('/images/login-image.webp');
+    const [profileImage, setProfileImage] = useState(() => localStorage.getItem('profileImage') || '');
+
+    useEffect(() => {
+        setFormData(readStoredTrainingProviderProfileForm());
+        const saved = localStorage.getItem('profileImage');
+        if (saved) setProfileImage(saved);
+    }, []);
 
     // Handle form data change
     const handleFormChange = (field, value) => {
@@ -94,7 +131,16 @@ const TrainingProviderProfile = () => {
             // Create preview URL
             const reader = new FileReader();
             reader.onloadend = () => {
-                setProfileImage(reader.result);
+                const url = reader.result;
+                setProfileImage(url);
+                try {
+                    if (typeof url === 'string') {
+                        localStorage.setItem('profileImage', url);
+                        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url } }));
+                    }
+                } catch {
+                    /* ignore quota errors */
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -102,7 +148,21 @@ const TrainingProviderProfile = () => {
 
     // Handle profile image removal
     const handleImageRemove = () => {
-        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+        setProfileImage('');
+        try {
+            localStorage.removeItem('profileImage');
+            const raw = localStorage.getItem('userProfile');
+            if (raw) {
+                const p = JSON.parse(raw);
+                delete p.profilePhoto;
+                delete p.profilePhotoUrl;
+                delete p.photo;
+                localStorage.setItem('userProfile', JSON.stringify(p));
+            }
+            window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: null } }));
+        } catch {
+            /* ignore */
+        }
     };
 
     // Handle password update
@@ -206,11 +266,17 @@ const TrainingProviderProfile = () => {
                                     {/* Avatar Section */}
                                     <div className="flex-shrink-0">
                                         <div className="relative">
-                                            <img
-                                                src={profileImage}
-                                                alt="Profile"
-                                                className="w-24 h-24 rounded-full object-cover border-4 border-gray-50"
-                                            />
+                                            {profileImage ? (
+                                                <img
+                                                    src={profileImage}
+                                                    alt=""
+                                                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-50"
+                                                />
+                                            ) : (
+                                                <div className="w-24 h-24 rounded-full border-4 border-gray-50 bg-gray-100 flex items-center justify-center">
+                                                    <User className="h-10 w-10 text-gray-400" />
+                                                </div>
+                                            )}
                                             <input
                                                 type="file"
                                                 id="profile-photo-upload"

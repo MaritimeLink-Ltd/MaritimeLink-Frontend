@@ -503,7 +503,20 @@ export default function SessionAttendance() {
                                 isAdminAttendance
                                   ? `/admin/marketplace/candidate/${attendee.professionalId}`
                                   : `/trainingprovider/candidate/${attendee.professionalId}`,
-                                { state: { fromAttendance: true } }
+                                {
+                                  state: {
+                                    fromAttendance: true,
+                                    /** Load /api/admin|trainer/professionals/:id — not job /applicants/:id */
+                                    isProfessionalView: true,
+                                    bookingId: attendee.bookingId,
+                                    bookingStatus: attendee.statusRaw,
+                                    sessionId: sessionId || undefined,
+                                    courseId: courseId || undefined,
+                                    adminCourseBookingsMode: adminCourseBookingsMode || false,
+                                    returnPath: returnPath || undefined,
+                                    courseTitle: courseTitle || undefined,
+                                  },
+                                }
                               )
                             }
                             className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"

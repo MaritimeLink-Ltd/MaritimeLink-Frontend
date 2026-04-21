@@ -103,9 +103,19 @@ export const API_ENDPOINTS = {
   },
   // Training provider (trainer) session / booking management
   TRAINER: {
+    DASHBOARD_STATS: '/api/trainer/dashboard/stats',
+    DASHBOARD_ACTION_ITEMS: '/api/trainer/dashboard/action-items',
+    DASHBOARD_COURSES: '/api/trainer/dashboard/courses',
     SESSION_ATTENDEES: (sessionId) => `/api/trainer/sessions/${sessionId}/attendees`,
     APPROVE_ATTENDEE: (sessionId, bookingId) =>
       `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/approve`,
+    /** Optional: reject pending attendee (backend must implement this route). */
+    REJECT_ATTENDEE: (sessionId, bookingId) =>
+      `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/reject`,
+    /** Professional profile for a booked trainee (backend must implement if used). */
+    PROFESSIONAL_DETAIL: (professionalId) => `/api/trainer/professionals/${professionalId}`,
+    /** Full course booking including documents submitted at checkout (backend must implement if used). */
+    BOOKING_DETAIL: (bookingId) => `/api/trainer/bookings/${bookingId}`,
   },
   // Job Endpoints
   JOBS: {
@@ -133,6 +143,12 @@ export const API_ENDPOINTS = {
   // Admin Endpoints
   ADMIN: {
     LOGIN: '/api/admin/login',
+    DASHBOARD_STATS: '/api/admin/dashboard/stats',
+    DASHBOARD_ACTIVITY: '/api/admin/dashboard/activity',
+    DASHBOARD_REVENUE: '/api/admin/dashboard/revenue',
+    DASHBOARD_QUEUES: '/api/admin/dashboard/queues',
+    /** Aggregated marketplace / training revenue, fees, and payouts */
+    REVENUE: '/api/admin/revenue',
     RECRUITERS: '/api/admin/recruiters',
     RECRUITERS_STATS: '/api/admin/recruiters/stats',
     RECRUITER_DETAIL: (id) => `/api/admin/recruiters/${id}`,
@@ -156,6 +172,8 @@ export const API_ENDPOINTS = {
     MARKETPLACE_LISTINGS: '/api/admin/marketplace/listings',
     /** All bookings for a course (attendees / payment summary) — SUPER_ADMIN */
     COURSE_BOOKINGS: (courseId) => `/api/admin/courses/${courseId}/bookings`,
+    /** Full course booking (documents, resume snapshot) — align with backend route. */
+    BOOKING_DETAIL: (bookingId) => `/api/admin/bookings/${bookingId}`,
     APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,

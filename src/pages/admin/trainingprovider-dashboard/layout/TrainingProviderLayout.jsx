@@ -13,6 +13,17 @@ import {
     MessageSquare
 } from 'lucide-react';
 
+function initialsFromName(name) {
+    const parts = String(name || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    if (parts.length === 1 && parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return '?';
+}
+
 function TrainingProviderLayout() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -20,9 +31,9 @@ function TrainingProviderLayout() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [userData, setUserData] = useState({
-        name: 'User Profile',
+        name: '',
         email: '',
-        photo: '/images/login-image.webp'
+        photo: null,
     });
 
     useEffect(() => {
@@ -39,9 +50,14 @@ function TrainingProviderLayout() {
                         : profile.fullName || 'Training Provider User';
                     
                     setUserData({
-                        name: name,
+                        name,
                         email: profile.email || userEmail || '',
-                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
+                        photo:
+                            savedPhoto ||
+                            profile.profilePhoto ||
+                            profile.profilePhotoUrl ||
+                            profile.photo ||
+                            null,
                     });
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
@@ -59,9 +75,8 @@ function TrainingProviderLayout() {
         window.addEventListener('storage', updateUserData);
         
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, photo: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            setUserData((prev) => ({ ...prev, photo: url || null }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         
@@ -189,13 +204,24 @@ function TrainingProviderLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors"
                                 >
-                                    <img
-                                        className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src={userData.photo}
-                                        alt="User avatar"
-                                    />
-                                    <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
-                                        <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2">{userData.name}</span>
+                                    {userData.photo ? (
+                                        <img
+                                            className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
+                                            src={userData.photo}
+                                            alt=""
+                                        />
+                                    ) : (
+                                        <div
+                                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-[#003971]/10 text-[#003971] flex items-center justify-center text-xs font-bold"
+                                            title={userData.name || userData.email}
+                                        >
+                                            {initialsFromName(userData.name || userData.email || 'U')}
+                                        </div>
+                                    )}
+                                    <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left min-w-0">
+                                        <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2 truncate max-w-[160px]">
+                                            {userData.name || 'Training provider'}
+                                        </span>
                                         {userData.email && (
                                             <span className="text-xs text-gray-500 leading-none">{userData.email}</span>
                                         )}

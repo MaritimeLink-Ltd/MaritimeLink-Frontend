@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     ChevronLeft,
@@ -21,6 +21,27 @@ const courseTitleOptions = [
     'STCW Refresher Course',
     'Other'
 ];
+
+function openDatePicker(inputRef) {
+    const el = inputRef?.current;
+    if (!el) return;
+    try {
+        if (typeof el.showPicker === 'function') {
+            el.showPicker();
+            return;
+        }
+    } catch {
+        /* showPicker can throw if not user-activated in some environments */
+    }
+    el.click();
+}
+
+function formatSessionDateDisplay(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function CreateCourse() {
     const navigate = useNavigate();
@@ -59,6 +80,10 @@ export default function CreateCourse() {
         seatCapacity: '',
         enrollmentDeadline: ''
     };
+
+    const sessionStartDateRef = useRef(null);
+    const sessionEndDateRef = useRef(null);
+    const sessionEnrollmentDeadlineRef = useRef(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -491,7 +516,9 @@ export default function CreateCourse() {
                                                 className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-gray-50 border border-gray-100 text-sm"
                                             >
                                                 <span className="font-medium text-gray-700">
-                                                    Session {idx + 1}: {s.startDate || '—'} – {s.endDate || '—'}
+                                                    Session {idx + 1}:{' '}
+                                                    {formatSessionDateDisplay(s.startDate) || '—'} –{' '}
+                                                    {formatSessionDateDisplay(s.endDate) || '—'}
                                                     {s.location && ` • ${s.location}`}
                                                     {s.seatCapacity && ` • ${s.seatCapacity} seats`}
                                                 </span>
@@ -514,14 +541,21 @@ export default function CreateCourse() {
                                             </label>
                                             <div className="relative">
                                                 <input
-                                                    type="text"
+                                                    ref={sessionStartDateRef}
+                                                    type="date"
                                                     name="startDate"
-                                                    placeholder="e.g. Jun 10, 2024"
                                                     value={sessionForm.startDate}
                                                     onChange={handleSessionChange}
-                                                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                                                 />
-                                                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <button
+                                                    type="button"
+                                                    aria-label="Open calendar for start date"
+                                                    onClick={() => openDatePicker(sessionStartDateRef)}
+                                                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                                                >
+                                                    <Calendar className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
                                         <div>
@@ -530,14 +564,21 @@ export default function CreateCourse() {
                                             </label>
                                             <div className="relative">
                                                 <input
-                                                    type="text"
+                                                    ref={sessionEndDateRef}
+                                                    type="date"
                                                     name="endDate"
-                                                    placeholder="e.g. Jun 12, 2024"
                                                     value={sessionForm.endDate}
                                                     onChange={handleSessionChange}
-                                                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                                    className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                                                 />
-                                                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <button
+                                                    type="button"
+                                                    aria-label="Open calendar for end date"
+                                                    onClick={() => openDatePicker(sessionEndDateRef)}
+                                                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                                                >
+                                                    <Calendar className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -582,14 +623,21 @@ export default function CreateCourse() {
                                         </label>
                                         <div className="relative">
                                             <input
-                                                type="text"
+                                                ref={sessionEnrollmentDeadlineRef}
+                                                type="date"
                                                 name="enrollmentDeadline"
-                                                placeholder="Set deadline for enrollment"
                                                 value={sessionForm.enrollmentDeadline}
                                                 onChange={handleSessionChange}
-                                                className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] placeholder-gray-400"
+                                                className="w-full border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] [color-scheme:light] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
                                             />
-                                            <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <button
+                                                type="button"
+                                                aria-label="Open calendar for enrollment deadline"
+                                                onClick={() => openDatePicker(sessionEnrollmentDeadlineRef)}
+                                                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#003971] focus:outline-none focus:ring-2 focus:ring-[#003971]/20"
+                                            >
+                                                <Calendar className="h-4 w-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

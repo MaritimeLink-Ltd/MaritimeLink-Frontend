@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import jobService from '../../../../services/jobService';
@@ -213,6 +214,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [statusUpdatedBy, setStatusUpdatedBy] = useState(null);
     const [statusActionError, setStatusActionError] = useState('');
+    const [isBookingActionLoading, setIsBookingActionLoading] = useState(false);
+    const [showBookingRejectModal, setShowBookingRejectModal] = useState(false);
+    const [bookingRejectReason, setBookingRejectReason] = useState('');
 
     const statusPatchApplicationId = useMemo(
         () => resolveApplicantRecordIdForStatusPatch(location.state, candidateId, fetchedCandidate),
@@ -228,6 +232,72 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
             if (!candidateId) {
                 setIsLoading(false);
+                return;
+            }
+
+            const fromAttendance = !!location.state?.fromAttendance;
+            const isTrainingProviderUser = currentUserType === 'training-provider';
+
+            if (fromAttendance && (isAdmin || isTrainingProviderUser)) {
+                try {
+                    setIsLoading(true);
+                    const profPath = isAdmin
+                        ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
+                        : API_ENDPOINTS.TRAINER.PROFESSIONAL_DETAIL(candidateId);
+                    const response = await httpClient.get(profPath);
+                    const responseData = response?.data?.data || response?.data;
+                    const obj = responseData?.professional ? responseData.professional : responseData;
+
+                    let mergedCandidate = obj;
+                    const bookingId = location.state?.bookingId;
+                    if (bookingId && obj) {
+                        try {
+                            const bPath = isAdmin
+                                ? API_ENDPOINTS.ADMIN.BOOKING_DETAIL(bookingId)
+                                : API_ENDPOINTS.TRAINER.BOOKING_DETAIL(bookingId);
+                            const bRes = await httpClient.get(bPath);
+                            const booking = bRes?.data?.booking ?? bRes?.data?.data?.booking ?? bRes?.data;
+                            const att = Array.isArray(booking?.attachedDocuments) ? booking.attachedDocuments : [];
+                            if (
+                                att.length > 0 ||
+                                booking?.cvUrl ||
+                                booking?.coverLetterUrl ||
+                                booking?.coverLetter ||
+                                booking?.resumeSnapshot
+                            ) {
+                                mergedCandidate = {
+                                    professional: obj,
+                                    application: {
+                                        professional: obj,
+                                        attachedDocuments: att,
+                                        cvUrl: booking?.cvUrl || null,
+                                        coverLetterUrl: booking?.coverLetterUrl || null,
+                                        coverLetter: booking?.coverLetter ?? null,
+                                        resumeSnapshot: booking?.resumeSnapshot || null,
+                                        status: booking?.bookingStatus || booking?.applicationStatus || 'APPLIED',
+                                    },
+                                };
+                            }
+                        } catch {
+                            /* Optional: full booking may use a different admin/trainer route */
+                        }
+                    }
+
+                    if (mergedCandidate) {
+                        setFetchedCandidate(mergedCandidate);
+                        const appStatus = mergedCandidate.application?.status;
+                        if (appStatus) {
+                            setApplicationStage(mapApiStatusToStage(appStatus));
+                        } else {
+                            setApplicationStage(null);
+                        }
+                        setStatusUpdatedBy(extractUpdatedByRole(mergedCandidate));
+                    }
+                } catch (error) {
+                    console.error('Failed to load professional for session attendee:', error);
+                } finally {
+                    setIsLoading(false);
+                }
                 return;
             }
 
@@ -342,7 +412,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         };
 
         fetchCandidateDetails();
-    }, [candidateId, isAdmin, location.state]);
+    }, [candidateId, isAdmin, currentUserType, location.state]);
 
     const resolveApplicantData = () => {
         const fallback = location.state?.candidateData || {};
@@ -578,7 +648,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         };
     }, [attachedDocuments, resume, cvUrl, coverLetter, coverLetterUrl, applicationAttachments, walletJobApplicationOnly]);
 
-    const shouldShowApplicationStatus = (showApplicationStatus || location.state?.fromJobDetail) && location.state?.applicantStatus !== 'matches';
+    const shouldShowApplicationStatus =
+        (showApplicationStatus || location.state?.fromJobDetail) &&
+        location.state?.applicantStatus !== 'matches' &&
+        !location.state?.fromAttendance;
     /** Visible stepper only (UNDER_REVIEW / APPLIED use `applicationStage` null or `under-review` — not shown here). */
     const stages = [
         { id: 'shortlisted', label: 'Shortlisted' },
@@ -667,6 +740,60 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         }
     };
 
+    const fromAttendanceReview = !!location.state?.fromAttendance;
+    const bookingDecisionSessionId = location.state?.sessionId;
+    const bookingDecisionBookingId = location.state?.bookingId;
+    const adminCourseBookingsOnly = !!location.state?.adminCourseBookingsMode;
+    const canTrainerDecideSessionBooking =
+        fromAttendanceReview &&
+        Boolean(bookingDecisionSessionId) &&
+        Boolean(bookingDecisionBookingId) &&
+        !adminCourseBookingsOnly &&
+        currentUserType === 'training-provider';
+    const sessionBookingStatusUpper = String(location.state?.bookingStatus || '').toUpperCase();
+    const sessionBookingIsPending = sessionBookingStatusUpper === 'PENDING';
+
+    const handleApproveSessionBooking = async () => {
+        if (!bookingDecisionSessionId || !bookingDecisionBookingId) return;
+        setIsBookingActionLoading(true);
+        try {
+            await httpClient.post(
+                API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(bookingDecisionSessionId, bookingDecisionBookingId),
+                {},
+            );
+            toast.success('Attendee approved.');
+            if (location.state?.returnPath) navigate(location.state.returnPath);
+            else navigate(-1);
+        } catch (e) {
+            toast.error(e?.message || 'Could not approve this booking.');
+        } finally {
+            setIsBookingActionLoading(false);
+        }
+    };
+
+    const handleRejectSessionBooking = async () => {
+        if (!bookingDecisionSessionId || !bookingDecisionBookingId || !bookingRejectReason.trim()) return;
+        setIsBookingActionLoading(true);
+        try {
+            await httpClient.post(
+                API_ENDPOINTS.TRAINER.REJECT_ATTENDEE(bookingDecisionSessionId, bookingDecisionBookingId),
+                { reason: bookingRejectReason.trim() },
+            );
+            toast.success('Attendee rejected.');
+            setShowBookingRejectModal(false);
+            setBookingRejectReason('');
+            if (location.state?.returnPath) navigate(location.state.returnPath);
+            else navigate(-1);
+        } catch (e) {
+            toast.error(
+                e?.message ||
+                    'Could not reject this booking. If this keeps failing, the reject endpoint may not be deployed yet.',
+            );
+        } finally {
+            setIsBookingActionLoading(false);
+        }
+    };
+
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -743,6 +870,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 p-6">
+            <Toaster position="top-right" />
             <div className="mb-4">
                 <button onClick={handleBack} className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors">
                     <ChevronLeft className="h-5 w-5" />
@@ -792,7 +920,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {!location.pathname.includes('/trainingprovider/') && (
+                        {(!location.pathname.includes('/trainingprovider/') || location.state?.fromAttendance) && (
                             <button onClick={handleViewResume} className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <FileText className="h-5 w-5" />
                                 View Resume
@@ -819,6 +947,58 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                         </button>
                     </div>
                 </div>
+
+                {fromAttendanceReview && location.state?.bookingId ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Calendar className="h-5 w-5 text-[#003971]" />
+                            <h2 className="text-lg font-bold text-[#003971]">Course session booking</h2>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Booking ID{' '}
+                            <span className="font-mono text-xs text-gray-800">{String(location.state.bookingId)}</span>
+                            {location.state?.bookingStatus ? (
+                                <>
+                                    {' '}
+                                    · Status{' '}
+                                    <span className="font-semibold text-gray-900">
+                                        {String(location.state.bookingStatus)}
+                                    </span>
+                                </>
+                            ) : null}
+                        </p>
+                        {canTrainerDecideSessionBooking && sessionBookingIsPending ? (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleApproveSessionBooking}
+                                    disabled={isBookingActionLoading}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-wait"
+                                >
+                                    <Check className="h-4 w-4" />
+                                    {isBookingActionLoading ? 'Working…' : 'Accept booking'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBookingRejectModal(true)}
+                                    disabled={isBookingActionLoading}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Reject booking
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">
+                                {adminCourseBookingsOnly
+                                    ? 'Admin course booking overview: use session-level attendee tools to approve or reject pending trainees when a session is selected.'
+                                    : canTrainerDecideSessionBooking
+                                        ? 'This booking is not pending approval.'
+                                        : 'Accept and reject actions are available for training providers when the booking is still pending.'}
+                            </p>
+                        )}
+                    </div>
+                ) : null}
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                     <div className="flex items-center gap-2 mb-5">
@@ -997,6 +1177,59 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
                 )}
 
+                {showBookingRejectModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowBookingRejectModal(false);
+                                    setBookingRejectReason('');
+                                }}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Reject this booking?</h3>
+                            <p className="text-gray-600 text-sm mb-6">
+                                The trainee will be marked as rejected for this session. Add a short reason for your records.
+                            </p>
+                            <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={bookingRejectReason}
+                                    onChange={(e) => setBookingRejectReason(e.target.value)}
+                                    placeholder="Please provide a reason"
+                                    rows={3}
+                                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none"
+                                />
+                            </div>
+                            <div className="flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowBookingRejectModal(false);
+                                        setBookingRejectReason('');
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRejectSessionBooking}
+                                    disabled={!bookingRejectReason.trim() || isBookingActionLoading}
+                                    className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isBookingActionLoading ? 'Rejecting…' : 'Reject booking'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showDocumentWallet && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-2xl p-0 max-w-4xl w-full max-h-[85vh] flex flex-col relative">
@@ -1006,7 +1239,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     <p className="text-sm text-gray-600">
                                         {walletJobApplicationOnly
                                             ? 'Only the CV, cover letter, and files the candidate included when they applied for this job.'
-                                            : 'Documents from this application submission, profile wallet, and resume-linked certificates.'}
+                                            : location.state?.fromAttendance
+                                                ? 'Course booking attachments (when available), profile wallet documents, and resume-linked certificates.'
+                                                : 'Documents from this application submission, profile wallet, and resume-linked certificates.'}
                                     </p>
                                 </div>
                                 <button onClick={() => setShowDocumentWallet(false)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors">
