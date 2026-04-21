@@ -57,7 +57,7 @@ function RecruiterSignup() {
             '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
             '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
         ];
-        
+
         const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
         if (isPersonalEmail) {
             setError('Please use a valid work email address');
