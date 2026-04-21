@@ -13,6 +13,7 @@ const Profile = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
     const [profileImage, setProfileImage] = useState(() => {
         const savedProfile = localStorage.getItem('userProfile');
         if (savedProfile) {
@@ -27,7 +28,11 @@ const Profile = () => {
         return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
     });
     const [isAvailable, setIsAvailable] = useState(false);
+    const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [membershipTier, setMembershipTier] = useState('FREE');
+    const [isUpdatingMembership, setIsUpdatingMembership] = useState(false);
 
     // Get user data from localStorage
     const [userName, setUserName] = useState('User');
@@ -36,6 +41,26 @@ const Profile = () => {
     // Fetch user data from Resume API
     React.useEffect(() => {
         const fetchUserData = async () => {
+            try {
+                const accountResponse = await authService.getMyAccount();
+                const professional = accountResponse?.data?.professional;
+                if (professional) {
+                    setIsAvailable(Boolean(professional.availableForWork));
+                    setMembershipTier(professional.tier || 'FREE');
+                    setUserEmail(professional.email || '');
+
+                    const apiName = professional.fullname || `${professional.firstName || ''} ${professional.lastName || ''}`.trim();
+                    if (apiName) setUserName(apiName);
+
+                    if (professional.profilePhotoUrl) {
+                        setProfileImage(professional.profilePhotoUrl);
+                        localStorage.setItem('profileImage', professional.profilePhotoUrl);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching professional account:', error);
+            }
+
             try {
                 // Try to get data from API first
                 const resumeData = await resumeService.getResume();
@@ -85,28 +110,74 @@ const Profile = () => {
     }, []);
 
     const handleLogout = () => {
-        // Here you would clear auth tokens/state if applicable (e.g., localStorage.removeItem('token');)
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
+        authService.logout();
         navigate('/signin');
         setShowLogoutModal(false);
     };
 
-    const handleFeedbackSubmit = () => {
-        if (feedbackMessage.trim()) {
-            setFeedbackSubmitted(true);
-            setTimeout(() => {
-                setShowFeedbackModal(false);
-                setFeedbackMessage('');
-                setFeedbackSubmitted(false);
-            }, 2000);
+    const handleFeedbackSubmit = async () => {
+        const message = feedbackMessage.trim();
+        if (message) {
+            try {
+                setIsSubmittingFeedback(true);
+                await authService.submitFeedback(message);
+                setFeedbackSubmitted(true);
+                setTimeout(() => {
+                    setShowFeedbackModal(false);
+                    setFeedbackMessage('');
+                    setFeedbackSubmitted(false);
+                }, 2000);
+            } catch (error) {
+                toast.error(error.message || 'Failed to submit feedback', { position: 'top-right' });
+            } finally {
+                setIsSubmittingFeedback(false);
+            }
         }
     };
 
-    const handleDeleteAccount = () => {
-        // Handle account deletion logic
-        console.log('Account deleted');
-        navigate('/signin');
+    const handleDeleteAccount = async () => {
+        try {
+            setIsDeletingAccount(true);
+            await authService.deleteAccount();
+            toast.success('Account deleted successfully', { position: 'top-right' });
+            navigate('/signin');
+        } catch (error) {
+            toast.error(error.message || 'Failed to delete account', { position: 'top-right' });
+        } finally {
+            setIsDeletingAccount(false);
+            setShowDeleteModal(false);
+        }
+    };
+
+    const handleAvailabilityToggle = async () => {
+        const nextAvailability = !isAvailable;
+        setIsAvailable(nextAvailability);
+
+        try {
+            setIsUpdatingAvailability(true);
+            await authService.updateAvailability(nextAvailability);
+            toast.success(nextAvailability ? 'You are now available for work' : 'Availability turned off', { position: 'top-right' });
+        } catch (error) {
+            setIsAvailable(!nextAvailability);
+            toast.error(error.message || 'Failed to update availability', { position: 'top-right' });
+        } finally {
+            setIsUpdatingAvailability(false);
+        }
+    };
+
+    const handleMembershipSelect = async (tier) => {
+        try {
+            setIsUpdatingMembership(true);
+            const response = await authService.updateMembership(tier);
+            const nextTier = response?.data?.membership?.tier || tier;
+            setMembershipTier(nextTier);
+            toast.success('Membership updated successfully', { position: 'top-right' });
+            setShowPremiumPlans(false);
+        } catch (error) {
+            toast.error(error.message || 'Failed to update membership', { position: 'top-right' });
+        } finally {
+            setIsUpdatingMembership(false);
+        }
     };
 
     // Handle profile image upload — calls the real API
@@ -137,13 +208,7 @@ const Profile = () => {
         // Upload to API
         try {
             setIsUploadingPhoto(true);
-            const professionalId = localStorage.getItem('professionalId');
-            if (!professionalId) {
-                toast.error('Professional ID not found. Please log in again.', { position: 'top-right' });
-                return;
-            }
-
-            const response = await authService.uploadProfilePhoto(professionalId, file);
+            const response = await authService.updateProfilePhoto(file);
             const photoUrl = response?.data?.url || response?.data?.photoUrl || response?.data?.profilePhoto;
 
             if (photoUrl) {
@@ -181,12 +246,32 @@ const Profile = () => {
     };
 
     // Handle profile image removal
-    const handleImageRemove = () => {
+    const handleImageRemove = async () => {
         const defaultImage = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
-        setProfileImage(defaultImage);
-        localStorage.setItem('profileImage', defaultImage);
-        // Notify header
-        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultImage } }));
+        try {
+            setIsUploadingPhoto(true);
+            await authService.deleteProfilePhoto();
+            setProfileImage(defaultImage);
+            localStorage.setItem('profileImage', defaultImage);
+
+            const savedProfile = localStorage.getItem('userProfile');
+            if (savedProfile) {
+                try {
+                    const profile = JSON.parse(savedProfile);
+                    delete profile.profilePhotoUrl;
+                    delete profile.profilePhoto;
+                    delete profile.photo;
+                    localStorage.setItem('userProfile', JSON.stringify(profile));
+                } catch (e) { /* ignore */ }
+            }
+
+            window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultImage } }));
+            toast.success('Profile photo removed', { position: 'top-right' });
+        } catch (error) {
+            toast.error(error.message || 'Failed to remove profile photo', { position: 'top-right' });
+        } finally {
+            setIsUploadingPhoto(false);
+        }
     };
 
     return (
@@ -240,9 +325,10 @@ const Profile = () => {
                                 </label>
                                 <button
                                     onClick={handleImageRemove}
-                                    className="text-sm font-medium text-red-600 hover:text-red-700"
+                                    disabled={isUploadingPhoto}
+                                    className="text-sm font-medium text-red-600 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed"
                                 >
-                                    Remove
+                                    {isUploadingPhoto ? 'Saving...' : 'Remove'}
                                 </button>
                             </div>
                         </div>
@@ -256,8 +342,8 @@ const Profile = () => {
                                 <Crown size={20} />
                                 <h4 className="font-semibold text-base">Maritime Premium</h4>
                             </div>
-                            <p className="text-sm mb-1">No active membership plan</p>
-                            <p className="text-sm opacity-90">Click to see available plans</p>
+                            <p className="text-sm mb-1">{membershipTier === 'PRO' ? 'Active membership plan' : 'No active membership plan'}</p>
+                            <p className="text-sm opacity-90">{membershipTier === 'PRO' ? 'Maritime Premium is active' : 'Click to see available plans'}</p>
                             <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2" size={20} />
                         </div>
                     </div>
@@ -276,8 +362,9 @@ const Profile = () => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => setIsAvailable(!isAvailable)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
+                                    onClick={handleAvailabilityToggle}
+                                    disabled={isUpdatingAvailability}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
                                 >
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm ${isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
@@ -425,8 +512,12 @@ const Profile = () => {
                                                 <span className="text-sm text-gray-600">Email support</span>
                                             </li>
                                         </ul>
-                                        <button className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
-                                            Select Plan
+                                        <button
+                                            onClick={() => handleMembershipSelect('FREE')}
+                                            disabled={isUpdatingMembership}
+                                            className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                        >
+                                            {membershipTier === 'FREE' ? 'Current Plan' : 'Select Plan'}
                                         </button>
                                     </div>
 
@@ -460,8 +551,12 @@ const Profile = () => {
                                                 <span className="text-sm text-gray-600">Priority support</span>
                                             </li>
                                         </ul>
-                                        <button className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                                            Select Plan
+                                        <button
+                                            onClick={() => handleMembershipSelect('PRO')}
+                                            disabled={isUpdatingMembership}
+                                            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                        >
+                                            {membershipTier === 'PRO' ? 'Current Plan' : 'Select Plan'}
                                         </button>
                                     </div>
 
@@ -496,8 +591,12 @@ const Profile = () => {
                                                 <span className="text-sm text-gray-600">24/7 priority support</span>
                                             </li>
                                         </ul>
-                                        <button className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
-                                            Select Plan
+                                        <button
+                                            onClick={() => handleMembershipSelect('PRO')}
+                                            disabled={isUpdatingMembership}
+                                            className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                        >
+                                            {membershipTier === 'PRO' ? 'Current Plan' : 'Select Plan'}
                                         </button>
                                     </div>
                                 </div>
@@ -537,10 +636,10 @@ const Profile = () => {
                                     />
                                     <button
                                         onClick={handleFeedbackSubmit}
-                                        disabled={!feedbackMessage.trim()}
+                                        disabled={!feedbackMessage.trim() || isSubmittingFeedback}
                                         className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
-                                        Submit Feedback
+                                        {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
                                     </button>
                                 </>
                             )}
@@ -565,9 +664,10 @@ const Profile = () => {
                             <div className="space-y-3">
                                 <button
                                     onClick={handleDeleteAccount}
-                                    className="w-full py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                                    disabled={isDeletingAccount}
+                                    className="w-full py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                                 >
-                                    Yes, Delete My Account
+                                    {isDeletingAccount ? 'Deleting...' : 'Yes, Delete My Account'}
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteModal(false)}

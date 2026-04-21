@@ -513,6 +513,84 @@ class AuthService {
         }
     }
 
+    async updateProfilePhoto(file) {
+        try {
+            const formData = new FormData();
+            formData.append('photo', file);
+
+            return await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.PROFILE_PHOTO, formData);
+        } catch (error) {
+            console.error('Profile photo update error:', error);
+            throw error;
+        }
+    }
+
+    async deleteProfilePhoto() {
+        try {
+            return await httpClient.delete(API_ENDPOINTS.PROFESSIONAL.PROFILE_PHOTO);
+        } catch (error) {
+            console.error('Profile photo delete error:', error);
+            throw error;
+        }
+    }
+
+    async getMyAccount() {
+        try {
+            return await httpClient.get(API_ENDPOINTS.PROFESSIONAL.ME);
+        } catch (error) {
+            console.error('Get professional account error:', error);
+            throw error;
+        }
+    }
+
+    async updateAvailability(availableForWork) {
+        try {
+            return await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.AVAILABILITY, { availableForWork });
+        } catch (error) {
+            console.error('Availability update error:', error);
+            throw error;
+        }
+    }
+
+    async submitFeedback(message) {
+        try {
+            return await httpClient.post(API_ENDPOINTS.PROFESSIONAL.FEEDBACK, { message });
+        } catch (error) {
+            console.error('Feedback submit error:', error);
+            throw error;
+        }
+    }
+
+    async getMembership() {
+        try {
+            return await httpClient.get(API_ENDPOINTS.PROFESSIONAL.MEMBERSHIP);
+        } catch (error) {
+            console.error('Membership fetch error:', error);
+            throw error;
+        }
+    }
+
+    async updateMembership(tier) {
+        try {
+            return await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.MEMBERSHIP, { tier });
+        } catch (error) {
+            console.error('Membership update error:', error);
+            throw error;
+        }
+    }
+
+    async deleteAccount() {
+        try {
+            const response = await httpClient.delete(API_ENDPOINTS.PROFESSIONAL.DELETE_ACCOUNT);
+            clearAuthStorage();
+            emitAuthTokenChanged();
+            return response;
+        } catch (error) {
+            console.error('Account delete error:', error);
+            throw error;
+        }
+    }
+
     /**
      * Complete professional profile
      * @param {Object} profileData - Profile completion data
