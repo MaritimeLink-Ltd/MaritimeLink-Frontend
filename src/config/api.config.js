@@ -123,7 +123,9 @@ export const API_ENDPOINTS = {
       `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/reject`,
     /** Professional profile for a booked trainee (backend must implement if used). */
     PROFESSIONAL_DETAIL: (professionalId) => `/api/trainer/professionals/${professionalId}`,
-    /** Full course booking including documents submitted at checkout (backend must implement if used). */
+    /** Trainer course bookings list. */
+    BOOKINGS: '/api/trainer/bookings',
+    /** Full course booking including documents submitted at checkout. */
     BOOKING_DETAIL: (bookingId) => `/api/trainer/bookings/${bookingId}`,
   },
   // Job Endpoints

@@ -24,8 +24,8 @@ const Profile = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-<<<<<<< Updated upstream
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+    const defaultAvatar = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
     const [profileImage, setProfileImage] = useState(() => {
         const savedProfile = localStorage.getItem('userProfile');
         if (savedProfile) {
@@ -37,12 +37,8 @@ const Profile = () => {
                 console.error('Error parsing userProfile for profile image:', e);
             }
         }
-        return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
+        return localStorage.getItem('profileImage') || defaultAvatar;
     });
-=======
-    const defaultAvatar = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
-    const [profileImage, setProfileImage] = useState(defaultAvatar);
->>>>>>> Stashed changes
     const [isAvailable, setIsAvailable] = useState(false);
     const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -225,11 +221,7 @@ const Profile = () => {
 
         try {
             setIsUploadingPhoto(true);
-<<<<<<< Updated upstream
             const response = await authService.updateProfilePhoto(file);
-=======
-            const response = await authService.uploadProfilePhoto(professionalId, file);
->>>>>>> Stashed changes
             const photoUrl = response?.data?.url || response?.data?.photoUrl || response?.data?.profilePhoto;
 
             if (photoUrl) {
@@ -249,14 +241,12 @@ const Profile = () => {
     };
 
     // Handle profile image removal
-<<<<<<< Updated upstream
     const handleImageRemove = async () => {
-        const defaultImage = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
         try {
             setIsUploadingPhoto(true);
             await authService.deleteProfilePhoto();
-            setProfileImage(defaultImage);
-            localStorage.setItem('profileImage', defaultImage);
+            setProfileImage(defaultAvatar);
+            localStorage.setItem('profileImage', defaultAvatar);
 
             const savedProfile = localStorage.getItem('userProfile');
             if (savedProfile) {
@@ -269,18 +259,13 @@ const Profile = () => {
                 } catch (e) { /* ignore */ }
             }
 
-            window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultImage } }));
+            window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultAvatar } }));
             toast.success('Profile photo removed', { position: 'top-right' });
         } catch (error) {
             toast.error(error.message || 'Failed to remove profile photo', { position: 'top-right' });
         } finally {
             setIsUploadingPhoto(false);
         }
-=======
-    const handleImageRemove = () => {
-        setProfileImage(defaultAvatar);
-        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultAvatar } }));
->>>>>>> Stashed changes
     };
 
     return (
