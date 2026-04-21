@@ -47,6 +47,7 @@ export const API_ENDPOINTS = {
     KYC_UPLOAD_BACK: '/api/professional/kyc/upload-document-back',
     KYC_SUBMIT: '/api/professional/kyc/submit',
     KYC_UPLOAD_SELFIE: '/api/professional/kyc/upload-selfie',
+    UPDATE_PASSWORD: '/api/professional/update-password',
   },
   // Document Endpoints
   DOCUMENTS: {

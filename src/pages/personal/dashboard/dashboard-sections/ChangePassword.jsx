@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Lock, Loader2 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import authService from '../../../../services/authService';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ChangePassword = () => {
@@ -12,15 +14,41 @@ const ChangePassword = () => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSave = () => {
-        // Handle password change logic
-        console.log('Password changed successfully!');
-        navigate('/personal/profile');
+    const handleSave = async () => {
+        if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+            toast.error('Please fill in all fields.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast.error('New password and confirmation do not match.');
+            return;
+        }
+        if (newPassword === currentPassword) {
+            toast.error('New password must be different from your current password.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await authService.updateProfessionalPassword(currentPassword, newPassword);
+            toast.success(res?.message || 'Password updated successfully.');
+            navigate('/personal/profile');
+        } catch (error) {
+            const msg =
+                error?.data?.message ||
+                error?.message ||
+                'Could not update password. Please try again.';
+            toast.error(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
         <div className="w-full h-full flex items-center justify-center bg-gray-50 p-8">
+            <Toaster position="top-center" />
             {/* Logo in top-left corner */}
             <div className="absolute top-6 left-6">
                 <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
@@ -63,7 +91,11 @@ const ChangePassword = () => {
                                 {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
-                        <button className="text-blue-900 text-sm mt-2 hover:underline">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/forgot-password')}
+                            className="text-blue-900 text-sm mt-2 hover:underline"
+                        >
                             Forgot Password?
                         </button>
                     </div>
@@ -123,10 +155,19 @@ const ChangePassword = () => {
 
                 {/* Save Button - stays at bottom */}
                 <button
+                    type="button"
                     onClick={handleSave}
-                    className="w-full py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors mt-6"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors mt-6 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    Save
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                            Saving…
+                        </>
+                    ) : (
+                        'Save'
+                    )}
                 </button>
             </div>
         </div>

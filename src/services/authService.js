@@ -773,6 +773,25 @@ class AuthService {
     }
 
     /**
+     * Update Professional Password (authenticated)
+     * PATCH /api/professional/update-password
+     * @param {string} oldPassword
+     * @param {string} newPassword
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async updateProfessionalPassword(oldPassword, newPassword) {
+        try {
+            return await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.UPDATE_PASSWORD, {
+                oldPassword,
+                newPassword,
+            });
+        } catch (error) {
+            console.error('Update professional password error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Logout
      * Clears all authentication data
      */

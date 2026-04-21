@@ -5,6 +5,17 @@ import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import toast, { Toaster } from 'react-hot-toast';
 
+function resolveProfessionalId() {
+    const direct = localStorage.getItem('professionalId');
+    if (direct) return direct;
+    try {
+        const p = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        return p.id || p.professionalId || p._id || '';
+    } catch {
+        return '';
+    }
+}
+
 const Profile = () => {
     const navigate = useNavigate();
     const [showPremiumPlans, setShowPremiumPlans] = useState(false);
@@ -13,6 +24,7 @@ const Profile = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+<<<<<<< Updated upstream
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
     const [profileImage, setProfileImage] = useState(() => {
         const savedProfile = localStorage.getItem('userProfile');
@@ -27,6 +39,10 @@ const Profile = () => {
         }
         return localStorage.getItem('profileImage') || 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
     });
+=======
+    const defaultAvatar = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
+    const [profileImage, setProfileImage] = useState(defaultAvatar);
+>>>>>>> Stashed changes
     const [isAvailable, setIsAvailable] = useState(false);
     const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -72,10 +88,8 @@ const Profile = () => {
                     setUserName(name);
                     setUserEmail(pi.emailAddress || '');
 
-                    // Update profile photo if available in resume
                     if (pi.profilePhoto) {
                         setProfileImage(pi.profilePhoto);
-                        localStorage.setItem('profileImage', pi.profilePhoto);
                     }
                     return;
                 }
@@ -92,11 +106,9 @@ const Profile = () => {
                     setUserName(name);
                     setUserEmail(userData?.email || localStorage.getItem('userEmail') || '');
                     
-                    // Update profile photo from userProfile if resume fetch failed
                     if (userData?.profilePhotoUrl || userData?.profilePhoto || userData?.photo) {
                         const photoUrl = userData.profilePhotoUrl || userData.profilePhoto || userData.photo;
                         setProfileImage(photoUrl);
-                        localStorage.setItem('profileImage', photoUrl);
                     }
                 } catch (e) {
                     console.error('Error parsing userProfile:', e);
@@ -198,38 +210,31 @@ const Profile = () => {
             return;
         }
 
-        // Show local preview immediately
+        const imageBeforeUpload = profileImage;
+        const professionalId = resolveProfessionalId();
+        if (!professionalId) {
+            toast.error('Professional ID not found. Please log in again.', { position: 'top-right' });
+            return;
+        }
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setProfileImage(reader.result);
         };
         reader.readAsDataURL(file);
 
-        // Upload to API
         try {
             setIsUploadingPhoto(true);
+<<<<<<< Updated upstream
             const response = await authService.updateProfilePhoto(file);
+=======
+            const response = await authService.uploadProfilePhoto(professionalId, file);
+>>>>>>> Stashed changes
             const photoUrl = response?.data?.url || response?.data?.photoUrl || response?.data?.profilePhoto;
 
             if (photoUrl) {
                 setProfileImage(photoUrl);
-                localStorage.setItem('profileImage', photoUrl);
-
-                // Update userProfile in localStorage too
-                const savedProfile = localStorage.getItem('userProfile');
-                if (savedProfile) {
-                    try {
-                        const profile = JSON.parse(savedProfile);
-                        profile.profilePhotoUrl = photoUrl;
-                        profile.profilePhoto = photoUrl;
-                        profile.photo = photoUrl;
-                        localStorage.setItem('userProfile', JSON.stringify(profile));
-                    } catch (e) { /* ignore */ }
-                }
-
-                // Dispatch custom event so header and other components update immediately
                 window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: photoUrl } }));
-
                 toast.success('Profile photo updated successfully!', { position: 'top-right' });
             } else {
                 toast.success('Photo uploaded!', { position: 'top-right' });
@@ -237,15 +242,14 @@ const Profile = () => {
         } catch (error) {
             console.error('Profile photo upload error:', error);
             toast.error(error.message || 'Failed to upload photo. Please try again.', { position: 'top-right' });
-            // Revert to saved image on failure
-            const saved = localStorage.getItem('profileImage');
-            if (saved) setProfileImage(saved);
+            setProfileImage(imageBeforeUpload);
         } finally {
             setIsUploadingPhoto(false);
         }
     };
 
     // Handle profile image removal
+<<<<<<< Updated upstream
     const handleImageRemove = async () => {
         const defaultImage = 'https://placehold.co/128x128/e5e7eb/6b7280?text=User';
         try {
@@ -272,6 +276,11 @@ const Profile = () => {
         } finally {
             setIsUploadingPhoto(false);
         }
+=======
+    const handleImageRemove = () => {
+        setProfileImage(defaultAvatar);
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: defaultAvatar } }));
+>>>>>>> Stashed changes
     };
 
     return (

@@ -31,29 +31,27 @@ function PersonalDashboardLayout() {
     React.useEffect(() => {
         const updateUserData = () => {
             const savedProfile = localStorage.getItem('userProfile');
-            const savedPhoto = localStorage.getItem('profileImage');
             const userEmail = localStorage.getItem('userEmail');
-            
+
             if (savedProfile) {
                 try {
                     const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName) 
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+                    const name = (profile.firstName || profile.lastName)
+                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
                         : profile.fullName || profile.fullname || 'User Profile';
                     const apiPhoto = profile.profilePhotoUrl || profile.profilePhoto || profile.photo;
-                    
+
                     setUserData({
                         name: name,
                         email: profile.email || userEmail || '',
-                        photo: apiPhoto || savedPhoto || '/images/login-image.webp'
+                        photo: apiPhoto || '/images/login-image.webp'
                     });
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
                 }
-            } else if (savedPhoto || userEmail) {
-                setUserData(prev => ({ 
-                    ...prev, 
-                    photo: savedPhoto || prev.photo,
+            } else if (userEmail) {
+                setUserData(prev => ({
+                    ...prev,
                     email: userEmail || prev.email
                 }));
             }
