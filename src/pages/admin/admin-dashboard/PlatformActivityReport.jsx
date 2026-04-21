@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -25,6 +25,7 @@ import {
     Legend,
     ResponsiveContainer
 } from 'recharts';
+import adminDashboardService from '../../../services/adminDashboardService';
 
 // Mock Data for different time ranges
 const mockReportData = {
@@ -102,6 +103,9 @@ function PlatformActivityReport() {
     const [timeFilter, setTimeFilter] = useState('Today');
     const [notification, setNotification] = useState({ show: false, message: '' });
     const [selectedLog, setSelectedLog] = useState(null);
+    const [reportData, setReportData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     const timeFilters = ['Today', '7 Days', '30 Days'];
 
@@ -116,8 +120,32 @@ function PlatformActivityReport() {
         setTimeout(() => setNotification({ show: false, message: '' }), 3000);
     };
 
+    useEffect(() => {
+        let cancelled = false;
+        const rangeMap = { Today: 'today', '7 Days': '7d', '30 Days': '30d' };
+
+        const loadReport = async () => {
+            try {
+                setLoading(true);
+                setError('');
+                const response = await adminDashboardService.getPlatformActivityReport(rangeMap[timeFilter] || '7d');
+                if (!cancelled) setReportData(response?.data || null);
+            } catch (err) {
+                if (!cancelled) setError(err?.message || 'Could not load platform activity report.');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        loadReport();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [timeFilter]);
+
     // Get current data based on active time filter
-    const currentData = mockReportData[timeFilter] || mockReportData['Today'];
+    const currentData = reportData || mockReportData[timeFilter] || mockReportData['Today'];
 
     // Filter logs based on selected filters
     const filteredLogs = currentData.logs.filter(log => {
@@ -127,8 +155,8 @@ function PlatformActivityReport() {
     });
 
     // Get unique event types and statuses for filter dropdowns
-    const allEventTypes = [...new Set(Object.values(mockReportData).flatMap(data => data.logs.map(log => log.eventType)))];
-    const allStatuses = [...new Set(Object.values(mockReportData).flatMap(data => data.logs.map(log => log.status)))];
+    const allEventTypes = [...new Set(currentData.logs.map(log => log.eventType))];
+    const allStatuses = [...new Set(currentData.logs.map(log => log.status))];
 
     const handleExport = () => {
         // Defines CSV headers
@@ -213,6 +241,17 @@ function PlatformActivityReport() {
                     </div>
                 </div>
             </div>
+
+            {error && (
+                <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+            {loading && (
+                <div className="mb-6 rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500">
+                    Loading live report...
+                </div>
+            )}
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

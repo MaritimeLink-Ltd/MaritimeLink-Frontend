@@ -9,6 +9,7 @@ import {
     ChevronRight,
     X
 } from 'lucide-react';
+import adminDashboardService from '../../../services/adminDashboardService';
 
 function TransactionHistory() {
     const navigate = useNavigate();
@@ -16,10 +17,14 @@ function TransactionHistory() {
     const [filterStatus, setFilterStatus] = useState('All');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [apiTransactions, setApiTransactions] = useState([]);
+    const [apiLoaded, setApiLoaded] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const itemsPerPage = 10;
 
     // Expanded Transaction Data
-    const transactions = [
+    const fallbackTransactions = [
         { id: 'TXN-8821', userCompany: 'OceanHire Agency', type: 'Subscription', date: 'Oct 24, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$499.00', amountColor: 'text-green-600' },
         { id: 'TXN-8822', userCompany: 'John Smith', type: 'Course Purchase', date: 'Oct 24, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
         { id: 'TXN-8823', userCompany: 'Blue Wave Shipping', type: 'Subscription', date: 'Oct 23, 2024', status: 'Failed', statusColor: 'text-red-600 bg-red-50', amount: '$899.00', amountColor: 'text-green-600' },
@@ -46,6 +51,38 @@ function TransactionHistory() {
         { id: 'TXN-8844', userCompany: 'Robert Downey', type: 'Course Purchase', date: 'Oct 13, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
         { id: 'TXN-8845', userCompany: 'Seafarer Union', type: 'Payout', date: 'Oct 12, 2024', status: 'Processing', statusColor: 'text-blue-600 bg-blue-50', amount: '-$500.00', amountColor: 'text-red-600' },
     ];
+    const transactions = apiLoaded ? apiTransactions : fallbackTransactions;
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTransactions = async () => {
+            try {
+                setLoading(true);
+                setError('');
+                const response = await adminDashboardService.getTransactions({ page: 1, limit: 100 });
+                const list = response?.data?.transactions || [];
+                if (!cancelled) {
+                    setApiTransactions(list.map((transaction) => ({
+                        ...transaction,
+                        date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A',
+                        amount: transaction.amountDisplay || String(transaction.amount || 0),
+                    })));
+                    setApiLoaded(true);
+                }
+            } catch (err) {
+                if (!cancelled) setError(err?.message || 'Could not load transaction history.');
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        loadTransactions();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Filter Logic
     const filteredTransactions = useMemo(() => {
@@ -190,6 +227,16 @@ function TransactionHistory() {
             </div>
 
             {/* Transaction Table */}
+            {error && (
+                <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+            {loading && (
+                <div className="mb-4 rounded-xl border border-gray-100 bg-white px-4 py-3 text-sm text-gray-500">
+                    Loading live transactions...
+                </div>
+            )}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
