@@ -22,6 +22,16 @@ class AdminDashboardService {
         return httpClient.get(API_ENDPOINTS.ADMIN.DASHBOARD_ACTIVITY);
     }
 
+    async getPlatformActivityReport(range = '7d') {
+        const params = new URLSearchParams();
+        if (range) params.set('range', range);
+        const qs = params.toString();
+        const path = qs
+            ? `${API_ENDPOINTS.ADMIN.DASHBOARD_ACTIVITY_REPORT}?${qs}`
+            : API_ENDPOINTS.ADMIN.DASHBOARD_ACTIVITY_REPORT;
+        return httpClient.get(path);
+    }
+
     /**
      * GET /api/admin/dashboard/revenue
      * @returns {Promise<{ data?: { overview?: object, breakdown?: object, training?: object } }>}
@@ -36,6 +46,23 @@ class AdminDashboardService {
      */
     async getDashboardQueues() {
         return httpClient.get(API_ENDPOINTS.ADMIN.DASHBOARD_QUEUES);
+    }
+
+    async getTransactions(query = {}) {
+        const params = new URLSearchParams();
+        if (query.page) params.set('page', query.page);
+        if (query.limit) params.set('limit', query.limit);
+        if (query.search) params.set('search', query.search);
+        if (query.status && query.status !== 'All') params.set('status', query.status);
+        const qs = params.toString();
+        const path = qs
+            ? `${API_ENDPOINTS.ADMIN.DASHBOARD_TRANSACTIONS}?${qs}`
+            : API_ENDPOINTS.ADMIN.DASHBOARD_TRANSACTIONS;
+        return httpClient.get(path);
+    }
+
+    async getNotifications() {
+        return httpClient.get(API_ENDPOINTS.ADMIN.DASHBOARD_NOTIFICATIONS);
     }
 
     /**

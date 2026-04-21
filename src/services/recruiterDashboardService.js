@@ -49,6 +49,10 @@ class RecruiterDashboardService {
     async getPopularSearches() {
         return httpClient.get(API_ENDPOINTS.RECRUITER.DASHBOARD_POPULAR_SEARCHES);
     }
+
+    async getNotifications() {
+        return httpClient.get(API_ENDPOINTS.RECRUITER.DASHBOARD_NOTIFICATIONS);
+    }
 }
 
 export default new RecruiterDashboardService();

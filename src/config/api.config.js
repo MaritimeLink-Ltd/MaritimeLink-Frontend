@@ -93,6 +93,7 @@ export const API_ENDPOINTS = {
     DASHBOARD_ACTION_ITEMS: '/api/recruiter/dashboard/action-items',
     DASHBOARD_JOBS: '/api/recruiter/dashboard/jobs',
     DASHBOARD_POPULAR_SEARCHES: '/api/recruiter/dashboard/popular-searches',
+    DASHBOARD_NOTIFICATIONS: '/api/recruiter/dashboard/notifications',
   },
   // Recruiter KYC Endpoints
   RECRUITER_KYC: {
@@ -113,6 +114,7 @@ export const API_ENDPOINTS = {
     DASHBOARD_STATS: '/api/trainer/dashboard/stats',
     DASHBOARD_ACTION_ITEMS: '/api/trainer/dashboard/action-items',
     DASHBOARD_COURSES: '/api/trainer/dashboard/courses',
+    DASHBOARD_NOTIFICATIONS: '/api/trainer/dashboard/notifications',
     SESSION_ATTENDEES: (sessionId) => `/api/trainer/sessions/${sessionId}/attendees`,
     APPROVE_ATTENDEE: (sessionId, bookingId) =>
       `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/approve`,
@@ -152,8 +154,11 @@ export const API_ENDPOINTS = {
     LOGIN: '/api/admin/login',
     DASHBOARD_STATS: '/api/admin/dashboard/stats',
     DASHBOARD_ACTIVITY: '/api/admin/dashboard/activity',
+    DASHBOARD_ACTIVITY_REPORT: '/api/admin/dashboard/activity-report',
     DASHBOARD_REVENUE: '/api/admin/dashboard/revenue',
     DASHBOARD_QUEUES: '/api/admin/dashboard/queues',
+    DASHBOARD_TRANSACTIONS: '/api/admin/dashboard/transactions',
+    DASHBOARD_NOTIFICATIONS: '/api/admin/dashboard/notifications',
     /** Aggregated marketplace / training revenue, fees, and payouts */
     REVENUE: '/api/admin/revenue',
     RECRUITERS: '/api/admin/recruiters',

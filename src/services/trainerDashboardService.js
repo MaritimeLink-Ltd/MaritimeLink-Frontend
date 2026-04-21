@@ -38,6 +38,10 @@ class TrainerDashboardService {
     async getDashboardCourses() {
         return httpClient.get(API_ENDPOINTS.TRAINER.DASHBOARD_COURSES);
     }
+
+    async getNotifications() {
+        return httpClient.get(API_ENDPOINTS.TRAINER.DASHBOARD_NOTIFICATIONS);
+    }
 }
 
 export default new TrainerDashboardService();
