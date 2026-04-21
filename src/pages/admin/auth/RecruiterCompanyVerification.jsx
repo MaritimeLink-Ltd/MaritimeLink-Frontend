@@ -21,12 +21,83 @@ function mapLookupToDisplay(lookupPayload) {
         source: d.source || root.source || '',
         sources: d.sources || root.sources || [],
         raw: d,
+        apiResponse: root,
     };
 }
 
 function getLookupPayload(response) {
     if (!response || typeof response !== 'object') return null;
     return response.data || response;
+}
+
+function normalizeUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+function normalizeDomain(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    try {
+        const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        return new URL(withProtocol).hostname.replace(/^www\./, '');
+    } catch {
+        return raw
+            .replace(/^https?:\/\//, '')
+            .replace(/^www\./, '')
+            .split('/')[0]
+            .split('?')[0];
+    }
+}
+
+function faviconUrl(value) {
+    const domain = normalizeDomain(value);
+    return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
+}
+
+function normalizeLinkedInSlug(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    const cleaned = raw.replace(/^https?:\/\/(www\.)?linkedin\.com\//, '');
+    const parts = cleaned.split('?')[0].split('/').filter(Boolean);
+    const companyIndex = parts.indexOf('company');
+    if (companyIndex >= 0 && parts[companyIndex + 1]) return parts[companyIndex + 1];
+    return parts[parts.length - 1] || cleaned;
+}
+
+function fieldValue(value) {
+    if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+    return value || '';
+}
+
+function verificationState(type, entered, fetched) {
+    if (!entered || !fetched) return 'unknown';
+    if (type === 'website') return normalizeDomain(entered) === normalizeDomain(fetched) ? 'match' : 'mismatch';
+    if (type === 'linkedin') return normalizeLinkedInSlug(entered) === normalizeLinkedInSlug(fetched) ? 'match' : 'mismatch';
+    return 'unknown';
+}
+
+function VerificationBadge({ state }) {
+    if (state === 'match') {
+        return (
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                Matches entered
+            </span>
+        );
+    }
+    if (state === 'mismatch') {
+        return (
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                Different from entered
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500">
+            Not entered
+        </span>
+    );
 }
 
 function RecruiterCompanyVerification() {
@@ -46,11 +117,61 @@ function RecruiterCompanyVerification() {
         name: formData?.companyName || lookupPreview?.name || '',
         website: formData?.website || lookupPreview?.website || '',
     };
+    const hasPublicLookup = Boolean(lookupPreview?.apiResponse || lookupPreview?.raw);
+
+    const recruiterId = localStorage.getItem('recruiterId');
+
+    const buildEnteredPayload = () => ({
+        recruiterId,
+        organizationName: formData?.companyName?.trim() || companyData.name || '',
+        address: formData?.address?.trim() || '',
+        companyCity: formData?.city?.trim() || '',
+        companyState: formData?.stateProvince?.trim() || '',
+        companyZip: formData?.postcode?.trim() || '',
+        companyCountry: formData?.country?.trim() || '',
+        website: normalizeUrl(formData?.website),
+        companyLinkedIn: normalizeUrl(formData?.linkedIn),
+    });
+
+    const buildLookupPayload = () => ({
+        recruiterId,
+        organizationName: lookupPreview?.name || companyData.name || formData?.companyName || '',
+        address: lookupPreview?.address || formData?.address || '',
+        companyCity: lookupPreview?.city || formData?.city || '',
+        companyState: lookupPreview?.state || formData?.stateProvince || '',
+        companyZip: lookupPreview?.postcode || formData?.postcode || '',
+        companyCountry: lookupPreview?.country || formData?.country || '',
+        website: normalizeUrl(lookupPreview?.website || formData?.website),
+        companyLinkedIn: normalizeUrl(lookupPreview?.linkedin || formData?.linkedIn),
+        companyLogo: lookupPreview?.logo || companyData.logo || '',
+    });
 
     const showLookupCompare =
         lookupPreview?.name &&
         formData?.companyName &&
         lookupPreview.name.trim().toLowerCase() !== formData.companyName.trim().toLowerCase();
+    const apiCompany = lookupPreview?.raw || lookupPreview?.apiResponse?.company || {};
+    const enteredWebsite = formData?.website || '';
+    const fetchedWebsite = lookupPreview?.website || apiCompany.company_website || '';
+    const displayLogo =
+        lookupPreview?.logo ||
+        apiCompany.logo ||
+        companyData.logo ||
+        faviconUrl(fetchedWebsite || enteredWebsite);
+    const enteredLinkedIn = formData?.linkedIn || '';
+    const fetchedLinkedIn = lookupPreview?.linkedin || apiCompany.linkedin || '';
+    const detailRows = [
+        ['Website', fetchedWebsite, verificationState('website', enteredWebsite, fetchedWebsite), enteredWebsite],
+        ['Address', [lookupPreview?.address, lookupPreview?.city, lookupPreview?.state, lookupPreview?.postcode, lookupPreview?.country].filter(Boolean).join(', ')],
+        ['Registration #', apiCompany.registration_number],
+        ['Status', apiCompany.status],
+        ['Legal form', apiCompany.company_legal_form],
+        ['Industry', Array.isArray(apiCompany.industry) ? apiCompany.industry.map((item) => item?.value).filter(Boolean).join(', ') : ''],
+        ['Email', apiCompany.company_email],
+        ['Phone', apiCompany.company_phone],
+        ['LinkedIn', fetchedLinkedIn, verificationState('linkedin', enteredLinkedIn, fetchedLinkedIn), enteredLinkedIn],
+    ].filter(([, value]) => fieldValue(value));
+    const sourceLinks = Array.isArray(lookupPreview?.sources) ? lookupPreview.sources.slice(0, 3) : [];
 
     useEffect(() => {
         const lookupCompany = async () => {
@@ -92,6 +213,7 @@ function RecruiterCompanyVerification() {
             source: organizationVerified ? (verification?.source || lookupPreview?.source || 'GEMINI_GOOGLE_SEARCH') : 'USER_DECLINED_LOOKUP',
             selectedCompany: organizationVerified ? companyData : null,
             enteredCompany: formData || null,
+            lookupApiResponse: lookupPreview?.apiResponse || lookupPreview?.raw || lookupPreview || null,
             decidedAt: new Date().toISOString(),
         };
 
@@ -102,9 +224,26 @@ function RecruiterCompanyVerification() {
     const handleConfirm = async () => {
         setLoading(true);
         try {
+            if (!recruiterId) {
+                throw new Error('Session expired. Please restart registration.');
+            }
+            if (!hasPublicLookup) {
+                throw new Error(
+                    'Public company verification is not available right now. Please use your entered details.',
+                );
+            }
             const decision = saveDecision({
                 organizationVerified: true,
                 useManualDetails: false,
+            });
+
+            await authService.setRecruiterCompanyDetails({
+                ...buildLookupPayload(),
+                organizationVerified: true,
+                organizationRiskLevel: 'LOW',
+                organizationVerificationSource: decision.source,
+                organizationVerificationDecision: 'CONFIRMED_PUBLIC_LOOKUP',
+                organizationVerificationData: decision.lookupApiResponse,
             });
 
             navigate('/agent/compliance-declaration', {
@@ -119,28 +258,52 @@ function RecruiterCompanyVerification() {
             });
         } catch (err) {
             console.error('Company confirmation error:', err);
+            setLookupError(err.data?.message || err.message || 'Could not save company confirmation. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDecline = () => {
-        const decision = saveDecision({
-            organizationVerified: false,
-            useManualDetails: true,
-        });
-
-        navigate('/agent/compliance-declaration', {
-            state: {
+    const handleDecline = async () => {
+        setLoading(true);
+        try {
+            if (!recruiterId) {
+                throw new Error('Session expired. Please restart registration.');
+            }
+            const decision = saveDecision({
+                organizationVerified: false,
                 useManualDetails: true,
-                companyData: formData || companyData,
-                lookupPreview,
-                verification: {
-                    ...verification,
-                    ...decision,
+            });
+
+            await authService.setRecruiterCompanyDetails({
+                ...buildEnteredPayload(),
+                organizationVerified: false,
+                organizationRiskLevel: 'HIGH',
+                organizationVerificationSource: decision.source,
+                organizationVerificationDecision: 'DECLINED_PUBLIC_LOOKUP',
+                organizationVerificationData: {
+                    enteredCompany: formData || null,
+                    declinedLookup: decision.lookupApiResponse,
                 },
-            },
-        });
+            });
+
+            navigate('/agent/compliance-declaration', {
+                state: {
+                    useManualDetails: true,
+                    companyData: formData || companyData,
+                    lookupPreview,
+                    verification: {
+                        ...verification,
+                        ...decision,
+                    },
+                },
+            });
+        } catch (err) {
+            console.error('Company decline error:', err);
+            setLookupError(err.data?.message || err.message || 'Could not save company decision. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -188,31 +351,75 @@ function RecruiterCompanyVerification() {
                         </div>
                     )}
 
-                    <div className="bg-gray-50 rounded-2xl p-8 mb-6 flex flex-col items-center">
-                        {companyData.logo && (
-                            <img
-                                src={companyData.logo}
-                                alt={`${companyData.name || 'Company'} logo`}
-                                className="w-32 h-32 object-contain mb-4"
-                            />
+                    <div className="bg-gray-50 rounded-2xl p-6 mb-6">
+                        {displayLogo ? (
+                            <div className="mb-4 flex flex-col items-center">
+                                <img
+                                    src={displayLogo}
+                                    alt={`${companyData.name || 'Company'} logo`}
+                                    className="w-24 h-24 object-contain rounded-xl bg-white border border-gray-100 p-2"
+                                />
+                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400 font-semibold">
+                                    Fetched logo
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="mb-4 flex flex-col items-center">
+                                <div className="w-24 h-24 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-3xl font-bold text-[#003971]">
+                                    {(companyData.name || 'C').charAt(0)}
+                                </div>
+                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400 font-semibold">
+                                    No logo returned
+                                </p>
+                            </div>
                         )}
 
                         <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">{companyData.name}</h2>
 
-                        {companyData.website && (
-                            <p className="text-sm text-gray-600 break-all text-center">{companyData.website}</p>
-                        )}
+                        <div className="mt-5 space-y-3">
+                            {detailRows.length > 0 ? (
+                                detailRows.map(([label, value, matchState, enteredValue]) => (
+                                    <div key={label} className="rounded-xl bg-white border border-gray-100 px-4 py-3">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">{label}</p>
+                                            {(label === 'Website' || label === 'LinkedIn') && (
+                                                <VerificationBadge state={matchState} />
+                                            )}
+                                        </div>
+                                        <p className="mt-1 text-sm text-gray-800 break-words">{fieldValue(value)}</p>
+                                        {(label === 'Website' || label === 'LinkedIn') && enteredValue && matchState === 'mismatch' && (
+                                            <p className="mt-2 text-xs text-gray-500 break-words">
+                                                You entered: {enteredValue}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-gray-500 text-center">No public company details were returned.</p>
+                            )}
+                        </div>
 
-                        {(companyData.address || companyData.city || companyData.country) && (
-                            <p className="mt-3 text-xs text-gray-500 text-center">
-                                {[companyData.address, companyData.city, companyData.state, companyData.postcode, companyData.country]
-                                    .filter(Boolean)
-                                    .join(', ')}
-                            </p>
+                        {sourceLinks.length > 0 && (
+                            <div className="mt-4 rounded-xl bg-white border border-gray-100 px-4 py-3">
+                                <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Public sources</p>
+                                <div className="mt-2 space-y-1">
+                                    {sourceLinks.map((source, index) => (
+                                        <a
+                                            key={`${source.uri || source.url || index}`}
+                                            href={source.uri || source.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="block text-xs text-[#003971] hover:underline break-words"
+                                        >
+                                            {source.title || source.uri || source.url}
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
                         {companyData.source && (
-                            <p className="mt-3 text-[11px] font-semibold text-[#003971] uppercase tracking-wide">
+                            <p className="mt-4 text-[11px] font-semibold text-[#003971] uppercase tracking-wide text-center">
                                 Verified using public search
                             </p>
                         )}
@@ -221,7 +428,7 @@ function RecruiterCompanyVerification() {
                     <button
                         type="button"
                         onClick={handleConfirm}
-                        disabled={loading}
+                        disabled={loading || lookupLoading || !hasPublicLookup}
                         className="w-full bg-[#003971] text-white py-3 px-4 rounded-md hover:bg-[#002855] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px] mb-4"
                     >
                         {loading ? (

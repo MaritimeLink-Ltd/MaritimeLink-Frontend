@@ -10,16 +10,6 @@ function unwrapApiBody(res) {
     return res;
 }
 
-/** Merge nested `data` with top-level fields (PATCH company-details may put flags at either level). */
-function mergeApiEnvelope(res) {
-    if (!res || typeof res !== 'object') return res;
-    const inner =
-        res.data !== undefined && !Array.isArray(res.data) && typeof res.data === 'object'
-            ? res.data
-            : {};
-    return { ...inner, ...res };
-}
-
 /** Map lookup API payload to UI fields (backend shape may vary). */
 function mapLookupToDisplay(lookupPayload) {
     const root = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
@@ -38,6 +28,7 @@ function mapLookupToDisplay(lookupPayload) {
         source: d.source || root.source || '',
         sources: d.sources || root.sources || [],
         raw: d,
+        apiResponse: root,
     };
 }
 
@@ -140,25 +131,12 @@ function RecruiterCompanyDetails() {
                 previewData ||
                 (await runCompanyLookup(buildLookupParams()));
 
-            const patchRes = await authService.setRecruiterCompanyDetails({
-                recruiterId: recruiterId,
-                organizationName: formData.companyName.trim(),
-                address: formData.address.trim(),
-                companyCity: formData.city.trim(),
-                companyState: formData.stateProvince.trim(),
-                companyZip: formData.postcode.trim(),
-                companyCountry: formData.country.trim(),
-                website: formData.website.trim(),
-                companyLinkedIn: formData.linkedIn.trim()
-            });
-
-            const patchBody = mergeApiEnvelope(patchRes);
+            const lookupBody = lookupResult?.apiResponse || {};
             const verification = {
-                mismatchDetected: Boolean(
-                    patchBody?.companyVerification?.mismatchDetected ?? patchBody?.mismatchDetected
-                ),
-                riskLevel: patchBody?.companyVerification?.riskLevel || patchBody?.riskLevel || null,
-                source: patchBody?.companyVerification?.source || lookupResult?.source || null,
+                mismatchDetected: Boolean(lookupBody?.companyVerification?.mismatchDetected),
+                mismatchDetails: lookupBody?.companyVerification?.mismatchDetails || null,
+                riskLevel: lookupBody?.companyVerification?.riskLevel || null,
+                source: lookupBody?.companyVerification?.source || lookupResult?.source || null,
             };
 
             const companyCard = {

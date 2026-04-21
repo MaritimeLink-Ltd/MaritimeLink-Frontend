@@ -189,6 +189,12 @@ class AuthService {
         const q = new URLSearchParams();
         if (params.url) q.set('url', params.url.trim());
         if (params.organizationName) q.set('organizationName', params.organizationName.trim());
+        if (params.address) q.set('address', params.address.trim());
+        if (params.companyCity) q.set('companyCity', params.companyCity.trim());
+        if (params.companyState) q.set('companyState', params.companyState.trim());
+        if (params.companyZip) q.set('companyZip', params.companyZip.trim());
+        if (params.companyCountry) q.set('companyCountry', params.companyCountry.trim());
+        if (params.companyLinkedIn) q.set('companyLinkedIn', params.companyLinkedIn.trim());
         const qs = q.toString();
         if (!qs) {
             throw new Error('lookupCompanyDetails requires url or organizationName');
