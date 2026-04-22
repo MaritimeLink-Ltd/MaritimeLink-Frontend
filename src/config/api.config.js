@@ -115,6 +115,9 @@ export const API_ENDPOINTS = {
     DASHBOARD_ACTION_ITEMS: '/api/trainer/dashboard/action-items',
     DASHBOARD_COURSES: '/api/trainer/dashboard/courses',
     DASHBOARD_NOTIFICATIONS: '/api/trainer/dashboard/notifications',
+    STRIPE_STATUS: '/api/trainer/stripe/status',
+    STRIPE_ONBOARDING: '/api/trainer/stripe/onboarding',
+    STRIPE_ONBOARDING_REFRESH: '/api/trainer/stripe/onboarding/refresh',
     SESSION_ATTENDEES: (sessionId) => `/api/trainer/sessions/${sessionId}/attendees`,
     APPROVE_ATTENDEE: (sessionId, bookingId) =>
       `/api/trainer/sessions/${sessionId}/attendees/${bookingId}/approve`,
@@ -171,6 +174,8 @@ export const API_ENDPOINTS = {
     TRAINERS: '/api/admin/trainers',
     TRAINER_DETAIL: (id) => `/api/admin/trainers/${id}`,
     UPDATE_TRAINER_STATUS: (id) => `/api/admin/trainers/${id}/status`,
+    TRAINER_PAYOUT_STATS: '/api/admin/trainers/payout-stats',
+    INITIATE_TRAINER_STRIPE: (id) => `/api/admin/trainers/${id}/initiate-stripe`,
     PROFESSIONALS: '/api/admin/professionals',
     PROFESSIONALS_STATS: '/api/admin/professionals/stats',
     KYC_SUBMISSIONS: '/api/admin/kyc-submissions',

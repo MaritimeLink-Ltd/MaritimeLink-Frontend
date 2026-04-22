@@ -42,6 +42,18 @@ class TrainerDashboardService {
     async getNotifications() {
         return httpClient.get(API_ENDPOINTS.TRAINER.DASHBOARD_NOTIFICATIONS);
     }
+
+    async getStripeStatus() {
+        return httpClient.get(API_ENDPOINTS.TRAINER.STRIPE_STATUS);
+    }
+
+    async startStripeOnboarding() {
+        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING, {});
+    }
+
+    async refreshStripeOnboarding() {
+        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING_REFRESH, {});
+    }
 }
 
 export default new TrainerDashboardService();

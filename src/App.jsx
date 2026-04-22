@@ -65,6 +65,7 @@ import BookingDetail from './pages/admin/trainingprovider-dashboard/bookings/Boo
 import TrainingProviderNotifications from './pages/admin/trainingprovider-dashboard/TrainingProviderNotifications';
 import TrainingProviderProfile from './pages/admin/trainingprovider-dashboard/TrainingProviderProfile';
 import TrainingProviderChats from './pages/admin/trainingprovider-dashboard/chats/TrainingProviderChats';
+import PayoutOnboardingReturn from './pages/admin/trainingprovider-dashboard/PayoutOnboardingReturn';
 
 import SuperAdminLayout from './pages/admin/admin-dashboard/layout/AdminLayout';
 import AdminDashboard from './pages/admin/admin-dashboard/AdminDashboard';
@@ -244,6 +245,8 @@ function App() {
             <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
             <Route path="/trainingprovider/chats" element={<TrainingProviderChats />} />
+            <Route path="/trainingprovider/payouts/success" element={<PayoutOnboardingReturn mode="success" />} />
+            <Route path="/trainingprovider/payouts/reauth" element={<PayoutOnboardingReturn mode="reauth" />} />
           </Route>
 
           {/* Super Admin Protected Routes (With Layout) */}

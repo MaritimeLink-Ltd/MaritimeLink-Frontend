@@ -7,6 +7,10 @@ import {
     Clock,
     ChevronRight,
     AlertCircle,
+    CheckCircle2,
+    ExternalLink,
+    RefreshCcw,
+    Wallet,
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -238,6 +242,9 @@ function TrainingProviderDashboard() {
     const [dashboardCoursesList, setDashboardCoursesList] = useState([]);
     const [dashboardCoursesLoading, setDashboardCoursesLoading] = useState(false);
     const [dashboardCoursesError, setDashboardCoursesError] = useState(null);
+    const [stripeStatus, setStripeStatus] = useState(null);
+    const [stripeStatusError, setStripeStatusError] = useState(null);
+    const [stripeActionLoading, setStripeActionLoading] = useState(false);
 
     const {
         isKycUnderReview,
@@ -280,10 +287,11 @@ function TrainingProviderDashboard() {
         setDashboardCoursesError(null);
         try {
             const query = getTrainerStatsQuery(timeFilter);
-            const [statsOutcome, actionsOutcome, coursesOutcome] = await Promise.allSettled([
+            const [statsOutcome, actionsOutcome, coursesOutcome, stripeOutcome] = await Promise.allSettled([
                 trainerDashboardService.getDashboardStats(query),
                 trainerDashboardService.getDashboardActionItems(),
                 trainerDashboardService.getDashboardCourses(),
+                trainerDashboardService.getStripeStatus(),
             ]);
 
             if (statsOutcome.status === 'fulfilled') {
@@ -321,6 +329,16 @@ function TrainingProviderDashboard() {
                 );
                 setDashboardCoursesList([]);
             }
+
+            if (stripeOutcome.status === 'fulfilled') {
+                setStripeStatus(stripeOutcome.value?.data || null);
+                setStripeStatusError(null);
+            } else {
+                console.error('Failed to fetch trainer Stripe status:', stripeOutcome.reason);
+                setStripeStatusError(
+                    stripeOutcome.reason?.message || 'Could not load payout setup status.'
+                );
+            }
         } finally {
             setStatsLoading(false);
             setActionItemsLoading(false);
@@ -342,6 +360,26 @@ function TrainingProviderDashboard() {
             window.removeEventListener('profileImageUpdated', syncHeader);
         };
     }, []);
+
+    const handleStripeOnboarding = async () => {
+        setStripeActionLoading(true);
+        setStripeStatusError(null);
+        try {
+            const hasStripeAccount = Boolean(stripeStatus?.stripeAccountId);
+            const response = hasStripeAccount
+                ? await trainerDashboardService.refreshStripeOnboarding()
+                : await trainerDashboardService.startStripeOnboarding();
+            const onboardingUrl = response?.data?.onboardingUrl;
+            if (!onboardingUrl) {
+                throw new Error('Stripe onboarding link was not returned.');
+            }
+            window.location.assign(onboardingUrl);
+        } catch (error) {
+            console.error('Failed to start Stripe onboarding:', error);
+            setStripeStatusError(error.message || 'Could not open Stripe onboarding.');
+            setStripeActionLoading(false);
+        }
+    };
 
     const renderKycGate = () => {
         if (isKycUnderReview) {
@@ -510,6 +548,63 @@ function TrainingProviderDashboard() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-3 rounded-xl ${
+                                        stripeStatus?.onboardingComplete
+                                            ? 'bg-green-50'
+                                            : 'bg-[#003971]/10'
+                                    }`}>
+                                        {stripeStatus?.onboardingComplete ? (
+                                            <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                        ) : (
+                                            <Wallet className="h-6 w-6 text-[#003971]" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <h2 className="text-base font-bold text-gray-900">Payout setup</h2>
+                                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                                stripeStatus?.onboardingComplete
+                                                    ? 'bg-green-50 text-green-700'
+                                                    : 'bg-amber-50 text-amber-700'
+                                            }`}>
+                                                {stripeStatus?.onboardingComplete ? 'Ready' : 'Action needed'}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500 max-w-2xl">
+                                            {stripeStatus?.onboardingComplete
+                                                ? 'Your Stripe Connect account is ready. Approved bookings can be paid out to your connected account.'
+                                                : 'Connect Stripe to receive trainer payouts after bookings are completed and approved.'}
+                                        </p>
+                                        {stripeStatusError && (
+                                            <p className="text-sm text-red-600 mt-2">{stripeStatusError}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                {!stripeStatus?.onboardingComplete && (
+                                    <button
+                                        type="button"
+                                        onClick={handleStripeOnboarding}
+                                        disabled={stripeActionLoading}
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#003971] text-white text-sm font-semibold hover:bg-[#002455] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {stripeStatus?.stripeAccountId ? (
+                                            <RefreshCcw className="h-4 w-4" />
+                                        ) : (
+                                            <ExternalLink className="h-4 w-4" />
+                                        )}
+                                        {stripeActionLoading
+                                            ? 'Opening Stripe...'
+                                            : stripeStatus?.stripeAccountId
+                                                ? 'Resume setup'
+                                                : 'Connect Stripe'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Action Required and Quick Overview */}

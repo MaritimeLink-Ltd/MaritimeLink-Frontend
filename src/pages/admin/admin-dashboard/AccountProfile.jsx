@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye } from 'lucide-react';
+import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye, ExternalLink } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 
@@ -354,6 +354,7 @@ function AccountProfile() {
     const [showDocViewer, setShowDocViewer] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [notes, setNotes] = useState([]);
+    const [isStartingStripe, setIsStartingStripe] = useState(false);
 
     // Recruiter API state
     const [recruiterData, setRecruiterData] = useState(null);
@@ -369,9 +370,10 @@ function AccountProfile() {
     const isKYC = id?.startsWith('KYC');
     const isTrainingProvider = id?.startsWith('TP');
     const isProfessional = id?.startsWith('PRO');
-    // A recruiter if old mock prefix OR a real UUID from the recruiters tab
-    const isRecruiter = id?.startsWith('REC') || (isUUID && !isTrainerAccount);
-    const isTrainer = isUUID && isTrainerAccount;
+    const loadedAccountRole = recruiterData?.accountRole;
+    const isTrainer = isUUID && (isTrainerAccount || loadedAccountRole === 'TRAINING_AGENT');
+    // A recruiter if old mock prefix OR a real UUID that is not a loaded trainer account.
+    const isRecruiter = id?.startsWith('REC') || (isUUID && !isTrainer);
 
     useEffect(() => {
         if (isUUID) {
@@ -389,6 +391,7 @@ function AccountProfile() {
                         setRecruiterData({
                             name: fullName,
                             role: r.role === 'TRAINING_AGENT' ? 'TRAINING AGENT' : 'RECRUITER',
+                            accountRole: r.role,
                             roleDetail: r.role === 'TRAINING_AGENT' ? 'Training Agent at' : 'Recruiter at',
                             company: r.organizationName || 'N/A',
                             email: r.email || 'N/A',
@@ -442,6 +445,8 @@ function AccountProfile() {
                             riskLevel: r.kyc?.riskLevel ?? r.riskLevel ?? null,
                             hasCompanyMismatch: Boolean(r.hasCompanyMismatch ?? r.kyc?.hasCompanyMismatch),
                             ipReputation: r.ipReputation || r.ipReputationStatus || null,
+                            stripeAccountId: r.stripeAccountId || null,
+                            stripeOnboardingComplete: Boolean(r.stripeOnboardingComplete),
                         });
                         
                         // Extract and set admin notes from API response
@@ -521,6 +526,8 @@ function AccountProfile() {
             hasCompanyMismatch: false,
             ipReputation: null,
             isVerified: false,
+            stripeAccountId: null,
+            stripeOnboardingComplete: false,
         };
     };
 
@@ -753,6 +760,33 @@ function AccountProfile() {
 
     const cancelApproveAccount = () => {
         setShowApprovePopup(false);
+    };
+
+    const handleStartTrainerStripe = async () => {
+        if (!isTrainer || !isUUID) return;
+        setIsStartingStripe(true);
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.ADMIN.INITIATE_TRAINER_STRIPE(id), {});
+            const onboardingUrl = response?.data?.onboardingUrl;
+            if (!onboardingUrl) {
+                throw new Error('Stripe onboarding link was not returned.');
+            }
+            setRecruiterData((current) => current
+                ? { ...current, stripeAccountId: response?.data?.stripeAccountId || current.stripeAccountId }
+                : current
+            );
+            window.open(onboardingUrl, '_blank', 'noopener,noreferrer');
+            setActionNotificationMessage('Stripe onboarding link opened.');
+            setShowActionNotification(true);
+            setTimeout(() => setShowActionNotification(false), 3000);
+        } catch (err) {
+            console.error('Failed to start trainer Stripe onboarding:', err);
+            setActionNotificationMessage(`Could not start Stripe onboarding: ${formatHttpErrorMessage(err)}`);
+            setShowActionNotification(true);
+            setTimeout(() => setShowActionNotification(false), 5000);
+        } finally {
+            setIsStartingStripe(false);
+        }
     };
 
     // Handle document view
@@ -1077,6 +1111,29 @@ function AccountProfile() {
                             </div>
                         </div>
                     </div>
+                    {isTrainer && (
+                        <div className="flex items-center gap-3">
+                            {profileData.stripeOnboardingComplete ? (
+                                <span className="px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
+                                    Stripe ready
+                                </span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleStartTrainerStripe}
+                                    disabled={isStartingStripe}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] disabled:opacity-60 transition-colors"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                    {isStartingStripe
+                                        ? 'Opening Stripe...'
+                                        : profileData.stripeAccountId
+                                            ? 'Resume Stripe'
+                                            : 'Start Stripe'}
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {isProfessional && (
                         <div className="flex items-center gap-3">
                             <button
