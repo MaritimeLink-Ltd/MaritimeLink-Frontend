@@ -182,19 +182,13 @@ export default function SessionAttendance() {
   }, [loadAttendees]);
 
   const handleApproveAttendee = async (bookingId) => {
-    if (!bookingId) return;
+    if (adminCourseBookingsMode || !sessionId || !bookingId) return;
     setApprovingBookingId(bookingId);
     try {
-      const res =
-        adminCourseBookingsMode
-          ? await httpClient.post(API_ENDPOINTS.ADMIN.RELEASE_BOOKING_PAYOUT(bookingId), {})
-          : sessionId
-            ? await httpClient.post(
-                API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(sessionId, bookingId),
-                {}
-              )
-            : null;
-      if (!res) return;
+      const res = await httpClient.post(
+        API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(sessionId, bookingId),
+        {}
+      );
       const booking = res?.data?.booking;
       if (booking?.id) {
         setAttendees((prev) =>
@@ -218,6 +212,49 @@ export default function SessionAttendance() {
     } catch (e) {
       console.error('Approve attendee failed', e);
       toast.error(e?.message || 'Could not approve attendee.');
+    } finally {
+      setApprovingBookingId(null);
+    }
+  };
+
+  const handleRejectAttendee = async (bookingId, isPaid) => {
+    if (adminCourseBookingsMode || !sessionId || !bookingId) return;
+    const confirmed = window.confirm(
+      isPaid
+        ? 'Reject this paid booking and refund the professional?'
+        : 'Reject this booking?'
+    );
+    if (!confirmed) return;
+
+    setApprovingBookingId(bookingId);
+    try {
+      const res = await httpClient.post(
+        API_ENDPOINTS.TRAINER.REJECT_ATTENDEE(sessionId, bookingId),
+        { reason: isPaid ? 'Trainer rejected paid course booking' : 'Trainer rejected course booking' }
+      );
+      const booking = res?.data?.booking;
+      if (booking?.id) {
+        setAttendees((prev) =>
+          prev.map((row) => {
+            if (row.bookingId !== booking.id) return row;
+            return {
+              ...row,
+              statusRaw: booking.bookingStatus,
+              statusLabel: bookingStatusLabel(booking.bookingStatus),
+              canonical: normalizeBookingStatus(booking.bookingStatus),
+              paymentRaw: booking.paymentStatus,
+              paymentLabel: paymentLabel(booking.paymentStatus),
+              paymentOk: paymentOk(booking.paymentStatus),
+            };
+          })
+        );
+      } else {
+        await loadAttendees();
+      }
+      toast.success(res?.message || 'Attendee rejected successfully.');
+    } catch (e) {
+      console.error('Reject attendee failed', e);
+      toast.error(e?.message || 'Could not reject attendee.');
     } finally {
       setApprovingBookingId(null);
     }
@@ -429,7 +466,10 @@ export default function SessionAttendance() {
                   const canApprovePending =
                     !adminCourseBookingsMode && statusUpper === 'PENDING';
                   const canReleasePayout =
-                    statusUpper === 'CONFIRMED' && attendee.paymentOk;
+                    !adminCourseBookingsMode && statusUpper === 'CONFIRMED' && attendee.paymentOk;
+                  const canRejectBooking =
+                    !adminCourseBookingsMode &&
+                    (statusUpper === 'PENDING' || (statusUpper === 'CONFIRMED' && attendee.paymentOk));
                   const initials = attendee.name
                     .split(/\s+/)
                     .filter(Boolean)
@@ -506,6 +546,17 @@ export default function SessionAttendance() {
                                 <UserCheck className="h-3.5 w-3.5" />
                               )}
                               {canReleasePayout ? 'Complete / Release payout' : 'Approve'}
+                            </button>
+                          )}
+                          {canRejectBooking && (
+                            <button
+                              type="button"
+                              onClick={() => handleRejectAttendee(attendee.bookingId, attendee.paymentOk)}
+                              disabled={approvingBookingId === attendee.bookingId}
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 disabled:cursor-wait"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              {attendee.paymentOk ? 'Reject / Refund' : 'Reject'}
                             </button>
                           )}
                           <button

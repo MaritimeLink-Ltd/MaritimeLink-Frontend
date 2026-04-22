@@ -258,26 +258,18 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             const bRes = await httpClient.get(bPath);
                             const booking = bRes?.data?.booking ?? bRes?.data?.data?.booking ?? bRes?.data;
                             const att = Array.isArray(booking?.attachedDocuments) ? booking.attachedDocuments : [];
-                            if (
-                                att.length > 0 ||
-                                booking?.cvUrl ||
-                                booking?.coverLetterUrl ||
-                                booking?.coverLetter ||
-                                booking?.resumeSnapshot
-                            ) {
-                                mergedCandidate = {
+                            mergedCandidate = {
+                                professional: obj,
+                                application: {
                                     professional: obj,
-                                    application: {
-                                        professional: obj,
-                                        attachedDocuments: att,
-                                        cvUrl: booking?.cvUrl || null,
-                                        coverLetterUrl: booking?.coverLetterUrl || null,
-                                        coverLetter: booking?.coverLetter ?? null,
-                                        resumeSnapshot: booking?.resumeSnapshot || null,
-                                        status: booking?.bookingStatus || booking?.applicationStatus || 'APPLIED',
-                                    },
-                                };
-                            }
+                                    attachedDocuments: att,
+                                    cvUrl: booking?.cvUrl || null,
+                                    coverLetterUrl: booking?.coverLetterUrl || null,
+                                    coverLetter: booking?.coverLetter ?? null,
+                                    resumeSnapshot: booking?.resumeSnapshot || null,
+                                    status: booking?.bookingStatus || booking?.applicationStatus || 'APPLIED',
+                                },
+                            };
                         } catch {
                             /* Optional: full booking may use a different admin/trainer route */
                         }
@@ -597,10 +589,10 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         const docsFromAttached = (Array.isArray(attachedDocuments) ? attachedDocuments : []).map((d) => ({
             id: d.id,
             category: d.category || 'OTHER',
-            name: d.name || 'Untitled Document',
+            name: d.name || d.title || d.fileName || d.number || 'Course booking document',
             expiryDate: toDisplayDate(d.expiryDate),
             status: getDocStatus(d.expiryDate),
-            url: d.fileUrl || '',
+            url: d.fileUrl || d.url || d.documentUrl || '',
             mimeType: d.mimeType || null,
             uploadedOn: toDisplayDate(d.createdAt),
             verificationStatus: d.verificationStatus || 'PENDING',
@@ -756,6 +748,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const sessionBookingCanReleasePayout =
         sessionBookingStatusUpper === 'CONFIRMED' &&
         (sessionPaymentStatusUpper === 'SUCCEEDED' || sessionPaymentStatusUpper === 'PAID');
+    const sessionBookingCanReject =
+        sessionBookingIsPending || sessionBookingCanReleasePayout;
 
     const handleApproveSessionBooking = async () => {
         if (!bookingDecisionSessionId || !bookingDecisionBookingId) return;
@@ -783,7 +777,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 API_ENDPOINTS.TRAINER.REJECT_ATTENDEE(bookingDecisionSessionId, bookingDecisionBookingId),
                 { reason: bookingRejectReason.trim() },
             );
-            toast.success('Attendee rejected.');
+            toast.success(sessionBookingCanReleasePayout ? 'Booking rejected and payment refunded.' : 'Attendee rejected.');
             setShowBookingRejectModal(false);
             setBookingRejectReason('');
             if (location.state?.returnPath) navigate(location.state.returnPath);
@@ -986,7 +980,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                             ? 'Complete / Release payout'
                                             : 'Accept booking'}
                                 </button>
-                                {sessionBookingIsPending ? (
+                                {sessionBookingCanReject ? (
                                     <button
                                         type="button"
                                         onClick={() => setShowBookingRejectModal(true)}
@@ -994,7 +988,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                         className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
                                     >
                                         <X className="h-4 w-4" />
-                                        Reject booking
+                                        {sessionBookingCanReleasePayout ? 'Reject / Refund' : 'Reject booking'}
                                     </button>
                                 ) : null}
                             </div>
@@ -1200,9 +1194,13 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             >
                                 <X className="h-5 w-5" />
                             </button>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Reject this booking?</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                {sessionBookingCanReleasePayout ? 'Reject and refund this booking?' : 'Reject this booking?'}
+                            </h3>
                             <p className="text-gray-600 text-sm mb-6">
-                                The trainee will be marked as rejected for this session. Add a short reason for your records.
+                                {sessionBookingCanReleasePayout
+                                    ? 'The trainee will be cancelled for this session and their payment will be refunded. Add a short reason for your records.'
+                                    : 'The trainee will be marked as rejected for this session. Add a short reason for your records.'}
                             </p>
                             <div className="mb-6">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1233,7 +1231,11 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     disabled={!bookingRejectReason.trim() || isBookingActionLoading}
                                     className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isBookingActionLoading ? 'Rejecting…' : 'Reject booking'}
+                                    {isBookingActionLoading
+                                        ? 'Rejecting…'
+                                        : sessionBookingCanReleasePayout
+                                            ? 'Reject / Refund'
+                                            : 'Reject booking'}
                                 </button>
                             </div>
                         </div>
