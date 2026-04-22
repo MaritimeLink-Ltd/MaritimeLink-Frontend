@@ -106,6 +106,7 @@ function mapAdminBookingRow(booking, index) {
     paymentLabel: paymentLabel(booking.paymentStatus),
     paymentOk: paymentOk(booking.paymentStatus),
     sessionHint: formatSessionHint(booking.sessions),
+    sessionId: Array.isArray(booking.sessions) && booking.sessions[0]?.id ? booking.sessions[0].id : null,
     amountLabel: amt,
   };
 }
@@ -181,13 +182,19 @@ export default function SessionAttendance() {
   }, [loadAttendees]);
 
   const handleApproveAttendee = async (bookingId) => {
-    if (adminCourseBookingsMode || !sessionId || !bookingId) return;
+    if (!bookingId) return;
     setApprovingBookingId(bookingId);
     try {
-      const res = await httpClient.post(
-        API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(sessionId, bookingId),
-        {}
-      );
+      const res =
+        adminCourseBookingsMode
+          ? await httpClient.post(API_ENDPOINTS.ADMIN.RELEASE_BOOKING_PAYOUT(bookingId), {})
+          : sessionId
+            ? await httpClient.post(
+                API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(sessionId, bookingId),
+                {}
+              )
+            : null;
+      if (!res) return;
       const booking = res?.data?.booking;
       if (booking?.id) {
         setAttendees((prev) =>
@@ -418,6 +425,11 @@ export default function SessionAttendance() {
                 {filteredAttendees.map((attendee, index) => {
                   const isLast = index === filteredAttendees.length - 1;
                   const statusClass = chipClassForStatus(attendee.canonical);
+                  const statusUpper = String(attendee.statusRaw || '').toUpperCase();
+                  const canApprovePending =
+                    !adminCourseBookingsMode && statusUpper === 'PENDING';
+                  const canReleasePayout =
+                    statusUpper === 'CONFIRMED' && attendee.paymentOk;
                   const initials = attendee.name
                     .split(/\s+/)
                     .filter(Boolean)
@@ -481,7 +493,7 @@ export default function SessionAttendance() {
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
-                          {!adminCourseBookingsMode && attendee.canonical === 'pending' && (
+                          {(canApprovePending || canReleasePayout) && (
                             <button
                               type="button"
                               onClick={() => handleApproveAttendee(attendee.bookingId)}
@@ -493,7 +505,7 @@ export default function SessionAttendance() {
                               ) : (
                                 <UserCheck className="h-3.5 w-3.5" />
                               )}
-                              Approve
+                              {canReleasePayout ? 'Complete / Release payout' : 'Approve'}
                             </button>
                           )}
                           <button
@@ -510,7 +522,8 @@ export default function SessionAttendance() {
                                     isProfessionalView: true,
                                     bookingId: attendee.bookingId,
                                     bookingStatus: attendee.statusRaw,
-                                    sessionId: sessionId || undefined,
+                                    paymentStatus: attendee.paymentRaw,
+                                    sessionId: sessionId || attendee.sessionId || undefined,
                                     courseId: courseId || undefined,
                                     adminCourseBookingsMode: adminCourseBookingsMode || false,
                                     returnPath: returnPath || undefined,

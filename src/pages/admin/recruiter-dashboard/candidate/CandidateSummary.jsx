@@ -751,7 +751,11 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         !adminCourseBookingsOnly &&
         currentUserType === 'training-provider';
     const sessionBookingStatusUpper = String(location.state?.bookingStatus || '').toUpperCase();
+    const sessionPaymentStatusUpper = String(location.state?.paymentStatus || '').toUpperCase();
     const sessionBookingIsPending = sessionBookingStatusUpper === 'PENDING';
+    const sessionBookingCanReleasePayout =
+        sessionBookingStatusUpper === 'CONFIRMED' &&
+        (sessionPaymentStatusUpper === 'SUCCEEDED' || sessionPaymentStatusUpper === 'PAID');
 
     const handleApproveSessionBooking = async () => {
         if (!bookingDecisionSessionId || !bookingDecisionBookingId) return;
@@ -761,7 +765,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 API_ENDPOINTS.TRAINER.APPROVE_ATTENDEE(bookingDecisionSessionId, bookingDecisionBookingId),
                 {},
             );
-            toast.success('Attendee approved.');
+            toast.success(sessionBookingCanReleasePayout ? 'Payout released.' : 'Attendee approved.');
             if (location.state?.returnPath) navigate(location.state.returnPath);
             else navigate(-1);
         } catch (e) {
@@ -967,7 +971,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 </>
                             ) : null}
                         </p>
-                        {canTrainerDecideSessionBooking && sessionBookingIsPending ? (
+                        {canTrainerDecideSessionBooking && (sessionBookingIsPending || sessionBookingCanReleasePayout) ? (
                             <div className="flex flex-wrap items-center gap-3">
                                 <button
                                     type="button"
@@ -976,17 +980,23 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                     className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-wait"
                                 >
                                     <Check className="h-4 w-4" />
-                                    {isBookingActionLoading ? 'Working…' : 'Accept booking'}
+                                    {isBookingActionLoading
+                                        ? 'Working…'
+                                        : sessionBookingCanReleasePayout
+                                            ? 'Complete / Release payout'
+                                            : 'Accept booking'}
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowBookingRejectModal(true)}
-                                    disabled={isBookingActionLoading}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
-                                >
-                                    <X className="h-4 w-4" />
-                                    Reject booking
-                                </button>
+                                {sessionBookingIsPending ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBookingRejectModal(true)}
+                                        disabled={isBookingActionLoading}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Reject booking
+                                    </button>
+                                ) : null}
                             </div>
                         ) : (
                             <p className="text-sm text-gray-500">

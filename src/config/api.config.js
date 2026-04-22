@@ -193,6 +193,7 @@ export const API_ENDPOINTS = {
     COURSE_BOOKINGS: (courseId) => `/api/admin/courses/${courseId}/bookings`,
     /** Full course booking (documents, resume snapshot) — align with backend route. */
     BOOKING_DETAIL: (bookingId) => `/api/admin/bookings/${bookingId}`,
+    RELEASE_BOOKING_PAYOUT: (bookingId) => `/api/admin/bookings/${bookingId}/release-payout`,
     APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
