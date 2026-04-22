@@ -137,7 +137,9 @@ const Training = () => {
             const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
             const total = Number(session.totalSeats) || 0;
             const enrolled = Number(session.enrolledCount) || 0;
-            const availableSpaces = Math.max(0, total - enrolled);
+            const availableSpaces = Number.isFinite(Number(session.availableSeats))
+                ? Math.max(0, Number(session.availableSeats))
+                : Math.max(0, total - enrolled);
 
             return { id: session.id, eventDate, availableSpaces };
         });

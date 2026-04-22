@@ -46,9 +46,36 @@ function sessionStatusMeta(total, enrolled) {
   return { label: 'Open', color: 'text-emerald-600' };
 }
 
+function getSessionBookingMetrics(session) {
+  const bookings = Array.isArray(session?.bookings) ? session.bookings : [];
+  if (bookings.length === 0) {
+    return {
+      booked: Number(session?.bookedCount ?? session?.confirmedBookings ?? 0) || 0,
+      pending: Number(session?.pendingBookings ?? session?.pendingApprovals ?? session?.pendingCount ?? 0) || 0,
+      revenue: Number(session?.revenue ?? session?.paidRevenue ?? 0) || 0,
+    };
+  }
+  const activeBookings = bookings.filter((booking) =>
+    ['CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase())
+  );
+  const pendingBookings = bookings.filter(
+    (booking) => String(booking.bookingStatus || '').toUpperCase() === 'PENDING'
+  );
+  const paidBookings = bookings.filter(
+    (booking) => String(booking.paymentStatus || '').toUpperCase() === 'SUCCEEDED'
+  );
+
+  return {
+    booked: activeBookings.length,
+    pending: pendingBookings.length,
+    revenue: paidBookings.reduce((sum, booking) => sum + (Number(booking.amountPaid) || 0), 0),
+  };
+}
+
 function mapCourseSessionToRow(course, session, idx) {
   const total = Number(session.totalSeats) || 0;
-  let enrolled = Number(session.enrolledCount);
+  const bookingMetrics = getSessionBookingMetrics(session);
+  let enrolled = bookingMetrics.booked;
   if (Number.isNaN(enrolled)) {
     const avail = Number(session.availableSeats);
     if (!Number.isNaN(avail) && total > 0) enrolled = Math.max(0, total - avail);
@@ -63,13 +90,15 @@ function mapCourseSessionToRow(course, session, idx) {
   const courseType = course.category || course.courseType || 'Uncategorized';
   const { label: status, color: statusColor } = sessionStatusMeta(total, enrolled);
   const pending =
-    Number(session.pendingBookings ?? session.pendingApprovals ?? session.pendingCount ?? 0) || 0;
+    bookingMetrics.pending ||
+    Number(session.pendingBookings ?? session.pendingApprovals ?? session.pendingCount ?? 0) ||
+    0;
   const sid = session.id != null ? String(session.id) : `temp-${idx}`;
   const displayId =
     session.sessionCode || session.referenceCode || (sid.length > 14 ? `…${sid.slice(-8)}` : sid);
 
   const price = Number(course.price || 0);
-  const rowRevenue = price * enrolled;
+  const rowRevenue = bookingMetrics.revenue || price * enrolled;
 
   return {
     displayId,

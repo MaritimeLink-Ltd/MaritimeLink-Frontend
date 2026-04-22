@@ -19,6 +19,28 @@ const statusStyles = {
 
 const PAGE_SIZE = 8;
 
+function getSessionBookingMetrics(session) {
+    const bookings = Array.isArray(session?.bookings) ? session.bookings : [];
+    if (bookings.length === 0) {
+        return {
+            booked: Number(session?.bookedCount ?? session?.confirmedBookings ?? 0) || 0,
+            revenue: Number(session?.revenue ?? session?.paidRevenue ?? 0) || 0,
+        };
+    }
+
+    const activeBookings = bookings.filter((booking) =>
+        ['CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase())
+    );
+    const paidBookings = bookings.filter(
+        (booking) => String(booking.paymentStatus || '').toUpperCase() === 'SUCCEEDED'
+    );
+
+    return {
+        booked: activeBookings.length,
+        revenue: paidBookings.reduce((sum, booking) => sum + (Number(booking.amountPaid) || 0), 0),
+    };
+}
+
 function TrainingProviderCourses() {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +54,7 @@ function TrainingProviderCourses() {
         const totalSessions = coursesList.reduce((acc, course) => acc + course.sessions, 0);
         const totalBookings = coursesList.reduce((acc, course) => acc + course.bookings, 0);
         const totalRevenue = coursesList.reduce((acc, course) => acc + (course.revenueValue || 0), 0);
+        const currencySymbol = coursesList.find((course) => course.currencySymbol)?.currencySymbol || '$';
 
         return [
             {
@@ -58,7 +81,7 @@ function TrainingProviderCourses() {
             {
                 id: 4,
                 label: 'Revenue',
-                value: `$${totalRevenue.toLocaleString()}`,
+                value: `${currencySymbol}${totalRevenue.toLocaleString()}`,
                 icon: DollarSign,
                 accent: 'bg-emerald-50 text-emerald-600'
             }
@@ -80,17 +103,22 @@ function TrainingProviderCourses() {
                             totalSeats = sessions.reduce((sum, s) => sum + (Number(s.totalSeats) || 0), 0);
                         }
 
-                        let bookings = course.enrolledCount || 0;
-                        if (bookings === 0 && sessionsCount > 0) {
-                            bookings = sessions.reduce((sum, s) => {
-                                const t = Number(s.totalSeats) || 0;
-                                const a = Number(s.availableSeats) || 0;
-                                return sum + (t > a ? t - a : 0);
-                            }, 0);
-                        }
+                        const sessionMetrics = sessions.reduce(
+                            (acc, session) => {
+                                const metrics = getSessionBookingMetrics(session);
+                                return {
+                                    bookings: acc.bookings + metrics.booked,
+                                    revenue: acc.revenue + metrics.revenue,
+                                };
+                            },
+                            { bookings: 0, revenue: 0 }
+                        );
 
                         const numericPrice = Number(course.price || 0);
-                        const revenueValue = numericPrice * bookings;
+                        const bookings = sessionMetrics.bookings || course.enrolledCount || 0;
+                        const revenueValue = sessionMetrics.revenue || numericPrice * bookings;
+                        const currencySymbol =
+                            course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : '';
 
                         return {
                             id: course.id,
@@ -103,7 +131,8 @@ function TrainingProviderCourses() {
                             createdAt: course.createdAt,
                             bookingsTag: null,
                             revenueValue: revenueValue,
-                            revenue: `${course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : ''}${revenueValue.toLocaleString()}`,
+                            currencySymbol,
+                            revenue: `${currencySymbol}${revenueValue.toLocaleString()}`,
                             status: course.status === 'ACTIVE' ? 'Published' : course.status === 'DRAFT' ? 'Draft' : course.status,
                             statusVariant: course.status === 'ACTIVE' ? 'success' : course.status === 'DRAFT' ? 'neutral' : 'warning',
                             icon: BookOpen,

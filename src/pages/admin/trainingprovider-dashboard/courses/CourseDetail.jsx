@@ -34,6 +34,27 @@ const statusPillStyles = {
 
 const PAGE_SIZE = 4;
 
+function getSessionBookingMetrics(session) {
+  const bookings = Array.isArray(session?.bookings) ? session.bookings : [];
+  if (bookings.length === 0) {
+    return {
+      booked: Number(session?.bookedCount ?? session?.confirmedBookings ?? 0) || 0,
+      revenue: Number(session?.revenue ?? session?.paidRevenue ?? 0) || 0,
+    };
+  }
+  const activeBookings = bookings.filter((booking) =>
+    ['CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase())
+  );
+  const paidBookings = bookings.filter(
+    (booking) => String(booking.paymentStatus || '').toUpperCase() === 'SUCCEEDED'
+  );
+
+  return {
+    booked: activeBookings.length,
+    revenue: paidBookings.reduce((sum, booking) => sum + (Number(booking.amountPaid) || 0), 0),
+  };
+}
+
 export default function CourseDetail() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -109,6 +130,16 @@ export default function CourseDetail() {
           if (fetchedSessions.length > 0 && computedTotalSeats === 0) {
               computedTotalSeats = fetchedSessions.reduce((acc, s) => acc + (Number(s.totalSeats) || 0), 0);
           }
+          const bookingMetrics = fetchedSessions.reduce(
+            (acc, session) => {
+              const metrics = getSessionBookingMetrics(session);
+              return {
+                bookings: acc.bookings + metrics.booked,
+                revenue: acc.revenue + metrics.revenue,
+              };
+            },
+            { bookings: 0, revenue: 0 }
+          );
 
           setCourseSummary({
             id: course.id,
@@ -116,8 +147,8 @@ export default function CourseDetail() {
             categoryTag: course.category || course.courseType,
             totalSeats: computedTotalSeats,
             sessions: fetchedSessions.length,
-            bookings: course.enrolledCount || 0,
-            revenue: `${currencySymbol}${(Number(course.price || 0) * (course.enrolledCount || 0)).toLocaleString()}`,
+            bookings: bookingMetrics.bookings || course.enrolledCount || 0,
+            revenue: `${currencySymbol}${Math.round(bookingMetrics.revenue || (Number(course.price || 0) * (course.enrolledCount || 0))).toLocaleString()}`,
             description: course.description || 'No description provided.',
           });
           
@@ -131,7 +162,8 @@ export default function CourseDetail() {
                
                const total = Number(s.totalSeats) || 0;
                const available = Number(s.availableSeats) || 0;
-               const enrolled = total - available;
+               const metrics = getSessionBookingMetrics(s);
+               const enrolled = metrics.booked || Math.max(0, total - available);
 
                return {
                  id: s.id || `S${idx}`,
