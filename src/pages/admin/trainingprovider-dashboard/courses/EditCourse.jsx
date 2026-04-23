@@ -93,7 +93,7 @@ export default function EditCourse() {
                 contractType: 'Full-time'
             };
 
-            const response = await httpClient.put(API_ENDPOINTS.COURSES.UPDATE(courseId), payload);
+            const response = await httpClient.patch(API_ENDPOINTS.COURSES.UPDATE(courseId), payload);
             if (response.status === 'success') {
                 setShowSuccessModal(true);
                 setTimeout(() => {
