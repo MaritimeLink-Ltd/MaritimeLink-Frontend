@@ -352,31 +352,28 @@ function RecruiterCompanyVerification() {
                     )}
 
                     <div className="bg-gray-50 rounded-2xl p-6 mb-6">
-                        {displayLogo ? (
-                            <div className="mb-4 flex flex-col items-center">
-                                <img
-                                    src={displayLogo}
-                                    alt={`${companyData.name || 'Company'} logo`}
-                                    className="w-24 h-24 object-contain rounded-xl bg-white border border-gray-100 p-2"
-                                />
-                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400 font-semibold">
-                                    Fetched logo
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="mb-4 flex flex-col items-center">
-                                <div className="w-24 h-24 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-3xl font-bold text-[#003971]">
-                                    {(companyData.name || 'C').charAt(0)}
-                                </div>
-                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400 font-semibold">
-                                    No logo returned
-                                </p>
-                            </div>
-                        )}
-
                         <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">{companyData.name}</h2>
 
                         <div className="mt-5 space-y-3">
+                            <div className="rounded-xl bg-white border border-gray-100 px-4 py-4">
+                                <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold text-center">
+                                    {displayLogo ? 'Fetched logo' : 'No logo returned'}
+                                </p>
+                                <div className="mt-3 h-[96px] overflow-hidden rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center px-4 py-3">
+                                    {displayLogo ? (
+                                        <img
+                                            src={displayLogo}
+                                            alt={`${companyData.name || 'Company'} logo`}
+                                            className="block w-auto h-auto max-w-full max-h-[56px] object-contain"
+                                        />
+                                    ) : (
+                                        <div className="w-16 h-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-2xl font-bold text-[#003971]">
+                                            {(companyData.name || 'C').charAt(0)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {detailRows.length > 0 ? (
                                 detailRows.map(([label, value, matchState, enteredValue]) => (
                                     <div key={label} className="rounded-xl bg-white border border-gray-100 px-4 py-3">
