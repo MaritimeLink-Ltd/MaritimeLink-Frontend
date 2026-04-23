@@ -10,6 +10,15 @@ function unwrapApiBody(res) {
     return res;
 }
 
+function faviconUrl(value) {
+    const domain = (value || '')
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/^www\./i, '')
+        .split('/')[0];
+    return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
+}
+
 /** Map lookup API payload to UI fields (backend shape may vary). */
 function mapLookupToDisplay(lookupPayload) {
     const root = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
@@ -17,7 +26,7 @@ function mapLookupToDisplay(lookupPayload) {
     const website = d.company_website || d.website || d.url || '';
     return {
         name: d.organizationName || d.name || d.companyName || '',
-        logo: d.logo || d.logoUrl || d.companyLogo || '',
+        logo: d.logo || d.logoUrl || d.companyLogo || faviconUrl(website),
         website,
         address: [d.address_street, d.address_location].filter(Boolean).join(', '),
         city: d.address_city || '',
@@ -189,8 +198,18 @@ function RecruiterCompanyDetails() {
 
                     {/* Company Preview (Logo) */}
                     {previewData?.logo && (
-                        <div className="mb-4">
-                            <img src={previewData.logo} alt="Company Logo" className="h-12 object-contain rounded" />
+                        <div className="mb-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                            <img
+                                src={previewData.logo}
+                                alt="Company favicon"
+                                className="h-12 w-12 rounded-xl border border-gray-200 bg-white object-contain p-2"
+                            />
+                            <div className="min-w-0">
+                                <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Public match</p>
+                                <p className="text-sm font-semibold text-gray-900 truncate">
+                                    {previewData.name || 'Company found'}
+                                </p>
+                            </div>
                         </div>
                     )}
                     {previewData?.name && !previewLoading && (
