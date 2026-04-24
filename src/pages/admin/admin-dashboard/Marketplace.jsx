@@ -157,11 +157,11 @@ function Marketplace() {
         try {
             const typeParam = subTabKey === 'Jobs' ? 'JOBS' : 'COURSES';
             const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_OVERSIGHT}?type=${typeParam}`);
-            if (res?.data?.oversight) {
-                setOversightData(res.data.oversight);
-            }
+            const oversight = res?.data?.data?.oversight ?? res?.data?.oversight ?? [];
+            setOversightData(oversight);
         } catch (error) {
             console.error('Failed to load marketplace oversight:', error);
+            setOversightData([]);
         }
     };
 
@@ -583,13 +583,21 @@ function Marketplace() {
                         org.includes(query) || email.includes(query);
                 }
                 return record.name?.toLowerCase().includes(query) ||
-                    record.company?.toLowerCase().includes(query);
+                    record.company?.toLowerCase().includes(query) ||
+                    record.email?.toLowerCase().includes(query);
             });
         }
 
         // Apply Status Filter
         if (statusFilter !== 'Status' && statusFilter !== 'All') {
             data = data.filter((record) => {
+                if (activeMainTab === 'Oversight' && activeSubTab === 'Jobs') {
+                    if (statusFilter === 'Active') return Number(record.totalActive || 0) > 0;
+                    if (statusFilter === 'Flagged') return Number(record.flaggedCount || 0) > 0;
+                    if (statusFilter === 'Draft') return Number(record.totalPosted || 0) === 0;
+                    if (statusFilter === 'Paused') return false;
+                    return true;
+                }
                 if (isOversightCourses || (onMaritimeLinkListings && activeSubTab === 'Training Courses')) {
                     if (statusFilter === 'Flagged') return record.isFlagged === true;
                     const map = { Active: 'ACTIVE', Draft: 'DRAFT', Paused: 'PAUSED' };

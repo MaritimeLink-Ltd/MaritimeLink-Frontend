@@ -72,6 +72,21 @@ function alertRowIconClass(type) {
     return 'text-gray-600';
 }
 
+function alertDestination(alert) {
+    const type = (alert?.type || '').toUpperCase();
+    const metadata = alert?.metadata && typeof alert.metadata === 'object' ? alert.metadata : {};
+
+    if ((type === 'INVITATION' || type === 'JOB_APPLICATION_STATUS') && metadata.jobId) {
+        return `/personal/jobs/${metadata.jobId}`;
+    }
+
+    if (type === 'COURSE_BOOKING_STATUS' && metadata.bookingId) {
+        return `/personal/training/applied/${metadata.bookingId}`;
+    }
+
+    return null;
+}
+
 function activityDescription(entry) {
     const action = (entry?.action || '').toUpperCase();
     const meta = entry?.metadata && typeof entry.metadata === 'object' ? entry.metadata : {};
@@ -190,11 +205,10 @@ const Dashboard = () => {
 
     const onApiAlertPress = useCallback(
         async (alert) => {
-            const t = (alert?.type || '').toUpperCase();
-            const canNavigate = t === 'INVITATION' && Boolean(alert?.metadata?.jobId);
+            const destination = alertDestination(alert);
             await markAlertReadRemote(alert);
-            if (canNavigate) {
-                navigate(`/personal/jobs/${alert.metadata.jobId}`);
+            if (destination) {
+                navigate(destination);
             }
         },
         [markAlertReadRemote, navigate]
@@ -460,9 +474,7 @@ const Dashboard = () => {
                                     {apiAlerts.map((alert) => {
                                         const Icon = alertRowIconComponent(alert.type);
                                         const iconClass = alertRowIconClass(alert.type);
-                                        const t = (alert.type || '').toUpperCase();
-                                        const canNavigate =
-                                            t === 'INVITATION' && Boolean(alert.metadata?.jobId);
+                                        const canNavigate = Boolean(alertDestination(alert));
                                         const unread = alert.isRead === false;
                                         const interactive = unread || canNavigate;
                                         const rel = formatRelativeTime(alert.createdAt);
