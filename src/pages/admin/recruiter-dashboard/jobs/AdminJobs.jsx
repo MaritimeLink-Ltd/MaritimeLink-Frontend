@@ -108,8 +108,13 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         return cat.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
                     };
 
-                    const formattedStatus = job.status ? 
-                        job.status.charAt(0) + job.status.slice(1).toLowerCase() : 'Active';
+                    const formattedStatus = (() => {
+                        const upper = String(job.status || '').toUpperCase();
+                        if (upper === 'DRAFT') return 'Draft';
+                        if (upper === 'EXPIRED') return 'Expired';
+                        if (upper === 'FILLED') return 'Filled';
+                        return 'Active';
+                    })();
 
                     return {
                         ...job, // Spread original data first
@@ -121,7 +126,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         applicants: job.applicantsCount || 0, // Fallback if API hasn't added it yet
                         posted: postedString,
                         postedDaysAgo: diffDays, 
-                        status: formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed'), // Overwrite API status with UI status
+                        status: formattedStatus,
                         type: formattedType
                     };
                 });
@@ -145,7 +150,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
     const activeJobsCount = jobs.filter(job => job.status === 'Active').length;
     const draftJobsCount = jobs.filter(job => job.status === 'Draft').length;
-    const closedJobsCount = jobs.filter(job => job.status === 'Closed').length;
+    const closedJobsCount = jobs.filter(job => ['Expired', 'Filled'].includes(job.status)).length;
     const totalApplications = jobs.reduce((sum, job) => sum + (job.applicants || 0), 0);
 
     const stats = [

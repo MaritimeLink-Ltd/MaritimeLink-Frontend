@@ -16,8 +16,21 @@ const mapSessionsArray = (sessions) => {
         const total = Number(session.totalSeats) || 0;
         const enrolled = Number(session.enrolledCount) || 0;
         const availableSpaces = Math.max(0, total - enrolled);
-        return { id: session.id, eventDate, availableSpaces };
+        const status = String(session.status || (availableSpaces > 0 ? 'AVAILABLE' : 'FULL')).toUpperCase();
+        return {
+            id: session.id,
+            eventDate,
+            availableSpaces,
+            status,
+            isBookable: status === 'AVAILABLE' && availableSpaces > 0,
+        };
     });
+};
+
+const sessionStatusPill = (status) => {
+    if (status === 'FULL') return 'bg-red-50 text-red-700 border-red-200';
+    if (status === 'EXPIRED') return 'bg-gray-100 text-gray-600 border-gray-200';
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
 };
 
 function CoursePaymentForm({ clientSecret, bookingId, payLabel, onAbandon }) {
@@ -341,19 +354,20 @@ const BookCourse = () => {
                         <div className="space-y-3">
                             {availableSessions.map((session) => {
                                 const isSelected = selectedSessions.includes(session.id);
+                                const sessionLocked = paymentLocked || !session.isBookable;
 
                                 return (
                                     <div
                                         key={session.id}
                                         onClick={() => {
-                                            if (paymentLocked) return;
+                                            if (sessionLocked) return;
                                             setSelectedSessions((prev) => (
                                                 prev.includes(session.id)
                                                     ? prev.filter((id) => id !== session.id)
                                                     : [...prev, session.id]
                                             ));
                                         }}
-                                        className={`flex items-center p-4 border rounded-xl transition-colors ${paymentLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                                        className={`flex items-center p-4 border rounded-xl transition-colors ${sessionLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'}`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${isSelected ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'}`}>
                                             {isSelected && <Check size={14} className="text-white" strokeWidth={3} />}
@@ -362,6 +376,9 @@ const BookCourse = () => {
                                             <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
                                             <p className="text-xs text-gray-500 mt-1">Available Spaces: {session.availableSpaces}</p>
                                         </div>
+                                        <span className={`ml-3 shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${sessionStatusPill(session.status)}`}>
+                                            {session.status === 'AVAILABLE' ? 'Open' : session.status === 'FULL' ? 'Full Seats' : 'Expired'}
+                                        </span>
                                     </div>
                                 );
                             })}

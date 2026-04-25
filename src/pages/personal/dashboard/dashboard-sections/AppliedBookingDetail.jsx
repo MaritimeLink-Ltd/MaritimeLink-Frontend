@@ -23,6 +23,23 @@ const statusPillClass = (status) => {
     return 'bg-gray-50 text-gray-700 border-gray-200';
 };
 
+const bookingStatusLabel = (status) => {
+    const u = String(status || '').toUpperCase();
+    if (u === 'PENDING') return 'Pending Approval';
+    if (u === 'CONFIRMED') return 'Paid';
+    if (u === 'COMPLETED') return 'Approved';
+    if (u === 'CANCELLED') return 'Rejected';
+    return status || '—';
+};
+
+const paymentStatusLabel = (status) => {
+    const u = String(status || '').toUpperCase();
+    if (u === 'SUCCEEDED') return 'Paid';
+    if (u === 'PENDING') return 'Pending';
+    if (u === 'REFUNDED') return 'Refunded';
+    return status || '—';
+};
+
 const formatSessionWhen = (session) => {
     const start = session.startDate ? new Date(session.startDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
     const end = session.endDate ? new Date(session.endDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
@@ -135,14 +152,14 @@ const AppliedBookingDetail = () => {
                                     booking.bookingStatus
                                 )}`}
                             >
-                                {booking.bookingStatus || '—'}
+                                {bookingStatusLabel(booking.bookingStatus)}
                             </span>
                             <span
                                 className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusPillClass(
                                     booking.paymentStatus
                                 )}`}
                             >
-                                Payment: {booking.paymentStatus || '—'}
+                                Payment: {paymentStatusLabel(booking.paymentStatus)}
                             </span>
                         </div>
                     </div>

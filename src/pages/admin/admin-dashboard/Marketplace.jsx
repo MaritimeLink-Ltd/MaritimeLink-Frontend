@@ -21,6 +21,7 @@ function Marketplace() {
     const [totalRemoteJobs, setTotalRemoteJobs] = useState(0);
     const [marketplaceStats, setMarketplaceStats] = useState(null);
     const [oversightData, setOversightData] = useState([]);
+    const [totalOversight, setTotalOversight] = useState(0);
     const [coursesList, setCoursesList] = useState([]);
     const [totalCourses, setTotalCourses] = useState(0);
     /** Admin-owned courses from GET /api/courses/my — MaritimeLink Listings → Training */
@@ -153,15 +154,24 @@ function Marketplace() {
         }
     };
 
-    const loadOversightData = async (subTabKey) => {
+    const loadOversightData = async (subTabKey, page = 1, search = '') => {
         try {
             const typeParam = subTabKey === 'Jobs' ? 'JOBS' : 'COURSES';
-            const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_OVERSIGHT}?type=${typeParam}`);
+            const params = new URLSearchParams({
+                type: typeParam,
+                page: String(page),
+                limit: String(itemsPerPage),
+            });
+            if (search.trim()) params.set('search', search.trim());
+
+            const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_OVERSIGHT}?${params.toString()}`);
             const oversight = res?.data?.data?.oversight ?? res?.data?.oversight ?? [];
             setOversightData(oversight);
+            setTotalOversight(Number(res?.pagination?.total ?? res?.data?.total ?? oversight.length ?? 0));
         } catch (error) {
             console.error('Failed to load marketplace oversight:', error);
             setOversightData([]);
+            setTotalOversight(0);
         }
     };
 
@@ -213,12 +223,16 @@ function Marketplace() {
             if (activeSubTab === 'Training Courses') {
                 loadCoursesData(currentPage);
             } else {
-                loadOversightData(activeSubTab);
+                loadOversightData(activeSubTab, currentPage, searchQuery);
             }
         } else if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
             loadJobsData(currentPage);
         }
-    }, [currentPage, activeSubTab, activeMainTab]);
+    }, [currentPage, activeSubTab, activeMainTab, searchQuery]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, activeMainTab, activeSubTab]);
 
     const handleRefresh = () => {
         // Reset filters
@@ -231,7 +245,7 @@ function Marketplace() {
             if (activeSubTab === 'Training Courses') {
                 loadCoursesData(1);
             } else {
-                loadOversightData(activeSubTab);
+                loadOversightData(activeSubTab, 1, '');
             }
         } else if (activeSubTab === 'Jobs') {
             loadJobsData(1);
@@ -582,6 +596,9 @@ function Marketplace() {
                     return title.includes(query) || cat.includes(query) || loc.includes(query) ||
                         org.includes(query) || email.includes(query);
                 }
+                if (activeMainTab === 'Oversight' && activeSubTab === 'Jobs') {
+                    return true;
+                }
                 return record.name?.toLowerCase().includes(query) ||
                     record.company?.toLowerCase().includes(query) ||
                     record.email?.toLowerCase().includes(query);
@@ -666,8 +683,11 @@ function Marketplace() {
     // Pagination Logic
     // For MaritimeLink Jobs and Oversight courses, totalPages comes from backend totals.
     // For everything else, use filtered local length.
+    const isOversightJobs = activeMainTab === 'Oversight' && activeSubTab === 'Jobs';
     const totalPages = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
         ? Math.max(1, Math.ceil(totalRemoteJobs / itemsPerPage))
+        : isOversightJobs
+            ? Math.max(1, Math.ceil(totalOversight / itemsPerPage))
         : isCoursesOversightApi
             ? Math.max(1, Math.ceil(totalCourses / itemsPerPage))
             : Math.max(1, Math.ceil(currentData.length / itemsPerPage));
@@ -675,9 +695,12 @@ function Marketplace() {
     // Determine if backend correctly paginated, or if we need to manually slice it.
     const isBackendPaginated =
         (activeSubTab === 'Jobs' && isMaritimeLinkTab && currentData.length <= itemsPerPage) ||
+        (isOversightJobs && currentData.length <= itemsPerPage) ||
         (isCoursesOversightApi && currentData.length <= itemsPerPage);
     const totalItems = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
         ? totalRemoteJobs
+        : isOversightJobs
+            ? totalOversight
         : isCoursesOversightApi
             ? totalCourses
             : currentData.length;

@@ -140,9 +140,22 @@ const Training = () => {
             const availableSpaces = Number.isFinite(Number(session.availableSeats))
                 ? Math.max(0, Number(session.availableSeats))
                 : Math.max(0, total - enrolled);
+            const status = String(session.status || (availableSpaces > 0 ? 'AVAILABLE' : 'FULL')).toUpperCase();
 
-            return { id: session.id, eventDate, availableSpaces };
+            return {
+                id: session.id,
+                eventDate,
+                availableSpaces,
+                status,
+                isBookable: status === 'AVAILABLE' && availableSpaces > 0,
+            };
         });
+    };
+
+    const sessionStatusPill = (status) => {
+        if (status === 'FULL') return 'bg-red-50 text-red-700 border-red-200';
+        if (status === 'EXPIRED') return 'bg-gray-100 text-gray-600 border-gray-200';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     };
 
     const mapSessionsFromCourse = (course) => mapSessionsList(course?.sessions);
@@ -206,6 +219,8 @@ const Training = () => {
             setSaveToggleLoading(false);
         }
     };
+
+    const hasBookableSelectedCourseSession = selectedCourseSessions.some((session) => session.isBookable);
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
@@ -319,10 +334,10 @@ const Training = () => {
                                                 bookingSessions: selectedCourseSessions
                                             }
                                         })}
-                                        disabled={isCourseLoading}
-                                        className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial"
+                                        disabled={isCourseLoading || !hasBookableSelectedCourseSession}
+                                        className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
-                                        Book now
+                                        {hasBookableSelectedCourseSession ? 'Book now' : 'No seats available'}
                                     </button>
                                     <button
                                         onClick={() => navigate('/personal/chats', {
@@ -421,12 +436,17 @@ const Training = () => {
                                                 key={session.id}
                                                 className="border border-gray-200 rounded-xl p-4"
                                             >
-                                                <div>
-                                                    <p className="text-sm text-gray-500">Event Date</p>
-                                                    <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
-                                                    <p className="text-sm text-gray-500 mt-1">
-                                                        Available Spaces: <span className="font-semibold text-gray-700">{session.availableSpaces}</span>
-                                                    </p>
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm text-gray-500">Event Date</p>
+                                                        <p className="text-sm font-semibold text-gray-800">{session.eventDate || '-'}</p>
+                                                        <p className="text-sm text-gray-500 mt-1">
+                                                            Available Spaces: <span className="font-semibold text-gray-700">{session.availableSpaces}</span>
+                                                        </p>
+                                                    </div>
+                                                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${sessionStatusPill(session.status)}`}>
+                                                        {session.status === 'AVAILABLE' ? 'Open' : session.status === 'FULL' ? 'Full Seats' : 'Expired'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         ))}

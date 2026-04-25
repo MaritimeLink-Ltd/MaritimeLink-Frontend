@@ -96,10 +96,18 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [jobStatus, setJobStatus] = useState(jobData?.status || 'Active');
+
+    const mapApiJobStatusToUi = (status) => {
+        const upper = String(status || '').toUpperCase();
+        if (upper === 'DRAFT') return 'Draft';
+        if (upper === 'EXPIRED') return 'Expired';
+        if (upper === 'FILLED') return 'Filled';
+        return 'Active';
+    };
     
     // Derived values
     const isPublished = jobStatus === 'Active';
-    const isClosed = jobStatus === 'Closed';
+    const isClosed = jobStatus === 'Expired' || jobStatus === 'Filled';
     const allowedInitialAtsTabs = new Set([
         'matches',
         'all',
@@ -165,8 +173,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                      if (diffDays === 0) postedString = 'Today';
                      else if (diffDays === 1) postedString = '1 day ago';
                      
-                     const formattedStatus = fetchedJob.status ? 
-                         fetchedJob.status.charAt(0) + fetchedJob.status.slice(1).toLowerCase() : 'Active';
+                     const formattedStatus = mapApiJobStatusToUi(fetchedJob.status);
 
                      setJob({
                          ...fetchedJob,
@@ -175,10 +182,10 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                          domain: fetchedJob.companyId || 'company.com',
                          location: fetchedJob.location || 'Global',
                          posted: postedString,
-                         status: formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed')
+                         status: formattedStatus
                      });
                      
-                     setJobStatus(formattedStatus === 'Active' ? 'Active' : (formattedStatus === 'Draft' ? 'Draft' : 'Closed'));
+                     setJobStatus(formattedStatus);
                  }
              } catch (error) {
                  console.error("Failed to fetch job detail:", error);
@@ -434,6 +441,20 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             console.error("Failed to delete job:", error);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleJobStatusUpdate = async (nextStatus) => {
+        if (!jobId) return;
+        try {
+            const response = await jobService.updateJobStatus(jobId, nextStatus);
+            const updated = response?.data?.job || response?.job;
+            const nextUiStatus = mapApiJobStatusToUi(updated?.status || nextStatus);
+            setJob((prev) => prev ? ({ ...prev, status: nextUiStatus }) : prev);
+            setJobStatus(nextUiStatus);
+            setShowJobDetailsModal(false);
+        } catch (error) {
+            console.error('Failed to update job status:', error);
         }
     };
 
@@ -908,24 +929,18 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                             </button>
                             {!isClosed && (
                                 <button
-                                    onClick={() => {
-                                        setJobStatus(isPublished ? 'Unpublished' : 'Active');
-                                        setShowJobDetailsModal(false);
-                                    }}
+                                    onClick={() => handleJobStatusUpdate(isPublished ? 'DRAFT' : 'ACTIVE')}
                                     className={`px-5 py-2.5 rounded-xl font-semibold text-white transition-colors ${isPublished
                                         ? 'bg-orange-500 hover:bg-orange-600'
                                         : 'bg-[#003971] hover:bg-[#002855]'
                                         }`}
                                 >
-                                    {isPublished ? 'Unpublish' : 'Publish'}
+                                    {isPublished ? 'Pause Job' : 'Publish'}
                                 </button>
                             )}
                             {!isClosed ? (
                                 <button
-                                    onClick={() => {
-                                        setJobStatus('Closed');
-                                        setShowJobDetailsModal(false);
-                                    }}
+                                    onClick={() => handleJobStatusUpdate('EXPIRED')}
                                     className="px-5 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
                                 >
                                     Close Job

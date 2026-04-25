@@ -413,6 +413,22 @@ class JobService {
     }
 
     /**
+     * Update only a job status.
+     * PATCH /api/jobs/:id/status
+     * @param {string} id
+     * @param {'DRAFT'|'ACTIVE'|'FILLED'|'EXPIRED'|'REMOVED'} status
+     */
+    async updateJobStatus(id, status) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.JOBS.UPDATE_STATUS(id), { status });
+            return response;
+        } catch (error) {
+            console.error('Update Job Status error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Delete a job
      * DELETE /api/jobs/:id
      * @param {string} id - Job ID
