@@ -39,7 +39,8 @@ const PUBLIC_PATH_PREFIXES = [
     '/recruiter/login',
 ];
 
-export function parseJwtExpiryMs(token) {
+/** Decode JWT payload (no signature verification). */
+export function parseJwtPayload(token) {
     if (!token || typeof token !== 'string') return null;
 
     const parts = token.split('.');
@@ -48,13 +49,16 @@ export function parseJwtExpiryMs(token) {
     try {
         const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
         const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
-        const payload = JSON.parse(atob(padded));
-
-        if (!payload || typeof payload.exp !== 'number') return null;
-        return payload.exp * 1000;
+        return JSON.parse(atob(padded));
     } catch {
         return null;
     }
+}
+
+export function parseJwtExpiryMs(token) {
+    const payload = parseJwtPayload(token);
+    if (!payload || typeof payload.exp !== 'number') return null;
+    return payload.exp * 1000;
 }
 
 export function isAuthTokenExpired(token) {

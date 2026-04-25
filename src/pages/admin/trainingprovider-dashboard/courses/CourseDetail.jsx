@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 import {
   ArrowLeft,
   BookOpen,
@@ -107,6 +108,12 @@ export default function CourseDetail() {
 
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [isDeletingSession, setIsDeletingSession] = useState(false);
+  /** Raw API course (ownership fields) for permission checks */
+  const [courseEntity, setCourseEntity] = useState(null);
+
+  useEffect(() => {
+    setCourseEntity(null);
+  }, [resolvedCourseId]);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -124,6 +131,7 @@ export default function CourseDetail() {
 
         if (courseResponse.status === 'success' && courseResponse.data?.course) {
           const course = courseResponse.data.course;
+          setCourseEntity(course);
           const currencySymbol = course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : '';
           
           let computedTotalSeats = course.capacity || 0;
@@ -263,12 +271,14 @@ export default function CourseDetail() {
   }, [pageCount]);
 
   const handleEditCourse = () => {
+    if (!canManageCourseActions) return;
     navigate(coursePaths.editCourse, {
       state: { returnPath: coursePaths.base },
     });
   };
 
   const handleAddSession = () => {
+    if (!canManageCourseActions) return;
     navigate(coursePaths.scheduleSession, {
       state: {
         courseTitle: courseSummary?.title,
@@ -279,6 +289,22 @@ export default function CourseDetail() {
 
   const isAdminMarketplaceCourse =
     location.pathname.includes('/admin/marketplace');
+
+  const canManageCourseActions = useMemo(() => {
+    if (!courseSummary) return false;
+    if (isAdminMarketplaceCourse) {
+      if (!courseEntity) return false;
+      return canCurrentUserManageCourse({
+        pathname: location.pathname,
+        course: courseEntity,
+      });
+    }
+    if (!courseEntity) return true;
+    return canCurrentUserManageCourse({
+      pathname: location.pathname,
+      course: courseEntity,
+    });
+  }, [courseSummary, courseEntity, location.pathname, isAdminMarketplaceCourse]);
 
   const handleViewAllCourseAttendees = () => {
     if (!isAdminMarketplaceCourse) return;
@@ -328,7 +354,9 @@ export default function CourseDetail() {
       setIsDeleting(true);
       const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE(resolvedCourseId));
       if (response.status === 'success') {
-        navigate('/trainingprovider/courses');
+        navigate(
+          isAdminMarketplaceCourse ? '/admin/marketplace' : '/trainingprovider/courses'
+        );
       }
     } catch (err) {
       console.error('Failed to delete course:', err);
@@ -392,6 +420,16 @@ export default function CourseDetail() {
         Back
       </button>
 
+      {isAdminMarketplaceCourse && !canManageCourseActions ? (
+        <div
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          You are viewing this course in read-only mode. Only the training provider or the admin who
+          created a MaritimeLink listing can edit, delete, or change sessions from here.
+        </div>
+      ) : null}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
         <div className="flex items-center gap-4">
@@ -418,22 +456,26 @@ export default function CourseDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleEditCourse}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            <span>Edit Course</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsDeleteDialogOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-red-100 transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Delete</span>
-          </button>
-          {currentStatusConfig && (
+          {canManageCourseActions ? (
+            <button
+              type="button"
+              onClick={handleEditCourse}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <span>Edit Course</span>
+            </button>
+          ) : null}
+          {canManageCourseActions ? (
+            <button
+              type="button"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          ) : null}
+          {canManageCourseActions && currentStatusConfig ? (
             <button
               type="button"
               onClick={handleStatusActionClick}
@@ -441,7 +483,7 @@ export default function CourseDetail() {
             >
               <span>{currentStatusConfig.actionLabel}</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -577,13 +619,15 @@ export default function CourseDetail() {
                     <span>View attendees</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={handleAddSession}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002455]"
-                >
-                  <span>Add Session</span>
-                </button>
+                {canManageCourseActions ? (
+                  <button
+                    type="button"
+                    onClick={handleAddSession}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002455]"
+                  >
+                    <span>Add Session</span>
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -649,13 +693,15 @@ export default function CourseDetail() {
                             >
                                 {isAdminMarketplaceCourse ? 'View attendees' : 'View Attendees'}
                             </button>
-                            <button
+                            {canManageCourseActions ? (
+                              <button
                                 type="button"
                                 onClick={() => setSessionToDelete(session)}
                                 className="inline-flex items-center justify-center rounded-xl bg-red-50 p-2 text-red-600 hover:bg-red-100 transition-colors"
-                            >
+                              >
                                 <Trash2 className="h-4 w-4" />
-                            </button>
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

@@ -241,49 +241,47 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             if (fromAttendance && (isAdmin || isTrainingProviderUser)) {
                 try {
                     setIsLoading(true);
-                    const profPath = isAdmin
-                        ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
-                        : API_ENDPOINTS.TRAINER.PROFESSIONAL_DETAIL(candidateId);
-                    const response = await httpClient.get(profPath);
-                    const responseData = response?.data?.data || response?.data;
-                    const obj = responseData?.professional ? responseData.professional : responseData;
-
-                    let mergedCandidate = obj;
                     const bookingId = location.state?.bookingId;
-                    if (bookingId && obj) {
-                        try {
-                            const bPath = isAdmin
-                                ? API_ENDPOINTS.ADMIN.BOOKING_DETAIL(bookingId)
-                                : API_ENDPOINTS.TRAINER.BOOKING_DETAIL(bookingId);
-                            const bRes = await httpClient.get(bPath);
-                            const booking = bRes?.data?.booking ?? bRes?.data?.data?.booking ?? bRes?.data;
-                            const att = Array.isArray(booking?.attachedDocuments) ? booking.attachedDocuments : [];
-                            mergedCandidate = {
-                                professional: obj,
-                                application: {
-                                    professional: obj,
-                                    attachedDocuments: att,
-                                    cvUrl: booking?.cvUrl || null,
-                                    coverLetterUrl: booking?.coverLetterUrl || null,
-                                    coverLetter: booking?.coverLetter ?? null,
-                                    resumeSnapshot: booking?.resumeSnapshot || null,
-                                    status: booking?.bookingStatus || booking?.applicationStatus || 'APPLIED',
-                                },
-                            };
-                        } catch {
-                            /* Optional: full booking may use a different admin/trainer route */
-                        }
-                    }
+                    if (bookingId) {
+                        const bPath = isAdmin
+                            ? API_ENDPOINTS.ADMIN.BOOKING_DETAIL(bookingId)
+                            : API_ENDPOINTS.TRAINER.BOOKING_DETAIL(bookingId);
+                        const bRes = await httpClient.get(bPath);
+                        const booking = bRes?.data?.booking ?? bRes?.data?.data?.booking ?? bRes?.data;
+                        const professional = booking?.professional || booking?.trainee || booking?.user || null;
+                        const att = Array.isArray(booking?.attachedDocuments) ? booking.attachedDocuments : [];
 
-                    if (mergedCandidate) {
+                        const mergedCandidate = {
+                            professional,
+                            booking,
+                            application: {
+                                professional,
+                                attachedDocuments: att,
+                                cvUrl: booking?.cvUrl || null,
+                                coverLetterUrl: booking?.coverLetterUrl || null,
+                                coverLetter: booking?.coverLetter ?? null,
+                                resumeSnapshot: booking?.resumeSnapshot || professional?.resume || null,
+                                status: booking?.bookingStatus || booking?.applicationStatus || 'APPLIED',
+                            },
+                        };
+
                         setFetchedCandidate(mergedCandidate);
                         const appStatus = mergedCandidate.application?.status;
-                        if (appStatus) {
-                            setApplicationStage(mapApiStatusToStage(appStatus));
-                        } else {
-                            setApplicationStage(null);
-                        }
+                        setApplicationStage(appStatus ? mapApiStatusToStage(appStatus) : null);
                         setStatusUpdatedBy(extractUpdatedByRole(mergedCandidate));
+                    } else {
+                        // Fallback (older navigation): no booking id passed.
+                        const profPath = isAdmin
+                            ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
+                            : API_ENDPOINTS.TRAINER.PROFESSIONAL_DETAIL(candidateId);
+                        const response = await httpClient.get(profPath);
+                        const responseData = response?.data?.data || response?.data;
+                        const obj = responseData?.professional ? responseData.professional : responseData;
+                        if (obj) {
+                            setFetchedCandidate(obj);
+                            setApplicationStage(obj.application?.status || obj.status ? mapApiStatusToStage(obj.application?.status || obj.status) : null);
+                            setStatusUpdatedBy(extractUpdatedByRole(obj));
+                        }
                     }
                 } catch (error) {
                     console.error('Failed to load professional for session attendee:', error);

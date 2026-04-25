@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search } from 'lucide-react';
+import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search, Loader2 } from 'lucide-react';
 import { publishedCourses } from '../../../../data/publishedCoursesData';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 
 function openDatePicker(inputRef) {
   const el = inputRef?.current;
@@ -37,6 +38,44 @@ export default function ScheduleSession() {
   const passedCourseTitle = location.state?.courseTitle || '';
   const returnPath = location.state?.returnPath;
   const lockCourseSelection = Boolean(courseId);
+  const isAdminMarketplace = location.pathname.includes('/admin/marketplace');
+  const [adminCourseGateReady, setAdminCourseGateReady] = useState(
+    !(lockCourseSelection && isAdminMarketplace)
+  );
+  const [adminCourseGateAllowed, setAdminCourseGateAllowed] = useState(true);
+
+  useEffect(() => {
+    if (!lockCourseSelection || !isAdminMarketplace || !courseId) {
+      setAdminCourseGateReady(true);
+      setAdminCourseGateAllowed(true);
+      return undefined;
+    }
+    let cancelled = false;
+    setAdminCourseGateReady(false);
+    (async () => {
+      try {
+        const res = await httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId));
+        const c = res?.data?.course;
+        const ok =
+          Boolean(c) &&
+          canCurrentUserManageCourse({ pathname: location.pathname, course: c });
+        if (cancelled) return;
+        setAdminCourseGateAllowed(ok);
+        setAdminCourseGateReady(true);
+        if (!ok) {
+          navigate(returnPath || '/admin/marketplace', { replace: true });
+        }
+      } catch {
+        if (cancelled) return;
+        setAdminCourseGateAllowed(false);
+        setAdminCourseGateReady(true);
+        navigate(returnPath || '/admin/marketplace', { replace: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lockCourseSelection, isAdminMarketplace, courseId, location.pathname, navigate, returnPath]);
 
   const goBack = () => {
     if (returnPath) navigate(returnPath);
@@ -99,6 +138,7 @@ export default function ScheduleSession() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
+    if (lockCourseSelection && isAdminMarketplace && !adminCourseGateAllowed) return;
     setIsLoading(true);
     try {
       const targetCourseId = selectedCourse || courseId;
@@ -133,6 +173,19 @@ export default function ScheduleSession() {
       setIsLoading(false);
     }
   };
+
+  if (lockCourseSelection && isAdminMarketplace && !adminCourseGateReady) {
+    return (
+      <div className="flex h-[320px] flex-col items-center justify-center gap-2 text-gray-600">
+        <Loader2 className="h-8 w-8 animate-spin text-[#003971]" />
+        <span className="text-sm font-medium">Checking permissions…</span>
+      </div>
+    );
+  }
+
+  if (lockCourseSelection && isAdminMarketplace && !adminCourseGateAllowed) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col min-h-full">

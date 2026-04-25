@@ -155,7 +155,15 @@ const BookCourse = () => {
 
                     const docsRes = await documentService.getDocuments().catch(() => null);
                     if (docsRes?.status === 'success' && docsRes.data?.documents) {
-                        const mapped = docsRes.data.documents.map(doc => ({
+                        const walletOnly = docsRes.data.documents.filter((doc) => {
+                            const cat = String(doc?.category || '').toUpperCase();
+                            // Course booking should use document wallet items (certificates, endorsements, etc),
+                            // not job-application CV / cover letters.
+                            if (cat === 'CV_RESUME' || cat === 'COVER_LETTER') return false;
+                            if (cat === 'APPLICATION_SUBMISSION') return false;
+                            return true;
+                        });
+                        const mapped = walletOnly.map(doc => ({
                             id: doc.id,
                             title: doc.name || doc.title || 'Untitled Document',
                             expiry: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
@@ -194,7 +202,13 @@ const BookCourse = () => {
                 }
 
                 if (docsRes?.status === 'success' && docsRes.data?.documents) {
-                    const mapped = docsRes.data.documents.map(doc => ({
+                    const walletOnly = docsRes.data.documents.filter((doc) => {
+                        const cat = String(doc?.category || '').toUpperCase();
+                        if (cat === 'CV_RESUME' || cat === 'COVER_LETTER') return false;
+                        if (cat === 'APPLICATION_SUBMISSION') return false;
+                        return true;
+                    });
+                    const mapped = walletOnly.map(doc => ({
                         id: doc.id,
                         title: doc.name || doc.title || 'Untitled Document',
                         expiry: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',

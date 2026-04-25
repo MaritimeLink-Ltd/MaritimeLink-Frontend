@@ -7,7 +7,8 @@ import {
     BookOpen,
     Calendar,
     MapPin,
-    Users
+    Users,
+    Loader2
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
@@ -114,6 +115,7 @@ export default function CreateCourse() {
     };
 
     const handleSaveDraft = async () => {
+        if (isLoading) return; // prevent double-submit
         setIsLoading(true);
         try {
             await saveCourseAsDraft();
@@ -137,6 +139,7 @@ export default function CreateCourse() {
 
     const handleSkipToDashboard = async () => {
         // Save course as draft, no session
+        if (isLoading) return; // prevent double-submit
         setIsLoading(true);
         try {
             await saveCourseAsDraft();
@@ -446,13 +449,22 @@ export default function CreateCourse() {
                                 <button
                                     type="button"
                                     onClick={handleSaveDraft}
-                                    className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
+                                    disabled={isLoading}
+                                    className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                                 >
-                                    Save as Draft
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Saving…
+                                        </>
+                                    ) : (
+                                        'Save as Draft'
+                                    )}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleCancel}
+                                    disabled={isLoading}
                                     className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-all"
                                 >
                                     Cancel
@@ -460,6 +472,7 @@ export default function CreateCourse() {
                                 <button
                                     type="button"
                                     onClick={handleContinue}
+                                    disabled={isLoading}
                                     className="px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-all shadow-sm"
                                 >
                                     Continue
@@ -493,12 +506,20 @@ export default function CreateCourse() {
                                             setAddSessionChoice('skip');
                                             handleSkipToDashboard();
                                         }}
+                                        disabled={isLoading}
                                         className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all ${addSessionChoice === 'skip'
                                                 ? 'bg-[#003971] text-white shadow-sm'
                                                 : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                                             }`}
                                     >
-                                        Skip to Dashboard
+                                        {isLoading ? (
+                                            <span className="inline-flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Saving…
+                                            </span>
+                                        ) : (
+                                            'Skip to Dashboard'
+                                        )}
                                     </button>
                                 </div>
                             </div>

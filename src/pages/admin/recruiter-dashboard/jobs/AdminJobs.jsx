@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import jobService from '../../../../services/jobService';
 import {
@@ -36,43 +36,51 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         fetchJobs();
     };
 
-    const handleExportCSV = () => {
-        // Prepare CSV data
-        const headers = ['Job ID', 'Title', 'Vessel/Type', 'Location', 'Applicants', 'Posted', 'Status', 'Type'];
-        const csvRows = [headers.join(',')];
+    const csvEscape = (value) => {
+        const s = value === null || value === undefined ? '' : String(value);
+        return `"${s.replace(/"/g, '""')}"`;
+    };
 
-        // Add job data
-        jobs.forEach(job => {
-            const row = [
-                job.id,
-                `"${job.title}"`,
-                `"${job.vessel}"`,
-                `"${job.location}"`,
-                job.applicants,
-                `"${job.posted}"`,
-                job.status,
-                job.type
-            ];
-            csvRows.push(row.join(','));
-        });
-
-        // Create CSV content
-        const csvContent = csvRows.join('\\n');
-
-        // Create blob and download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const downloadCsv = (filename, csvContent) => {
+        // Add UTF-8 BOM so Excel opens the file correctly (avoids “blank”/garbled display for some setups).
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-
         link.setAttribute('href', url);
-        link.setAttribute('download', `jobs_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', filename);
         link.style.visibility = 'hidden';
-
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        // Cleanup (avoid blob URL leak) — delay to avoid canceling the download in some browsers.
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+    };
 
-        // Show export notification
+    const handleExportCSV = () => {
+        // Export what the user is currently seeing (filtered rows, not full list).
+        const rowsToExport = filteredJobs;
+
+        const headers = ['Job ID', 'Title', 'Category', 'Location', 'Applicants', 'Posted', 'Status', 'Contract Type'];
+        const csvRows = [headers.map(csvEscape).join(',')];
+
+        rowsToExport.forEach((job) => {
+            const row = [
+                job?.id,
+                job?.title,
+                job?.vessel,
+                job?.location,
+                job?.applicants,
+                job?.posted,
+                job?.status,
+                job?.type,
+            ].map(csvEscape);
+            csvRows.push(row.join(','));
+        });
+
+        const csvContent = csvRows.join('\r\n');
+        downloadCsv(`jobs_export_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+
         setShowExportNotification(true);
         setTimeout(() => setShowExportNotification(false), 3000);
     };
@@ -86,11 +94,16 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             const response = await jobService.getMyJobs();
             if (response?.data?.jobs) {
                 // Map API data to the format expected by the component
-                const mappedJobs = response.data.jobs.map(job => {
-                    const createdAt = new Date(job.createdAt);
+                const mappedJobs = response.data.jobs.map((job) => {
+                    const createdAt = job?.createdAt ? new Date(job.createdAt) : null;
                     const now = new Date();
-                    const diffTime = Math.abs(now - createdAt);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const startOfCreated = createdAt
+                        ? new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate())
+                        : null;
+                    const diffDays = startOfCreated
+                        ? Math.max(0, Math.floor((startOfToday - startOfCreated) / (1000 * 60 * 60 * 24)))
+                        : 0;
                     
                     let postedString = `${diffDays} days ago`;
                     if (diffDays === 0) {
@@ -147,10 +160,16 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         fetchJobs();
     }, []);
 
+    // If user changes filters/search, keep them on page 1 (otherwise it looks like filters "don't work").
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filters.status, filters.jobType, filters.vessel, filters.postedTime]);
+
 
     const activeJobsCount = jobs.filter(job => job.status === 'Active').length;
-    const draftJobsCount = jobs.filter(job => job.status === 'Draft').length;
-    const closedJobsCount = jobs.filter(job => ['Expired', 'Filled'].includes(job.status)).length;
+    const closedJobsCount = jobs.filter((job) =>
+        ['Closed', 'Expired', 'Filled'].includes(job.status)
+    ).length;
     const totalApplications = jobs.reduce((sum, job) => sum + (job.applicants || 0), 0);
 
     const stats = [
@@ -163,16 +182,6 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             iconColor: 'text-blue-600',
             textColor: 'text-blue-600',
             filterStatus: 'Active'
-        },
-        {
-            icon: FileText,
-            label: 'Draft Jobs',
-            value: draftJobsCount.toString(),
-            subtitle: 'Draft Jobs',
-            color: 'bg-orange-50',
-            iconColor: 'text-orange-600',
-            textColor: 'text-orange-600',
-            filterStatus: 'Draft'
         },
         {
             icon: CheckCircle,
@@ -196,19 +205,26 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         }
     ];
 
-    const filteredJobs = jobs.filter(job => {
+    const filteredJobs = useMemo(() => jobs.filter((job) => {
         // Search Filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            if (!job.title.toLowerCase().includes(query) &&
-                !job.vessel.toLowerCase().includes(query) &&
-                !job.id.toLowerCase().includes(query)) {
+            const title = String(job?.title || '').toLowerCase();
+            const vessel = String(job?.vessel || '').toLowerCase();
+            const id = String(job?.id || '').toLowerCase();
+            if (!title.includes(query) && !vessel.includes(query) && !id.includes(query)) {
                 return false;
             }
         }
 
         // Dropdown Filters
-        if (filters.status !== 'Status' && job.status !== filters.status) return false;
+        if (filters.status !== 'Status') {
+            if (filters.status === 'Closed') {
+                if (!['Closed', 'Expired', 'Filled'].includes(job.status)) return false;
+            } else if (job.status !== filters.status) {
+                return false;
+            }
+        }
         // Note: Mock data needs 'type' property added to support job type filtering properly, or we assume defaults.
         // I added 'type' property to the mock data above.
         if (filters.jobType !== 'Job Type' && job.type !== filters.jobType) return false;
@@ -221,13 +237,13 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         if (filters.postedTime !== '') {
             const postedDaysAgo = job.postedDaysAgo !== undefined ? job.postedDaysAgo : 0;
 
-            if (filters.postedTime === 'Today' && postedDaysAgo > 1) return false;
+            if (filters.postedTime === 'Today' && postedDaysAgo > 0) return false;
             if (filters.postedTime === '7 Days' && postedDaysAgo > 7) return false;
             if (filters.postedTime === '30 Days' && postedDaysAgo > 30) return false;
         }
 
         return true;
-    });
+    }), [jobs, searchQuery, filters.status, filters.jobType, filters.vessel, filters.postedTime]);
 
     // Pagination logic
     const totalJobs = filteredJobs.length;
@@ -310,7 +326,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             <div className="flex-1 overflow-y-auto px-8 pb-4">
                 <div className="space-y-4">
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {stats.map((stat, idx) => (
                             <div
                                 key={idx}

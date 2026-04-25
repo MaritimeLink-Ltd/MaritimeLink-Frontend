@@ -10,6 +10,7 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { countryCodes } from '../../../../utils/countryCodes';
+import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -30,6 +31,11 @@ export default function EditCourse() {
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [courseEntity, setCourseEntity] = useState(null);
+
+    useEffect(() => {
+        setCourseEntity(null);
+    }, [courseId]);
 
     const [form, setForm] = useState({
         title: 'STCW Basic Safety Training',
@@ -49,6 +55,7 @@ export default function EditCourse() {
                 const response = await httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId));
                 if (response.status === 'success' && response.data?.course) {
                     const course = response.data.course;
+                    setCourseEntity(course);
                     const isStandardTitle = courseTitleOptions.includes(course.title);
                     setForm({
                         title: isStandardTitle ? course.title : 'Other',
@@ -116,11 +123,63 @@ export default function EditCourse() {
         );
     };
 
+    const canEdit =
+        Boolean(courseEntity) &&
+        canCurrentUserManageCourse({
+            pathname: location.pathname,
+            course: courseEntity,
+        });
+
     if (isLoading) {
         return (
             <div className="min-h-[400px] bg-transparent p-6 flex flex-col items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-[#003971] mb-4" />
                 <p className="text-gray-500 font-medium">Loading course specifics...</p>
+            </div>
+        );
+    }
+
+    if (!courseEntity) {
+        return (
+            <div className="flex flex-col min-h-full">
+                <div className="max-w-lg mx-auto w-full p-6 mt-10">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm text-center">
+                        <h1 className="text-xl font-bold text-gray-900 mb-2">Course not found</h1>
+                        <p className="text-sm text-gray-600 mb-6">
+                            We could not load this course. It may have been removed or you may not have access.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="px-5 py-2.5 rounded-xl bg-[#003971] text-white text-sm font-semibold hover:bg-[#002455]"
+                        >
+                            Go back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!canEdit) {
+        return (
+            <div className="flex flex-col min-h-full">
+                <div className="max-w-lg mx-auto w-full p-6 mt-10">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm text-center">
+                        <h1 className="text-xl font-bold text-gray-900 mb-2">You can’t edit this course</h1>
+                        <p className="text-sm text-gray-600 mb-6">
+                            This listing belongs to another training provider or another admin account. You can
+                            return to the marketplace or open the course in read-only view.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="px-5 py-2.5 rounded-xl bg-[#003971] text-white text-sm font-semibold hover:bg-[#002455]"
+                        >
+                            Go back
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }

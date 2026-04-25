@@ -78,6 +78,14 @@ const ADVANCE_BUTTON_LABEL = {
     offered: 'Mark hired',
 };
 
+/** Job was created via platform admin (marketplace / admin upload), not a recruiter listing. */
+function isAdminCreatedJob(job) {
+    if (!job || typeof job !== 'object') return false;
+    if (job.adminId != null && String(job.adminId).trim() !== '') return true;
+    if (job.admin && typeof job.admin === 'object') return true;
+    return false;
+}
+
 function JobDetail({ onBack, jobId: jobIdProp }) {
     const navigate = useNavigate();
     const { jobId: jobIdFromRoute } = useParams();
@@ -90,6 +98,21 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     /** Recruiter dashboard login sets `adminUserType` to `recruiter`; admin login sets `userType` to `admin`. */
     const isRecruiterContext = sessionRole === 'recruiter';
     const isAdminPath = location.pathname.includes('/admin/') && !isRecruiterContext;
+    /** Marketplace routes recruiter vs admin jobs explicitly (see Marketplace.jsx “View Details” links). */
+    const isMarketplaceOversightRecruiterJob =
+        isAdminPath && location.pathname.includes('/admin/marketplace/oversight/jobs/');
+    const isMarketplaceInternalAdminJob =
+        isAdminPath && location.pathname.includes('/admin/marketplace/internal/jobs/');
+    /**
+     * Recruiters always manage their listings.
+     * Platform admins: hide edit/delete/publish/close on recruiter jobs (oversight); allow on admin-created jobs
+     * (internal marketplace route or job payload has admin linkage).
+     */
+    const showJobManagementActions =
+        isRecruiterContext ||
+        (isAdminPath &&
+            !isMarketplaceOversightRecruiterJob &&
+            (isMarketplaceInternalAdminJob || isAdminCreatedJob(job)));
     const [job, setJob] = useState(jobData || null);
     const [isLoadingJob, setIsLoadingJob] = useState(!jobData); // Only load if no jobData provided initially, or always load to get fresh data
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
@@ -548,19 +571,21 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                             </div>
                         )}
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const editPath = location.pathname.includes('/admin/marketplace')
-                                    ? '/admin/marketplace/create-job'
-                                    : '/admin/upload-job'; // Same for recruiter and default admin
-                                navigate(editPath, { state: { jobData: job, isEdit: true } });
-                            }}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
-                        >
-                            <Edit2 className="h-4 w-4" />
-                            Edit Job
-                        </button>
+                        {showJobManagementActions ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const editPath = location.pathname.includes('/admin/marketplace')
+                                        ? '/admin/marketplace/create-job'
+                                        : '/admin/upload-job';
+                                    navigate(editPath, { state: { jobData: job, isEdit: true } });
+                                }}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
+                            >
+                                <Edit2 className="h-4 w-4" />
+                                Edit Job
+                            </button>
+                        ) : null}
                         <button
                             type="button"
                             onClick={() => setShowJobDetailsModal(true)}
@@ -568,14 +593,16 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                         >
                             View Job Details
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowDeleteModal(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Job
-                        </button>
+                        {showJobManagementActions ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteModal(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Job
+                            </button>
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -927,33 +954,39 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                             >
                                 Cancel
                             </button>
-                            {!isClosed && (
-                                <button
-                                    onClick={() => handleJobStatusUpdate(isPublished ? 'DRAFT' : 'ACTIVE')}
-                                    className={`px-5 py-2.5 rounded-xl font-semibold text-white transition-colors ${isPublished
-                                        ? 'bg-orange-500 hover:bg-orange-600'
-                                        : 'bg-[#003971] hover:bg-[#002855]'
-                                        }`}
-                                >
-                                    {isPublished ? 'Pause Job' : 'Publish'}
-                                </button>
-                            )}
-                            {!isClosed ? (
-                                <button
-                                    onClick={() => handleJobStatusUpdate('EXPIRED')}
-                                    className="px-5 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
-                                >
-                                    Close Job
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="px-5 py-2.5 rounded-xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
-                                >
-                                    Job Closed
-                                </button>
-                            )}
+                            {showJobManagementActions ? (
+                                <>
+                                    {!isClosed && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleJobStatusUpdate(isPublished ? 'DRAFT' : 'ACTIVE')}
+                                            className={`px-5 py-2.5 rounded-xl font-semibold text-white transition-colors ${isPublished
+                                                ? 'bg-orange-500 hover:bg-orange-600'
+                                                : 'bg-[#003971] hover:bg-[#002855]'
+                                                }`}
+                                        >
+                                            {isPublished ? 'Unpublish' : 'Publish'}
+                                        </button>
+                                    )}
+                                    {!isClosed ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleJobStatusUpdate('EXPIRED')}
+                                            className="px-5 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                        >
+                                            Close Job
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            disabled
+                                            className="px-5 py-2.5 rounded-xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                                        >
+                                            Job Closed
+                                        </button>
+                                    )}
+                                </>
+                            ) : null}
                         </div>
                     </div>
                 </div>

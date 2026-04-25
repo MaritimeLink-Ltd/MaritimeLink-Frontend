@@ -569,7 +569,7 @@ export default function SessionAttendance() {
                                 {
                                   state: {
                                     fromAttendance: true,
-                                    /** Load /api/admin|trainer/professionals/:id — not job /applicants/:id */
+                                    /** Load /api/admin|trainer/bookings/:id (booking detail) for attendee docs + profile */
                                     isProfessionalView: true,
                                     bookingId: attendee.bookingId,
                                     bookingStatus: attendee.statusRaw,
