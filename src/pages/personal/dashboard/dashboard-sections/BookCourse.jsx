@@ -15,7 +15,9 @@ const mapSessionsArray = (sessions) => {
         const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
         const total = Number(session.totalSeats) || 0;
         const enrolled = Number(session.enrolledCount) || 0;
-        const availableSpaces = Math.max(0, total - enrolled);
+        const availableSpaces = Number.isFinite(Number(session.availableSeats))
+            ? Math.max(0, Number(session.availableSeats))
+            : Math.max(0, total - enrolled);
         const status = String(session.status || (availableSpaces > 0 ? 'AVAILABLE' : 'FULL')).toUpperCase();
         return {
             id: session.id,
@@ -151,7 +153,17 @@ const BookCourse = () => {
                         category: bookingCourse.category,
                         duration: bookingCourse.duration
                     });
-                    setAvailableSessions(Array.isArray(bookingSessions) ? bookingSessions : []);
+
+                    const sessionsRes = await httpClient
+                        .get(API_ENDPOINTS.COURSES.PROFESSIONAL_SESSIONS(courseId))
+                        .catch(() => null);
+                    const freshSessions =
+                        sessionsRes?.status === 'success' && Array.isArray(sessionsRes.data?.sessions)
+                            ? mapSessionsArray(sessionsRes.data.sessions)
+                            : Array.isArray(bookingSessions)
+                                ? bookingSessions
+                                : [];
+                    setAvailableSessions(freshSessions);
 
                     const docsRes = await documentService.getDocuments().catch(() => null);
                     if (docsRes?.status === 'success' && docsRes.data?.documents) {

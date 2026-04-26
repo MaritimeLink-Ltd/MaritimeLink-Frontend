@@ -200,6 +200,8 @@ function App() {
           <Route path="/training-provider/reset-password/:token" element={<ResetPassword userType="training-provider" />} />
           <Route path="/recruiter/login" element={<RecruiterLogin />} />
           <Route path="/training-provider/login" element={<TrainingProviderLogin />} />
+          <Route path="/trainingprovider/payouts/success" element={<PayoutOnboardingReturn mode="success" />} />
+          <Route path="/trainingprovider/payouts/reauth" element={<PayoutOnboardingReturn mode="reauth" />} />
           <Route path="/agent/signup" element={<RecruiterSignup />} />
           <Route path="/agent/otp-verification" element={<RecruiterOTPVerification />} />
           <Route path="/agent/profile-completion" element={<RecruiterProfileCompletion />} />
@@ -245,8 +247,6 @@ function App() {
             <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
             <Route path="/trainingprovider/chats" element={<TrainingProviderChats />} />
-            <Route path="/trainingprovider/payouts/success" element={<PayoutOnboardingReturn mode="success" />} />
-            <Route path="/trainingprovider/payouts/reauth" element={<PayoutOnboardingReturn mode="reauth" />} />
           </Route>
 
           {/* Super Admin Protected Routes (With Layout) */}

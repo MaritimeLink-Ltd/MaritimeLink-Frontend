@@ -30,6 +30,16 @@ function PayoutOnboardingReturn({ mode = 'success' }) {
         };
     }, []);
 
+    useEffect(() => {
+        if (!loading && status?.onboardingComplete) {
+            const timer = window.setTimeout(() => {
+                navigate('/trainingprovider-dashboard');
+            }, 1500);
+            return () => window.clearTimeout(timer);
+        }
+        return undefined;
+    }, [loading, status?.onboardingComplete, navigate]);
+
     const handleResume = async () => {
         setActionLoading(true);
         setMessage('');
@@ -64,7 +74,7 @@ function PayoutOnboardingReturn({ mode = 'success' }) {
                 </h1>
                 <p className="text-sm text-gray-500 mb-6">
                     {complete
-                        ? 'Your Stripe Connect account is connected and ready for trainer payouts.'
+                        ? 'Your Stripe Connect account is connected and ready for trainer payouts. Redirecting you back to the dashboard…'
                         : needsResume
                             ? 'Stripe needs a little more information before payouts can be enabled.'
                             : 'We are refreshing your Stripe onboarding status.'}

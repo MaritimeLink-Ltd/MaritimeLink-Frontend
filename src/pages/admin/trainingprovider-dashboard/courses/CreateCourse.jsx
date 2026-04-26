@@ -48,6 +48,7 @@ export default function CreateCourse() {
     const navigate = useNavigate();
     const location = useLocation();
     const isAdmin = location.pathname.includes('/admin/');
+    const submitLockRef = useRef(false);
     const [step, setStep] = useState(1);
     const [addSessionChoice, setAddSessionChoice] = useState(null); // null | 'add' | 'skip'
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -115,7 +116,8 @@ export default function CreateCourse() {
     };
 
     const handleSaveDraft = async () => {
-        if (isLoading) return; // prevent double-submit
+        if (isLoading || submitLockRef.current) return; // prevent double-submit
+        submitLockRef.current = true;
         setIsLoading(true);
         try {
             await saveCourseAsDraft();
@@ -130,6 +132,7 @@ export default function CreateCourse() {
             alert(error.message || 'Failed to save draft');
         } finally {
             setIsLoading(false);
+            submitLockRef.current = false;
         }
     };
 
@@ -139,7 +142,8 @@ export default function CreateCourse() {
 
     const handleSkipToDashboard = async () => {
         // Save course as draft, no session
-        if (isLoading) return; // prevent double-submit
+        if (isLoading || submitLockRef.current) return; // prevent double-submit
+        submitLockRef.current = true;
         setIsLoading(true);
         try {
             await saveCourseAsDraft();
@@ -154,6 +158,7 @@ export default function CreateCourse() {
             alert(error.message || 'Failed to save draft');
         } finally {
             setIsLoading(false);
+            submitLockRef.current = false;
         }
     };
 
@@ -165,6 +170,8 @@ export default function CreateCourse() {
     };
 
     const handleSavePublish = async () => {
+        if (isLoading || submitLockRef.current) return;
+        submitLockRef.current = true;
         setIsLoading(true);
         try {
             // 1. Create Draft Course
@@ -191,7 +198,10 @@ export default function CreateCourse() {
                         endTime: "17:00",
                         location: locationStr,
                         instructor: "TBD", // Defaulting as form doesn't capture instructor
-                        totalSeats: Number(s.seatCapacity) || 10
+                        totalSeats: Number(s.seatCapacity) || 10,
+                        ...(s.enrollmentDeadline
+                            ? { enrollmentDeadline: new Date(s.enrollmentDeadline).toISOString() }
+                            : {})
                     };
                     
                     try {
@@ -221,6 +231,7 @@ export default function CreateCourse() {
             alert(error.message || 'Failed to publish course');
         } finally {
             setIsLoading(false);
+            submitLockRef.current = false;
         }
     };
 

@@ -114,22 +114,54 @@ function Marketplace() {
         handleFileSelect(event);
     };
 
+    const mapTimeFilterToParam = (filter) => {
+        if (filter === 'Today') return 'today';
+        if (filter === '7 Days') return '7d';
+        return '30d';
+    };
+
+    const mapStatusFilterToParam = (filter) => {
+        if (filter === 'Status' || filter === 'All') return '';
+        if (filter === 'Flagged') return 'FLAGGED';
+        if (filter === 'Closed') return 'CLOSED';
+        return filter.toUpperCase();
+    };
+
     const mainTabs = ['Oversight', 'MaritimeLink Listings'];
     const timeFilters = ['Today', '7 Days', '30 Days'];
 
     // Filter Options
-    const statusOptions = ['All', 'Active', 'Draft', 'Paused', 'Flagged'];
+    const statusOptions = activeSubTab === 'Jobs'
+        ? ['All', 'Active', 'Draft', 'Closed', 'Flagged']
+        : ['All', 'Active', 'Draft', 'Paused', 'Flagged'];
     const riskOptions = ['All', 'High', 'Medium', 'Low'];
 
     // Refresh handler
     const loadJobsData = async (page) => {
         try {
             setIsRefreshing(true);
-            const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_LISTINGS}?page=${page}&limit=${itemsPerPage}`);
+            const params = new URLSearchParams({
+                type: 'JOBS',
+                page: String(page),
+                limit: String(itemsPerPage),
+                timeframe: mapTimeFilterToParam(timeFilter),
+            });
+            if (searchQuery.trim()) params.set('search', searchQuery.trim());
+            const statusParam = mapStatusFilterToParam(statusFilter);
+            if (statusParam) params.set('status', statusParam);
+
+            const res = await httpClient.get(
+                `${API_ENDPOINTS.ADMIN.MARKETPLACE_LISTINGS}?${params.toString()}`
+            );
 
             // Always update state even if listings are empty to prevent stale data
             const listings = res?.data?.listings || res?.listings || [];
-            const total = res?.data?.total || res?.total || listings.length || 0;
+            const total =
+                res?.data?.total ||
+                res?.pagination?.total ||
+                res?.total ||
+                listings.length ||
+                0;
 
             setRemoteJobs(listings);
             setTotalRemoteJobs(total);
@@ -145,7 +177,12 @@ function Marketplace() {
 
     const loadStatsData = async () => {
         try {
-            const res = await httpClient.get(API_ENDPOINTS.ADMIN.MARKETPLACE_STATS);
+            const params = new URLSearchParams({
+                timeframe: mapTimeFilterToParam(timeFilter),
+            });
+            const res = await httpClient.get(
+                `${API_ENDPOINTS.ADMIN.MARKETPLACE_STATS}?${params.toString()}`
+            );
             if (res?.data) {
                 setMarketplaceStats(res.data);
             }
@@ -161,13 +198,19 @@ function Marketplace() {
                 type: typeParam,
                 page: String(page),
                 limit: String(itemsPerPage),
+                timeframe: mapTimeFilterToParam(timeFilter),
             });
             if (search.trim()) params.set('search', search.trim());
+            const statusParam = mapStatusFilterToParam(statusFilter);
+            if (statusParam) params.set('status', statusParam);
+            if (riskFilter !== 'Risk Level' && riskFilter !== 'All') {
+                params.set('riskLevel', riskFilter.toUpperCase());
+            }
 
             const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.MARKETPLACE_OVERSIGHT}?${params.toString()}`);
             const oversight = res?.data?.data?.oversight ?? res?.data?.oversight ?? [];
             setOversightData(oversight);
-            setTotalOversight(Number(res?.pagination?.total ?? res?.data?.total ?? oversight.length ?? 0));
+            setTotalOversight(Number(res?.data?.pagination?.total ?? res?.pagination?.total ?? res?.data?.total ?? oversight.length ?? 0));
         } catch (error) {
             console.error('Failed to load marketplace oversight:', error);
             setOversightData([]);
@@ -228,7 +271,7 @@ function Marketplace() {
         } else if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
             loadJobsData(currentPage);
         }
-    }, [currentPage, activeSubTab, activeMainTab, searchQuery]);
+    }, [currentPage, activeSubTab, activeMainTab, searchQuery, timeFilter, statusFilter, riskFilter]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -254,15 +297,24 @@ function Marketplace() {
         }
     };
 
+    const getJobDisplayStatus = (job) => {
+        if (job.isFlagged) return 'Flagged';
+        const rawStatus = (job.status || '').toUpperCase();
+        if (rawStatus === 'ACTIVE') return 'Active';
+        if (rawStatus === 'DRAFT') return 'Draft';
+        if (['REMOVED', 'EXPIRED', 'FILLED'].includes(rawStatus)) return 'Closed';
+        return rawStatus ? rawStatus.replace(/_/g, ' ') : '—';
+    };
+
     // Export CSV handler
     const handleExportCSV = () => {
         const currentData = getCurrentData();
         const headers = isMaritimeLinkTab
             ? (activeSubTab === 'Jobs'
-                ? ['ID', 'Job Title', 'Type', 'Location', 'Status', 'Applications', 'Views', 'Posted']
+                ? ['ID', 'Job Title', 'Creator', 'Type', 'Location', 'Status', 'Risk Level', 'Posted']
                 : ['ID', 'Title', 'Category', 'Location', 'Price', 'Bookings', 'Status', 'Risk', 'Posted'])
             : (activeSubTab === 'Jobs'
-                ? ['ID', 'Recruiter/Company', 'Total Live Jobs', 'Jobs Posted', 'Total Applications', 'Flagged Jobs', 'Risk Level']
+                ? ['ID', 'Recruiter/Company', 'Email', 'Total Active', 'Total Posted', 'Interactions', 'Flagged Jobs', 'Risk Level']
                 : ['ID', 'Title', 'Category', 'Location', 'Price', 'Provider', 'Status', 'Flagged', 'Risk Level']);
 
         const csvRows = [headers.join(',')];
@@ -271,15 +323,16 @@ function Marketplace() {
             let row;
             if (isMaritimeLinkTab) {
                 if (activeSubTab === 'Jobs') {
+                    const creator = record.recruiter?.organizationName || record.recruiter?.email || record.admin?.email || '';
                     row = [
                         record.id,
-                        `"${record.jobTitle}"`,
-                        `"${record.type}"`,
-                        `"${record.location}"`,
-                        record.status,
-                        record.applications,
-                        record.views,
-                        `"${record.posted}"`
+                        `"${(record.title || '').replace(/"/g, '""')}"`,
+                        `"${creator.replace(/"/g, '""')}"`,
+                        `"${(record.jobType || record.category || '').replace(/"/g, '""')}"`,
+                        `"${(record.location || '').replace(/"/g, '""')}"`,
+                        getJobDisplayStatus(record),
+                        record.riskLevel || '',
+                        `"${record.createdAt ? new Date(record.createdAt).toLocaleDateString() : ''}"`
                     ];
                 } else {
                     const price = [record.currency, record.price].filter(Boolean).join(' ');
@@ -302,12 +355,13 @@ function Marketplace() {
                 if (activeSubTab === 'Jobs') {
                     row = [
                         record.id,
-                        `"${record.recruiterName}"`,
-                        record.totalLiveJobs,
-                        record.jobsPosted,
-                        record.totalApplications,
-                        record.flaggedJobs,
-                        record.riskLevel
+                        `"${(record.name || record.company || '').replace(/"/g, '""')}"`,
+                        `"${(record.email || '').replace(/"/g, '""')}"`,
+                        record.totalActive || 0,
+                        record.totalPosted || 0,
+                        record.totalInteractions || 0,
+                        record.flaggedCount || 0,
+                        record.riskLevel || 'LOW'
                     ];
                 } else {
                     const provider =
@@ -348,8 +402,6 @@ function Marketplace() {
         setTimeout(() => setShowExportNotification(false), 3000);
     };
 
-    // Calculate dynamic stats from API job data
-    const oversightJobs = remoteJobs.filter(j => j.recruiterId);
     // Unified API Stats
     const apiJobsStats = [
         {
@@ -431,127 +483,6 @@ function Marketplace() {
         }
     ];
 
-    // Oversight Jobs Data
-    const oversightJobsData = [
-        {
-            id: '1',
-            recruiterName: 'OceanhHire Agency',
-            recruiterSubtext: 'David Turner',
-            totalLiveJobs: 12,
-            jobsPosted: 3,
-            totalApplications: 148,
-            flaggedJobs: 2,
-            riskLevel: 'Medium',
-            riskColor: 'text-orange-600',
-            status: 'Active'
-        },
-        {
-            id: '2',
-            recruiterName: 'Worldwide Crew Now',
-            recruiterSubtext: 'Sarah Müller',
-            totalLiveJobs: 11,
-            jobsPosted: 3,
-            totalApplications: 148,
-            flaggedJobs: 1,
-            riskLevel: 'Low',
-            riskColor: 'text-green-600',
-            status: 'Active'
-        },
-        {
-            id: '3',
-            recruiterName: 'BlueWave Crewing',
-            recruiterSubtext: 'James Wilson',
-            totalLiveJobs: 11,
-            jobsPosted: 3,
-            totalApplications: 148,
-            flaggedJobs: 2,
-            riskLevel: 'Low',
-            riskColor: 'text-green-600',
-            status: 'Active'
-        },
-        {
-            id: '4',
-            recruiterName: 'New Horizon Crewing',
-            recruiterSubtext: 'Pending Approval',
-            totalLiveJobs: 0,
-            jobsPosted: 0,
-            totalApplications: 0,
-            flaggedJobs: 0,
-            riskLevel: 'Low',
-            riskColor: 'text-green-600',
-            status: 'Draft'
-        }
-    ];
-
-    // MaritimeLink Jobs Data
-    const maritimeLinkJobsData = [
-        {
-            id: '1',
-            jobTitle: 'Deck Officer',
-            jobSubtext: 'Official MaritimeLink Listing',
-            type: 'MECHANICAL, ON OSV',
-            typeColor: 'text-blue-600',
-            location: 'UK',
-            status: 'Active',
-            statusColor: 'text-green-600',
-            applications: 10,
-            views: 176,
-            posted: 'Today'
-        },
-        {
-            id: '2',
-            jobTitle: 'Chief Engineer',
-            jobSubtext: 'Official MaritimeLink Listing',
-            type: 'JOB',
-            typeColor: 'text-blue-600',
-            location: 'Norway',
-            status: 'Draft',
-            statusColor: 'text-gray-600',
-            applications: 0,
-            views: 0,
-            posted: 'Today'
-        },
-        {
-            id: '3',
-            jobTitle: 'Second Officer',
-            jobSubtext: 'Official MaritimeLink Listing',
-            type: 'OFFICER',
-            typeColor: 'text-blue-600',
-            location: 'Singapore',
-            status: 'Draft',
-            statusColor: 'text-gray-600',
-            applications: 0,
-            views: 0,
-            posted: 'Yesterday'
-        },
-        {
-            id: '4',
-            jobTitle: 'Electrical Technical Officer',
-            jobSubtext: 'Official MaritimeLink Listing',
-            type: 'TECHNICAL',
-            typeColor: 'text-blue-600',
-            location: 'Rotterdam',
-            status: 'Draft',
-            statusColor: 'text-gray-600',
-            applications: 0,
-            views: 0,
-            posted: '2 days ago'
-        },
-        {
-            id: '5',
-            jobTitle: 'Master Mariner',
-            jobSubtext: 'Official MaritimeLink Listing',
-            type: 'CAPTAIN',
-            typeColor: 'text-blue-600',
-            location: 'Dubai',
-            status: 'Draft',
-            statusColor: 'text-gray-600',
-            applications: 0,
-            views: 0,
-            posted: '3 days ago'
-        }
-    ];
-
     // Determine current stats and data based on active tab
     const getCurrentStats = () => {
         return activeSubTab === 'Jobs' ? apiJobsStats : apiCoursesStats;
@@ -578,9 +509,11 @@ function Marketplace() {
             data = data.filter((record) => {
                 if (onMaritimeLinkListings) {
                     if (activeSubTab === 'Jobs') {
-                        return record.jobTitle?.toLowerCase().includes(query) ||
-                            record.type?.toLowerCase().includes(query) ||
-                            record.location?.toLowerCase().includes(query);
+                        return (record.title || '').toLowerCase().includes(query) ||
+                            (record.jobType || record.category || '').toLowerCase().includes(query) ||
+                            (record.location || '').toLowerCase().includes(query) ||
+                            (record.recruiter?.organizationName || '').toLowerCase().includes(query) ||
+                            (record.recruiter?.email || record.admin?.email || '').toLowerCase().includes(query);
                     }
                     const loc = (record.location || '').toLowerCase();
                     const cat = (record.category || '').toLowerCase();
@@ -597,11 +530,11 @@ function Marketplace() {
                         org.includes(query) || email.includes(query);
                 }
                 if (activeMainTab === 'Oversight' && activeSubTab === 'Jobs') {
-                    return true;
+                    return (record.name || '').toLowerCase().includes(query) ||
+                        (record.company || '').toLowerCase().includes(query) ||
+                        (record.email || '').toLowerCase().includes(query);
                 }
-                return record.name?.toLowerCase().includes(query) ||
-                    record.company?.toLowerCase().includes(query) ||
-                    record.email?.toLowerCase().includes(query);
+                return true;
             });
         }
 
@@ -611,8 +544,8 @@ function Marketplace() {
                 if (activeMainTab === 'Oversight' && activeSubTab === 'Jobs') {
                     if (statusFilter === 'Active') return Number(record.totalActive || 0) > 0;
                     if (statusFilter === 'Flagged') return Number(record.flaggedCount || 0) > 0;
-                    if (statusFilter === 'Draft') return Number(record.totalPosted || 0) === 0;
-                    if (statusFilter === 'Paused') return false;
+                    if (statusFilter === 'Closed') return Number(record.totalActive || 0) === 0 && Number(record.totalPosted || 0) > 0;
+                    if (statusFilter === 'Draft') return false;
                     return true;
                 }
                 if (isOversightCourses || (onMaritimeLinkListings && activeSubTab === 'Training Courses')) {
@@ -621,7 +554,11 @@ function Marketplace() {
                     const want = (map[statusFilter] || statusFilter).toString().toUpperCase();
                     return (record.status || '').toUpperCase() === want;
                 }
-                return record.status === statusFilter;
+                if (statusFilter === 'Flagged') return record.isFlagged === true;
+                if (statusFilter === 'Closed') {
+                    return ['REMOVED', 'EXPIRED', 'FILLED'].includes((record.status || '').toUpperCase());
+                }
+                return (record.status || '').toUpperCase() === statusFilter.toUpperCase();
             });
         }
 
@@ -1195,10 +1132,12 @@ function Marketplace() {
                             ) : activeSubTab === 'Jobs' ? (
                                 paginatedData.map((job) => {
                                     const creator = job.recruiter?.organizationName || job.admin?.email || (job.adminId ? 'MaritimeLink Admin' : 'Unknown');
-                                    const formattedStatus = job.status === 'ACTIVE' ? 'Active' : (job.status === 'DRAFT' ? 'Draft' : 'Closed');
+                                    const formattedStatus = getJobDisplayStatus(job);
                                     let statusColor = 'text-gray-600';
                                     if (formattedStatus === 'Active') statusColor = 'text-green-600';
                                     if (formattedStatus === 'Draft') statusColor = 'text-orange-600';
+                                    if (formattedStatus === 'Closed') statusColor = 'text-red-600';
+                                    if (formattedStatus === 'Flagged') statusColor = 'text-orange-600';
 
                                     let riskColor = 'text-green-600';
                                     if (job.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
