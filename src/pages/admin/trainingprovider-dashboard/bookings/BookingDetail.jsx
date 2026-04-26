@@ -49,7 +49,7 @@ function formatSessionDate(sessions, bookedAt) {
 function statusLabel(status) {
     const s = String(status || '').toUpperCase();
     if (s === 'COMPLETED') return 'Completed';
-    if (s === 'CONFIRMED') return 'Confirmed';
+    if (s === 'CONFIRMED') return 'Pending Approval';
     if (s === 'CANCELLED') return 'Cancelled';
     if (s === 'PENDING') return 'Pending Approval';
     return status || 'Unknown';
@@ -95,7 +95,7 @@ function mapBookingToView(booking) {
             location: session?.location || booking.course?.location || 'Location not set',
             totalBookings: bookedSeats,
             totalSeats: capacity,
-            confirmed: ['CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase()) ? 1 : 0,
+            confirmed: ['PENDING', 'CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase()) ? 1 : 0,
             confirmedLabel: 'Paid & verified',
             pending: String(booking.bookingStatus || '').toUpperCase() === 'PENDING' ? 1 : 0,
             pendingLabel: 'Action required',

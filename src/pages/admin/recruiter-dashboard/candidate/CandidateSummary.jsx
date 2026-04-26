@@ -408,6 +408,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         const fallback = location.state?.candidateData || {};
         const source = fetchedCandidate || fallback.rawApplicant || null;
         const isApplicationScopedView = !!location.state?.fromJobDetail || showApplicationStatus === true;
+        const trainerAttendanceAttachmentOnly =
+            !!location.state?.fromAttendance && currentUserType === 'training-provider' && !isAdmin;
 
         if (!source) {
             return {
@@ -432,20 +434,30 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             return {
                 professional,
                 resume:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView
-                        ? application.resumeSnapshot || professional?.resume || null
-                        : application.resumeSnapshot || null,
+                    trainerAttendanceAttachmentOnly
+                        ? null
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView
+                            ? application.resumeSnapshot || professional?.resume || null
+                            : application.resumeSnapshot || null,
                 attachedDocuments:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView
-                        ? source.attachedDocuments || application.attachedDocuments || professional?.documents || []
-                        : Array.isArray(application.attachedDocuments)
+                    trainerAttendanceAttachmentOnly
+                        ? (Array.isArray(application.attachedDocuments)
                             ? application.attachedDocuments
-                            : [],
+                            : Array.isArray(source.attachedDocuments)
+                                ? source.attachedDocuments
+                                : [])
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView
+                            ? source.attachedDocuments || application.attachedDocuments || professional?.documents || []
+                            : Array.isArray(application.attachedDocuments)
+                                ? application.attachedDocuments
+                                : [],
                 applicationAttachments: Array.isArray(application.attachedDocuments) ? application.attachedDocuments : [],
                 cvUrl:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView
-                        ? application.cvUrl || professional?.cvUrl || null
-                        : application.cvUrl || null,
+                    trainerAttendanceAttachmentOnly
+                        ? null
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView
+                            ? application.cvUrl || professional?.cvUrl || null
+                            : application.cvUrl || null,
                 coverLetter: application.coverLetter ?? null,
                 coverLetterUrl: application.coverLetterUrl ?? null,
                 fallback,
@@ -460,21 +472,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             return {
                 professional: source.professional,
                 resume:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
-                        ? source.resumeSnapshot || source.professional.resume || null
-                        : source.resumeSnapshot || null,
+                    trainerAttendanceAttachmentOnly
+                        ? null
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                            ? source.resumeSnapshot || source.professional.resume || null
+                            : source.resumeSnapshot || null,
                 attachedDocuments:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
-                        ? source.attachedDocuments || source.professional.documents || []
-                        : Array.isArray(source.attachedDocuments)
-                            ? source.attachedDocuments
-                            : [],
+                    trainerAttendanceAttachmentOnly
+                        ? (Array.isArray(source.attachedDocuments) ? source.attachedDocuments : [])
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                            ? source.attachedDocuments || source.professional.documents || []
+                            : Array.isArray(source.attachedDocuments)
+                                ? source.attachedDocuments
+                                : [],
                 applicationAttachments:
                     isApplicationRow && Array.isArray(source.attachedDocuments) ? source.attachedDocuments : [],
                 cvUrl:
-                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
-                        ? source.cvUrl || source.professional.cvUrl || null
-                        : source.cvUrl || null,
+                    trainerAttendanceAttachmentOnly
+                        ? null
+                        : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                            ? source.cvUrl || source.professional.cvUrl || null
+                            : source.cvUrl || null,
                 coverLetter: isApplicationRow ? (source.coverLetter ?? null) : null,
                 coverLetterUrl: isApplicationRow ? (source.coverLetterUrl ?? null) : null,
                 fallback,
@@ -783,7 +801,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const sessionPaymentStatusUpper = String(location.state?.paymentStatus || '').toUpperCase();
     const sessionBookingIsPending = sessionBookingStatusUpper === 'PENDING';
     const sessionBookingCanReleasePayout =
-        sessionBookingStatusUpper === 'CONFIRMED' &&
+        sessionBookingStatusUpper !== 'COMPLETED' &&
+        sessionBookingStatusUpper !== 'CANCELLED' &&
         (sessionPaymentStatusUpper === 'SUCCEEDED' || sessionPaymentStatusUpper === 'PAID');
     const sessionBookingCanReject =
         sessionBookingIsPending || sessionBookingCanReleasePayout;
@@ -955,7 +974,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {(!location.pathname.includes('/trainingprovider/') || location.state?.fromAttendance) && (
+                        {(!location.pathname.includes('/trainingprovider/') || (location.state?.fromAttendance && isAdmin)) && (
                             <button onClick={handleViewResume} className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <FileText className="h-5 w-5" />
                                 View Resume
@@ -1289,7 +1308,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                         {walletJobApplicationOnly
                                             ? 'Only the CV, cover letter, and files the candidate included when they applied for this job.'
                                             : location.state?.fromAttendance
-                                                ? 'Course booking attachments (when available), profile wallet documents, and resume-linked certificates.'
+                                                ? (currentUserType === 'training-provider' && !isAdmin
+                                                    ? 'Only the files attached to this specific course booking.'
+                                                    : 'Course booking attachments, profile wallet documents, and resume-linked certificates.')
                                                 : 'Documents from this application submission, profile wallet, and resume-linked certificates.'}
                                     </p>
                                 </div>

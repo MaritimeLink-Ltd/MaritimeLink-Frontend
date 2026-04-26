@@ -24,7 +24,7 @@ function normalizeBookingStatus(raw) {
 
 function bookingStatusLabel(raw) {
   const s = String(raw || '').toUpperCase();
-  if (s === 'CONFIRMED') return 'Confirmed';
+  if (s === 'CONFIRMED') return 'Pending Approval';
   if (s === 'APPROVED') return 'Approved';
   if (s === 'COMPLETED') return 'Completed';
   if (s === 'CANCELLED') return 'Cancelled';
@@ -464,12 +464,15 @@ export default function SessionAttendance() {
                   const statusClass = chipClassForStatus(attendee.canonical);
                   const statusUpper = String(attendee.statusRaw || '').toUpperCase();
                   const canApprovePending =
-                    !adminCourseBookingsMode && statusUpper === 'PENDING';
-                  const canReleasePayout =
-                    !adminCourseBookingsMode && statusUpper === 'CONFIRMED' && attendee.paymentOk;
+                    !adminCourseBookingsMode &&
+                    statusUpper !== 'COMPLETED' &&
+                    statusUpper !== 'CANCELLED' &&
+                    attendee.paymentOk;
+                  const canReleasePayout = canApprovePending;
                   const canRejectBooking =
                     !adminCourseBookingsMode &&
-                    (statusUpper === 'PENDING' || (statusUpper === 'CONFIRMED' && attendee.paymentOk));
+                    statusUpper !== 'COMPLETED' &&
+                    statusUpper !== 'CANCELLED';
                   const initials = attendee.name
                     .split(/\s+/)
                     .filter(Boolean)

@@ -262,8 +262,8 @@ const Dashboard = () => {
                 statusLight: true,
                 status:
                     o.jobMatchesCount === 0
-                        ? 'No job matches yet'
-                        : `${o.jobMatchesCount} job match${o.jobMatchesCount === 1 ? '' : 'es'}`,
+                        ? 'No available jobs'
+                        : `${o.jobMatchesCount} available job${o.jobMatchesCount === 1 ? '' : 's'}`,
                 buttonText: 'Go To Jobs',
                 onClick: () => navigate('/personal/jobs'),
             },
@@ -276,8 +276,8 @@ const Dashboard = () => {
                 statusLight: true,
                 status:
                     o.recommendedCoursesCount === 0
-                        ? 'No recommended courses'
-                        : `${o.recommendedCoursesCount} recommended course${o.recommendedCoursesCount === 1 ? '' : 's'}`,
+                        ? 'No available courses'
+                        : `${o.recommendedCoursesCount} available course${o.recommendedCoursesCount === 1 ? '' : 's'}`,
                 buttonText: 'Go To Training',
                 onClick: () => navigate('/personal/training'),
             },

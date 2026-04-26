@@ -26,7 +26,7 @@ const statusPillClass = (status) => {
 const bookingStatusLabel = (status) => {
     const u = String(status || '').toUpperCase();
     if (u === 'PENDING') return 'Pending Approval';
-    if (u === 'CONFIRMED') return 'Paid';
+    if (u === 'CONFIRMED') return 'Pending Approval';
     if (u === 'COMPLETED') return 'Approved';
     if (u === 'CANCELLED') return 'Rejected';
     return status || '—';

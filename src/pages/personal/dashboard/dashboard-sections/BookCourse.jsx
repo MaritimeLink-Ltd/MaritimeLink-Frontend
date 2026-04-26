@@ -7,6 +7,27 @@ import { API_ENDPOINTS } from '../../../../config/api.config';
 import documentService from '../../../../services/documentService';
 import { stripePromise } from '../../../../lib/stripeClient';
 
+const COURSE_BOOKING_EXCLUDED_DOC_CATEGORIES = new Set([
+    'APPLICATION_SUBMISSION',
+    'CV_RESUME',
+    'COVER_LETTER',
+    'RESUME',
+    'CV',
+    'JOB_APPLICATION',
+    'JOB_APPLICATION_ATTACHMENTS',
+]);
+
+const isCourseWalletDocument = (doc) => {
+    const category = String(doc?.category || doc?.type || '').trim().toUpperCase();
+    if (COURSE_BOOKING_EXCLUDED_DOC_CATEGORIES.has(category)) return false;
+
+    const name = String(doc?.name || doc?.title || '').trim().toUpperCase();
+    if (name.includes('COVER LETTER')) return false;
+    if (name === 'CV' || name.includes('CV / RESUME') || name.includes('RESUME')) return false;
+
+    return true;
+};
+
 const mapSessionsArray = (sessions) => {
     if (!Array.isArray(sessions)) return [];
     return sessions.map((session) => {
@@ -167,14 +188,7 @@ const BookCourse = () => {
 
                     const docsRes = await documentService.getDocuments().catch(() => null);
                     if (docsRes?.status === 'success' && docsRes.data?.documents) {
-                        const walletOnly = docsRes.data.documents.filter((doc) => {
-                            const cat = String(doc?.category || '').toUpperCase();
-                            // Course booking should use document wallet items (certificates, endorsements, etc),
-                            // not job-application CV / cover letters.
-                            if (cat === 'CV_RESUME' || cat === 'COVER_LETTER') return false;
-                            if (cat === 'APPLICATION_SUBMISSION') return false;
-                            return true;
-                        });
+                        const walletOnly = docsRes.data.documents.filter(isCourseWalletDocument);
                         const mapped = walletOnly.map(doc => ({
                             id: doc.id,
                             title: doc.name || doc.title || 'Untitled Document',
@@ -214,12 +228,7 @@ const BookCourse = () => {
                 }
 
                 if (docsRes?.status === 'success' && docsRes.data?.documents) {
-                    const walletOnly = docsRes.data.documents.filter((doc) => {
-                        const cat = String(doc?.category || '').toUpperCase();
-                        if (cat === 'CV_RESUME' || cat === 'COVER_LETTER') return false;
-                        if (cat === 'APPLICATION_SUBMISSION') return false;
-                        return true;
-                    });
+                    const walletOnly = docsRes.data.documents.filter(isCourseWalletDocument);
                     const mapped = walletOnly.map(doc => ({
                         id: doc.id,
                         title: doc.name || doc.title || 'Untitled Document',

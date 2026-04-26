@@ -44,7 +44,7 @@ function getSessionBookingMetrics(session) {
     };
   }
   const activeBookings = bookings.filter((booking) =>
-    ['CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase())
+    ['PENDING', 'CONFIRMED', 'COMPLETED'].includes(String(booking.bookingStatus || '').toUpperCase())
   );
   const paidBookings = bookings.filter(
     (booking) => String(booking.paymentStatus || '').toUpperCase() === 'SUCCEEDED'

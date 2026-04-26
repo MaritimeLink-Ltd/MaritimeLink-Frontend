@@ -171,11 +171,10 @@ function RecruiterDashboard({ onNavigate }) {
                 customRangeApplied.from,
                 customRangeApplied.to
             );
-            const [jobsOutcome, statsOutcome, actionsOutcome, popularOutcome] = await Promise.allSettled([
+            const [jobsOutcome, statsOutcome, actionsOutcome] = await Promise.allSettled([
                 recruiterDashboardService.getDashboardJobs(),
                 recruiterDashboardService.getDashboardStats(statsQuery),
                 recruiterDashboardService.getDashboardActionItems(),
-                recruiterDashboardService.getPopularSearches(),
             ]);
 
             if (jobsOutcome.status === 'fulfilled') {
@@ -217,18 +216,8 @@ function RecruiterDashboard({ onNavigate }) {
                 );
                 setActionItemsList([]);
             }
-
-            if (popularOutcome.status === 'fulfilled') {
-                const res = popularOutcome.value;
-                const list = res?.data?.popularSearches;
-                setPopularSearchesList(Array.isArray(list) ? list : []);
-            } else {
-                console.error('Failed to fetch popular searches:', popularOutcome.reason);
-                setPopularSearchesError(
-                    popularOutcome.reason?.message || 'Could not load popular searches.'
-                );
-                setPopularSearchesList([]);
-            }
+            setPopularSearchesList([]);
+            setPopularSearchesError(null);
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
@@ -528,9 +517,8 @@ function RecruiterDashboard({ onNavigate }) {
                         ))}
                     </div>
 
-                    <div className="flex flex-col lg:flex-row gap-8">
-                        {/* Left Column: Action Required */}
-                        <div className="flex-1 space-y-5">
+                    <div className="space-y-5">
+                        <div className="space-y-5">
                             <h2 className="text-lg font-bold text-gray-900">Action Required</h2>
                             {actionItemsError && (
                                 <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2">
@@ -584,82 +572,6 @@ function RecruiterDashboard({ onNavigate }) {
                                         );
                                     })
                                 )}
-                            </div>
-                        </div>
-
-                        {/* Right Column: Insights */}
-                        <div className="lg:w-1/3">
-                            <div className="bg-gray-50/70 rounded-2xl p-6 h-full border border-gray-100">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <div className="text-orange-500">
-                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                            <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                                        </svg>
-                                    </div>
-                                    <h2 className="text-sm font-bold text-gray-900">Insight: Popular Searches</h2>
-                                </div>
-                                {popularSearchesError && (
-                                    <p className="text-xs text-red-600 mb-3">{popularSearchesError}</p>
-                                )}
-
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100">
-                                    {isRefreshing && popularSearchesList.length === 0 && !popularSearchesError ? (
-                                        [1, 2, 3, 4].map((k) => (
-                                            <div
-                                                key={k}
-                                                className="flex items-center justify-between p-4 animate-pulse"
-                                            >
-                                                <div className="flex items-center gap-3 flex-1">
-                                                    <div className="h-4 w-4 bg-gray-200 rounded" />
-                                                    <div className="h-4 bg-gray-200 rounded flex-1 max-w-[180px]" />
-                                                </div>
-                                                <div className="h-4 w-12 bg-gray-200 rounded" />
-                                            </div>
-                                        ))
-                                    ) : popularSearchesList.length === 0 ? (
-                                        <div className="p-4 text-sm text-gray-500 text-center">
-                                            No popular search data yet.
-                                        </div>
-                                    ) : (
-                                        popularSearchesList.map((row, index) => {
-                                            const term = row?.term || '';
-                                            const count =
-                                                typeof row?.count === 'number' ? row.count : null;
-                                            return (
-                                                <div
-                                                    key={`${term}-${index}`}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onClick={() => handlePopularSearchClick(term)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            e.preventDefault();
-                                                            handlePopularSearchClick(term);
-                                                        }
-                                                    }}
-                                                    className="flex items-center justify-between gap-3 p-4 hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-xl last:rounded-b-xl"
-                                                >
-                                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                        <span className="text-gray-400 font-bold text-sm w-4 shrink-0">
-                                                            {index + 1}.
-                                                        </span>
-                                                        <div className="min-w-0">
-                                                            <span className="text-gray-900 font-bold text-sm block truncate">
-                                                                {term || '—'}
-                                                            </span>
-                                                            {count != null && (
-                                                                <span className="text-xs text-gray-500 font-medium">
-                                                                    {count.toLocaleString()} searches
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
                             </div>
                         </div>
                     </div>

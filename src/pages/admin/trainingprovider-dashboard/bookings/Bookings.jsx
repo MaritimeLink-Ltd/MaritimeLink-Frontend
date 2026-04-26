@@ -38,9 +38,9 @@ function formatDateRange(sessions, bookedAt) {
 function statusLabel(status) {
     const s = String(status || '').toUpperCase();
     if (s === 'COMPLETED') return 'Completed';
-    if (s === 'CONFIRMED') return 'Confirmed';
+    if (s === 'CONFIRMED') return 'Pending Approval';
     if (s === 'CANCELLED') return 'Cancelled';
-    if (s === 'PENDING') return 'Pending';
+    if (s === 'PENDING') return 'Pending Approval';
     return status || 'Unknown';
 }
 
