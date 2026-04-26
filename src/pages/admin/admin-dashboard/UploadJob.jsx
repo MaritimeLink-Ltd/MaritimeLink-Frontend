@@ -48,6 +48,24 @@ function UploadJob({ onBack: onBackProp }) {
     };
 
     const normalizeStatus = (value) => String(value || '').toUpperCase();
+
+    /** Jobs list maps `closingDate` to a Date; API returns ISO strings — both must work for `<input type="date">`. */
+    const closingDateToInputValue = (value) => {
+        if (value == null || value === '') return '';
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            const y = value.getFullYear();
+            const m = String(value.getMonth() + 1).padStart(2, '0');
+            const d = String(value.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+        if (typeof value === 'string') {
+            const s = value.trim();
+            if (!s) return '';
+            return s.includes('T') ? s.split('T')[0] : s.slice(0, 10);
+        }
+        return '';
+    };
+
     const navigateBackToListing = () => {
         if (returnPath) {
             navigate(returnPath);
@@ -68,7 +86,7 @@ function UploadJob({ onBack: onBackProp }) {
                 category: API_TO_CATEGORY[editData.category] || editData.category || 'Officer',
                 contractType: API_TO_CONTRACT[editData.contractType] || editData.contractType || editData.type || 'Temporary',
                 salary: editData.salary || '',
-                closingDate: editData.closingDate ? editData.closingDate.split('T')[0] : '',
+                closingDate: closingDateToInputValue(editData.closingDate),
                 description: editData.description || ''
             });
         }
