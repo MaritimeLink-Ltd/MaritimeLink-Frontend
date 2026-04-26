@@ -49,6 +49,7 @@ class JobService {
                 contractType: CONTRACT_TYPE_TO_API[jobData.contractType] || jobData.contractType,
                 salary: jobData.salary,
                 description: jobData.description,
+                status: jobData.status || 'ACTIVE',
             };
 
             // Only include closingDate if it has a value
@@ -402,6 +403,10 @@ class JobService {
 
             if (jobData.closingDate) {
                 payload.closingDate = jobData.closingDate;
+            }
+
+            if (jobData.status) {
+                payload.status = jobData.status;
             }
 
             const response = await httpClient.patch(API_ENDPOINTS.JOBS.UPDATE(id), payload);

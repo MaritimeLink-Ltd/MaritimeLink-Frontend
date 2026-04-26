@@ -232,11 +232,11 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                  
                  let applicantsList = [];
                  const rawApplicants = extractApplicantsList(applicantsRes);
-                 if (rawApplicants.length > 0) {
-                     applicantsList = rawApplicants.map((app) => {
-                         const prof = app.professional || {};
-                         const resume = prof?.resume || app.resumeSnapshot || {};
-                         const uiStatus = mapApiStatusToApplicantUi(app.status);
+                if (rawApplicants.length > 0) {
+                    applicantsList = rawApplicants.map((app) => {
+                        const prof = app.professional || {};
+                        const resume = prof?.resume || app.resumeSnapshot || {};
+                        const uiStatus = mapApiStatusToApplicantUi(app.status);
 
                          return {
                              id: app.id,
@@ -247,8 +247,8 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                              rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
                              availability: 'Immediate',
                              availabilitySubtext: prof?.profession || '',
-                             compliance: 'Ready',
-                             complianceSubtext: '',
+                             compliance: prof?.compliance || 'Not Deployable',
+                             complianceSubtext: prof?.complianceSubtext || 'Missing critical certs',
                              applicationDate: app.createdAt ? new Date(app.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
                              status: uiStatus,
                              rawApplicant: app
@@ -270,10 +270,10 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                              age: resume?.dateOfBirth ? (new Date().getFullYear() - new Date(resume.dateOfBirth).getFullYear()) : 'N/A',
                              avatar: resolveProfessionalAvatarUrl(prof),
                              rank: resume?.subcategory || resume?.category || prof?.profession || 'Unknown',
-                             availability: 'Immediate',
-                             availabilitySubtext: prof?.profession || '',
-                             compliance: 'Ready',
-                             complianceSubtext: '',
+                             availability: candidate.availability || 'Available Now',
+                             availabilitySubtext: candidate.availabilitySubtext || prof?.profession || '',
+                             compliance: candidate.compliance || 'Not Deployable',
+                             complianceSubtext: candidate.complianceSubtext || 'Missing critical certs',
                              applicationDate: 'Not Applied', // Match without applying
                              status: 'matches',
                              rawApplicant: candidate
@@ -296,11 +296,13 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         fetchApplicants();
     }, [jobId, isAdminPath, isRecruiterContext, location.pathname]);
 
+    const applicantOnlyRows = allApplicants.filter((item) => item.status !== 'matches');
+
     const stats = [
         {
             icon: Users,
             label: 'Total Applicants',
-            value: allApplicants.length.toString(),
+            value: applicantOnlyRows.length.toString(),
             subtitle: 'Real time count',
             color: 'bg-blue-50',
             iconColor: 'text-blue-600'
@@ -308,7 +310,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         {
             icon: CheckCircle,
             label: 'Compliance Ready',
-            value: allApplicants.filter(a => a.compliance === 'Ready').length.toString(),
+            value: applicantOnlyRows.filter(a => a.compliance === 'Ready').length.toString(),
             subtitle: 'Ready to deploy',
             color: 'bg-green-50',
             iconColor: 'text-green-600'
@@ -316,7 +318,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         {
             icon: AlertTriangle,
             label: 'Expiring Soon',
-            value: allApplicants.filter(a => a.compliance === 'Expiring Soon').length.toString(),
+            value: applicantOnlyRows.filter(a => a.compliance === 'Expiring Soon').length.toString(),
             subtitle: 'Renewals needed',
             color: 'bg-orange-50',
             iconColor: 'text-orange-600'
@@ -324,7 +326,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         {
             icon: XCircle,
             label: 'Not Deployable',
-            value: allApplicants.filter(a => a.compliance === 'Not Deployable').length.toString(),
+            value: applicantOnlyRows.filter(a => a.compliance === 'Not Deployable').length.toString(),
             subtitle: 'Missing critical certs',
             color: 'bg-red-50',
             iconColor: 'text-red-600'

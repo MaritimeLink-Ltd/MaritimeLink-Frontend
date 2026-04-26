@@ -199,6 +199,14 @@ function UploadJob({ onBack: onBackProp }) {
     };
 
     const handlePublish = async () => {
+        await submitJob('ACTIVE');
+    };
+
+    const handleSaveDraft = async () => {
+        await submitJob('DRAFT');
+    };
+
+    const submitJob = async (status) => {
         // Validate required fields
         if (!formData.jobTitle.trim()) {
             setSubmitError('Job title is required.');
@@ -221,16 +229,23 @@ function UploadJob({ onBack: onBackProp }) {
                 salary: formData.salary,
                 description: formData.description,
                 closingDate: formData.closingDate || undefined,
+                status,
             };
 
             let response;
             if (isEditMode && editData?.id) {
                 response = await jobService.updateJob(editData.id, payload);
                 console.log('Job updated successfully:', response);
+                if (status === 'DRAFT') {
+                    await jobService.updateJobStatus(editData.id, 'DRAFT');
+                }
             } else {
                 response = await jobService.createJob(payload);
                 console.log('Job created successfully:', response);
             }
+            setIsPublished(status === 'ACTIVE');
+            setIsPaused(status === 'DRAFT');
+            setIsClosed(false);
             setShowSuccessModal(true);
         } catch (error) {
             console.error('Failed to create job:', error);
@@ -473,7 +488,14 @@ function UploadJob({ onBack: onBackProp }) {
                                 className="w-full bg-[#1e5a8f] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                                {isSubmitting ? 'Publishing...' : (isEditMode ? 'Update Job' : 'Publish Job')}
+                                {isSubmitting ? 'Saving...' : (isEditMode ? 'Update Job' : 'Publish Job')}
+                            </button>
+                            <button
+                                onClick={handleSaveDraft}
+                                disabled={isSubmitting}
+                                className="w-full border border-gray-300 text-gray-700 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? 'Saving...' : (isEditMode ? 'Save as Draft' : 'Save Draft')}
                             </button>
                         </div>
                     )}
@@ -492,12 +514,16 @@ function UploadJob({ onBack: onBackProp }) {
 
                             {/* Title */}
                             <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                                {isEditMode ? 'Job Updated Successfully!' : 'Job Created Successfully!'}
+                                {isEditMode ? 'Job Updated Successfully!' : 'Job Saved Successfully!'}
                             </h2>
 
                             {/* Message */}
                             <p className="text-gray-600 mb-8">
-                                {isEditMode ? 'Your job listing has been updated.' : 'Your job listing has been published to the marketplace.'}
+                                {isEditMode
+                                    ? 'Your job listing has been updated.'
+                                    : isPublished
+                                        ? 'Your job listing has been published to the marketplace.'
+                                        : 'Your job listing has been saved as a draft.'}
                             </p>
 
                             {/* Action Button */}
