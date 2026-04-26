@@ -104,9 +104,14 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                     const diffDays = startOfCreated
                         ? Math.max(0, Math.floor((startOfToday - startOfCreated) / (1000 * 60 * 60 * 24)))
                         : 0;
-                    
+                    const isToday =
+                        !!createdAt &&
+                        now.getFullYear() === createdAt.getFullYear() &&
+                        now.getMonth() === createdAt.getMonth() &&
+                        now.getDate() === createdAt.getDate();
+
                     let postedString = `${diffDays} days ago`;
-                    if (diffDays === 0) {
+                    if (isToday) {
                         postedString = 'Today';
                     } else if (diffDays === 1) {
                         postedString = '1 day ago';
@@ -138,7 +143,9 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         location: job.location || 'Global',
                         applicants: job.applicantsCount || 0, // Fallback if API hasn't added it yet
                         posted: postedString,
-                        postedDaysAgo: diffDays, 
+                        postedDaysAgo: diffDays,
+                        createdAt,
+                        closingDate: job.closingDate ? new Date(job.closingDate) : null,
                         status: formattedStatus,
                         type: formattedType
                     };
@@ -212,7 +219,8 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
             const title = String(job?.title || '').toLowerCase();
             const vessel = String(job?.vessel || '').toLowerCase();
             const id = String(job?.id || '').toLowerCase();
-            if (!title.includes(query) && !vessel.includes(query) && !id.includes(query)) {
+            const location = String(job?.location || '').toLowerCase();
+            if (!title.includes(query) && !vessel.includes(query) && !id.includes(query) && !location.includes(query)) {
                 return false;
             }
         }
@@ -221,6 +229,10 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         if (filters.status !== 'Status') {
             if (filters.status === 'Closed') {
                 if (!['Closed', 'Expired', 'Filled'].includes(job.status)) return false;
+            } else if (filters.status === 'Ends Soon') {
+                if (!job.closingDate) return false;
+                const daysUntilClosing = (job.closingDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+                if (daysUntilClosing < 0 || daysUntilClosing > 7 || job.status !== 'Active') return false;
             } else if (job.status !== filters.status) {
                 return false;
             }
@@ -236,8 +248,13 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
         // Posted Time Filter
         if (filters.postedTime !== '') {
             const postedDaysAgo = job.postedDaysAgo !== undefined ? job.postedDaysAgo : 0;
+            const createdAt = job.createdAt instanceof Date ? job.createdAt : new Date(job.createdAt);
+            const isToday =
+                createdAt.getFullYear() === new Date().getFullYear() &&
+                createdAt.getMonth() === new Date().getMonth() &&
+                createdAt.getDate() === new Date().getDate();
 
-            if (filters.postedTime === 'Today' && postedDaysAgo > 0) return false;
+            if (filters.postedTime === 'Today' && !isToday) return false;
             if (filters.postedTime === '7 Days' && postedDaysAgo > 7) return false;
             if (filters.postedTime === '30 Days' && postedDaysAgo > 30) return false;
         }
@@ -523,7 +540,9 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         {/* Pagination */}
                         <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
                             <p className="text-sm text-gray-600 font-medium">
-                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalJobs)} of {totalJobs} entries
+                                {totalJobs === 0
+                                    ? 'Showing 0-0 of 0 entries'
+                                    : `Showing ${indexOfFirstItem + 1}-${Math.min(indexOfLastItem, totalJobs)} of ${totalJobs} entries`}
                             </p>
                             <div className="flex items-center gap-2">
                                 <button

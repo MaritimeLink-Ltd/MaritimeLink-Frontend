@@ -407,6 +407,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const resolveApplicantData = () => {
         const fallback = location.state?.candidateData || {};
         const source = fetchedCandidate || fallback.rawApplicant || null;
+        const isApplicationScopedView = !!location.state?.fromJobDetail || showApplicationStatus === true;
 
         if (!source) {
             return {
@@ -424,13 +425,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
         if (source.application) {
             const application = source.application;
             const professional = application.professional || source.professional || null;
+            const allowAdminFullDocumentAccess =
+                isAdmin &&
+                !!(application.job?.adminId || source.job?.adminId || location.state?.jobData?.adminId);
+
             return {
                 professional,
-                resume: application.resumeSnapshot || professional?.resume || null,
+                resume:
+                    allowAdminFullDocumentAccess || !isApplicationScopedView
+                        ? application.resumeSnapshot || professional?.resume || null
+                        : application.resumeSnapshot || null,
                 attachedDocuments:
-                    source.attachedDocuments || application.attachedDocuments || professional?.documents || [],
+                    allowAdminFullDocumentAccess || !isApplicationScopedView
+                        ? source.attachedDocuments || application.attachedDocuments || professional?.documents || []
+                        : Array.isArray(application.attachedDocuments)
+                            ? application.attachedDocuments
+                            : [],
                 applicationAttachments: Array.isArray(application.attachedDocuments) ? application.attachedDocuments : [],
-                cvUrl: application.cvUrl || professional?.cvUrl || null,
+                cvUrl:
+                    allowAdminFullDocumentAccess || !isApplicationScopedView
+                        ? application.cvUrl || professional?.cvUrl || null
+                        : application.cvUrl || null,
                 coverLetter: application.coverLetter ?? null,
                 coverLetterUrl: application.coverLetterUrl ?? null,
                 fallback,
@@ -439,13 +454,27 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
 
         if (source.professional) {
             const isApplicationRow = rawApplicantLooksLikeApplicationRow(source);
+            const allowAdminFullDocumentAccess =
+                isAdmin &&
+                !!(source.job?.adminId || location.state?.jobData?.adminId);
             return {
                 professional: source.professional,
-                resume: source.resumeSnapshot || source.professional.resume || null,
-                attachedDocuments: source.attachedDocuments || source.professional.documents || [],
+                resume:
+                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                        ? source.resumeSnapshot || source.professional.resume || null
+                        : source.resumeSnapshot || null,
+                attachedDocuments:
+                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                        ? source.attachedDocuments || source.professional.documents || []
+                        : Array.isArray(source.attachedDocuments)
+                            ? source.attachedDocuments
+                            : [],
                 applicationAttachments:
                     isApplicationRow && Array.isArray(source.attachedDocuments) ? source.attachedDocuments : [],
-                cvUrl: source.cvUrl || source.professional.cvUrl || null,
+                cvUrl:
+                    allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
+                        ? source.cvUrl || source.professional.cvUrl || null
+                        : source.cvUrl || null,
                 coverLetter: isApplicationRow ? (source.coverLetter ?? null) : null,
                 coverLetterUrl: isApplicationRow ? (source.coverLetterUrl ?? null) : null,
                 fallback,
@@ -467,8 +496,18 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const { professional, resume, attachedDocuments, applicationAttachments, cvUrl, coverLetter, coverLetterUrl, fallback } =
         resolveApplicantData();
 
-    /** Job applicant flow (recruiter/admin from job): wallet lists only what was submitted with the application. */
-    const walletJobApplicationOnly = !!location.state?.fromJobDetail || showApplicationStatus === true;
+    const adminCreatedJobApplicationView =
+        isAdmin &&
+        !!(
+            fetchedCandidate?.application?.job?.adminId ||
+            fetchedCandidate?.job?.adminId ||
+            location.state?.jobData?.adminId
+        );
+
+    /** Job applicant flow: recruiters see only application-submitted files; admin-created jobs can still expose the full document set. */
+    const walletJobApplicationOnly =
+        (!!location.state?.fromJobDetail || showApplicationStatus === true) &&
+        !adminCreatedJobApplicationView;
 
     const candidate = useMemo(() => {
         const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];

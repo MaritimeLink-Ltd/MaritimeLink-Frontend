@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2, Trash2 } from 'lucide-react';
 import jobService from '../../../services/jobService';
 
 function UploadJob({ onBack: onBackProp }) {
@@ -18,9 +18,12 @@ function UploadJob({ onBack: onBackProp }) {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [isClosed, setIsClosed] = useState(editData?.status === 'Closed' || false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     const [formData, setFormData] = useState({
         jobTitle: '',
@@ -44,8 +47,21 @@ function UploadJob({ onBack: onBackProp }) {
         'PERMANENT': 'Permanent'
     };
 
+    const normalizeStatus = (value) => String(value || '').toUpperCase();
+    const navigateBackToListing = () => {
+        if (returnPath) {
+            navigate(returnPath);
+            return;
+        }
+        navigate(-1);
+    };
+
     useEffect(() => {
         if (isEditMode && editData) {
+            const normalizedStatus = normalizeStatus(editData.status);
+            setIsPublished(normalizedStatus !== 'DRAFT' && normalizedStatus !== 'REMOVED');
+            setIsPaused(normalizedStatus === 'DRAFT');
+            setIsClosed(normalizedStatus === 'EXPIRED' || normalizedStatus === 'FILLED');
             setFormData({
                 jobTitle: editData.jobTitle || editData.title || '',
                 region: editData.region || editData.location || 'Global',
@@ -70,31 +86,101 @@ function UploadJob({ onBack: onBackProp }) {
         setShowPublishModal(true);
     };
 
-    const confirmPublishToggle = () => {
-        setIsPublished(!isPublished);
-        setShowPublishModal(false);
+    const confirmPublishToggle = async () => {
+        if (!isEditMode || !editData?.id) {
+            setIsPublished(!isPublished);
+            setShowPublishModal(false);
+            return;
+        }
+
+        setIsStatusUpdating(true);
+        setSubmitError('');
+        try {
+            const nextStatus = isPublished ? 'DRAFT' : 'ACTIVE';
+            await jobService.updateJobStatus(editData.id, nextStatus);
+            setIsPublished(nextStatus === 'ACTIVE');
+            setIsPaused(nextStatus === 'DRAFT');
+            setIsClosed(false);
+            setShowPublishModal(false);
+        } catch (error) {
+            console.error('Failed to update job publish status:', error);
+            setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+        } finally {
+            setIsStatusUpdating(false);
+        }
     };
 
     const handlePauseToggle = () => {
         setShowPauseModal(true);
     };
 
-    const confirmPauseToggle = () => {
-        setIsPaused(!isPaused);
-        setShowPauseModal(false);
+    const confirmPauseToggle = async () => {
+        if (!isEditMode || !editData?.id) {
+            setIsPaused(!isPaused);
+            setShowPauseModal(false);
+            return;
+        }
+
+        setIsStatusUpdating(true);
+        setSubmitError('');
+        try {
+            const nextStatus = isPaused ? 'ACTIVE' : 'DRAFT';
+            await jobService.updateJobStatus(editData.id, nextStatus);
+            setIsPaused(nextStatus === 'DRAFT');
+            setIsPublished(nextStatus === 'ACTIVE');
+            setIsClosed(false);
+            setShowPauseModal(false);
+        } catch (error) {
+            console.error('Failed to pause/resume job:', error);
+            setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+        } finally {
+            setIsStatusUpdating(false);
+        }
     };
 
     const handleCloseJob = () => {
         setShowCloseModal(true);
     };
 
-    const confirmCloseJob = () => {
-        setIsClosed(true);
-        setShowCloseModal(false);
-        if (returnPath) {
-            navigate(returnPath);
-        } else {
-            navigate(-1);
+    const confirmCloseJob = async () => {
+        if (!editData?.id) {
+            setIsClosed(true);
+            setShowCloseModal(false);
+            navigateBackToListing();
+            return;
+        }
+
+        setIsStatusUpdating(true);
+        setSubmitError('');
+        try {
+            await jobService.updateJobStatus(editData.id, 'EXPIRED');
+            setIsClosed(true);
+            setIsPublished(false);
+            setIsPaused(false);
+            setShowCloseModal(false);
+            navigateBackToListing();
+        } catch (error) {
+            console.error('Failed to close job:', error);
+            setSubmitError(error?.data?.message || error?.message || 'Could not close this job.');
+        } finally {
+            setIsStatusUpdating(false);
+        }
+    };
+
+    const confirmDeleteJob = async () => {
+        if (!editData?.id) return;
+
+        setIsDeleting(true);
+        setSubmitError('');
+        try {
+            await jobService.deleteJob(editData.id);
+            setShowDeleteModal(false);
+            navigateBackToListing();
+        } catch (error) {
+            console.error('Failed to delete job:', error);
+            setSubmitError(error?.data?.message || error?.message || 'Could not delete this job.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -218,6 +304,13 @@ function UploadJob({ onBack: onBackProp }) {
                                 Close Job
                             </button>
                         )}
+                        <button
+                            onClick={() => setShowDeleteModal(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 border border-red-200 rounded-lg text-red-700 font-semibold hover:bg-red-50 transition-colors text-sm"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Job
+                        </button>
                     </div>
                 )}
             </div>
@@ -440,12 +533,13 @@ function UploadJob({ onBack: onBackProp }) {
                             </button>
                             <button
                                 onClick={confirmPublishToggle}
+                                disabled={isStatusUpdating}
                                 className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPublished
                                     ? 'bg-gray-700 text-white hover:bg-gray-800'
                                     : 'bg-[#003971] text-white hover:bg-[#002855]'
-                                    }`}
+                                    } disabled:opacity-60 disabled:cursor-not-allowed`}
                             >
-                                {isPublished ? 'Unpublish' : 'Publish'}
+                                {isStatusUpdating ? 'Updating...' : (isPublished ? 'Unpublish' : 'Publish')}
                             </button>
                         </div>
                     </div>
@@ -473,12 +567,13 @@ function UploadJob({ onBack: onBackProp }) {
                             </button>
                             <button
                                 onClick={confirmPauseToggle}
+                                disabled={isStatusUpdating}
                                 className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors ${isPaused
                                     ? 'bg-green-600 text-white hover:bg-green-700'
                                     : 'bg-orange-600 text-white hover:bg-orange-700'
-                                    }`}
+                                    } disabled:opacity-60 disabled:cursor-not-allowed`}
                             >
-                                {isPaused ? 'Resume' : 'Pause'}
+                                {isStatusUpdating ? 'Updating...' : (isPaused ? 'Resume' : 'Pause')}
                             </button>
                         </div>
                     </div>
@@ -504,9 +599,38 @@ function UploadJob({ onBack: onBackProp }) {
                             </button>
                             <button
                                 onClick={confirmCloseJob}
-                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                                disabled={isStatusUpdating}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                                Close Job
+                                {isStatusUpdating ? 'Closing...' : 'Close Job'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">
+                            Delete Job?
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            This will permanently remove the job and its listing. Please make sure you really want to delete it.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteJob}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isDeleting ? 'Deleting...' : 'Delete Job'}
                             </button>
                         </div>
                     </div>
