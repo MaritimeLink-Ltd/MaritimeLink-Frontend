@@ -17,15 +17,6 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
-const courseHighlights = [
-  'Firefighting',
-  'Personal Survival',
-  'First Aid',
-  'Social Responsibilities',
-  'Duration: 3 Days',
-  'Summary Included'
-];
-
 const statusPillStyles = {
   warning: 'bg-amber-50 text-amber-700',
   success: 'bg-emerald-50 text-emerald-700',
@@ -34,6 +25,17 @@ const statusPillStyles = {
 };
 
 const PAGE_SIZE = 4;
+
+function sanitizeDescription(value) {
+  if (!value) return '';
+  const s = String(value);
+  // Defensive: sometimes env-style tokens get stored in description (e.g. VITE_XXX=yyy).
+  // Strip them from display to avoid leaking secrets and confusing UI.
+  return s
+    .replace(/\bVITE_[A-Z0-9_]+=[^\s]+/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
 function getSessionBookingMetrics(session) {
   const bookings = Array.isArray(session?.bookings) ? session.bookings : [];
@@ -157,7 +159,7 @@ export default function CourseDetail() {
             sessions: fetchedSessions.length,
             bookings: bookingMetrics.bookings || course.enrolledCount || 0,
             revenue: `${currencySymbol}${Math.round(bookingMetrics.revenue || (Number(course.price || 0) * (course.enrolledCount || 0))).toLocaleString()}`,
-            description: course.description || 'No description provided.',
+            description: sanitizeDescription(course.description) || 'No description provided.',
           });
           
           setStatus(course.status === 'ACTIVE' ? 'Published' : course.status === 'DRAFT' ? 'Draft' : 'Archived');
@@ -587,17 +589,6 @@ export default function CourseDetail() {
                 <p className="text-sm text-gray-500 leading-relaxed">
                   {courseSummary.description}
                 </p>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {courseHighlights.map((item) => (
-                  <span
-                    key={item}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700"
-                  >
-                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                    {item}
-                  </span>
-                ))}
               </div>
             </div>
           )}

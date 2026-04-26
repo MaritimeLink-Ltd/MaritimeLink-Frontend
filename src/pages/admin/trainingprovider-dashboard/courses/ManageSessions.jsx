@@ -380,15 +380,7 @@ export default function ManageSessions() {
   };
 
   const handleScheduleSession = () => {
-    const match =
-      (courseTypeFilter &&
-        courses.find((c) => (c.category || c.courseType || 'Uncategorized') === courseTypeFilter)) ||
-      courses[0];
-    if (match?.id) {
-      navigate(`/trainingprovider/courses/${match.id}/sessions/schedule`);
-      return;
-    }
-    navigate('/trainingprovider/courses');
+    navigate('/trainingprovider/sessions/schedule');
   };
 
   return (

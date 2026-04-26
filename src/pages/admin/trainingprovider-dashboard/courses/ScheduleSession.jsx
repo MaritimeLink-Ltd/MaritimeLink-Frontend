@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Calendar, MapPin, Users, ChevronLeft, BookOpen, ChevronDown, Search, Loader2 } from 'lucide-react';
-import { publishedCourses } from '../../../../data/publishedCoursesData';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
@@ -82,6 +81,10 @@ export default function ScheduleSession() {
     else navigate(-1);
   };
 
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [resolvedCourseTitle, setResolvedCourseTitle] = useState(passedCourseTitle || '');
+
   const [selectedCourse, setSelectedCourse] = useState(courseId || sessionData?.courseId || '');
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
@@ -118,11 +121,69 @@ export default function ScheduleSession() {
     }
   }, [courseDropdownOpen]);
 
-  const filteredCourses = publishedCourses.filter((c) =>
-    c.name.toLowerCase().includes(courseSearch.toLowerCase())
+  // Load real courses for dropdown when not locked.
+  useEffect(() => {
+    if (lockCourseSelection) return undefined;
+    let cancelled = false;
+    setCoursesLoading(true);
+    (async () => {
+      try {
+        const res = await httpClient.get(API_ENDPOINTS.COURSES.MY);
+        const list = res?.data?.courses;
+        const normalized = Array.isArray(list)
+          ? list.map((c) => ({
+              id: c.id,
+              title: c.title || c.name || 'Course',
+              status: c.status,
+            }))
+          : [];
+        if (cancelled) return;
+        // Prefer ACTIVE/PUBLISHED style courses first, but keep everything selectable.
+        normalized.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+        setCourses(normalized);
+      } catch (e) {
+        console.error('Failed to load courses', e);
+        if (cancelled) return;
+        setCourses([]);
+      } finally {
+        if (!cancelled) setCoursesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lockCourseSelection]);
+
+  // Resolve title for locked course if not passed.
+  useEffect(() => {
+    if (!lockCourseSelection) return undefined;
+    if (resolvedCourseTitle || !courseId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await httpClient.get(API_ENDPOINTS.COURSES.GET_BY_ID(courseId));
+        const c = res?.data?.course;
+        if (cancelled) return;
+        setResolvedCourseTitle(c?.title || c?.name || '');
+      } catch {
+        // Ignore; fallback to "This course"
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lockCourseSelection, courseId, resolvedCourseTitle]);
+
+  const filteredCourses = courses.filter((c) =>
+    String(c.title || '')
+      .toLowerCase()
+      .includes(courseSearch.toLowerCase())
   );
 
-  const selectedCourseName = passedCourseTitle || publishedCourses.find((c) => String(c.id) === String(selectedCourse))?.name || '';
+  const selectedCourseName =
+    resolvedCourseTitle ||
+    courses.find((c) => String(c.id) === String(selectedCourse))?.title ||
+    '';
 
   const handleSelectCourse = (course) => {
     setSelectedCourse(course.id);
@@ -142,6 +203,10 @@ export default function ScheduleSession() {
     setIsLoading(true);
     try {
       const targetCourseId = selectedCourse || courseId;
+      if (!targetCourseId) {
+        alert('Please select a course.');
+        return;
+      }
 
       const sessionPayload = {
           startDate: form.startDate ? new Date(form.startDate).toISOString() : new Date().toISOString(),
@@ -231,7 +296,7 @@ export default function ScheduleSession() {
                   >
                     <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <span className={selectedCourseName ? 'text-gray-900' : 'text-gray-400'}>
-                      {selectedCourseName || '-- Select a Course --'}
+                      {selectedCourseName || (coursesLoading ? 'Loading courses…' : '-- Select a Course --')}
                     </span>
                     <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-transform ${courseDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -260,11 +325,13 @@ export default function ScheduleSession() {
                                   : 'text-gray-700 hover:bg-gray-50'
                                 }`}
                             >
-                              {course.name}
+                              {course.title}
                             </li>
                           ))
                         ) : (
-                          <li className="px-4 py-3 text-sm text-gray-400 text-center">No courses found</li>
+                          <li className="px-4 py-3 text-sm text-gray-400 text-center">
+                            {coursesLoading ? 'Loading courses…' : 'No courses found'}
+                          </li>
                         )}
                       </ul>
                     </div>
