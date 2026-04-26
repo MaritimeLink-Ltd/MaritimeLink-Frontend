@@ -120,6 +120,12 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [jobStatus, setJobStatus] = useState(jobData?.status || 'Active');
 
+    const getJobDetailRequest = () => {
+        if (isAdminPath) return jobService.getAdminJobById(jobId);
+        if (isRecruiterContext) return jobService.getRecruiterJobById(jobId);
+        return jobService.getJobById(jobId);
+    };
+
     const mapApiJobStatusToUi = (status) => {
         const upper = String(status || '').toUpperCase();
         if (upper === 'DRAFT') return 'Draft';
@@ -178,7 +184,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
              if (!jobId) return;
              try {
                  setIsLoadingJob(true);
-                 const response = await jobService.getJobById(jobId);
+                 const response = await getJobDetailRequest();
                  if (response?.data?.job) {
                      const fetchedJob = response.data.job;
                      
@@ -460,7 +466,9 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             await jobService.deleteJob(jobId);
             setShowDeleteModal(false);
             // Navigate back to jobs list
-            const listPath = location.pathname.includes('/admin/marketplace') ? '/admin/marketplace/jobs' : '/admin/jobs';
+            const listPath = location.pathname.includes('/admin/marketplace')
+                ? '/admin/marketplace'
+                : '/admin/jobs';
             navigate(listPath);
         } catch (error) {
             console.error("Failed to delete job:", error);

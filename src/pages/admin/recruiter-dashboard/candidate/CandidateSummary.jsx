@@ -436,6 +436,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 resume:
                     trainerAttendanceAttachmentOnly
                         ? null
+                        : isApplicationScopedView && !allowAdminFullDocumentAccess
+                            ? null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView
                             ? application.resumeSnapshot || professional?.resume || null
                             : application.resumeSnapshot || null,
@@ -456,7 +458,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     trainerAttendanceAttachmentOnly
                         ? null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView
-                            ? application.cvUrl || professional?.cvUrl || null
+                            ? application.cvUrl || (allowAdminFullDocumentAccess ? professional?.cvUrl : null) || null
                             : application.cvUrl || null,
                 coverLetter: application.coverLetter ?? null,
                 coverLetterUrl: application.coverLetterUrl ?? null,
@@ -474,6 +476,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 resume:
                     trainerAttendanceAttachmentOnly
                         ? null
+                        : isApplicationScopedView && isApplicationRow && !allowAdminFullDocumentAccess
+                            ? null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
                             ? source.resumeSnapshot || source.professional.resume || null
                             : source.resumeSnapshot || null,
@@ -491,7 +495,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     trainerAttendanceAttachmentOnly
                         ? null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
-                            ? source.cvUrl || source.professional.cvUrl || null
+                            ? source.cvUrl || ((allowAdminFullDocumentAccess || !isApplicationRow) ? source.professional.cvUrl : null) || null
                             : source.cvUrl || null,
                 coverLetter: isApplicationRow ? (source.coverLetter ?? null) : null,
                 coverLetterUrl: isApplicationRow ? (source.coverLetterUrl ?? null) : null,
@@ -526,9 +530,13 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     const walletJobApplicationOnly =
         (!!location.state?.fromJobDetail || showApplicationStatus === true) &&
         !adminCreatedJobApplicationView;
+    const recruiterApplicationScopedView =
+        walletJobApplicationOnly && !isAdmin && !location.state?.fromAttendance;
 
     const candidate = useMemo(() => {
-        const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
+        const seaService = recruiterApplicationScopedView
+            ? []
+            : (Array.isArray(resume?.seaService) ? resume.seaService : []);
         const vesselTypes = [...new Set(seaService.map((s) => s.vesselType).filter(Boolean))];
         const experience = seaService.map((s) => {
             const role = s.role || 'Role not provided';
@@ -550,12 +558,14 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             image: professional?.profilePhotoUrl || professional?.avatarUrl || professional?.photo || null,
             location: professional?.location || resume?.country || fallback.location || 'N/A',
             vesselTypes,
-            seaTime: Number.isFinite(years) ? `${years} years experience` : (seaService.length ? `${seaService.length} sea service record(s)` : 'No sea service recorded'),
+            seaTime: recruiterApplicationScopedView
+                ? 'Application documents only'
+                : (Number.isFinite(years) ? `${years} years experience` : (seaService.length ? `${seaService.length} sea service record(s)` : 'No sea service recorded')),
             compliant: professional?.isVerified || professional?.kyc?.status === 'APPROVED' || false,
             experience,
             skills,
         };
-    }, [professional, resume, fallback]);
+    }, [professional, resume, fallback, recruiterApplicationScopedView]);
 
     const documentWallet = useMemo(() => {
         const applicationSubmissionDocs = [];
@@ -974,7 +984,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {(!location.pathname.includes('/trainingprovider/') || (location.state?.fromAttendance && isAdmin)) && (
+                        {(!location.pathname.includes('/trainingprovider/') || (location.state?.fromAttendance && isAdmin)) && !recruiterApplicationScopedView && (
                             <button onClick={handleViewResume} className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <FileText className="h-5 w-5" />
                                 View Resume

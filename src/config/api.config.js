@@ -137,6 +137,8 @@ export const API_ENDPOINTS = {
     LIST: '/api/jobs',
     MY: '/api/jobs/my',
     DETAIL: (id) => `/api/jobs/${id}`,
+    RECRUITER_DETAIL: (id) => `/api/recruiter/jobs/${id}`,
+    ADMIN_DETAIL: (id) => `/api/admin/jobs/${id}`,
     UPDATE: (id) => `/api/jobs/${id}`,
     UPDATE_STATUS: (id) => `/api/jobs/${id}/status`,
     DELETE: (id) => `/api/jobs/${id}`,

@@ -335,6 +335,38 @@ class JobService {
     }
 
     /**
+     * Get a single job by ID for a recruiter-owned job page
+     * GET /api/recruiter/jobs/:id
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with recruiter job detail
+     */
+    async getRecruiterJobById(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.RECRUITER_DETAIL(id));
+            return response;
+        } catch (error) {
+            console.error('Get Recruiter Job Detail error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get a single job by ID for an admin-owned/admin-view page
+     * GET /api/admin/jobs/:id
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} Response with admin job detail
+     */
+    async getAdminJobById(id) {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.ADMIN_DETAIL(id));
+            return response;
+        } catch (error) {
+            console.error('Get Admin Job Detail error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get applicants for a job (Recruiter)
      * GET /api/recruiter/jobs/:id/applicants
      * @param {string} id - Job ID
