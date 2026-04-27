@@ -146,6 +146,8 @@ export const API_ENDPOINTS = {
     ADMIN_APPLICANTS: (id) => `/api/admin/jobs/${id}/applicants`,
     ADMIN_MATCHES: (id) => `/api/admin/jobs/${id}/matches`,
     ADMIN_INVITE_MATCH: (jobId, professionalId) => `/api/admin/jobs/${jobId}/invite/${professionalId}`,
+    /** SUPER_ADMIN: hide job from main feed */
+    ADMIN_FLAG: (id) => `/api/admin/jobs/${id}/flag`,
     PROFESSIONAL_ALL: '/api/professional/jobs',
     PROFESSIONAL_DETAIL: (id) => `/api/professional/jobs/${id}`,
     APPLY: (id) => `/api/professional/jobs/${id}/apply`,

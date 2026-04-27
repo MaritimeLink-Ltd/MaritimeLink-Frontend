@@ -8,7 +8,8 @@ import {
     XCircle,
     ChevronDown,
     Edit2,
-    Trash2
+    Trash2,
+    Flag,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
@@ -165,6 +166,8 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     const itemsPerPage = 10;
     const [allApplicants, setAllApplicants] = useState([]);
     const [isLoadingApplicants, setIsLoadingApplicants] = useState(false);
+    const [isFlaggingJob, setIsFlaggingJob] = useState(false);
+    const [flagJobError, setFlagJobError] = useState('');
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -403,6 +406,10 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         setApplicantListActionError('');
     }, [activeTab]);
 
+    useEffect(() => {
+        setFlagJobError('');
+    }, [jobId]);
+
     const handleSort = (field) => {
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -491,6 +498,42 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         }
     };
 
+    const handleFlagJob = async () => {
+        if (!jobId || !isAdminPath || job?.isFlagged) return;
+        setFlagJobError('');
+        setIsFlaggingJob(true);
+        try {
+            const response = await jobService.flagAdminJob(jobId);
+            const updated = response?.data?.job;
+            if (updated) {
+                const formatCategory = (cat) => {
+                    if (!cat) return '';
+                    return cat.split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+                };
+                setJob((prev) => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        ...updated,
+                        vessel: formatCategory(updated.category) || prev.vessel || 'General',
+                        status: mapApiJobStatusToUi(updated.status),
+                    };
+                });
+                setJobStatus(mapApiJobStatusToUi(updated.status));
+            }
+        } catch (error) {
+            console.error('Failed to flag job:', error);
+            const msg =
+                error?.data?.message ||
+                (Array.isArray(error?.data?.message) ? error.data.message.join('; ') : null) ||
+                error?.message ||
+                'Could not flag this job';
+            setFlagJobError(typeof msg === 'string' ? msg : 'Could not flag this job');
+        } finally {
+            setIsFlaggingJob(false);
+        }
+    };
+
     const renderApplicantPipelineButtons = (applicant) => {
         if (applicant.status === 'matches') return null;
         const terminal = ['hired', 'rejected', 'withdrawn'].includes(applicant.status);
@@ -547,6 +590,11 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                 }`}>
                                 {isClosed ? 'Closed' : isPublished ? 'Published' : 'Unpublished'}
                             </span>
+                            {isAdminPath && job?.isFlagged ? (
+                                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
+                                    Flagged
+                                </span>
+                            ) : null}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <span>{job?.vessel || 'General'}</span>
@@ -555,7 +603,8 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-3">
                         {/* Time Period Filters */}
                         {activeTab !== 'all' && (
                             <div className="flex items-center bg-gray-100 rounded-lg p-1">
@@ -603,6 +652,22 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                         >
                             View Job Details
                         </button>
+                        {isAdminPath ? (
+                            <button
+                                type="button"
+                                disabled={isFlaggingJob || job?.isFlagged === true}
+                                onClick={handleFlagJob}
+                                title={
+                                    job?.isFlagged
+                                        ? 'This job is already flagged and hidden from the main feed.'
+                                        : 'Hide this job from the main feed'
+                                }
+                                className="flex items-center gap-2 px-5 py-2.5 border border-amber-300 rounded-lg text-amber-900 font-semibold bg-amber-50 hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Flag className="h-4 w-4" />
+                                {isFlaggingJob ? 'Flagging…' : job?.isFlagged ? 'Flagged' : 'Flag job'}
+                            </button>
+                        ) : null}
                         {showJobManagementActions ? (
                             <button
                                 type="button"
@@ -612,6 +677,12 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                 <Trash2 className="h-4 w-4" />
                                 Delete Job
                             </button>
+                        ) : null}
+                        </div>
+                        {flagJobError ? (
+                            <p className="text-sm text-red-600 text-right max-w-xl" role="alert">
+                                {flagJobError}
+                            </p>
                         ) : null}
                     </div>
                 </div>

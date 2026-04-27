@@ -162,6 +162,22 @@ class JobService {
     }
 
     /**
+     * Flag a job (platform admin). Hides it from the main feed.
+     * PATCH /api/admin/jobs/:id/flag
+     * @param {string} id - Job ID
+     * @returns {Promise<Object>} e.g. `{ status, message, data: { job } }`
+     */
+    async flagAdminJob(id) {
+        try {
+            const response = await httpClient.patch(API_ENDPOINTS.JOBS.ADMIN_FLAG(id), {});
+            return response;
+        } catch (error) {
+            console.error('Flag Admin Job error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get all jobs for Professional
      * GET /api/professional/jobs
      * @param {number} page - Page number
