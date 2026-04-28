@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star, Folder, ChevronRight, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
 import resumeService from '../../../../services/resumeService';
+import authService from '../../../../services/authService';
 import documentService from '../../../../services/documentService';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
@@ -33,9 +34,10 @@ const ApplyToJob = () => {
         const fetchAllData = async () => {
             try {
                 setIsLoading(true);
-                const [jobResponse, resumeResponse, docResponse] = await Promise.all([
+                const [jobResponse, resumeResponse, accountResponse, docResponse] = await Promise.all([
                     jobService.getProfessionalJobById(jobId).catch(() => null),
                     resumeService.getResume().catch(() => null),
+                    authService.getMyAccount().catch(() => null),
                     documentService.getDocuments().catch(() => null)
                 ]);
 
@@ -51,19 +53,24 @@ const ApplyToJob = () => {
                     });
                 }
 
+                const profileCvUrl =
+                    accountResponse?.data?.professional?.cvUrl ||
+                    accountResponse?.professional?.cvUrl ||
+                    null;
+
                 if (resumeResponse && resumeResponse.updatedAt) {
                     setPlatformResume({
                         id: 'platform',
                         title: 'MaritimeLink Profile CV',
                         createdDate: `Updated ${new Date(resumeResponse.updatedAt).toLocaleDateString()}`,
-                        cvUrl: resumeResponse.cvUrl || resumeResponse.resumeUrl || null
+                        cvUrl: profileCvUrl
                     });
                 } else {
                     setPlatformResume({
                         id: 'platform',
                         title: 'MaritimeLink Profile CV',
                         createdDate: 'Up-to-date',
-                        cvUrl: resumeResponse?.cvUrl || resumeResponse?.resumeUrl || null
+                        cvUrl: profileCvUrl
                     });
                 }
 
@@ -135,7 +142,9 @@ const ApplyToJob = () => {
                     cvUrl = cvRes.data.url;
                 }
             } else if (selectedResume === 'platform') {
-                cvUrl = platformResume?.cvUrl;
+                // Platform resume uses the structured resume snapshot for the application.
+                // Only include a file URL when the professional actually has a profile CV file.
+                cvUrl = platformResume?.cvUrl || undefined;
             }
 
             let coverLetterUrl;
