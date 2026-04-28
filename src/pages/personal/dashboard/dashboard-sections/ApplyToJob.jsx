@@ -142,9 +142,10 @@ const ApplyToJob = () => {
                     cvUrl = cvRes.data.url;
                 }
             } else if (selectedResume === 'platform') {
-                // Platform resume uses the structured resume snapshot for the application.
-                // Only include a file URL when the professional actually has a profile CV file.
-                cvUrl = platformResume?.cvUrl || undefined;
+                // Platform resume should use the structured resume snapshot captured by the backend.
+                // Do not attach a profile PDF URL here, otherwise recruiter/admin can end up seeing
+                // an unrelated legacy CV file instead of the actual resume used for this application.
+                cvUrl = undefined;
             }
 
             let coverLetterUrl;
