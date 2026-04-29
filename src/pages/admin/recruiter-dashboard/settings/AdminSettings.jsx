@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import {
     User,
@@ -19,17 +19,19 @@ import {
     Monitor
 } from 'lucide-react';
 import { countryCodes } from '../../../../utils/countryCodes';
+import recruiterSettingsService from '../../../../services/recruiterSettingsService';
+import authService from '../../../../services/authService';
 
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
     const [profileImage, setProfileImage] = useState('/images/login-image.webp');
     const [profileData, setProfileData] = useState({
-        firstName: 'James',
-        lastName: 'Anderson',
-        email: 'james.anderson@maritimelink.com',
+        firstName: '',
+        lastName: '',
+        email: '',
         countryCode: '+44',
-        phoneNumber: '20 7123 4567',
-        role: 'HR Manager'
+        phoneNumber: '',
+        role: ''
     });
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
@@ -38,22 +40,149 @@ function AdminSettings() {
     });
     const [passwordError, setPasswordError] = useState('');
     const [passwordSuccess, setPasswordSuccess] = useState('');
-    const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
-    const [currentPlan, setCurrentPlan] = useState('Professional');
-    const [planUpgraded, setPlanUpgraded] = useState(false);
+    const [profileLoading, setProfileLoading] = useState(true);
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [savingCompany, setSavingCompany] = useState(false);
+    const [savingNotifications, setSavingNotifications] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [billingLoading, setBillingLoading] = useState(true);
+    const [billingData, setBillingData] = useState({
+        currentPlan: 'Free',
+        amount: 0,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        features: [],
+        canUpgrade: false,
+        stripeOnboardingComplete: false
+    });
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedbackType, setFeedbackType] = useState('success');
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
     const [isCompanySaved, setIsCompanySaved] = useState(false);
     const [companyData, setCompanyData] = useState({
-        name: 'Ocean Crewing Services Ltd',
-        website: 'https://oceancrewing.com',
-        linkedin: 'https://linkedin.com/company/ocean-crewing',
-        address: '12 Maritime Way',
-        city: 'London',
-        state: 'Greater London',
-        postcode: 'EC3R 8AD',
-        country: 'United Kingdom'
+        name: '',
+        website: '',
+        linkedin: '',
+        address: '',
+        city: '',
+        state: '',
+        postcode: '',
+        country: ''
     });
+    const [notifications, setNotifications] = useState({
+        securityAlerts: true,
+        newApplications: true,
+        candidateMessages: true,
+        jobPostings: true,
+        marketing: false,
+        desktopSounds: true,
+        urgentAlerts: true
+    });
+
+    const syncStoredRecruiterProfile = (profilePatch = {}) => {
+        try {
+            const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            const nextProfile = {
+                ...stored,
+                firstName: profilePatch.firstName ?? stored.firstName,
+                lastName: profilePatch.lastName ?? stored.lastName,
+                email: profilePatch.email ?? stored.email,
+                profilePhoto: profilePatch.profilePhotoUrl ?? stored.profilePhoto,
+                photo: profilePatch.profilePhotoUrl ?? stored.photo,
+            };
+            localStorage.setItem('userProfile', JSON.stringify(nextProfile));
+            if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
+            if (profilePatch.profilePhotoUrl !== undefined) {
+                if (profilePatch.profilePhotoUrl) {
+                    localStorage.setItem('profileImage', profilePatch.profilePhotoUrl);
+                } else {
+                    localStorage.removeItem('profileImage');
+                }
+                window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: profilePatch.profilePhotoUrl || '/images/login-image.webp' } }));
+            }
+        } catch (error) {
+            console.error('Failed to sync recruiter profile cache:', error);
+        }
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadSettings = async () => {
+            setProfileLoading(true);
+            setBillingLoading(true);
+            setFeedbackMessage('');
+            try {
+                const [settingsResponse, billingResponse] = await Promise.all([
+                    recruiterSettingsService.getSettings(),
+                    recruiterSettingsService.getBilling(),
+                ]);
+
+                if (cancelled) return;
+
+                const settingsData = settingsResponse?.data || {};
+                const profile = settingsData.profile || {};
+                const company = settingsData.company || {};
+                const notificationsData = settingsData.notifications || {};
+                const billing = billingResponse?.data?.billing || settingsData.billing || {};
+
+                setProfileData({
+                    firstName: profile.firstName || '',
+                    lastName: profile.lastName || '',
+                    email: profile.email || '',
+                    countryCode: profile.countryCode || '+44',
+                    phoneNumber: profile.phoneNumber || '',
+                    role: profile.role || '',
+                });
+                setProfileImage(profile.profilePhotoUrl || '/images/login-image.webp');
+                setCompanyData({
+                    name: company.name || '',
+                    website: company.website || '',
+                    linkedin: company.linkedin || '',
+                    address: company.address || '',
+                    city: company.city || '',
+                    state: company.state || '',
+                    postcode: company.postcode || '',
+                    country: company.country || '',
+                });
+                setNotifications({
+                    securityAlerts: notificationsData.securityAlerts ?? true,
+                    newApplications: notificationsData.newApplications ?? true,
+                    candidateMessages: notificationsData.candidateMessages ?? true,
+                    jobPostings: notificationsData.jobPostings ?? true,
+                    marketing: notificationsData.marketing ?? false,
+                    desktopSounds: notificationsData.desktopSounds ?? true,
+                    urgentAlerts: notificationsData.urgentAlerts ?? true,
+                });
+                setBillingData({
+                    currentPlan: billing.currentPlan || 'Free',
+                    amount: billing.amount || 0,
+                    currency: billing.currency || 'USD',
+                    billingCycle: billing.billingCycle || 'monthly',
+                    features: billing.features || [],
+                    canUpgrade: Boolean(billing.canUpgrade),
+                    stripeOnboardingComplete: Boolean(billing.stripeOnboardingComplete),
+                });
+            } catch (error) {
+                if (!cancelled) {
+                    setFeedbackType('error');
+                    setFeedbackMessage(error.message || 'Failed to load recruiter settings.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setProfileLoading(false);
+                    setBillingLoading(false);
+                }
+            }
+        };
+
+        loadSettings();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Handle profile data change
     const handleProfileChange = (field, value) => {
@@ -63,13 +192,32 @@ function AdminSettings() {
     };
 
     // Handle save changes
-    const handleSaveChanges = () => {
-        setIsSaved(true);
-        setHasChanges(false);
-        // Reset saved state after 2 seconds
-        setTimeout(() => {
-            setIsSaved(false);
-        }, 2000);
+    const handleSaveChanges = async () => {
+        setSavingProfile(true);
+        setFeedbackMessage('');
+        try {
+            const response = await recruiterSettingsService.updateProfile(profileData);
+            const updatedProfile = response?.data?.profile || profileData;
+            setProfileData({
+                firstName: updatedProfile.firstName || '',
+                lastName: updatedProfile.lastName || '',
+                email: updatedProfile.email || '',
+                countryCode: updatedProfile.countryCode || '+44',
+                phoneNumber: updatedProfile.phoneNumber || '',
+                role: updatedProfile.role || '',
+            });
+            syncStoredRecruiterProfile(updatedProfile);
+            setIsSaved(true);
+            setHasChanges(false);
+            setFeedbackType('success');
+            setFeedbackMessage(response?.message || 'Profile updated successfully.');
+            setTimeout(() => setIsSaved(false), 2000);
+        } catch (error) {
+            setFeedbackType('error');
+            setFeedbackMessage(error.message || 'Failed to update profile.');
+        } finally {
+            setSavingProfile(false);
+        }
     };
 
     // Handle company data change
@@ -79,12 +227,32 @@ function AdminSettings() {
     };
 
     // Handle company save
-    const handleCompanyUpdate = () => {
-        setIsCompanySaved(true);
-        // Reset saved state after 2 seconds
-        setTimeout(() => {
-            setIsCompanySaved(false);
-        }, 2000);
+    const handleCompanyUpdate = async () => {
+        setSavingCompany(true);
+        setFeedbackMessage('');
+        try {
+            const response = await recruiterSettingsService.updateCompany(companyData);
+            const updatedCompany = response?.data?.company || companyData;
+            setCompanyData({
+                name: updatedCompany.name || '',
+                website: updatedCompany.website || '',
+                linkedin: updatedCompany.linkedin || '',
+                address: updatedCompany.address || '',
+                city: updatedCompany.city || '',
+                state: updatedCompany.state || '',
+                postcode: updatedCompany.postcode || '',
+                country: updatedCompany.country || '',
+            });
+            setIsCompanySaved(true);
+            setFeedbackType('success');
+            setFeedbackMessage(response?.message || 'Company profile updated successfully.');
+            setTimeout(() => setIsCompanySaved(false), 2000);
+        } catch (error) {
+            setFeedbackType('error');
+            setFeedbackMessage(error.message || 'Failed to update company profile.');
+        } finally {
+            setSavingCompany(false);
+        }
     };
 
     // Handle invoice download
@@ -140,7 +308,7 @@ function AdminSettings() {
     };
 
     // Handle password update
-    const handleUpdatePassword = () => {
+    const handleUpdatePassword = async () => {
         setPasswordError('');
         setPasswordSuccess('');
 
@@ -160,46 +328,22 @@ function AdminSettings() {
             return;
         }
 
-        // Simulate API call
-        setTimeout(() => {
-            setPasswordSuccess('Password updated successfully!');
+        try {
+            const response = await authService.updateRecruiterPassword(
+                passwordData.currentPassword,
+                passwordData.newPassword
+            );
+            setPasswordSuccess(response?.message || 'Password updated successfully!');
             setPasswordData({
                 currentPassword: '',
                 newPassword: '',
                 confirmPassword: ''
             });
-
-            // Clear success message after 3 seconds
             setTimeout(() => setPasswordSuccess(''), 3000);
-        }, 500);
+        } catch (error) {
+            setPasswordError(error.message || 'Failed to update password.');
+        }
     };
-
-    // Handle 2FA toggle
-    const handle2FAToggle = () => {
-        setTwoFactorEnabled(!twoFactorEnabled);
-        // In real app, this would make an API call to enable/disable 2FA
-    };
-
-    // Handle upgrade plan
-    const handleUpgradePlan = () => {
-        setCurrentPlan('Enterprise');
-        setPlanUpgraded(true);
-        // In real app, this would make an API call to upgrade the plan
-
-        // Clear upgraded message after 3 seconds
-        setTimeout(() => setPlanUpgraded(false), 3000);
-    };
-
-    // Notification states
-    const [notifications, setNotifications] = useState({
-        securityAlerts: true,
-        newApplications: true,
-        candidateMessages: true,
-        jobPostings: true,
-        marketing: false,
-        desktopSounds: true,
-        urgentAlerts: true
-    });
 
     // Toggle component
     const Toggle = ({ checked, onChange }) => (
@@ -233,17 +377,58 @@ function AdminSettings() {
             }
 
             // Create preview URL
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImage(reader.result);
-            };
-            reader.readAsDataURL(file);
+            setUploadingPhoto(true);
+            setFeedbackMessage('');
+            recruiterSettingsService.uploadProfilePhoto(file)
+                .then((response) => {
+                    const nextUrl = response?.data?.profilePhotoUrl || response?.data?.url || '/images/login-image.webp';
+                    setProfileImage(nextUrl);
+                    syncStoredRecruiterProfile({ profilePhotoUrl: nextUrl });
+                    setFeedbackType('success');
+                    setFeedbackMessage(response?.message || 'Profile photo updated successfully.');
+                })
+                .catch((error) => {
+                    setFeedbackType('error');
+                    setFeedbackMessage(error.message || 'Failed to upload profile photo.');
+                })
+                .finally(() => {
+                    setUploadingPhoto(false);
+                });
         }
     };
 
     // Handle profile image removal
-    const handleImageRemove = () => {
-        setProfileImage('https://placehold.co/128x128/e5e7eb/6b7280?text=User');
+    const handleImageRemove = async () => {
+        setUploadingPhoto(true);
+        setFeedbackMessage('');
+        try {
+            const response = await recruiterSettingsService.removeProfilePhoto();
+            setProfileImage('/images/login-image.webp');
+            syncStoredRecruiterProfile({ profilePhotoUrl: null });
+            setFeedbackType('success');
+            setFeedbackMessage(response?.message || 'Profile photo removed successfully.');
+        } catch (error) {
+            setFeedbackType('error');
+            setFeedbackMessage(error.message || 'Failed to remove profile photo.');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const handleNotificationsSave = async () => {
+        setSavingNotifications(true);
+        setFeedbackMessage('');
+        try {
+            const response = await recruiterSettingsService.updateNotifications(notifications);
+            setNotifications(response?.data?.notifications || notifications);
+            setFeedbackType('success');
+            setFeedbackMessage(response?.message || 'Notification preferences updated successfully.');
+        } catch (error) {
+            setFeedbackType('error');
+            setFeedbackMessage(error.message || 'Failed to update notification preferences.');
+        } finally {
+            setSavingNotifications(false);
+        }
     };
 
     const accountSections = [
@@ -264,6 +449,15 @@ function AdminSettings() {
                 <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
                 <p className="text-gray-500 mt-1 text-sm">Manage your account settings and preferences</p>
             </div>
+
+            {feedbackMessage && (
+                <div className={`mb-3 rounded-xl border px-4 py-3 text-sm ${feedbackType === 'error'
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : 'border-green-200 bg-green-50 text-green-700'
+                    }`}>
+                    {feedbackMessage}
+                </div>
+            )}
 
             {/* Settings Container */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-3 overflow-hidden">
@@ -327,14 +521,14 @@ function AdminSettings() {
                                     {(hasChanges || isSaved) && (
                                         <button
                                             onClick={handleSaveChanges}
-                                            disabled={isSaved}
+                                            disabled={isSaved || savingProfile || profileLoading}
                                             className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${isSaved
                                                 ? 'bg-green-500 text-white cursor-default'
-                                                : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                                : 'bg-[#003971] text-white hover:bg-[#002855] disabled:opacity-60'
                                                 }`}
                                         >
                                             <Save className="h-4 w-4" />
-                                            {isSaved ? 'Saved' : 'Save Changes'}
+                                            {isSaved ? 'Saved' : savingProfile ? 'Saving...' : 'Save Changes'}
                                         </button>
                                     )}
                                 </div>
@@ -357,7 +551,7 @@ function AdminSettings() {
                                             />
                                             <label
                                                 htmlFor="profile-photo-upload"
-                                                className="absolute bottom-0 right-0 bg-white border-2 border-gray-200 rounded-full p-2 hover:bg-gray-50 transition-colors cursor-pointer"
+                                                className={`absolute bottom-0 right-0 bg-white border-2 border-gray-200 rounded-full p-2 hover:bg-gray-50 transition-colors ${uploadingPhoto ? 'cursor-wait opacity-60' : 'cursor-pointer'}`}
                                             >
                                                 <Camera className="h-4 w-4 text-gray-600" />
                                             </label>
@@ -368,9 +562,10 @@ function AdminSettings() {
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={handleImageRemove}
+                                                    disabled={uploadingPhoto}
                                                     className="text-sm font-medium text-red-600 hover:text-red-700"
                                                 >
-                                                    Remove
+                                                    {uploadingPhoto ? 'Working...' : 'Remove'}
                                                 </button>
                                             </div>
                                         </div>
@@ -468,14 +663,14 @@ function AdminSettings() {
                                     </div>
                                     <button
                                         onClick={handleCompanyUpdate}
-                                        disabled={isCompanySaved}
+                                        disabled={isCompanySaved || savingCompany || profileLoading}
                                         className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${isCompanySaved
                                             ? 'bg-green-500 text-white cursor-default'
-                                            : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                            : 'bg-[#003971] text-white hover:bg-[#002855] disabled:opacity-60'
                                             }`}
                                     >
                                         {isCompanySaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                                        {isCompanySaved ? 'Updated' : 'Update Company'}
+                                        {isCompanySaved ? 'Updated' : savingCompany ? 'Updating...' : 'Update Company'}
                                     </button>
                                 </div>
 
@@ -584,22 +779,15 @@ function AdminSettings() {
                         {/* Billing & Plans Section */}
                         {activeSection === 'billing' && (
                             <div>
-                                {/* Success Message */}
-                                {planUpgraded && (
-                                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 font-medium">
-                                        Plan upgraded successfully to {currentPlan}!
-                                    </div>
-                                )}
-
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
                                         <h2 className="text-lg font-bold text-gray-900">Current Plan</h2>
                                         <p className="text-sm text-gray-500 mt-0.5">Manage your subscription and billing details</p>
                                     </div>
-                                    <button className="text-[#003971] font-bold text-sm hover:underline">
-                                        {currentPlan} Plan
-                                    </button>
+                                    <span className="text-[#003971] font-bold text-sm">
+                                        {billingData.currentPlan} Plan
+                                    </span>
                                 </div>
 
                                 {/* Plan Card */}
@@ -608,54 +796,33 @@ function AdminSettings() {
                                     <div className="mb-4">
                                         <div className="flex items-baseline gap-1">
                                             <span className="text-4xl font-bold text-gray-900">
-                                                ${currentPlan === 'Professional' ? '299' : '599'}
+                                                {billingLoading ? '...' : `$${billingData.amount}`}
                                             </span>
-                                            <span className="text-gray-500">/month</span>
+                                            <span className="text-gray-500">/{billingData.billingCycle}</span>
                                         </div>
                                     </div>
 
                                     {/* Features */}
                                     <div className="space-y-3 mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                                <Check className="h-3 w-3 text-green-600" />
-                                            </div>
-                                            <span className="text-sm text-gray-700">Unlimited Job Postings</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                                <Check className="h-3 w-3 text-green-600" />
-                                            </div>
-                                            <span className="text-sm text-gray-700">Advanced Candidate Search</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                                <Check className="h-3 w-3 text-green-600" />
-                                            </div>
-                                            <span className="text-sm text-gray-700">Priority Support</span>
-                                        </div>
-                                        {currentPlan === 'Enterprise' && (
-                                            <div className="flex items-center gap-3">
+                                        {billingData.features.map((feature) => (
+                                            <div key={feature} className="flex items-center gap-3">
                                                 <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                                     <Check className="h-3 w-3 text-green-600" />
                                                 </div>
-                                                <span className="text-sm text-gray-700">Dedicated Account Manager</span>
+                                                <span className="text-sm text-gray-700">{feature}</span>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
 
                                     {/* Buttons */}
                                     <div className="flex items-center gap-3">
-                                        {currentPlan === 'Professional' ? (
-                                            <button
-                                                onClick={handleUpgradePlan}
-                                                className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
-                                            >
-                                                Upgrade Plan
-                                            </button>
-                                        ) : (
+                                        {!billingData.canUpgrade ? (
                                             <span className="px-5 py-2.5 rounded-xl font-bold text-sm bg-green-50 text-green-600 border border-green-200">
                                                 Current Plan
+                                            </span>
+                                        ) : (
+                                            <span className="px-5 py-2.5 rounded-xl font-bold text-sm bg-blue-50 text-[#003971] border border-blue-200">
+                                                Upgrade via support
                                             </span>
                                         )}
                                         <button
@@ -776,8 +943,19 @@ function AdminSettings() {
                             <>
                                 {/* Email Notifications */}
                                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                    <h2 className="text-lg font-bold text-gray-900 mb-1">Email Notifications</h2>
-                                    <p className="text-sm text-gray-500 mb-6">Manage what emails you receive from us.</p>
+                                    <div className="mb-6 flex items-start justify-between gap-4">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-gray-900 mb-1">Email Notifications</h2>
+                                            <p className="text-sm text-gray-500">Manage what emails you receive from us.</p>
+                                        </div>
+                                        <button
+                                            onClick={handleNotificationsSave}
+                                            disabled={savingNotifications}
+                                            className="rounded-xl bg-[#003971] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#002855] disabled:opacity-60"
+                                        >
+                                            {savingNotifications ? 'Saving...' : 'Save Preferences'}
+                                        </button>
+                                    </div>
 
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">

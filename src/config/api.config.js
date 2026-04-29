@@ -87,6 +87,12 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: '/api/recruiter/forgot-password',
     RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
     UPDATE_PASSWORD: '/api/recruiter/update-password',
+    SETTINGS: '/api/recruiter/settings',
+    SETTINGS_PROFILE: '/api/recruiter/settings/profile',
+    SETTINGS_COMPANY: '/api/recruiter/settings/company',
+    SETTINGS_NOTIFICATIONS: '/api/recruiter/settings/notifications',
+    SETTINGS_BILLING: '/api/recruiter/settings/billing',
+    SETTINGS_PROFILE_PHOTO: '/api/recruiter/settings/profile-photo',
     APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
     DASHBOARD_STATS: '/api/recruiter/dashboard/stats',

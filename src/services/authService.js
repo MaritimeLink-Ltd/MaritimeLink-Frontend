@@ -410,7 +410,7 @@ class AuthService {
     async updateRecruiterPassword(currentPassword, newPassword) {
         try {
             const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.UPDATE_PASSWORD, { 
-                currentPassword, 
+                oldPassword: currentPassword, 
                 newPassword 
             });
             return response;

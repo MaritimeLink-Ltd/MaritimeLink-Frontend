@@ -159,13 +159,13 @@ function AdminLayout() {
                             SETTINGS
                         </p>
                         <Link
-                            to="/admin/settings"
-                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive('/admin/settings')
+                            to="/recruiter/settings"
+                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${(isActive('/admin/settings') || isActive('/recruiter/settings'))
                                 ? 'bg-blue-50 text-[#003971]'
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                 }`}
                         >
-                            <UserCircle className={`h-5 w-5 mr-3 ${isActive('/admin/settings') ? 'text-[#003971]' : 'text-gray-400'
+                            <UserCircle className={`h-5 w-5 mr-3 ${(isActive('/admin/settings') || isActive('/recruiter/settings')) ? 'text-[#003971]' : 'text-gray-400'
                                 }`} />
                             Profile Settings
                         </Link>

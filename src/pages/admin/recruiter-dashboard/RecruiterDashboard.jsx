@@ -243,7 +243,7 @@ function RecruiterDashboard({ onNavigate }) {
                 'jobs': '/admin/jobs',
                 'search': '/admin/search',
                 'chats': '/admin/chats',
-                'settings': '/admin/settings'
+                'settings': '/recruiter/settings'
             };
             if (routeMap[section]) {
                 navigate(routeMap[section]);
