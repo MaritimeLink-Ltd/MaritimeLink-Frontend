@@ -422,15 +422,7 @@ export default function CourseDetail() {
         Back
       </button>
 
-      {isAdminMarketplaceCourse && !canManageCourseActions ? (
-        <div
-          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="status"
-        >
-          You are viewing this course in read-only mode. Only the training provider or the admin who
-          created a MaritimeLink listing can edit, delete, or change sessions from here.
-        </div>
-      ) : null}
+      {/** Intentionally removed the read-only banner from admin course detail view. */}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">

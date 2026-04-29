@@ -435,7 +435,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 professional,
                 resume:
                     trainerAttendanceAttachmentOnly
-                        ? null
+                        ? (application.resumeSnapshot || professional?.resume || null)
                         : isApplicationScopedView && !allowAdminFullDocumentAccess
                             ? application.resumeSnapshot || null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView
@@ -453,7 +453,15 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             : Array.isArray(application.attachedDocuments)
                                 ? application.attachedDocuments
                                 : [],
-                applicationAttachments: Array.isArray(application.attachedDocuments) ? application.attachedDocuments : [],
+                /**
+                 * IMPORTANT:
+                 * For trainer attendance views, the booking's `attachedDocuments` are the "source of truth"
+                 * and should not also be treated as "application attachments" (otherwise they render twice
+                 * in the wallet: once under APPLICATION_SUBMISSION and once under their real categories).
+                 */
+                applicationAttachments: trainerAttendanceAttachmentOnly
+                    ? []
+                    : (Array.isArray(application.attachedDocuments) ? application.attachedDocuments : []),
                 cvUrl:
                     trainerAttendanceAttachmentOnly
                         ? null
@@ -475,7 +483,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                 professional: source.professional,
                 resume:
                     trainerAttendanceAttachmentOnly
-                        ? null
+                        ? (source.resumeSnapshot || source.professional.resume || null)
                         : isApplicationScopedView && isApplicationRow && !allowAdminFullDocumentAccess
                             ? source.resumeSnapshot || null
                         : allowAdminFullDocumentAccess || !isApplicationScopedView || !isApplicationRow
@@ -490,7 +498,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                                 ? source.attachedDocuments
                                 : [],
                 applicationAttachments:
-                    isApplicationRow && Array.isArray(source.attachedDocuments) ? source.attachedDocuments : [],
+                    trainerAttendanceAttachmentOnly
+                        ? []
+                        : (isApplicationRow && Array.isArray(source.attachedDocuments) ? source.attachedDocuments : []),
                 cvUrl:
                     trainerAttendanceAttachmentOnly
                         ? null
@@ -562,6 +572,13 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             skills,
         };
     }, [professional, resume, fallback]);
+
+    const canShowResumeButton = useMemo(() => {
+        if (location.state?.fromAttendance && currentUserType === 'training-provider' && !isAdmin) {
+            return !!resume;
+        }
+        return true;
+    }, [resume, currentUserType, isAdmin, location.state]);
 
     const documentWallet = useMemo(() => {
         const applicationSubmissionDocs = [];
@@ -980,7 +997,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {(!location.pathname.includes('/trainingprovider/') || (location.state?.fromAttendance && isAdmin)) && (
+                        {canShowResumeButton && (
                             <button onClick={handleViewResume} className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <FileText className="h-5 w-5" />
                                 View Resume
