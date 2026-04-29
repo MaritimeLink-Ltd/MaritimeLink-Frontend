@@ -5,12 +5,15 @@ import {
     Bell,
     Mail,
     Save,
+    Camera,
     Building,
     MapPin,
     Calendar,
 } from 'lucide-react';
 import adminSettingsService from '../../../services/adminSettingsService';
 import adminDashboardService from '../../../services/adminDashboardService';
+
+const defaultAdminAvatar = '/images/login-image.webp';
 
 const AdminProfile = () => {
     const [activeTab, setActiveTab] = useState('general');
@@ -19,6 +22,13 @@ const AdminProfile = () => {
     const [savingPassword, setSavingPassword] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
     const [feedback, setFeedback] = useState({ type: '', message: '' });
+    const [profileImage, setProfileImage] = useState(() => {
+        try {
+            return localStorage.getItem('profileImage') || defaultAdminAvatar;
+        } catch {
+            return defaultAdminAvatar;
+        }
+    });
     const [profile, setProfile] = useState({
         displayName: 'Admin User',
         firstName: '',
@@ -56,6 +66,38 @@ const AdminProfile = () => {
             .join('') || 'A';
     }, [profile.displayName, profile.email]);
 
+    const syncStoredAdminProfile = (profilePatch = {}) => {
+        try {
+            const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+            const nextProfile = {
+                ...stored,
+                firstName: profilePatch.firstName ?? stored.firstName,
+                lastName: profilePatch.lastName ?? stored.lastName,
+                fullName: profilePatch.displayName ?? stored.fullName,
+                email: profilePatch.email ?? stored.email,
+                role: profilePatch.role ?? stored.role,
+                profilePhoto: profilePatch.profilePhotoUrl ?? stored.profilePhoto,
+                photo: profilePatch.profilePhotoUrl ?? stored.photo,
+            };
+            localStorage.setItem('userProfile', JSON.stringify(nextProfile));
+            if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
+            if (profilePatch.profilePhotoUrl !== undefined) {
+                if (profilePatch.profilePhotoUrl) {
+                    localStorage.setItem('profileImage', profilePatch.profilePhotoUrl);
+                } else {
+                    localStorage.removeItem('profileImage');
+                }
+                window.dispatchEvent(
+                    new CustomEvent('profileImageUpdated', {
+                        detail: { url: profilePatch.profilePhotoUrl || defaultAdminAvatar },
+                    }),
+                );
+            }
+        } catch (error) {
+            console.error('Failed to sync admin profile cache:', error);
+        }
+    };
+
     useEffect(() => {
         let cancelled = false;
 
@@ -79,6 +121,8 @@ const AdminProfile = () => {
                 };
                 localStorage.setItem('userProfile', JSON.stringify(nextStoredProfile));
                 if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
+                const cachedImage = localStorage.getItem('profileImage');
+                setProfileImage(cachedImage || defaultAdminAvatar);
             } catch (error) {
                 if (!cancelled) {
                     setFeedback({ type: 'error', message: error.message || 'Failed to load admin settings.' });
@@ -118,14 +162,7 @@ const AdminProfile = () => {
             const response = await adminSettingsService.updateProfile({ email: profile.email });
             const nextProfile = response?.data?.profile || profile;
             setProfile((prev) => ({ ...prev, ...nextProfile }));
-            localStorage.setItem('userProfile', JSON.stringify({
-                firstName: nextProfile.firstName || '',
-                lastName: nextProfile.lastName || '',
-                fullName: nextProfile.displayName || 'Admin User',
-                email: nextProfile.email || '',
-                role: nextProfile.role || '',
-            }));
-            if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
+            syncStoredAdminProfile(nextProfile);
             setFeedback({ type: 'success', message: response?.message || 'Admin profile updated successfully.' });
         } catch (error) {
             setFeedback({ type: 'error', message: error.message || 'Failed to update admin profile.' });
@@ -159,6 +196,52 @@ const AdminProfile = () => {
         } finally {
             setSavingPassword(false);
         }
+    };
+
+    const handleImageUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            setFeedback({
+                type: 'error',
+                message: 'Please upload a valid image file (JPEG, PNG, GIF, or WEBP).',
+            });
+            event.target.value = '';
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setFeedback({
+                type: 'error',
+                message: 'File size must be less than 5MB.',
+            });
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const nextUrl = typeof reader.result === 'string' ? reader.result : defaultAdminAvatar;
+            setProfileImage(nextUrl);
+            syncStoredAdminProfile({ profilePhotoUrl: nextUrl });
+            setFeedback({
+                type: 'success',
+                message: 'Admin profile photo updated successfully.',
+            });
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    };
+
+    const handleRemoveImage = () => {
+        setProfileImage(defaultAdminAvatar);
+        syncStoredAdminProfile({ profilePhotoUrl: null });
+        setFeedback({
+            type: 'success',
+            message: 'Admin profile photo removed successfully.',
+        });
     };
 
     return (
@@ -206,9 +289,38 @@ const AdminProfile = () => {
 
                                 <div className="flex flex-col md:flex-row gap-8">
                                     <div className="flex-shrink-0">
-                                        <div className="w-24 h-24 rounded-full border-4 border-gray-50 bg-[#0f385c] text-white flex items-center justify-center text-2xl font-bold">
-                                            {initials}
+                                        <div className="relative">
+                                            {profileImage && profileImage !== defaultAdminAvatar ? (
+                                                <img
+                                                    src={profileImage}
+                                                    alt=""
+                                                    className="w-24 h-24 rounded-full border-4 border-gray-50 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-24 h-24 rounded-full border-4 border-gray-50 bg-[#0f385c] text-white flex items-center justify-center text-2xl font-bold">
+                                                    {initials}
+                                                </div>
+                                            )}
+                                            <input
+                                                type="file"
+                                                id="admin-profile-photo-upload"
+                                                className="hidden"
+                                                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                                onChange={handleImageUpload}
+                                            />
+                                            <label
+                                                htmlFor="admin-profile-photo-upload"
+                                                className="absolute bottom-0 right-0 p-1.5 bg-white border border-gray-200 rounded-full shadow-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                                            >
+                                                <Camera className="h-4 w-4" />
+                                            </label>
                                         </div>
+                                        <button
+                                            onClick={handleRemoveImage}
+                                            className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                                        >
+                                            Remove
+                                        </button>
                                     </div>
 
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
