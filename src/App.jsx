@@ -246,6 +246,7 @@ function App() {
             <Route path="/trainingprovider/bookings/:bookingId" element={<BookingDetail />} />
             <Route path="/trainingprovider/notifications" element={<TrainingProviderNotifications />} />
             <Route path="/trainingprovider/profile" element={<TrainingProviderProfile />} />
+            <Route path="/trainingprovider/settings" element={<TrainingProviderProfile />} />
             <Route path="/trainingprovider/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/trainingprovider/cv-resume" element={<CVResume isReadOnly={true} />} />
             <Route path="/trainingprovider/chats" element={<TrainingProviderChats />} />
@@ -308,6 +309,7 @@ function App() {
             <Route path="/personal/saved-courses" element={<SavedCourses />} />
             <Route path="/personal/chats" element={<Chats />} />
             <Route path="/personal/profile" element={<Profile />} />
+            <Route path="/personal/settings" element={<Profile />} />
             <Route path="/personal/profile/change-password" element={<ChangePassword />} />
             <Route path="/personal/profile/manage-subscription" element={<ManageSubscription />} />
             <Route path="/personal/terms" element={<TermsConditions />} />
