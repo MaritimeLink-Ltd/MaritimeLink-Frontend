@@ -168,6 +168,9 @@ export const API_ENDPOINTS = {
   // Admin Endpoints
   ADMIN: {
     LOGIN: '/api/admin/login',
+    SETTINGS: '/api/admin/settings',
+    SETTINGS_PROFILE: '/api/admin/settings/profile',
+    SETTINGS_PASSWORD: '/api/admin/settings/password',
     DASHBOARD_STATS: '/api/admin/dashboard/stats',
     DASHBOARD_ACTIVITY: '/api/admin/dashboard/activity',
     DASHBOARD_ACTIVITY_REPORT: '/api/admin/dashboard/activity-report',
