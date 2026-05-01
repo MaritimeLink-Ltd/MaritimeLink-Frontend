@@ -20,6 +20,57 @@ const AUTH_STORAGE_KEYS = [
     'trainingProviderAdminVerified',
 ];
 
+/** Routes that belong to the platform super-admin app (not recruiter `/admin/*` agent UI). */
+export const SUPER_ADMIN_APP_PREFIXES = [
+    '/admin-dashboard',
+    '/admin/marketplace',
+    '/admin/sessions',
+    '/admin/accounts',
+    '/admin/companies',
+    '/admin/compliance',
+    '/admin/operations',
+    '/admin/profile',
+    '/admin/notifications',
+    '/admin/transaction-history',
+    '/admin/platform-activity',
+    '/admin/flagged-accounts',
+    '/admin/admin-chats',
+    '/admin/admin-cv-resume',
+    '/admin/create-course',
+    '/admin/candidate',
+];
+
+/**
+ * Whether the pathname is part of the super-admin app or its login screen.
+ * Used for login-route inference and layout guards.
+ */
+export function isSuperAdminAppPath(pathname) {
+    if (!pathname) return false;
+    if (pathname === '/admin/login') return true;
+    return SUPER_ADMIN_APP_PREFIXES.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+}
+
+/**
+ * Super-admin **content** routes only (excludes `/admin/login`). Use for session checks on layout.
+ */
+export function isSuperAdminProtectedPath(pathname) {
+    if (!pathname || pathname === '/admin/login') return false;
+    return SUPER_ADMIN_APP_PREFIXES.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+}
+
+/** localStorage says the current tab is a platform admin session. */
+export function isPlatformAdminSession() {
+    if (typeof window === 'undefined') return false;
+    return (
+        localStorage.getItem('userType') === 'admin' ||
+        localStorage.getItem('adminUserType') === 'admin'
+    );
+}
+
 const PUBLIC_PATH_PREFIXES = [
     '/',
     '/signin',
@@ -108,7 +159,7 @@ export function getLoginRouteFromStorage(pathname = typeof window !== 'undefined
             return '/training-provider/login';
         }
 
-        if (pathname === '/admin/login' || pathname.startsWith('/admin-dashboard') || pathname.startsWith('/admin/marketplace') || pathname.startsWith('/admin/sessions') || pathname.startsWith('/admin/accounts') || pathname.startsWith('/admin/companies') || pathname.startsWith('/admin/compliance') || pathname.startsWith('/admin/operations') || pathname.startsWith('/admin/profile') || pathname.startsWith('/admin/notifications') || pathname.startsWith('/admin/transaction-history') || pathname.startsWith('/admin/platform-activity') || pathname.startsWith('/admin/flagged-accounts')) {
+        if (isSuperAdminAppPath(pathname)) {
             return '/admin/login';
         }
     }

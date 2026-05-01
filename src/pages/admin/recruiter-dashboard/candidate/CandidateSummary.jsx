@@ -536,6 +536,9 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             location.state?.jobData?.adminId
         );
 
+    // Admin can message only MaritimeLink (admin-created) job applicants and MaritimeLink course attendees (admin course bookings mode).
+    const adminMessagingAllowed = !isAdmin || adminCreatedJobApplicationView || Boolean(location.state?.adminCourseBookingsMode);
+
     /** Job applicant flow: recruiters see only application-submitted files; admin-created jobs can still expose the full document set. */
     const walletJobApplicationOnly =
         (!!location.state?.fromJobDetail || showApplicationStatus === true) &&
@@ -1009,19 +1012,22 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             View Document Wallet
                         </button>
 
-                        <button
-                            onClick={() => onMessage
-                                ? onMessage(candidateId, candidate.name)
-                                : navigate(
-                                    location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' : (isAdmin ? '/admin/admin-chats' : '/admin/chats'),
-                                    { state: { candidateId, candidateName: candidate.name } },
-                                )
-                            }
-                            className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
-                        >
-                            <MessageSquare className="h-5 w-5" />
-                            Message {candidate.name}
-                        </button>
+                        {adminMessagingAllowed ? (
+                            <button
+                                type="button"
+                                onClick={() => onMessage
+                                    ? onMessage((professional?.id || professional?.professionalId || candidateId), candidate.name)
+                                    : navigate(
+                                        location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' : (isAdmin ? '/admin/admin-chats' : '/admin/chats'),
+                                        { state: { candidateId: (professional?.id || professional?.professionalId || candidateId), candidateName: candidate.name } },
+                                    )
+                                }
+                                className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
+                            >
+                                <MessageSquare className="h-5 w-5" />
+                                Message {candidate.name}
+                            </button>
+                        ) : null}
                     </div>
                 </div>
 

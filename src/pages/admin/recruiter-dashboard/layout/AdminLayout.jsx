@@ -12,6 +12,7 @@ import {
     X,
     LogOut
 } from 'lucide-react';
+import authService from '../../../../services/authService';
 
 function AdminLayout() {
     const location = useLocation();
@@ -84,11 +85,8 @@ function AdminLayout() {
     };
 
     const handleLogoutConfirm = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('adminUserType');
-        // Navigate to landing page
+        authService.logout();
+        setShowLogoutModal(false);
         navigate('/');
     };
 

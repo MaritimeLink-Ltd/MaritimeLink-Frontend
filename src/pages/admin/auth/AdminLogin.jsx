@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
 
 function AdminLogin() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const sessionHint =
+        typeof location.state?.sessionMismatch === 'string'
+            ? location.state.sessionMismatch
+            : '';
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -76,8 +81,15 @@ function AdminLogin() {
                     {/* Heading */}
                     <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Login</h1>
 
-                    {/* Error Message */}
-                    {error && (
+            {/* Redirect hint (e.g. recruiter session opened a super-admin URL) */}
+            {sessionHint && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-sm text-amber-800">{sessionHint}</p>
+                </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-sm text-red-600 flex items-center gap-2">
                                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">

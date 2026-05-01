@@ -89,6 +89,7 @@ import SystemJobDetail from './pages/admin/admin-dashboard/SystemJobDetail';
 import ManualActionReview from './pages/admin/admin-dashboard/ManualActionReview';
 import AdminProfile from './pages/admin/admin-dashboard/AdminProfile';
 import OversightRecruiterJobs from './pages/admin/admin-dashboard/OversightRecruiterJobs';
+import AdminDashboardChats from './pages/admin/admin-dashboard/Chats';
 
 // Personal Dashboard Layout and Pages
 import PersonalDashboardLayout from './pages/personal/dashboard/layout/PersonalDashboardLayout';
@@ -289,7 +290,7 @@ function App() {
             <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
             <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
-            <Route path="/admin/admin-chats" element={<AdminChats isAdmin={true} />} />
+            <Route path="/admin/admin-chats" element={<AdminDashboardChats />} />
             <Route path="/admin/admin-cv-resume" element={<CVResume isReadOnly={true} />} />
           </Route>
 

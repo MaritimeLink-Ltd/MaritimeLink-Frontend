@@ -1,5 +1,10 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import authService from '../../../../services/authService';
+import {
+    isSuperAdminProtectedPath,
+    isPlatformAdminSession,
+} from '../../../../utils/sessionManager';
 import {
     LayoutDashboard,
     Users,
@@ -13,11 +18,13 @@ import {
     Menu,
     X,
     ChevronDown,
-    LogOut
+    LogOut,
+    MessageSquare
 } from 'lucide-react';
 
 function AdminLayout() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [userData, setUserData] = useState({
@@ -72,12 +79,37 @@ function AdminLayout() {
         };
     }, []);
 
+    // Keep super-admin UI aligned with the JWT + role keys (e.g. after recruiter login in another tab).
+    useEffect(() => {
+        const ensureSuperAdminSession = () => {
+            const path = location.pathname;
+            if (!isSuperAdminProtectedPath(path)) return;
+            if (!localStorage.getItem('authToken')) {
+                navigate('/admin/login', { replace: true });
+                return;
+            }
+            if (!isPlatformAdminSession()) {
+                navigate('/admin/login', {
+                    replace: true,
+                    state: {
+                        sessionMismatch:
+                            'Sign in with your platform admin account to use this area.',
+                    },
+                });
+            }
+        };
+
+        ensureSuperAdminSession();
+        window.addEventListener('storage', ensureSuperAdminSession);
+        window.addEventListener('authTokenChanged', ensureSuperAdminSession);
+        return () => {
+            window.removeEventListener('storage', ensureSuperAdminSession);
+            window.removeEventListener('authTokenChanged', ensureSuperAdminSession);
+        };
+    }, [location.pathname, navigate]);
+
     const handleLogout = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('adminUserType');
-        // Navigate to landing page
+        authService.logout();
         navigate('/');
     };
 
@@ -87,7 +119,8 @@ function AdminLayout() {
         { name: 'Companies', path: '/admin/companies', icon: Building },
         { name: 'Compliance', path: '/admin/compliance', icon: FileCheck },
         { name: 'Marketplace', path: '/admin/marketplace', icon: Store },
-        { name: 'Operations', path: '/admin/operations', icon: SettingsIcon }
+        { name: 'Operations', path: '/admin/operations', icon: SettingsIcon },
+        { name: 'Chats', path: '/admin/admin-chats', icon: MessageSquare }
     ];
 
     const settingsItems = [

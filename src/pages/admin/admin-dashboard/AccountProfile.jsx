@@ -1142,12 +1142,6 @@ function AccountProfile() {
                             >
                                 Resume
                             </button>
-                            <button
-                                onClick={() => navigate('/admin/admin-chats', { state: { candidateId: id, candidateName: profileData.name } })}
-                                className="px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] transition-colors"
-                            >
-                                Message
-                            </button>
                         </div>
                     )}
                 </div>

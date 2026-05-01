@@ -218,6 +218,13 @@ export const API_ENDPOINTS = {
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
   },
+  /** Conversations — recruiter, training agent, super admin start/create thread with a professional */
+  CONVERSATIONS: {
+    LIST: '/api/conversations',
+    CREATE: '/api/conversations',
+    MESSAGES: (conversationId) => `/api/conversations/${conversationId}/messages`,
+    MARK_READ: (conversationId) => `/api/conversations/${conversationId}/read`,
+  },
   // Courses Endpoints
   COURSES: {
     CREATE: '/api/courses',

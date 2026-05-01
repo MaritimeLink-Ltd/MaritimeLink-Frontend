@@ -590,16 +590,26 @@ export default function SessionAttendance() {
                           >
                             View Profile
                           </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(isAdminAttendance ? '/admin/admin-chats' : '/trainingprovider/chats')
-                            }
-                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                            Message
-                          </button>
+                          {(!isAdminAttendance || adminCourseBookingsMode) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  isAdminAttendance ? '/admin/admin-chats' : '/trainingprovider/chats',
+                                  {
+                                    state: {
+                                      candidateId: attendee.professionalId,
+                                      candidateName: attendee.name,
+                                    },
+                                  }
+                                )
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Message
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

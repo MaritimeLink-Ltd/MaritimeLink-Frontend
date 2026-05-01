@@ -40,8 +40,27 @@ class HttpClient {
         const data = isJson ? await response.json() : await response.text();
 
         if (response.status === 401) {
-            const message = expireSessionAndRedirect();
-            const error = new Error(message);
+            const token = localStorage.getItem('authToken');
+            // Only tear down the session when the client can tell the token is gone or expired.
+            // Some APIs return 401 for "forbidden for this role" while the JWT is still valid; treating
+            // that as a global logout was logging admins out when using chat and similar endpoints.
+            const shouldInvalidateSession = !token || isAuthTokenExpired(token);
+
+            if (shouldInvalidateSession) {
+                const message = expireSessionAndRedirect();
+                const error = new Error(message);
+                error.status = 401;
+                error.data = data;
+                throw error;
+            }
+
+            const apiMessage =
+                (typeof data === 'object' && data !== null
+                    ? data.message || data.error || data.msg
+                    : null) ||
+                (typeof data === 'string' ? data : null) ||
+                'You are not authorized to perform this action.';
+            const error = new Error(apiMessage);
             error.status = 401;
             error.data = data;
             throw error;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Search,
@@ -6,110 +6,276 @@ import {
     Send,
     FileText,
     X,
-    AlertTriangle
+    AlertTriangle,
+    Loader2
 } from 'lucide-react';
 
-function AdminChats({ candidateId: propCandidateId, candidateName: propCandidateName, onViewProfile, isAdmin }) {
+import conversationService, {
+    mapConversationToChatItem,
+    mapApiMessageToChatMessage,
+    formatMessageCaptionTime,
+    CONVERSATION_MESSAGE_PAGE_SIZE,
+} from '../../../../services/conversationService';
+import { subscribeConversationMessages } from '../../../../services/socketClient';
+
+function AdminChats({ candidateId: propCandidateId, onViewProfile, isAdmin }) {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Support both props (if mounted as component) and location.state (if navigated via route)
     const candidateId = propCandidateId || location.state?.candidateId;
-    const candidateName = propCandidateName || location.state?.candidateName;
 
-    const [selectedChat, setSelectedChat] = useState(candidateId || 1);
+    const [chats, setChats] = useState([]);
+    const [selectedChat, setSelectedChat] = useState(null);
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [showReportModal, setShowReportModal] = useState(false);
     const [selectedReason, setSelectedReason] = useState('');
     const messagesEndRef = useRef(null);
-    const [messagesList, setMessagesList] = useState([
-        {
-            id: 1,
-            text: 'Hi , we are interested in your resume',
-            sent: false,
-            time: 'Yesterday 12:56pm'
-        },
-        {
-            id: 2,
-            text: 'Lets discuss more , tommorow',
-            sent: false
-        },
-        {
-            id: 3,
-            text: 'is that fine by you?',
-            sent: false
-        },
-        {
-            id: 4,
-            text: 'Hi, Thats Great',
-            sent: true
-        },
-        {
-            id: 5,
-            text: 'Yes , thats fine by me',
-            sent: true,
-            seen: true
+    const skipScrollToEndRef = useRef(false);
+    const [messagesList, setMessagesList] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+    const [historyError, setHistoryError] = useState(null);
+    const [messagesHasMore, setMessagesHasMore] = useState(false);
+    const [bootstrapLoading, setBootstrapLoading] = useState(false);
+    const [bootstrapError, setBootstrapError] = useState(null);
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState(null);
+    const [listLoading, setListLoading] = useState(true);
+    const [listError, setListError] = useState(null);
+
+    const upsertChatFromConversation = useCallback((conv) => {
+        if (!conv?.id) return;
+        setChats((prev) => {
+            const idx = prev.findIndex((c) => c.id === conv.id);
+            const prevRow = idx >= 0 ? prev[idx] : null;
+            let mergedConv = conv;
+            if (
+                prevRow?.raw &&
+                (!Array.isArray(conv.messages) || conv.messages.length === 0) &&
+                Array.isArray(prevRow.raw.messages) &&
+                prevRow.raw.messages.length > 0
+            ) {
+                mergedConv = {
+                    ...conv,
+                    messages: prevRow.raw.messages,
+                    lastMessageAt: prevRow.raw.lastMessageAt || conv.lastMessageAt,
+                };
+            }
+            const item = mapConversationToChatItem(mergedConv);
+            if (!item) return prev;
+            if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = item;
+                return next;
+            }
+            return [item, ...prev];
+        });
+        setSelectedChat(conv.id);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setListLoading(true);
+            setListError(null);
+            try {
+                const list = await conversationService.listConversations();
+                if (cancelled) return;
+                const rows = (list || []).map(mapConversationToChatItem).filter(Boolean);
+                rows.sort((a, b) => {
+                    const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
+                    const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
+                    return tb - ta;
+                });
+                setChats(rows);
+            } catch (err) {
+                if (!cancelled) {
+                    setListError(err?.message || 'Could not load conversations.');
+                }
+            } finally {
+                if (!cancelled) setListLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!candidateId) return undefined;
+
+        let cancelled = false;
+        (async () => {
+            setBootstrapError(null);
+            setBootstrapLoading(true);
+            try {
+                const conv = await conversationService.createConversation(String(candidateId));
+                if (cancelled || !conv) return;
+                upsertChatFromConversation(conv);
+            } catch (err) {
+                if (!cancelled) {
+                    setBootstrapError(err?.message || 'Could not start conversation.');
+                }
+            } finally {
+                if (!cancelled) setBootstrapLoading(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [candidateId, upsertChatFromConversation]);
+
+    useEffect(() => {
+        if (!selectedChat) return undefined;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                await conversationService.markConversationRead(selectedChat);
+                if (cancelled) return;
+                setChats((prev) =>
+                    prev.map((c) => (c.id === selectedChat ? { ...c, unread: 0 } : c))
+                );
+            } catch {
+                /* non-blocking */
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedChat]);
+
+    useEffect(() => {
+        if (!selectedChat) return undefined;
+
+        const unsubscribe = subscribeConversationMessages(selectedChat, (rawMsg) => {
+            const ui = mapApiMessageToChatMessage(rawMsg);
+            if (!ui) return;
+
+            setMessagesList((prev) => {
+                const byId = new Map();
+                [...prev, ui].forEach((m) => byId.set(m.id, m));
+                return [...byId.values()].sort(
+                    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+                );
+            });
+
+            setChats((prev) =>
+                prev.map((c) => {
+                    if (c.id !== selectedChat) return c;
+                    const nextMessages = [...(c.raw?.messages || []), rawMsg];
+                    const t = String(rawMsg.content || '').trim();
+                    const lm = t ? (t.length > 120 ? `${t.slice(0, 117)}…` : t) : c.lastMessage;
+                    return {
+                        ...c,
+                        lastMessage: lm,
+                        time: formatMessageCaptionTime(rawMsg.createdAt) || c.time,
+                        raw: {
+                            ...c.raw,
+                            messages: nextMessages,
+                            lastMessageAt: rawMsg.createdAt || c.raw?.lastMessageAt,
+                        },
+                    };
+                })
+            );
+
+            // If we received a professional message while focused, mark read.
+            const senderType = String(rawMsg.senderType || '').toUpperCase();
+            if (senderType === 'PROFESSIONAL') {
+                void conversationService.markConversationRead(selectedChat);
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedChat]);
+
+    useEffect(() => {
+        if (!selectedChat) {
+            setMessagesList([]);
+            setHistoryError(null);
+            setMessagesHasMore(false);
+            return undefined;
         }
+
+        let cancelled = false;
+        (async () => {
+            setHistoryLoading(true);
+            setHistoryError(null);
+            setMessagesHasMore(false);
+            try {
+                const { messages, hasMore } = await conversationService.getConversationMessages(
+                    selectedChat,
+                    { limit: CONVERSATION_MESSAGE_PAGE_SIZE }
+                );
+                if (cancelled) return;
+                const sorted = [...messages].sort(
+                    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+                );
+                setMessagesList(
+                    sorted.map((m) => mapApiMessageToChatMessage(m)).filter(Boolean)
+                );
+                setMessagesHasMore(!!hasMore);
+            } catch (err) {
+                if (!cancelled) {
+                    setHistoryError(err?.message || 'Could not load messages.');
+                    setMessagesList([]);
+                }
+            } finally {
+                if (!cancelled) setHistoryLoading(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedChat]);
+
+    const handleLoadOlderMessages = useCallback(async () => {
+        if (!selectedChat || historyLoadingMore || !messagesHasMore) return;
+        const oldest = messagesList[0];
+        if (!oldest?.id) return;
+
+        setHistoryLoadingMore(true);
+        setHistoryError(null);
+        skipScrollToEndRef.current = true;
+        try {
+            const { messages, hasMore } = await conversationService.getConversationMessages(
+                selectedChat,
+                { limit: CONVERSATION_MESSAGE_PAGE_SIZE, cursor: oldest.id }
+            );
+            const sorted = [...messages].sort(
+                (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+            );
+            const incoming = sorted
+                .map((m) => mapApiMessageToChatMessage(m))
+                .filter(Boolean);
+            setMessagesList((prev) => {
+                const byId = new Map();
+                [...incoming, ...prev].forEach((m) => byId.set(m.id, m));
+                return [...byId.values()].sort(
+                    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+                );
+            });
+            setMessagesHasMore(!!hasMore);
+        } catch (err) {
+            setHistoryError(err?.message || 'Could not load older messages.');
+        } finally {
+            setHistoryLoadingMore(false);
+        }
+    }, [
+        selectedChat,
+        historyLoadingMore,
+        messagesHasMore,
+        messagesList,
     ]);
 
-    const baseChats = [
-        ...(candidateId && candidateName ? [{
-            id: candidateId,
-            name: candidateName,
-            lastMessage: 'Start conversation',
-            time: 'Now',
-            unread: 0,
-            online: true
-        }] : []),
-        {
-            id: 1,
-            name: 'Ali Shahzaib',
-            lastMessage: 'Okay Thanks 🙌',
-            time: '14:57',
-            unread: 1,
-            online: true
-        },
-        {
-            id: 2,
-            name: 'Abraham',
-            lastMessage: 'okay got it',
-            time: '14:57',
-            unread: 0,
-            online: false
-        },
-        {
-            id: 3,
-            name: 'Osifo',
-            lastMessage: 'okay got it',
-            time: '14:57',
-            unread: 0,
-            online: false
-        },
-        {
-            id: 4,
-            name: 'Umair',
-            lastMessage: 'okay got it',
-            time: '14:57',
-            unread: 0,
-            online: false
-        },
-        {
-            id: 5,
-            name: 'Quddus',
-            lastMessage: 'okay got it',
-            time: '14:57',
-            unread: 0,
-            online: false
-        }
-    ];
-
-    const chats = baseChats;
-
-    // Filter chats based on search query
-    const filteredChats = chats.filter(chat =>
-        chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredChats = chats.filter(
+        (chat) =>
+            chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const scrollToBottom = () => {
@@ -127,53 +293,105 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
 
     const handleReport = () => {
         if (selectedReason) {
-            console.log('Report submitted:', { chatId: selectedChat, reason: selectedReason });
-            // Here you would send to backend
             setShowReportModal(false);
             setSelectedReason('');
-            // You could show a success message here
         }
     };
 
     useEffect(() => {
+        if (skipScrollToEndRef.current) {
+            skipScrollToEndRef.current = false;
+            return;
+        }
         scrollToBottom();
     }, [messagesList]);
 
-    const handleSendMessage = () => {
-        if (messageInput.trim()) {
-            setMessagesList([...messagesList, {
-                id: messagesList.length + 1,
-                text: messageInput,
-                sent: true,
-                time: undefined
-            }]);
-            setMessageInput('');
+    const handleSendMessage = async () => {
+        const text = messageInput.trim();
+        if (!text || !selectedChat || sending) return;
+        setSendError(null);
+        setSending(true);
+        try {
+            const raw = await conversationService.sendMessage(selectedChat, text);
+            if (raw) {
+                setMessageInput('');
+                const ui = mapApiMessageToChatMessage(raw);
+                if (ui) {
+                    setMessagesList((prev) => {
+                        const byId = new Map();
+                        [...prev, ui].forEach((m) => byId.set(m.id, m));
+                        return [...byId.values()].sort(
+                            (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+                        );
+                    });
+                }
+                setChats((prev) =>
+                    prev.map((c) => {
+                        if (c.id !== selectedChat) return c;
+                        const nextMessages = [...(c.raw?.messages || []), raw];
+                        const lm = text.length > 120 ? `${text.slice(0, 117)}…` : text;
+                        return {
+                            ...c,
+                            lastMessage: lm,
+                            time: formatMessageCaptionTime(raw.createdAt) || c.time,
+                            raw: {
+                                ...c.raw,
+                                messages: nextMessages,
+                                lastMessageAt: raw.createdAt || c.raw?.lastMessageAt,
+                            },
+                        };
+                    })
+                );
+            }
+        } catch (err) {
+            setSendError(err?.message || 'Failed to send message.');
+        } finally {
+            setSending(false);
         }
     };
 
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSendMessage();
+            void handleSendMessage();
         }
     };
 
-    const currentChat = chats.find(c => c.id === selectedChat);
+    const currentChat = chats.find((c) => c.id === selectedChat);
+
+    const profilePathForProfessional = (professionalId) => {
+        if (!professionalId) return null;
+        if (isAdmin) return `/admin/candidate/${professionalId}`;
+        return `/recruiter/candidate/${professionalId}`;
+    };
+
+    const handleViewProfile = () => {
+        const pid = currentChat?.professionalId;
+        if (!pid) return;
+        if (onViewProfile) {
+            onViewProfile(pid);
+        } else {
+            const path = profilePathForProfessional(pid);
+            if (path) navigate(path);
+        }
+    };
 
     return (
         <div className="space-y-5">
-            {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
                 <p className="text-gray-500 mt-1 text-sm">Connect with professionals</p>
             </div>
 
-            {/* Chat Container */}
+            {(bootstrapError || listError) && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {bootstrapError || listError}
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 h-[calc(100vh-220px)]">
-                {/* Chat List Sidebar */}
                 <div className="lg:col-span-1 h-full">
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 h-full flex flex-col">
-                        {/* Search */}
                         <div className="relative mb-4 flex-shrink-0">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
@@ -185,17 +403,32 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
                             />
                         </div>
 
-                        {/* Chat List - Scrollable */}
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-2 -mr-2"
+                        <div
+                            className="flex-1 overflow-y-auto space-y-2 pr-2 -mr-2"
                             style={{
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#CBD5E0 transparent'
                             }}
                         >
-                            {filteredChats.length > 0 ? (
+                            {listLoading && (
+                                <div className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm">
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Loading conversations…
+                                </div>
+                            )}
+                            {!listLoading && bootstrapLoading && candidateId && (
+                                <div className="flex items-center justify-center gap-2 py-8 text-gray-500 text-sm">
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Opening conversation…
+                                </div>
+                            )}
+                            {!listLoading &&
+                                !bootstrapLoading &&
+                                filteredChats.length > 0 &&
                                 filteredChats.map((chat) => (
                                     <button
                                         key={chat.id}
+                                        type="button"
                                         onClick={() => setSelectedChat(chat.id)}
                                         className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors ${selectedChat === chat.id ? 'bg-gray-50' : ''
                                             }`}
@@ -223,118 +456,174 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
                                             <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
                                         </div>
                                     </button>
-                                ))
-                            ) : (
+                                ))}
+                            {!listLoading &&
+                                !bootstrapLoading &&
+                                filteredChats.length === 0 && (
                                 <div className="text-center py-8 text-gray-500 text-sm">
-                                    No chats found
+                                    No conversations yet. Open a candidate profile and choose Message to start.
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Chat Messages Area */}
                 <div className="lg:col-span-2 h-full">
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
-                        {/* Chat Header - Fixed */}
-                        <div className="border-b border-gray-100 p-5 flex items-center justify-between flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="relative">
-                                    <div className="w-12 h-12 bg-[#003971] rounded-xl flex items-center justify-center">
-                                        <Building2 className="h-6 w-6 text-white" />
-                                    </div>
-                                    {currentChat?.online && (
-                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                                    )}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900">{currentChat?.name}</h3>
-                                    {currentChat?.online && (
-                                        <p className="text-xs text-green-600 flex items-center gap-1">
-                                            <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                                            Online
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setShowReportModal(true)}
-                                    className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    Report
-                                </button>
-                                <button
-                                    onClick={() => onViewProfile ? onViewProfile(selectedChat) : navigate(isAdmin ? `/admin/candidate/${selectedChat}` : `/recruiter/candidate/${selectedChat}`)}
-                                    className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    View Profile
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Messages - Scrollable */}
-                        <div
-                            className="flex-1 overflow-y-auto p-5 space-y-4"
-                            style={{
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#CBD5E0 transparent',
-                                maxHeight: 'calc(100vh - 400px)',
-                                minHeight: '400px'
-                            }}
-                        >
-                            {messagesList.map((message, idx) => (
-                                <div key={message.id}>
-                                    {message.time && (
-                                        <div className="text-center mb-4">
-                                            <span className="text-xs text-gray-500">{message.time}</span>
-                                        </div>
-                                    )}
-                                    <div className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[70%] ${message.sent ? '' : ''}`}>
-                                            <div className={`px-4 py-3 rounded-2xl ${message.sent
-                                                ? 'bg-[#003971] text-white'
-                                                : 'bg-gray-100 text-gray-900'
-                                                }`}>
-                                                <p className="text-sm">{message.text}</p>
+                        {currentChat ? (
+                            <>
+                                <div className="border-b border-gray-100 p-5 flex items-center justify-between flex-shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="w-12 h-12 bg-[#003971] rounded-xl flex items-center justify-center">
+                                                <Building2 className="h-6 w-6 text-white" />
                                             </div>
-                                            {message.seen && (
-                                                <p className="text-xs text-gray-500 mt-1 text-right">Seen</p>
+                                            {currentChat?.online && (
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{currentChat?.name}</h3>
+                                            {currentChat?.online && (
+                                                <p className="text-xs text-green-600 flex items-center gap-1">
+                                                    <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                                                    Online
+                                                </p>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
 
-                        {/* Message Input - Fixed at bottom */}
-                        <div className="border-t border-gray-100 p-5 flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="text"
-                                    placeholder="Message..."
-                                    value={messageInput}
-                                    onChange={(e) => setMessageInput(e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
-                                />
-                                <button
-                                    onClick={handleSendMessage}
-                                    className="bg-[#003971] text-white p-3 rounded-full hover:bg-[#002855] transition-colors"
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowReportModal(true)}
+                                            className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm"
+                                        >
+                                            <FileText className="h-4 w-4" />
+                                            Report
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleViewProfile}
+                                            className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
+                                        >
+                                            <FileText className="h-4 w-4" />
+                                            View Profile
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className="flex-1 overflow-y-auto p-5 space-y-4"
+                                    style={{
+                                        scrollbarWidth: 'thin',
+                                        scrollbarColor: '#CBD5E0 transparent',
+                                        maxHeight: 'calc(100vh - 400px)',
+                                        minHeight: '400px'
+                                    }}
                                 >
-                                    <Send className="h-5 w-5" />
-                                </button>
+                                    {historyLoading && (
+                                        <div className="flex items-center justify-center gap-2 py-12 text-gray-500 text-sm">
+                                            <Loader2 className="h-6 w-6 animate-spin" />
+                                            Loading messages…
+                                        </div>
+                                    )}
+                                    {!historyLoading && historyError && (
+                                        <p className="text-center text-sm text-red-600 py-2">{historyError}</p>
+                                    )}
+                                    {!historyLoading && messagesHasMore && (
+                                        <div className="flex justify-center pb-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => void handleLoadOlderMessages()}
+                                                disabled={historyLoadingMore}
+                                                className="text-sm font-semibold text-[#003971] hover:text-[#002855] disabled:opacity-50 inline-flex items-center gap-2"
+                                            >
+                                                {historyLoadingMore ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                        Loading…
+                                                    </>
+                                                ) : (
+                                                    'Load older messages'
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {!historyLoading &&
+                                        messagesList.length === 0 &&
+                                        !historyError && (
+                                        <p className="text-center text-sm text-gray-400 py-8">
+                                            No messages yet.
+                                        </p>
+                                    )}
+                                    {!historyLoading &&
+                                        messagesList.map((message) => (
+                                        <div key={message.id}>
+                                            <div className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}>
+                                                <div className="max-w-[70%]">
+                                                    <div
+                                                        className={`px-4 py-3 rounded-2xl ${message.sent
+                                                            ? 'bg-[#003971] text-white'
+                                                            : 'bg-gray-100 text-gray-900'
+                                                            }`}
+                                                    >
+                                                        <p className="text-sm">{message.text}</p>
+                                                    </div>
+                                                    <p
+                                                        className={`text-[11px] text-gray-400 mt-1 ${message.sent ? 'text-right' : 'text-left'}`}
+                                                    >
+                                                        {formatMessageCaptionTime(message.createdAt)}
+                                                    </p>
+                                                    {message.seen && message.sent && (
+                                                        <p className="text-xs text-gray-500 mt-0.5 text-right">Seen</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!historyLoading && <div ref={messagesEndRef} />}
+                                </div>
+
+                                <div className="border-t border-gray-100 p-5 flex-shrink-0 space-y-2">
+                                    {sendError && (
+                                        <p className="text-sm text-red-600">{sendError}</p>
+                                    )}
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Message..."
+                                            value={messageInput}
+                                            onChange={(e) => setMessageInput(e.target.value)}
+                                            onKeyPress={handleKeyPress}
+                                            disabled={sending}
+                                            className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] disabled:opacity-60"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleSendMessage()}
+                                            disabled={sending || !messageInput.trim()}
+                                            className="bg-[#003971] text-white p-3 rounded-full hover:bg-[#002855] transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                                        >
+                                            {sending ? (
+                                                <Loader2 className="h-5 w-5 animate-spin" />
+                                            ) : (
+                                                <Send className="h-5 w-5" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-1 flex-col items-center justify-center min-h-[320px] text-gray-500 text-sm px-6 text-center">
+                                <Building2 className="h-12 w-12 text-gray-300 mb-3" />
+                                <p>Select a conversation from the list, or message a candidate from their profile.</p>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Report Modal */}
             {showReportModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
@@ -344,6 +633,7 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
                                 <h2 className="text-xl font-bold text-gray-900">Report User</h2>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => {
                                     setShowReportModal(false);
                                     setSelectedReason('');
@@ -382,6 +672,7 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
 
                         <div className="flex gap-3">
                             <button
+                                type="button"
                                 onClick={() => {
                                     setShowReportModal(false);
                                     setSelectedReason('');
@@ -391,6 +682,7 @@ function AdminChats({ candidateId: propCandidateId, candidateName: propCandidate
                                 Cancel
                             </button>
                             <button
+                                type="button"
                                 onClick={handleReport}
                                 disabled={!selectedReason}
                                 className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${selectedReason
