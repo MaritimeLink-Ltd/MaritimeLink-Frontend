@@ -5,6 +5,7 @@
 
 import { API_CONFIG } from '../config/api.config';
 import { expireSessionAndRedirect, isAuthTokenExpired } from './sessionManager';
+import { getClientIp } from './clientIp';
 
 class HttpClient {
     constructor(baseURL = API_CONFIG.BASE_URL) {
@@ -82,6 +83,7 @@ class HttpClient {
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const includeAuth = options.skipAuth !== true;
+        const clientIp = await getClientIp();
 
         const token = localStorage.getItem('authToken');
         if (includeAuth && token && isAuthTokenExpired(token)) {
@@ -96,9 +98,15 @@ class HttpClient {
         if (isFormData) {
             // For FormData, only add authorization, let browser set Content-Type with boundary
             const token = localStorage.getItem('authToken');
-            headers = includeAuth && token ? { 'Authorization': `Bearer ${token}` } : {};
+            headers = {
+                ...(includeAuth && token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(clientIp ? { 'X-Client-IP': clientIp } : {}),
+            };
         } else {
             headers = this.createHeaders(options.headers, includeAuth);
+            if (clientIp) {
+                headers['X-Client-IP'] = clientIp;
+            }
         }
 
         const controller = new AbortController();
