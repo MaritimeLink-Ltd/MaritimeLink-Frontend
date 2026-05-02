@@ -1,9 +1,107 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, RefreshCw, Download, Activity as ActivityIcon, LifeBuoy, Server, ChevronDown, User, Shield, Globe, XCircle, AlertTriangle, MessageSquare, Clock, CheckCircle, Users, AlertOctagon, ChevronLeft, ChevronRight, Layers, Database, Mail, FileText, PauseCircle, PlayCircle, Store, FileCheck } from 'lucide-react';
+import adminOperationsService from '../../../services/adminOperationsService';
+
+const formatShortDateTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const datePart = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    const timePart = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    });
+    return `${datePart}\n${timePart}`;
+};
+
+const getInitials = (name) => {
+    if (!name) return 'S';
+    return String(name)
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join('') || 'S';
+};
+
+const statusClassMap = {
+    SUCCESS: 'text-green-600',
+    WARNING: 'text-orange-600',
+    FAILED: 'text-red-600',
+};
+
+const statusBadgeClassMap = {
+    SUCCESS: 'bg-green-50 text-green-700 border border-green-100',
+    WARNING: 'bg-orange-50 text-orange-700 border border-orange-100',
+    FAILED: 'bg-red-50 text-red-700 border border-red-100',
+};
+
+const mapActivityLog = (log) => {
+    const actor = log?.actor || {};
+    const meta = log?.meta || {};
+
+    return {
+        id: log?.id,
+        timestamp: formatShortDateTime(log?.timestamp),
+        timestampRaw: log?.timestamp,
+        actor: actor?.name || 'Unknown',
+        actorRole: actor?.role || actor?.actorType || 'Unknown',
+        actorAvatar: actor?.avatar || '',
+        action: log?.event || log?.action || 'Activity',
+        actionDetail: log?.description || 'No description available',
+        ipDevice: `${meta?.ip || 'Unknown'}\n${meta?.device || 'Unknown'}`,
+        status: log?.status || 'SUCCESS',
+        statusColor: statusClassMap[String(log?.status || 'SUCCESS').toUpperCase()] || 'text-gray-600',
+    };
+};
+
+const normalizeActivityStats = (stats = {}) => [
+    {
+        value: Number.isFinite(Number(stats.activitiesToday)) ? Number(stats.activitiesToday).toLocaleString('en-US') : '0',
+        label: 'Total Activities',
+        sublabel: 'Today',
+        icon: ActivityIcon,
+        iconColor: 'text-purple-500',
+        iconBg: 'bg-purple-50',
+        cardBg: 'bg-purple-50',
+    },
+    {
+        value: Number.isFinite(Number(stats.activeUsers)) ? Number(stats.activeUsers).toLocaleString('en-US') : '0',
+        label: 'Active Users',
+        sublabel: 'Online now',
+        sublabelColor: 'text-green-600',
+        icon: Globe,
+        iconColor: 'text-teal-500',
+        iconBg: 'bg-teal-50',
+        cardBg: 'bg-white',
+    },
+    {
+        value: Number.isFinite(Number(stats.failedActions)) ? Number(stats.failedActions).toLocaleString('en-US') : '0',
+        label: 'Failed Actions',
+        sublabel: 'Requires attention',
+        sublabelColor: 'text-red-600',
+        icon: XCircle,
+        iconColor: 'text-red-500',
+        iconBg: 'bg-red-50',
+        cardBg: 'bg-white',
+    },
+    {
+        value: Number.isFinite(Number(stats.securityAlerts)) ? Number(stats.securityAlerts).toLocaleString('en-US') : '0',
+        label: 'Security Alerts',
+        sublabel: 'Needs review',
+        sublabelColor: 'text-orange-600',
+        icon: Shield,
+        iconColor: 'text-orange-500',
+        iconBg: 'bg-orange-50',
+        cardBg: 'bg-white',
+    },
+];
 
 function Operations() {
-    const [activeMainTab, setActiveMainTab] = useState('Support Cases');
+    const [activeMainTab, setActiveMainTab] = useState('Activity');
     const [activeSubTab, setActiveSubTab] = useState('All Activity');
     const [activeSupportSubTab, setActiveSupportSubTab] = useState('Open');
     const [activeSystemJobSubTab, setActiveSystemJobSubTab] = useState('All');
@@ -11,6 +109,9 @@ function Operations() {
     const [timeFilter, setTimeFilter] = useState('Today');
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [activityStats, setActivityStats] = useState(normalizeActivityStats());
+    const [activityData, setActivityData] = useState([]);
+    const [activityError, setActivityError] = useState('');
 
     // New State for Search, Filter, Pagination
     const [searchQuery, setSearchQuery] = useState('');
@@ -45,15 +146,6 @@ function Operations() {
     ];
     const timeFilters = ['Today', '7 Days', '30 Days'];
 
-    // --- DATA DEFINITIONS ---
-    // Activity Stats data
-    const activityStats = [
-        { value: '24,592', label: 'Total Activities', sublabel: 'Today', icon: ActivityIcon, iconColor: 'text-purple-500', iconBg: 'bg-purple-50', cardBg: 'bg-purple-50' },
-        { value: '842', label: 'Active Users', sublabel: 'Online now', sublabelColor: 'text-green-600', icon: Globe, iconColor: 'text-teal-500', iconBg: 'bg-teal-50', cardBg: 'bg-white' },
-        { value: '142', label: 'Failed Actions', sublabel: 'Requires attention', sublabelColor: 'text-red-600', icon: XCircle, iconColor: 'text-red-500', iconBg: 'bg-red-50', cardBg: 'bg-white' },
-        { value: '5', label: 'Security Alerts', sublabel: '3 Unresolved', sublabelColor: 'text-orange-600', icon: Shield, iconColor: 'text-orange-500', iconBg: 'bg-orange-50', cardBg: 'bg-white' }
-    ];
-
     // Support Cases Stats data
     const supportStats = [
         { value: '12', label: 'Open Cases', sublabel: '+4 new today', icon: MessageSquare, iconColor: 'text-blue-500', iconBg: 'bg-blue-50', cardBg: 'bg-white' },
@@ -61,42 +153,6 @@ function Operations() {
         { value: '28', label: 'Resolved Today', sublabel: 'Target: 30', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50', cardBg: 'bg-white' },
         { value: '94%', label: 'Satisfaction', sublabel: 'Based on feedback', icon: Users, iconColor: 'text-orange-500', iconBg: 'bg-orange-50', cardBg: 'bg-white' },
         { value: '3', label: 'Overdue', sublabel: '> 48h unanswered', sublabelColor: 'text-red-600', icon: AlertOctagon, iconColor: 'text-red-500', iconBg: 'bg-red-50', cardBg: 'bg-white' }
-    ];
-
-    // Sample activity data
-    const activityData = [
-        { id: '1', timestamp: 'Oct 24\n10:42:15', actor: 'Sarah Jenkins', actorRole: 'Recruiter', actorIcon: User, action: 'Job Posted', actionDetail: 'Published new job listing "Chief Engineer"', ipDevice: '192.168.1.42\nChrome / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '2', timestamp: 'Oct 24\n10:15:00', actor: 'Mike Ross', actorRole: 'Seafarer', actorIcon: User, action: 'Profile Update', actionDetail: 'Updated certifications and sea service', ipDevice: '192.168.1.45\nSafari / iOS', status: 'Success', statusColor: 'text-green-600' },
-        { id: '3', timestamp: 'Oct 24\n10:30:55', actor: 'Admin User', actorRole: 'Super Admin', actorIcon: User, action: 'User Ban', actionDetail: 'Banned user "John Smith" for policy violation', ipDevice: '10.0.0.5\nFirefox / Mac', status: 'Success', statusColor: 'text-green-600' },
-        { id: '4', timestamp: 'Oct 24\n09:45:22', actor: 'Sarah Connor', actorRole: 'Compliance Officer', actorIcon: User, action: 'Document Verification', actionDetail: 'Manually verified "Captain License" for user #882', ipDevice: '10.0.0.12\nChrome / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '5', timestamp: 'Oct 24\n10:38:22', actor: 'System Automation', actorRole: 'System', actorIcon: Server, action: 'Auto-Expiry', actionDetail: 'Expired 9 listings exceeding duration limit', ipDevice: 'Server\nBot', status: 'Success', statusColor: 'text-green-600' },
-        { id: '6', timestamp: 'Oct 24\n04:00:00', actor: 'Backup Service', actorRole: 'System', actorIcon: Server, action: 'Database Backup', actionDetail: 'Daily incremental backup completed successfully', ipDevice: 'Server\nBot', status: 'Success', statusColor: 'text-green-600' },
-        { id: '7', timestamp: 'Oct 24\n10:35:01', actor: 'Mark Weber', actorRole: 'Seafarer', actorIcon: AlertTriangle, action: 'Login Failed', actionDetail: 'Invalid password attempt (3rd retry)', ipDevice: '45.22.19.112\nSafari / iPhone', status: 'Warning', statusColor: 'text-orange-600' },
-        { id: '8', timestamp: 'Oct 24\n10:15:12', actor: 'Unknown', actorRole: 'Guest', actorIcon: AlertTriangle, action: 'API Access', actionDetail: 'Unauthorized API access attempt blocked', ipDevice: '185.220.101.44\nCurl / Linux', status: 'Failed', statusColor: 'text-red-600' },
-        { id: '9', timestamp: 'Oct 24\n08:20:11', actor: 'Bot Net', actorRole: 'Malicious', actorIcon: Shield, action: 'DDoS Attempt', actionDetail: 'High volume traffic detected from suspect IPs', ipDevice: 'Multiple\nBotnet', status: 'Failed', statusColor: 'text-red-600' },
-        { id: '10', timestamp: 'Oct 23\n23:55:00', actor: 'Night Watch', actorRole: 'System', actorIcon: Server, action: 'Health Check', actionDetail: 'Routine system health check - All systems operational', ipDevice: 'Server\nLocal', status: 'Success', statusColor: 'text-green-600' },
-        { id: '11', timestamp: 'Oct 23\n22:15:30', actor: 'David Lee', actorRole: 'Admin', actorIcon: User, action: 'Settings Change', actionDetail: 'Updated global email notification template', ipDevice: '192.168.1.10\nEdge / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '12', timestamp: 'Oct 23\n20:42:10', actor: 'Emma Watson', actorRole: 'Recruiter', actorIcon: User, action: 'Applicant Review', actionDetail: 'Reviewed 15 applications for "Deck Cadet"', ipDevice: '172.16.0.4\nChrome / Mac', status: 'Success', statusColor: 'text-green-600' },
-        { id: '13', timestamp: 'Oct 23\n19:30:00', actor: 'System', actorRole: 'System', actorIcon: Server, action: 'Cache Clear', actionDetail: 'Automated cache clearing to free up memory', ipDevice: 'Server\nInternal', status: 'Success', statusColor: 'text-green-600' },
-        { id: '14', timestamp: 'Oct 23\n18:15:22', actor: 'Frank Castle', actorRole: 'Seafarer', actorIcon: AlertTriangle, action: 'Document Upload Failed', actionDetail: 'File size exceeded limit (25MB)', ipDevice: '203.0.113.1\nFirefox / Android', status: 'Warning', statusColor: 'text-orange-600' },
-        { id: '15', timestamp: 'Oct 23\n17:05:55', actor: 'Grace Ho', actorRole: 'Admin', actorIcon: User, action: 'User Unlock', actionDetail: 'Unlocked account for user "Mark Weber"', ipDevice: '10.0.0.8\nSafari / Mac', status: 'Success', statusColor: 'text-green-600' },
-        { id: '16', timestamp: 'Oct 23\n16:45:10', actor: 'Henry Ford', actorRole: 'Recruiter', actorIcon: User, action: 'Subscription Renewal', actionDetail: 'Renewed "Premium" plan for 1 year', ipDevice: '198.51.100.2\nChrome / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '17', timestamp: 'Oct 23\n16:00:00', actor: 'Ivy Chen', actorRole: 'Compliance', actorIcon: User, action: 'Audit Log Export', actionDetail: 'Exported quarterly audit logs for review', ipDevice: '10.0.0.15\nExcel / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '18', timestamp: 'Oct 23\n15:22:33', actor: 'Jack Ryan', actorRole: 'Seafarer', actorIcon: User, action: 'Message Sent', actionDetail: 'Sent inquiry to recruiter "Maersk Line"', ipDevice: '192.0.2.146\nApp / Android', status: 'Success', statusColor: 'text-green-600' },
-        { id: '19', timestamp: 'Oct 23\n14:10:45', actor: 'Kelly Kapowski', actorRole: 'Recruiter', actorIcon: User, action: 'Interview Scheduled', actionDetail: 'Scheduled interview with "Mike Ross"', ipDevice: '203.0.113.55\nOutlook / Mac', status: 'Success', statusColor: 'text-green-600' },
-        { id: '20', timestamp: 'Oct 23\n13:05:12', actor: 'System', actorRole: 'System', actorIcon: AlertTriangle, action: 'High Latency', actionDetail: 'Detected API latency spike > 500ms', ipDevice: 'Server\nMonitor', status: 'Warning', statusColor: 'text-orange-600' },
-        { id: '21', timestamp: 'Oct 23\n12:00:01', actor: 'Leo Di', actorRole: 'User', actorIcon: User, action: 'Password Change', actionDetail: 'Successfully changed account password', ipDevice: '198.51.100.8\nChrome / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '22', timestamp: 'Oct 23\n11:45:30', actor: 'Mia Wong', actorRole: 'Admin', actorIcon: User, action: 'Category Added', actionDetail: 'Added new job category "Offshore Drilling"', ipDevice: '10.0.0.3\nFirefox / Linux', status: 'Success', statusColor: 'text-green-600' },
-        { id: '23', timestamp: 'Oct 23\n11:15:00', actor: 'Noah Liam', actorRole: 'Seafarer', actorIcon: User, action: 'Application Withdrawn', actionDetail: 'Withdrew application for "Chief Officer"', ipDevice: '172.16.0.9\nSafari / iOS', status: 'Success', statusColor: 'text-green-600' },
-        { id: '24', timestamp: 'Oct 23\n10:30:22', actor: 'Olivia Pope', actorRole: 'Recruiter', actorIcon: AlertTriangle, action: 'Payment Failed', actionDetail: 'Credit card declined for job posting', ipDevice: '203.0.113.99\nChrome / Mac', status: 'Failed', statusColor: 'text-red-600' },
-        { id: '25', timestamp: 'Oct 23\n09:55:18', actor: 'Peter Parker', actorRole: 'Seafarer', actorIcon: User, action: 'Login Success', actionDetail: 'Logged in from new device', ipDevice: '5.5.5.5\nApp / iOS', status: 'Success', statusColor: 'text-green-600' },
-        { id: '26', timestamp: 'Oct 23\n09:00:00', actor: 'Quinn Fabray', actorRole: 'Admin', actorIcon: User, action: 'Banner Update', actionDetail: 'Updated homepage promotional banner', ipDevice: '10.0.0.7\nEdge / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '27', timestamp: 'Oct 23\n08:30:45', actor: 'Rachel Green', actorRole: 'Recruiter', actorIcon: User, action: 'Company Profile Edit', actionDetail: 'Updated company logo and description', ipDevice: '192.168.1.50\nChrome / Windows', status: 'Success', statusColor: 'text-green-600' },
-        { id: '28', timestamp: 'Oct 23\n08:00:10', actor: 'System', actorRole: 'System', actorIcon: Server, action: 'Email Queue', actionDetail: 'Processed 500 queued daily digest emails', ipDevice: 'Server\nWorker', status: 'Success', statusColor: 'text-green-600' },
-        { id: '29', timestamp: 'Oct 23\n07:45:30', actor: 'Tom Riddle', actorRole: 'Malicious', actorIcon: Shield, action: 'SQL Injection', actionDetail: 'Blocked SQL injection attempt on login', ipDevice: '1.2.3.4\nScript / Linux', status: 'Failed', statusColor: 'text-red-600' },
-        { id: '30', timestamp: 'Oct 23\n07:15:00', actor: 'Ursula', actorRole: 'Guest', actorIcon: User, action: 'Page View', actionDetail: 'Visited "About Us" page', ipDevice: '6.6.6.6\nSafari / Mac', status: 'Success', statusColor: 'text-green-600' },
-        { id: '31', timestamp: 'Oct 23\n06:30:00', actor: 'Victor Doom', actorRole: 'Admin', actorIcon: User, action: 'Maintenance Mode', actionDetail: 'Toggled maintenance mode OFF', ipDevice: '10.0.0.1\nTerminal / Linux', status: 'Success', statusColor: 'text-green-600' },
-        { id: '32', timestamp: 'Oct 23\n05:00:00', actor: 'Wanda Maximoff', actorRole: 'Seafarer', actorIcon: User, action: 'Profile View', actionDetail: 'Viewed own profile statistics', ipDevice: '192.168.1.99\nApp / Android', status: 'Success', statusColor: 'text-green-600' }
     ];
 
     // Support Cases data
@@ -169,10 +225,58 @@ function Operations() {
         if (newTab === 'Manual Actions') setActiveManualActionSubTab('Accounts');
     };
 
+    const loadActivityFeed = async () => {
+        setIsRefreshing(true);
+        setActivityError('');
+
+        try {
+            const [activityResponse, statsResponse] = await Promise.all([
+                adminOperationsService.getActivityLogs({ page: 1, limit: 200 }),
+                adminOperationsService.getSystemStats(),
+            ]);
+
+            const logs = activityResponse?.data?.logs || [];
+            setActivityData(logs.map(mapActivityLog));
+            setActivityStats(normalizeActivityStats(statsResponse?.data || {}));
+        } catch (error) {
+            console.error('Failed to load activity feed:', error);
+            setActivityData([]);
+            setActivityError(error?.message || 'Failed to load activity feed');
+            setActivityStats(normalizeActivityStats());
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeMainTab === 'Activity') {
+            void loadActivityFeed();
+        }
+    }, [activeMainTab]);
+
+    useEffect(() => {
+        if (!autoRefresh || activeMainTab !== 'Activity') {
+            return undefined;
+        }
+
+        const timer = setInterval(() => {
+            void loadActivityFeed();
+        }, 30000);
+
+        return () => clearInterval(timer);
+    }, [autoRefresh, activeMainTab]);
+
     // Helper function to parse time strings and get days ago
     const getDaysAgo = (timeStr) => {
         const str = timeStr?.toLowerCase() || '';
         let daysAgo = 0;
+
+        const parsedDate = new Date(timeStr);
+        if (!Number.isNaN(parsedDate.getTime())) {
+            const diffMs = Date.now() - parsedDate.getTime();
+            if (diffMs <= 0) return 0;
+            return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        }
 
         if (str.includes('min')) {
             daysAgo = 0;
@@ -197,7 +301,7 @@ function Operations() {
         if (timeFilter === '30 Days') return true;
 
         // For Activity - use timestamp
-        const timeField = item.timestamp || item.opened || '';
+        const timeField = item.timestampRaw || item.timestamp || item.opened || '';
         const daysAgo = getDaysAgo(timeField);
 
         if (timeFilter === 'Today') {
@@ -225,9 +329,9 @@ function Operations() {
                 // Subtab Filtering Logic
                 let matchesSubTab = true;
                 if (activeSubTab === 'User Actions') {
-                    matchesSubTab = ['Recruiter', 'Seafarer', 'User', 'Guest'].includes(item.actorRole);
+                    matchesSubTab = ['Recruiter', 'Recruitment Agent', 'Training Agent', 'Professional', 'Seafarer', 'User', 'Guest'].includes(item.actorRole);
                 } else if (activeSubTab === 'Admin Actions') {
-                    matchesSubTab = ['Admin', 'Super Admin', 'Compliance Officer', 'Compliance', 'Manager'].includes(item.actorRole);
+                    matchesSubTab = ['Admin', 'Super Admin', 'Moderator', 'Compliance Officer', 'Compliance', 'Manager'].includes(item.actorRole);
                 } else if (activeSubTab === 'System Actions') {
                     matchesSubTab = ['System'].includes(item.actorRole);
                 } else if (activeSubTab === 'Security') {
@@ -285,6 +389,15 @@ function Operations() {
     const paginatedData = displayData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleRefresh = () => {
+        if (activeMainTab === 'Activity') {
+            void loadActivityFeed();
+            setSearchQuery('');
+            setFilterStatus('All');
+            setCurrentPage(1);
+            setActiveSubTab('All Activity');
+            return;
+        }
+
         setIsRefreshing(true);
         setTimeout(() => setIsRefreshing(false), 1000);
 
@@ -296,7 +409,6 @@ function Operations() {
         setCurrentPage(1);
 
         // Reset Logic dependent on active tab
-        if (activeMainTab === 'Activity') setActiveSubTab('All Activity');
         if (activeMainTab === 'Support Cases') setActiveSupportSubTab('Open');
         if (activeMainTab === 'System Jobs') setActiveSystemJobSubTab('All');
         if (activeMainTab === 'Manual Actions') setActiveManualActionSubTab('Accounts');
@@ -357,7 +469,7 @@ function Operations() {
                     {mainTabs.map((tab) => (
                         <button
                             key={tab.name}
-                            onClick={() => setActiveMainTab(tab.name)}
+                            onClick={() => handleTabChange(tab.name)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeMainTab === tab.name
                                 ? 'bg-[#003971] text-white'
                                 : 'text-gray-600 hover:bg-gray-100'
@@ -534,6 +646,11 @@ function Operations() {
                                 </button>
                             </div>
                         </div>
+                        {activityError && (
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {activityError}
+                            </div>
+                        )}
                     </div>
 
                     {/* Table - Scrollable Content */}
@@ -572,7 +689,17 @@ function Operations() {
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <record.actorIcon className="h-4 w-4 text-gray-400" />
+                                                    {record.actorAvatar ? (
+                                                        <img
+                                                            src={record.actorAvatar}
+                                                            alt={record.actor}
+                                                            className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-8 w-8 rounded-full bg-[#1e5a8f] text-white flex items-center justify-center text-xs font-semibold">
+                                                            {getInitials(record.actor)}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <div className="text-sm font-semibold text-gray-900">{record.actor}</div>
                                                         <div className="text-xs text-gray-500">{record.actorRole}</div>
@@ -589,7 +716,7 @@ function Operations() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${record.statusColor}`}>
+                                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${statusBadgeClassMap[String(record.status || '').toUpperCase()] || 'bg-gray-50 text-gray-700 border border-gray-100'}`}>
                                                     {record.status}
                                                 </span>
                                             </td>

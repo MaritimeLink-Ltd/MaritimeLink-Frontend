@@ -185,6 +185,9 @@ export const API_ENDPOINTS = {
     DASHBOARD_QUEUES: '/api/admin/dashboard/queues',
     DASHBOARD_TRANSACTIONS: '/api/admin/dashboard/transactions',
     DASHBOARD_NOTIFICATIONS: '/api/admin/dashboard/notifications',
+    OPERATIONS_ACTIVITY: '/api/admin/operations/activity',
+    OPERATIONS_ACTIVITY_DETAIL: (id) => `/api/admin/operations/activity/${id}`,
+    OPERATIONS_STATS: '/api/admin/operations/stats',
     /** Aggregated marketplace / training revenue, fees, and payouts */
     REVENUE: '/api/admin/revenue',
     RECRUITERS: '/api/admin/recruiters',
