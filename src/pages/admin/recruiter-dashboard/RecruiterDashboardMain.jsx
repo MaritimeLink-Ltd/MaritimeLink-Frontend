@@ -75,7 +75,6 @@ const RecruiterDashboardMain = () => {
             return <AdminChats
                 candidateId={messagingCandidate.id}
                 candidateName={messagingCandidate.name}
-                onViewProfile={(candidateId) => setViewingCandidate({ id: candidateId, fromJobApplicants: false })}
             />;
         }
 
@@ -118,7 +117,6 @@ const RecruiterDashboardMain = () => {
                 return <AdminChats
                     candidateId={null}
                     candidateName={null}
-                    onViewProfile={(candidateId) => setViewingCandidate({ id: candidateId, fromJobApplicants: false })}
                 />;
             case 'settings':
                 return <AdminSettings />;

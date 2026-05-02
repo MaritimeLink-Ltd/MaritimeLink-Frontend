@@ -1,7 +1,7 @@
 import AdminChats from '../recruiter-dashboard/chats/AdminChats';
 
 function Chats() {
-    return <AdminChats isAdmin />;
+    return <AdminChats />;
 }
 
 export default Chats;

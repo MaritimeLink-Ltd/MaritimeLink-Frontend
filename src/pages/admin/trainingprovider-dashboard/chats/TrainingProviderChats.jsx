@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
     Search,
     Building2,
@@ -18,8 +18,7 @@ import conversationService, {
 } from '../../../../services/conversationService';
 import { subscribeConversationMessages } from '../../../../services/socketClient';
 
-function TrainingProviderChats({ candidateId: propCandidateId, onViewProfile }) {
-    const navigate = useNavigate();
+function TrainingProviderChats({ candidateId: propCandidateId }) {
     const location = useLocation();
 
     const candidateId = propCandidateId || location.state?.candidateId;
@@ -358,16 +357,6 @@ function TrainingProviderChats({ candidateId: propCandidateId, onViewProfile }) 
 
     const currentChat = chats.find((c) => c.id === selectedChat);
 
-    const handleViewProfile = () => {
-        const pid = currentChat?.professionalId;
-        if (!pid) return;
-        if (onViewProfile) {
-            onViewProfile(pid);
-        } else {
-            navigate(`/trainingprovider/candidate/${pid}`);
-        }
-    };
-
     return (
         <div className="space-y-5">
             <div>
@@ -493,14 +482,6 @@ function TrainingProviderChats({ candidateId: propCandidateId, onViewProfile }) 
                                         >
                                             <FileText className="h-4 w-4" />
                                             Report
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleViewProfile}
-                                            className="bg-[#003971] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors flex items-center gap-2"
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            View Profile
                                         </button>
                                     </div>
                                 </div>
