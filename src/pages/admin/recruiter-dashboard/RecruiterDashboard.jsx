@@ -65,6 +65,55 @@ function formatStatsPeriodLabel(timeFilter, customFrom, customTo) {
     return 'Custom range';
 }
 
+function readRecruiterDashboardHeaderUser() {
+    try {
+        const raw = localStorage.getItem('userProfile');
+        const savedPhoto = localStorage.getItem('profileImage');
+        const userEmail = localStorage.getItem('userEmail') || '';
+        const profile = raw ? JSON.parse(raw) : {};
+        const firstName = String(profile.firstName || '').trim();
+        const lastName = String(profile.lastName || '').trim();
+        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() ||
+            String(profile.fullName || profile.name || '').trim();
+        const email = profile.email || userEmail;
+        const organizationName = String(profile.organizationName || profile.companyName || '').trim();
+        const welcomeName =
+            firstName ||
+            (fullName ? fullName.split(/\s+/)[0] : '') ||
+            (email ? email.split('@')[0] : '');
+        return {
+            welcomeLine: welcomeName ? `Welcome back, ${welcomeName}` : 'Welcome back',
+            dateLabel: new Date().toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+            }),
+            displayName: fullName || email || 'Recruiter',
+            avatarUrl:
+                savedPhoto ||
+                profile.profilePhoto ||
+                profile.profilePhotoUrl ||
+                profile.photo ||
+                null,
+            subtitle: organizationName || 'Recruiter',
+        };
+    } catch {
+        return {
+            welcomeLine: 'Welcome back',
+            dateLabel: new Date().toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+            }),
+            displayName: 'Recruiter',
+            avatarUrl: null,
+            subtitle: 'Recruiter',
+        };
+    }
+}
+
 function actionItemButtonLabel(action) {
     const a = (action || '').toUpperCase();
     if (a === 'VIEW_APPLICANTS') return 'Review applicants';
@@ -112,11 +161,10 @@ function RecruiterDashboard({ onNavigate }) {
     const [customRangeDraft, setCustomRangeDraft] = useState(initialCustom);
     const [statsError, setStatsError] = useState(null);
     const [jobsError, setJobsError] = useState(null);
-    const [popularSearchesList, setPopularSearchesList] = useState([]);
-    const [popularSearchesError, setPopularSearchesError] = useState(null);
     const [actionItemsList, setActionItemsList] = useState([]);
     const [actionItemsError, setActionItemsError] = useState(null);
     const [actionItemsLoading, setActionItemsLoading] = useState(false);
+    const [headerUser, setHeaderUser] = useState(() => readRecruiterDashboardHeaderUser());
 
     // Remote data states
     const [realJobs, setRealJobs] = useState([]);
@@ -157,13 +205,24 @@ function RecruiterDashboard({ onNavigate }) {
         },
     } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
 
+    useEffect(() => {
+        const syncHeaderUser = () => setHeaderUser(readRecruiterDashboardHeaderUser());
+        window.addEventListener('storage', syncHeaderUser);
+        window.addEventListener('profileUpdated', syncHeaderUser);
+        window.addEventListener('profileImageUpdated', syncHeaderUser);
+        return () => {
+            window.removeEventListener('storage', syncHeaderUser);
+            window.removeEventListener('profileUpdated', syncHeaderUser);
+            window.removeEventListener('profileImageUpdated', syncHeaderUser);
+        };
+    }, []);
+
     const loadDashboardData = useCallback(async () => {
         if (!hasFullAccess) return;
         setIsRefreshing(true);
         setActionItemsLoading(true);
         setStatsError(null);
         setJobsError(null);
-        setPopularSearchesError(null);
         setActionItemsError(null);
         try {
             const statsQuery = getStatsQueryOptions(
@@ -216,8 +275,6 @@ function RecruiterDashboard({ onNavigate }) {
                 );
                 setActionItemsList([]);
             }
-            setPopularSearchesList([]);
-            setPopularSearchesError(null);
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
@@ -342,15 +399,6 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    const handlePopularSearchClick = (searchTerm) => {
-        if (!searchTerm) return;
-        if (onNavigate) {
-            onNavigate('search');
-        } else {
-            navigate('/recruiter/search', { state: { searchQuery: searchTerm } });
-        }
-    };
-
     const isPreKyc = !kycStatus || kycStatus === 'pending' || kycStatus === 'rejected' || kycStatus === 'skipped';
 
     const renderKycGate = () => {
@@ -402,7 +450,8 @@ function RecruiterDashboard({ onNavigate }) {
                 <div>
                     <h1 className="text-[32px] font-bold text-gray-900 mb-1">Dashboard</h1>
                     <p className="text-gray-600 text-sm">
-                        Welcome back, John <span className="text-gray-400">Sunday, January 11, 2026</span>
+                        {headerUser.welcomeLine}{' '}
+                        <span className="text-gray-400">{headerUser.dateLabel}</span>
                     </p>
                 </div>
 
