@@ -18,10 +18,6 @@ class RecruiterSettingsService {
         return httpClient.patch(API_ENDPOINTS.RECRUITER.SETTINGS_NOTIFICATIONS, payload);
     }
 
-    async getBilling() {
-        return httpClient.get(API_ENDPOINTS.RECRUITER.SETTINGS_BILLING);
-    }
-
     async uploadProfilePhoto(file) {
         const formData = new FormData();
         formData.append('photo', file);

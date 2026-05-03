@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { jsPDF } from 'jspdf';
 import {
     User,
     Building2,
     Shield,
     Bell,
-    CreditCard,
     Camera,
     Mail,
     Phone,
@@ -13,8 +11,6 @@ import {
     Globe,
     Linkedin,
     MapPin,
-    Check,
-    Download,
     Smartphone,
     Monitor
 } from 'lucide-react';
@@ -45,16 +41,6 @@ function AdminSettings() {
     const [savingCompany, setSavingCompany] = useState(false);
     const [savingNotifications, setSavingNotifications] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
-    const [billingLoading, setBillingLoading] = useState(true);
-    const [billingData, setBillingData] = useState({
-        currentPlan: 'Free',
-        amount: 0,
-        currency: 'USD',
-        billingCycle: 'monthly',
-        features: [],
-        canUpgrade: false,
-        stripeOnboardingComplete: false
-    });
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackType, setFeedbackType] = useState('success');
     const [hasChanges, setHasChanges] = useState(false);
@@ -111,13 +97,9 @@ function AdminSettings() {
 
         const loadSettings = async () => {
             setProfileLoading(true);
-            setBillingLoading(true);
             setFeedbackMessage('');
             try {
-                const [settingsResponse, billingResponse] = await Promise.all([
-                    recruiterSettingsService.getSettings(),
-                    recruiterSettingsService.getBilling(),
-                ]);
+                const settingsResponse = await recruiterSettingsService.getSettings();
 
                 if (cancelled) return;
 
@@ -125,7 +107,6 @@ function AdminSettings() {
                 const profile = settingsData.profile || {};
                 const company = settingsData.company || {};
                 const notificationsData = settingsData.notifications || {};
-                const billing = billingResponse?.data?.billing || settingsData.billing || {};
 
                 setProfileData({
                     firstName: profile.firstName || '',
@@ -155,15 +136,6 @@ function AdminSettings() {
                     desktopSounds: notificationsData.desktopSounds ?? true,
                     urgentAlerts: notificationsData.urgentAlerts ?? true,
                 });
-                setBillingData({
-                    currentPlan: billing.currentPlan || 'Free',
-                    amount: billing.amount || 0,
-                    currency: billing.currency || 'USD',
-                    billingCycle: billing.billingCycle || 'monthly',
-                    features: billing.features || [],
-                    canUpgrade: Boolean(billing.canUpgrade),
-                    stripeOnboardingComplete: Boolean(billing.stripeOnboardingComplete),
-                });
             } catch (error) {
                 if (!cancelled) {
                     setFeedbackType('error');
@@ -172,7 +144,6 @@ function AdminSettings() {
             } finally {
                 if (!cancelled) {
                     setProfileLoading(false);
-                    setBillingLoading(false);
                 }
             }
         };
@@ -253,58 +224,6 @@ function AdminSettings() {
         } finally {
             setSavingCompany(false);
         }
-    };
-
-    // Handle invoice download
-    const handleDownloadInvoice = () => {
-        const doc = new jsPDF();
-
-        // Add content to PDF
-        doc.setFontSize(20);
-        doc.text('INVOICE', 105, 20, { align: 'center' });
-
-        doc.setFontSize(12);
-        doc.text('MaritimeLink', 20, 40);
-        doc.text('Invoice #: INV-2026-001', 20, 50);
-        doc.text('Date: February 4, 2026', 20, 60);
-        doc.text('Due Date: March 4, 2026', 20, 70);
-
-        doc.setFontSize(14);
-        doc.text('Bill To:', 20, 90);
-        doc.setFontSize(11);
-        doc.text('Company Name: Musharof Recruiting Agency', 20, 100);
-        doc.text('Email: recruiter@example.com', 20, 110);
-
-        doc.setFontSize(14);
-        doc.text('Invoice Details:', 20, 130);
-
-        // Table header
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('Description', 20, 145);
-        doc.text('Amount', 160, 145);
-
-        // Table content
-        doc.setFont(undefined, 'normal');
-        doc.text('Professional Plan - Monthly', 20, 155);
-        doc.text('$99.00', 160, 155);
-
-        doc.text('Priority Support', 20, 165);
-        doc.text('$29.00', 160, 165);
-
-        // Total
-        doc.line(20, 175, 190, 175);
-        doc.setFont(undefined, 'bold');
-        doc.text('Total:', 20, 185);
-        doc.text('$128.00', 160, 185);
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text('Thank you for your business!', 105, 250, { align: 'center' });
-        doc.text('For questions, contact support@maritimelink.com', 105, 260, { align: 'center' });
-
-        // Save PDF
-        doc.save(`invoice_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
     // Handle password update
@@ -439,7 +358,6 @@ function AdminSettings() {
 
     const preferenceSections = [
         { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'billing', label: 'Billing & Plans', icon: CreditCard }
     ];
 
     return (
@@ -776,67 +694,6 @@ function AdminSettings() {
                             </div>
                         )}
 
-                        {/* Billing & Plans Section */}
-                        {activeSection === 'billing' && (
-                            <div>
-                                {/* Header */}
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-gray-900">Current Plan</h2>
-                                        <p className="text-sm text-gray-500 mt-0.5">Manage your subscription and billing details</p>
-                                    </div>
-                                    <span className="text-[#003971] font-bold text-sm">
-                                        {billingData.currentPlan} Plan
-                                    </span>
-                                </div>
-
-                                {/* Plan Card */}
-                                <div className="border border-gray-200 rounded-2xl p-4">
-                                    {/* Price */}
-                                    <div className="mb-4">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-bold text-gray-900">
-                                                {billingLoading ? '...' : `$${billingData.amount}`}
-                                            </span>
-                                            <span className="text-gray-500">/{billingData.billingCycle}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Features */}
-                                    <div className="space-y-3 mb-4">
-                                        {billingData.features.map((feature) => (
-                                            <div key={feature} className="flex items-center gap-3">
-                                                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                                    <Check className="h-3 w-3 text-green-600" />
-                                                </div>
-                                                <span className="text-sm text-gray-700">{feature}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Buttons */}
-                                    <div className="flex items-center gap-3">
-                                        {!billingData.canUpgrade ? (
-                                            <span className="px-5 py-2.5 rounded-xl font-bold text-sm bg-green-50 text-green-600 border border-green-200">
-                                                Current Plan
-                                            </span>
-                                        ) : (
-                                            <span className="px-5 py-2.5 rounded-xl font-bold text-sm bg-blue-50 text-[#003971] border border-blue-200">
-                                                Upgrade via support
-                                            </span>
-                                        )}
-                                        <button
-                                            onClick={handleDownloadInvoice}
-                                            className="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                                        >
-                                            <Download className="h-4 w-4" />
-                                            Download Invoice
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {/* Security Section */}
                         {activeSection === 'security' && (
                             <>
@@ -1053,7 +910,7 @@ function AdminSettings() {
                         )}
 
                         {/* Placeholder for other sections */}
-                        {activeSection !== 'my-profile' && activeSection !== 'company-profile' && activeSection !== 'billing' && activeSection !== 'security' && activeSection !== 'notifications' && (
+                        {activeSection !== 'my-profile' && activeSection !== 'company-profile' && activeSection !== 'security' && activeSection !== 'notifications' && (
                             <div className="text-center py-12">
                                 <h2 className="text-lg font-bold text-gray-900 mb-2">
                                     {accountSections.find(s => s.id === activeSection)?.label ||
