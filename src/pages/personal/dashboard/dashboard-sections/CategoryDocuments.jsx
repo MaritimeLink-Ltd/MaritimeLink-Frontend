@@ -4,6 +4,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
+import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
@@ -30,7 +31,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     // Map frontend IDs to backend ENUM strings if needed
     const categoryMap = {
         'licenses': 'LICENSES_ENDORSEMENTS',
-        'stcw': 'LICENSES_ENDORSEMENTS',
+        'stcw': 'STCW_CERTIFICATES',
         'medical': 'MEDICAL_CERTIFICATES',
         'seaman': 'SEAMANS_BOOK',
         'travel': 'TRAVEL_DOCUMENTS',
@@ -58,8 +59,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
             const formattedDocs = docs.map(doc => ({
                 ...doc,
-                // fallback properties if backend doesn't provide them yet
-                status: { label: 'PENDING', color: 'bg-yellow-500' }, 
+                status: getDocumentStatusMeta(doc),
                 expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
                 type: category?.title || 'Document'
             }));
@@ -179,13 +179,13 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
         return documents.filter(doc => {
             switch (activeFilter) {
                 case 'Compliance Ready':
-                    return doc.status.label === 'VALID';
+                    return doc.status?.key === 'ready';
                 case 'Pending Approval':
-                    return doc.status.label === 'PENDING';
+                    return doc.status?.key === 'pending' || doc.status?.key === 'mismatch' || doc.status?.key === 'ocr-failed';
                 case 'Expiring Soon':
-                    return doc.status.label === 'EXPIRING';
+                    return doc.status?.key === 'expiring';
                 case 'Expired':
-                    return doc.status.label === 'EXPIRED';
+                    return doc.status?.key === 'expired';
                 default:
                     return true;
             }

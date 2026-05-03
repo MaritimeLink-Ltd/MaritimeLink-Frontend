@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
+import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
     const fileInputRef = useRef(null);
@@ -314,8 +315,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                 title: finalDoc?.name || formData.certificateName,
                 type: activeTab,
                 image: finalDoc?.fileUrl || localPreviewUrl,
-                status: 'Pending Approval',
-                statusColor: 'bg-yellow-500',
+                status: getDocumentStatusMeta(finalDoc || {}),
             };
 
             // Reset all state so user can upload another document
