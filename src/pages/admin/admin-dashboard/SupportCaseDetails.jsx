@@ -1,20 +1,113 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, User, Clock, RefreshCw, Lock, Paperclip, AlertTriangle, Send, CheckCircle, X } from 'lucide-react';
+import {
+    ArrowLeft,
+    Mail,
+    Phone,
+    User,
+    Clock,
+    RefreshCw,
+    Paperclip,
+    AlertTriangle,
+    Send,
+    CheckCircle,
+    X,
+    Shield,
+    MessageSquare,
+    FileText,
+    Loader2,
+} from 'lucide-react';
+import adminOperationsService from '../../../services/adminOperationsService';
+import { parseJwtPayload } from '../../../utils/sessionManager';
+
+const formatDateTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    });
+};
+
+const formatRelativeTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    const diff = Date.now() - date.getTime();
+    const minutes = Math.max(0, Math.floor(diff / (60 * 1000)));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+};
+
+const getInitials = (name) => {
+    if (!name) return 'SC';
+    return String(name)
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase())
+        .join('') || 'SC';
+};
+
+const getCurrentAdminId = () => {
+    if (typeof window === 'undefined') return null;
+    const payload = parseJwtPayload(localStorage.getItem('authToken'));
+    if (!payload || typeof payload !== 'object') return null;
+    return payload.adminId || payload.admin_id || payload.id || payload.userId || payload.sub || null;
+};
 
 function SupportCaseDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Reply to User');
     const [replyText, setReplyText] = useState('');
-    const [activeModal, setActiveModal] = useState(null); // 'assign', 'resolve', 'close', 'report'
+    const [activeModal, setActiveModal] = useState(null);
+    const [caseData, setCaseData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [feedback, setFeedback] = useState('');
+    const conversationEndRef = useRef(null);
+    const replyTabs = ['Reply to User', 'Internal Note'];
 
-    // Button States
-    const [isAssigned, setIsAssigned] = useState(false);
-    const [isResolved, setIsResolved] = useState(false);
-    const [isClosed, setIsClosed] = useState(false);
+    const currentAdminId = useMemo(() => getCurrentAdminId(), []);
 
-    const handleAction = (type) => {
+    const loadCase = async () => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await adminOperationsService.getSupportCaseById(id);
+            setCaseData(response?.data?.case || null);
+        } catch (err) {
+            console.error('Failed to load support case:', err);
+            setError(err?.message || 'Failed to load support case');
+            setCaseData(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadCase();
+    }, [id]);
+
+    useEffect(() => {
+        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [caseData?.notes?.length]);
+
+    const openModal = (type) => {
         setActiveModal(type);
     };
 
@@ -22,131 +115,137 @@ function SupportCaseDetails() {
         setActiveModal(null);
     };
 
-    const confirmAction = () => {
-        // Here you would implement the actual API call
-        console.log(`Confirmed action: ${activeModal}`);
+    const caseStatus = String(caseData?.status || 'OPEN').toUpperCase();
+    const assignedToId = caseData?.assignedTo?.id || caseData?.assignedToId || null;
+    const isAssignedToMe = Boolean(currentAdminId && assignedToId && String(assignedToId) === String(currentAdminId));
+    const user = caseData?.user || null;
+    const notes = Array.isArray(caseData?.notes) ? caseData.notes : [];
+    const publicReplies = notes.filter((note) => !note.isInternal);
+    const internalNotes = notes.filter((note) => note.isInternal);
 
-        // Update local state based on action
-        if (activeModal === 'assign') {
-            setIsAssigned(true);
-        } else if (activeModal === 'resolve') {
-            setIsResolved(true);
-        } else if (activeModal === 'close') {
-            setIsClosed(true);
-        }
+    const confirmAction = async () => {
+        if (!activeModal || saving) return;
 
-        closeModal();
-    };
+        setSaving(true);
+        setError('');
+        setFeedback('');
 
-    // Sample case detail data (in real app, this would be fetched based on id)
-    const [caseData, setCaseData] = useState({
-        id: `#${id}`,
-        user: {
-            id: '1',
-            name: 'Mark Bennett',
-            role: 'SEAFARER',
-            email: 'mark.bennett@email.co',
-            phone: '+1 (555) 123-4567',
-            avatar: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect fill="%23E5E7EB" width="56" height="56" rx="28"/><text x="50%" y="50%" dy=".35em" fill="%239CA3AF" font-family="Arial" font-size="20" text-anchor="middle">MB</text></svg>'
-        },
-        caseDetails: {
-            subject: 'Account Access Problem - Password Reset Loop',
-            priority: 'High',
-            priorityColor: 'text-red-500',
-            category: 'Account Access',
-            assignedTo: {
-                name: 'James T.',
-                avatar: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect fill="%23003971" width="24" height="24" rx="12"/><text x="50%" y="50%" dy=".35em" fill="white" font-family="Arial" font-size="10" text-anchor="middle">JT</text></svg>'
-            },
-            createdAt: '14 mins ago',
-            updatedAt: '2 mins ago'
-        },
-        internalNotes: [
-            {
-                id: 1,
-                content: 'User has had multiple login issues previously. Suspected device compatibility issue.',
-                author: 'Sarah M.',
-                timestamp: '2 days ago'
+        try {
+            if (activeModal === 'assign') {
+                if (!currentAdminId) {
+                    throw new Error('Unable to determine the current admin session.');
+                }
+
+                await adminOperationsService.updateSupportCase(id, {
+                    assignedToId: currentAdminId,
+                    status: caseStatus === 'OPEN' ? 'IN_PROGRESS' : caseStatus,
+                });
+                setFeedback('Case assigned successfully.');
+            } else if (activeModal === 'resolve') {
+                await adminOperationsService.updateSupportCase(id, {
+                    status: 'RESOLVED',
+                });
+                setFeedback('Case marked as resolved.');
+            } else if (activeModal === 'close') {
+                await adminOperationsService.updateSupportCase(id, {
+                    status: 'CLOSED',
+                });
+                setFeedback('Case closed successfully.');
             }
-        ],
-        conversation: [
-            {
-                id: 1,
-                sender: 'user',
-                name: 'Mark Bennett',
-                timestamp: '10:42 AM',
-                message: 'Hi, I keep getting a "Password Incorrect" error even though I just reset it 5 minutes ago. This is the third time this week. Can you please check if my account is locked?',
-                date: 'Today'
-            },
-            {
-                id: 2,
-                sender: 'agent',
-                name: 'James T.',
-                timestamp: '10:45 AM',
-                message: 'Hello Mark,\n\nI\'ve checked your account status and it appears active, but there were multiple failed login attempts from a different IP address.\n\nI have just cleared your active sessions. Please try resetting your password one more time using the link I just sent to your email.\n\nLet me know if this works.',
-                avatar: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect fill="%23003971" width="32" height="32" rx="16"/><text x="50%" y="50%" dy=".35em" fill="white" font-family="Arial" font-size="12" text-anchor="middle">JT</text></svg>'
-            },
-            {
-                id: 3,
-                sender: 'system',
-                message: 'System cleared all active sessions for user',
-                timestamp: ''
-            }
-        ]
-    });
 
-    const replyTabs = ['Reply to User', 'Internal Note'];
-
-    const handleSend = () => {
-        if (!replyText.trim()) return;
-
-        if (activeTab === 'Reply to User') {
-            const newMessage = {
-                id: caseData.conversation.length + 1,
-                sender: 'agent',
-                name: 'James T.',
-                timestamp: 'Just now',
-                message: replyText,
-                avatar: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect fill="%23003971" width="32" height="32" rx="16"/><text x="50%" y="50%" dy=".35em" fill="white" font-family="Arial" font-size="12" text-anchor="middle">JT</text></svg>'
-            };
-            setCaseData({
-                ...caseData,
-                conversation: [...caseData.conversation, newMessage]
-            });
-        } else {
-            const newNote = {
-                id: caseData.internalNotes.length + 1,
-                content: replyText,
-                author: 'James T.',
-                timestamp: 'Just now'
-            };
-            setCaseData({
-                ...caseData,
-                internalNotes: [...caseData.internalNotes, newNote]
-            });
+            await loadCase();
+            closeModal();
+        } catch (err) {
+            console.error('Failed to update support case:', err);
+            setError(err?.message || 'Failed to update support case');
+        } finally {
+            setSaving(false);
         }
-        setReplyText('');
     };
 
-    const handleAddNote = () => {
-        setActiveTab('Internal Note');
-        document.querySelector('textarea')?.focus();
+    const handleSend = async () => {
+        const message = replyText.trim();
+        if (!message || saving) return;
+
+        setSaving(true);
+        setError('');
+        setFeedback('');
+
+        try {
+            await adminOperationsService.addSupportCaseNote(id, {
+                content: message,
+                isInternal: activeTab === 'Internal Note',
+            });
+            setReplyText('');
+            setFeedback(activeTab === 'Internal Note' ? 'Internal note added.' : 'Reply recorded.');
+            await loadCase();
+        } catch (err) {
+            console.error('Failed to add note:', err);
+            setError(err?.message || 'Failed to add note');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    // Ref for conversation container
-    const conversationEndRef = useRef(null);
+    const caseStatusLabel = useMemo(() => {
+        const map = {
+            OPEN: 'Open',
+            IN_PROGRESS: 'In Progress',
+            WAITING: 'Waiting',
+            RESOLVED: 'Resolved',
+            CLOSED: 'Closed',
+        };
+        return map[caseStatus] || caseStatus;
+    }, [caseStatus]);
 
-    // Auto-scroll to bottom when conversation changes
-    useEffect(() => {
-        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [caseData.conversation]);
+    const priority = String(caseData?.priority || 'MEDIUM').toUpperCase();
+    const priorityLabelClass = {
+        HIGH: 'text-red-600',
+        MEDIUM: 'text-orange-600',
+        LOW: 'text-gray-600',
+    }[priority] || 'text-gray-600';
+
+    const statusBadgeClass = {
+        OPEN: 'bg-blue-50 text-blue-700 border-blue-100',
+        IN_PROGRESS: 'bg-yellow-50 text-yellow-700 border-yellow-100',
+        WAITING: 'bg-orange-50 text-orange-700 border-orange-100',
+        RESOLVED: 'bg-green-50 text-green-700 border-green-100',
+        CLOSED: 'bg-gray-100 text-gray-700 border-gray-200',
+    }[caseStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
+
+    if (loading) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-3 text-gray-600">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm font-medium">Loading support case...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (error && !caseData) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-gray-50 px-6 text-center">
+                <AlertTriangle className="h-10 w-10 text-red-500 mb-3" />
+                <h1 className="text-xl font-bold text-gray-900 mb-2">Support case not available</h1>
+                <p className="text-sm text-gray-600 mb-6 max-w-md">{error}</p>
+                <button
+                    onClick={() => void loadCase()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#003971] px-4 py-2 text-sm font-semibold text-white"
+                >
+                    <RefreshCw className="h-4 w-4" />
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-            {/* Header */}
             <div className="flex-shrink-0 mb-4 pt-2 px-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                         <button
                             onClick={() => navigate(-1)}
                             className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
@@ -154,368 +253,351 @@ function SupportCaseDetails() {
                             <ArrowLeft className="h-4 w-4" />
                             <span className="text-sm font-medium">Back to Cases</span>
                         </button>
-                        <div className="h-6 w-px bg-gray-300 mx-2"></div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xl font-bold text-gray-900">{caseData.id}</span>
-                            <span className="text-lg text-gray-600">{caseData.user.name}</span>
+                        <div className="h-6 w-px bg-gray-300 mx-2" />
+                        <div className="min-w-0">
+                            <span className="text-xl font-bold text-gray-900 block truncate">
+                                {caseData?.caseId || caseData?.id || `#${id}`}
+                            </span>
+                            <span className="text-sm text-gray-600 block truncate">
+                                {caseData?.subject || 'Support case details'}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => !isAssigned && handleAction('assign')}
-                            disabled={isAssigned}
-                            className={`px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssigned
+                            onClick={() => !isAssignedToMe && openModal('assign')}
+                            disabled={saving || isAssignedToMe}
+                            className={`px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssignedToMe
                                 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                                 : 'border-gray-200 text-gray-700 hover:bg-gray-50 bg-white'
                                 }`}
                         >
-                            {isAssigned ? 'Assigned' : 'Assign to Me'}
+                            {isAssignedToMe ? 'Assigned to Me' : 'Assign to Me'}
                         </button>
                         <button
-                            onClick={() => !isResolved && handleAction('resolve')}
-                            disabled={isResolved}
-                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${isResolved
+                            onClick={() => !saving && openModal('resolve')}
+                            disabled={saving || caseStatus === 'RESOLVED'}
+                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${caseStatus === 'RESOLVED'
                                 ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
                                 : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
                                 }`}
                         >
                             <CheckCircle className="h-4 w-4" />
-                            {isResolved ? 'Resolved' : 'Resolve'}
+                            Resolve
                         </button>
                         <button
-                            onClick={() => !isClosed && handleAction('close')}
-                            disabled={isClosed}
-                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${isClosed
+                            onClick={() => !saving && openModal('close')}
+                            disabled={saving || caseStatus === 'CLOSED'}
+                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${caseStatus === 'CLOSED'
                                 ? 'bg-orange-50 text-orange-400 border-orange-100 cursor-not-allowed'
                                 : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
                                 }`}
                         >
-                            <span className={`font-bold text-lg leading-none ${isClosed ? 'text-orange-400' : 'text-orange-600'}`}>&times;</span>
-                            {isClosed ? 'Closed' : 'Close Case'}
+                            <span className={`font-bold text-lg leading-none ${caseStatus === 'CLOSED' ? 'text-orange-400' : 'text-orange-600'}`}>
+                                &times;
+                            </span>
+                            Close Case
                         </button>
                     </div>
                 </div>
+
+                {feedback && (
+                    <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                        {feedback}
+                    </div>
+                )}
+                {error && (
+                    <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
             </div>
 
-            {/* Main Content */}
             <div className="flex-1 flex gap-6 overflow-hidden pb-4 px-6 min-h-0">
-                {/* Left Sidebar */}
                 <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
-                    {/* User Info Card */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                         <div className="flex flex-col items-center mb-4">
-                            <div className="w-16 h-16 rounded-full bg-gray-100 mb-2 overflow-hidden">
-                                <img
-                                    src={caseData.user.avatar}
-                                    alt={caseData.user.name}
-                                    className="w-full h-full object-cover"
-                                />
+                            <div className="w-16 h-16 rounded-full bg-gray-100 mb-2 overflow-hidden flex items-center justify-center">
+                                {user?.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name || 'User'}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-sm font-bold text-gray-500">
+                                        {getInitials(user?.name || caseData?.userLabel || caseData?.userId)}
+                                    </span>
+                                )}
                             </div>
-                            <h3 className="text-base font-bold text-gray-900 mb-0.5">{caseData.user.name}</h3>
+                            <h3 className="text-base font-bold text-gray-900 mb-0.5">{user?.name || caseData?.userLabel || 'Unknown user'}</h3>
                             <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold tracking-wider uppercase rounded-md">
-                                {caseData.user.role}
+                                {user?.role || caseData?.userType || 'User'}
                             </span>
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
                                 <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                <span>{caseData.user.email}</span>
+                                <span>{user?.email || 'No email available'}</span>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
                                 <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                <span>{caseData.user.phone}</span>
+                                <span>{caseData?.userPhone || 'No phone available'}</span>
                             </div>
-                            <button
-                                onClick={() => navigate(`/admin/accounts/${caseData.user.id}`)}
-                                className="flex items-center gap-3 text-xs text-blue-600 hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
-                            >
-                                <User className="h-3.5 w-3.5" />
-                                <span>View Profile</span>
-                            </button>
+                            {user?.id && (
+                                <Link
+                                    to={`/admin/accounts/${user.id}`}
+                                    className="flex items-center gap-3 text-xs text-blue-600 hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
+                                >
+                                    <User className="h-3.5 w-3.5" />
+                                    <span>View Profile</span>
+                                </Link>
+                            )}
                         </div>
                     </div>
 
-                    {/* Case Details Card */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                         <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">CASE DETAILS</h4>
-
                         <div className="space-y-4">
                             <div>
                                 <p className="text-[10px] text-gray-400 font-medium mb-1">Subject</p>
-                                <p className="text-xs font-bold text-gray-900 leading-snug">{caseData.caseDetails.subject}</p>
+                                <p className="text-xs font-bold text-gray-900 leading-snug">{caseData?.subject || '—'}</p>
                             </div>
-
+                            <div>
+                                <p className="text-[10px] text-gray-400 font-medium mb-1">Description</p>
+                                <p className="text-xs text-gray-700 leading-5 whitespace-pre-line">
+                                    {caseData?.description || '—'}
+                                </p>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-[10px] text-gray-400 font-medium mb-1">Priority</p>
-                                    <p className={`text-xs font-bold ${caseData.caseDetails.priorityColor}`}>
-                                        {caseData.caseDetails.priority}
-                                    </p>
+                                    <p className={`text-xs font-bold ${priorityLabelClass}`}>{priority}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-gray-400 font-medium mb-1">Category</p>
-                                    <p className="text-xs font-semibold text-gray-900">{caseData.caseDetails.category}</p>
+                                    <p className="text-xs font-semibold text-gray-900">{caseData?.category || '—'}</p>
                                 </div>
                             </div>
-
-                            <div>
-                                <p className="text-[10px] text-gray-400 font-medium mb-1.5">Assigned To</p>
-                                <div className="flex items-center gap-2">
-                                    <img
-                                        src={caseData.caseDetails.assignedTo.avatar}
-                                        alt={caseData.caseDetails.assignedTo.name}
-                                        className="w-5 h-5 rounded-full"
-                                    />
-                                    <span className="text-xs font-semibold text-gray-900">
-                                        {caseData.caseDetails.assignedTo.name}
-                                    </span>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] text-gray-400 font-medium mb-1">Created</p>
+                                    <p className="text-xs text-gray-700">{formatDateTime(caseData?.createdAt)}</p>
                                 </div>
-                            </div>
-
-                            <div>
-                                <p className="text-[10px] text-gray-400 font-medium mb-1.5">Timestamps</p>
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-                                        <Clock className="h-3 w-3 text-gray-400" />
-                                        <span>Created {caseData.caseDetails.createdAt}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-                                        <RefreshCw className="h-3 w-3 text-gray-400" />
-                                        <span>Updated {caseData.caseDetails.updatedAt}</span>
-                                    </div>
+                                <div>
+                                    <p className="text-[10px] text-gray-400 font-medium mb-1">Updated</p>
+                                    <p className="text-xs text-gray-700">{formatDateTime(caseData?.updatedAt)}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Internal Notes Card */}
-                    <div className="bg-amber-50 rounded-xl border border-amber-100 p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Lock className="h-3.5 w-3.5 text-amber-500" />
-                            <h4 className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">INTERNAL NOTES</h4>
+                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">STATUS</h4>
+                        <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-500">Current status</span>
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}>
+                                {caseStatusLabel}
+                            </span>
                         </div>
-
-                        <div className="space-y-2.5 mb-3">
-                            {caseData.internalNotes.map((note) => (
-                                <div key={note.id} className="bg-white rounded-lg p-2.5 border border-amber-100 shadow-sm">
-                                    <p className="text-xs text-gray-700 mb-1.5 leading-relaxed">{note.content}</p>
-                                    <p className="text-[10px] text-gray-400 text-right uppercase tracking-wide font-medium">- {note.author}, {note.timestamp}</p>
-                                </div>
-                            ))}
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-500">Assigned to</span>
+                            <span className="text-xs font-semibold text-gray-900">
+                                {caseData?.assignedTo?.name || caseData?.assignedTo?.email || 'Unassigned'}
+                            </span>
                         </div>
-
-                        <button
-                            onClick={handleAddNote}
-                            className="w-full py-2 bg-white border border-amber-200 rounded-lg text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors shadow-sm"
-                        >
-                            Add Note
-                        </button>
                     </div>
                 </div>
 
-                {/* Right Content - Conversation */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm min-w-0">
-                    {/* Conversation Area */}
-                    <div className="flex-1 p-8 bg-gray-50/50 custom-scrollbar" style={{ overflowY: 'auto', maxHeight: '100%' }}>
-                        {/* Date Header */}
-                        <div className="text-center mb-8">
-                            <span className="px-3 py-1 bg-gray-200/60 rounded-full text-xs font-bold text-gray-500">Today</span>
+                <div className="flex-1 flex flex-col min-h-0 gap-4">
+                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 rounded-xl bg-blue-50 text-[#003971]">
+                                        <Shield className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900">{caseData?.subject || 'Support case'}</h2>
+                                        <p className="text-sm text-gray-600">
+                                            {caseData?.caseId || caseData?.id} · {caseStatusLabel}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}>
+                                {caseStatusLabel}
+                            </span>
                         </div>
-
-                        {/* Messages */}
-                        <div className="space-y-8">
-                            {caseData.conversation.map((msg) => {
-                                if (msg.sender === 'user') {
-                                    return (
-                                        <div key={msg.id} className="max-w-[75%]">
-                                            {/* User name and timestamp inside scrollable area */}
-                                            <div className="flex items-center gap-2 mb-2 ml-1">
-                                                <span className="text-sm font-bold text-gray-900">{msg.name}</span>
-                                                <span className="text-xs text-gray-400 font-medium">{msg.timestamp}</span>
-                                            </div>
-                                            <div className="bg-white rounded-2xl rounded-tl-sm p-5 shadow-sm border border-gray-200/60">
-                                                <p className="text-[15px] text-gray-800 leading-relaxed">{msg.message}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                } else if (msg.sender === 'agent') {
-                                    return (
-                                        <div key={msg.id} className="flex justify-end">
-                                            <div className="max-w-[75%]">
-                                                {/* Agent name and timestamp inside scrollable area */}
-                                                <div className="flex items-center justify-end gap-2 mb-2 mr-1">
-                                                    <span className="text-sm font-bold text-gray-900">{msg.name}</span>
-                                                    <span className="text-xs text-gray-400 font-medium">{msg.timestamp}</span>
-                                                    <div className="w-6 h-6 rounded-full bg-[#003971] flex items-center justify-center text-[10px] text-white font-bold">JT</div>
-                                                </div>
-                                                <div className="bg-blue-50/50 rounded-2xl rounded-tr-sm p-5 border border-blue-100 shadow-sm">
-                                                    <p className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">{msg.message}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                } else if (msg.sender === 'system') {
-                                    return (
-                                        <div key={msg.id} className="flex justify-center py-2">
-                                            <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full">
-                                                <div className="p-0.5 bg-gray-400 rounded-full text-white">
-                                                    <Clock className="h-2.5 w-2.5" />
-                                                </div>
-                                                <span className="text-xs font-semibold text-gray-500">{msg.message}</span>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })}
-                        </div>
-                        {/* Scroll anchor at the end of scrollable area */}
-                        <div ref={conversationEndRef} />
                     </div>
 
-                    {/* Reply Section */}
-                    <div className="flex-shrink-0 border-t border-gray-100 bg-white p-4">
-                        {/* Tabs */}
-                        <div className="flex items-center gap-4 mb-2">
-                            {replyTabs.map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`text-xs font-bold transition-colors ${activeTab === tab
-                                        ? 'text-[#003971]'
-                                        : 'text-gray-400 hover:text-gray-600'
-                                        }`}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
+                    <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-0">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col min-h-0">
+                            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                                <div>
+                                    <h4 className="text-sm font-bold text-gray-900">Case Activity</h4>
+                                    <p className="text-xs text-gray-500">Public replies and internal notes</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <MessageSquare className="h-4 w-4" />
+                                    <span>{notes.length} entries</span>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                                {notes.length > 0 ? (
+                                    notes.map((note) => (
+                                        <div
+                                            key={note.id}
+                                            className={`rounded-xl border p-4 ${note.isInternal ? 'border-amber-200 bg-amber-50/60' : 'border-blue-100 bg-blue-50/60'}`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3 mb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-9 w-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                                        {getInitials(note.author?.name || 'Admin')}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900">
+                                                            {note.author?.name || 'Admin'}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {note.author?.email || 'System'} · {formatRelativeTime(note.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${note.isInternal ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {note.isInternal ? 'Internal Note' : 'Public Reply'}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 whitespace-pre-line leading-6">
+                                                {note.content}
+                                            </p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="h-full min-h-[200px] flex items-center justify-center text-sm text-gray-500">
+                                        No notes yet.
+                                    </div>
+                                )}
+                                <div ref={conversationEndRef} />
+                            </div>
                         </div>
 
-                        {/* Reply Input */}
-                        <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 focus-within:ring-2 focus-within:ring-blue-100 transition-shadow">
-                            <textarea
-                                value={replyText}
-                                onChange={(e) => setReplyText(e.target.value)}
-                                placeholder={`Type your ${activeTab === 'Internal Note' ? 'internal note' : 'reply'} here...`}
-                                className="w-full h-16 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-relaxed"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSend();
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col min-h-0">
+                            <div className="p-5 border-b border-gray-100">
+                                <h4 className="text-sm font-bold text-gray-900">Reply / Note</h4>
+                                <p className="text-xs text-gray-500">Choose whether this is public or internal.</p>
+                            </div>
+
+                            <div className="p-5 flex flex-col gap-4 min-h-0">
+                                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                    {replyTabs.map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === tab
+                                                ? 'bg-white shadow-sm text-[#003971]'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <textarea
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    rows={10}
+                                    placeholder={
+                                        activeTab === 'Reply to User'
+                                            ? 'Write a reply that will be recorded against the case...'
+                                            : 'Add an internal note for other admins...'
                                     }
-                                }}
-                            />
-                            <div className="flex items-center justify-between mt-1">
-                                <div className="flex items-center gap-1">
+                                    className="w-full flex-1 min-h-[220px] resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                />
+
+                                <div className="flex items-center gap-3 flex-wrap">
                                     <button
-                                        onClick={() => handleAction('report')}
-                                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200/50 rounded-lg transition-colors"
-                                        title="Report Issue"
+                                        onClick={handleSend}
+                                        disabled={saving || !replyText.trim()}
+                                        className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <AlertTriangle className="h-4 w-4" />
+                                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        {activeTab === 'Reply to User' ? 'Record Reply' : 'Save Note'}
+                                    </button>
+                                    <button
+                                        onClick={() => setReplyText('')}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Clear
                                     </button>
                                 </div>
-                                <button
-                                    onClick={handleSend}
-                                    className="flex items-center gap-2 px-4 py-2 bg-[#003971] text-white rounded-lg text-xs font-bold hover:bg-[#002a54] transition-colors shadow-sm"
-                                >
-                                    <Send className="h-3 w-3" />
-                                    {activeTab === 'Internal Note' ? 'Add Note' : 'Send Reply'}
-                                </button>
+
+                                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 space-y-2">
+                                    <div className="flex items-center gap-2 font-semibold text-gray-800">
+                                        <FileText className="h-4 w-4" />
+                                        Case summary
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-gray-400" />
+                                        <span>Created {formatRelativeTime(caseData?.createdAt)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 text-gray-400" />
+                                        <span>Updated {formatRelativeTime(caseData?.updatedAt)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Paperclip className="h-4 w-4 text-gray-400" />
+                                        <span>{publicReplies.length} public replies · {internalNotes.length} internal notes</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Modals */}
             {activeModal && (
-                <ActionModal
-                    isOpen={!!activeModal}
-                    onClose={closeModal}
-                    onConfirm={confirmAction}
-                    type={activeModal}
-                />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            {activeModal === 'assign'
+                                ? 'Assign this case to yourself?'
+                                : activeModal === 'resolve'
+                                    ? 'Mark this case as resolved?'
+                                    : 'Close this case?'}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                            {activeModal === 'assign'
+                                ? 'This will assign the case to your admin account and move it into active handling.'
+                                : activeModal === 'resolve'
+                                    ? 'This will mark the support case as resolved.'
+                                    : 'This will close the case and archive it from active support work.'}
+                        </p>
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                onClick={closeModal}
+                                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => void confirmAction()}
+                                disabled={saving}
+                                className="rounded-lg bg-[#003971] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                                {saving ? 'Saving...' : 'Confirm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
 }
 
 export default SupportCaseDetails;
-
-const ActionModal = ({ isOpen, onClose, onConfirm, type }) => {
-    if (!isOpen) return null;
-
-    let content = {};
-    switch (type) {
-        case 'assign':
-            content = {
-                title: 'Assign Case to Me',
-                message: 'Are you sure you want to take ownership of this case? It will be moved to your active queue.',
-                confirmLabel: 'Confirm Assignment',
-                confirmColor: 'bg-blue-600 hover:bg-blue-700'
-            };
-            break;
-        case 'resolve':
-            content = {
-                title: 'Resolve Case',
-                message: 'This will mark the case as resolved and notify the user. Please ensure all issues have been addressed.',
-                confirmLabel: 'Mark as Resolved',
-                confirmColor: 'bg-green-600 hover:bg-green-700'
-            };
-            break;
-        case 'close':
-            content = {
-                title: 'Close Case',
-                message: 'Closing this case will prevent further replies. Use this for cases that are invalid or completed.',
-                confirmLabel: 'Close Case',
-                confirmColor: 'bg-orange-600 hover:bg-orange-700'
-            };
-            break;
-        case 'report':
-            content = {
-                title: 'Report Issue',
-                message: 'Flag this case for review by a supervisor? This is used for abusive language or policy violations.',
-                confirmLabel: 'Flag Case',
-                confirmColor: 'bg-red-600 hover:bg-red-700'
-            };
-            break;
-        default:
-            return null;
-    }
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all scale-100 opacity-100">
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">{content.title}</h3>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100">
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-8">
-                        {content.message}
-                    </p>
-                    <div className="flex items-center justify-end gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={onConfirm}
-                            className={`px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm transition-colors ${content.confirmColor}`}
-                        >
-                            {content.confirmLabel}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
