@@ -91,7 +91,6 @@ export const API_ENDPOINTS = {
     SETTINGS_PROFILE: '/api/recruiter/settings/profile',
     SETTINGS_COMPANY: '/api/recruiter/settings/company',
     SETTINGS_NOTIFICATIONS: '/api/recruiter/settings/notifications',
-    SETTINGS_BILLING: '/api/recruiter/settings/billing',
     SETTINGS_PROFILE_PHOTO: '/api/recruiter/settings/profile-photo',
     APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
@@ -100,6 +99,7 @@ export const API_ENDPOINTS = {
     DASHBOARD_JOBS: '/api/recruiter/dashboard/jobs',
     DASHBOARD_POPULAR_SEARCHES: '/api/recruiter/dashboard/popular-searches',
     DASHBOARD_NOTIFICATIONS: '/api/recruiter/dashboard/notifications',
+    CANDIDATE_SEARCH: '/api/recruiter/candidates/search',
   },
   // Recruiter KYC Endpoints
   RECRUITER_KYC: {
