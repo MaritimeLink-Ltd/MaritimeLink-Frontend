@@ -48,7 +48,7 @@ function UploadJob({ onBack: onBackProp }) {
     };
 
     const normalizeStatus = (value) => String(value || '').toUpperCase();
-
+    const isClosedStatus = (value) => ['EXPIRED', 'FILLED', 'REMOVED'].includes(normalizeStatus(value));
     /** Jobs list maps `closingDate` to a Date; API returns ISO strings — both must work for `<input type="date">`. */
     const closingDateToInputValue = (value) => {
         if (value == null || value === '') return '';
@@ -67,8 +67,16 @@ function UploadJob({ onBack: onBackProp }) {
     };
 
     const navigateBackToListing = () => {
+        if (onBackProp) {
+            onBackProp();
+            return;
+        }
         if (returnPath) {
-            navigate(returnPath);
+            navigate(returnPath, {
+                state: {
+                    refreshJobsAt: Date.now(),
+                },
+            });
             return;
         }
         navigate(-1);
@@ -77,9 +85,9 @@ function UploadJob({ onBack: onBackProp }) {
     useEffect(() => {
         if (isEditMode && editData) {
             const normalizedStatus = normalizeStatus(editData.status);
-            setIsPublished(normalizedStatus !== 'DRAFT' && normalizedStatus !== 'REMOVED');
+            setIsPublished(normalizedStatus === 'ACTIVE');
             setIsPaused(normalizedStatus === 'DRAFT');
-            setIsClosed(normalizedStatus === 'EXPIRED' || normalizedStatus === 'FILLED');
+            setIsClosed(isClosedStatus(normalizedStatus));
             setFormData({
                 jobTitle: editData.jobTitle || editData.title || '',
                 region: editData.region || editData.location || 'Global',
@@ -298,9 +306,11 @@ function UploadJob({ onBack: onBackProp }) {
                         {isEditMode && (
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isPublished
                                 ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
+                                : isClosed
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-gray-100 text-gray-700'
                                 }`}>
-                                {isPublished ? 'Published' : 'Unpublished'}
+                                {isClosed ? 'Closed' : isPublished ? 'Published' : 'Unpublished'}
                             </span>
                         )}
                     </div>
@@ -309,17 +319,19 @@ function UploadJob({ onBack: onBackProp }) {
 
                 {isEditMode && (
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={handlePauseToggle}
-                            className={`flex items-center gap-2 px-5 py-2.5 border rounded-lg font-semibold transition-colors text-sm ${isPaused
-                                ? 'border-green-300 text-green-600 hover:bg-green-50'
-                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                }`}
-                        >
-                            <Pause className="h-4 w-4" />
-                            {isPaused ? 'Resume' : 'Pause'}
-                        </button>
-                        {!isPublished && (
+                        {!isClosed && (
+                            <button
+                                onClick={handlePauseToggle}
+                                className={`flex items-center gap-2 px-5 py-2.5 border rounded-lg font-semibold transition-colors text-sm ${isPaused
+                                    ? 'border-green-300 text-green-600 hover:bg-green-50'
+                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <Pause className="h-4 w-4" />
+                                {isPaused ? 'Resume' : 'Pause'}
+                            </button>
+                        )}
+                        {!isPublished && !isClosed && (
                             <button
                                 onClick={handlePublishToggle}
                                 className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors text-sm"
@@ -328,7 +340,7 @@ function UploadJob({ onBack: onBackProp }) {
                                 Publish
                             </button>
                         )}
-                        {!isClosed && (
+                        {!isClosed ? (
                             <button
                                 onClick={handleCloseJob}
                                 className="flex items-center gap-2 px-5 py-2.5 border border-red-300 rounded-lg text-red-600 font-semibold hover:bg-red-50 transition-colors text-sm"
@@ -336,6 +348,10 @@ function UploadJob({ onBack: onBackProp }) {
                                 <X className="h-4 w-4" />
                                 Close Job
                             </button>
+                        ) : (
+                            <span className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-50 text-red-700 font-semibold text-sm">
+                                Closed
+                            </span>
                         )}
                         <button
                             onClick={() => setShowDeleteModal(true)}

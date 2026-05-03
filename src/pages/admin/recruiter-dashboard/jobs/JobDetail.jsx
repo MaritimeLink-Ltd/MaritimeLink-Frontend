@@ -130,14 +130,13 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     const mapApiJobStatusToUi = (status) => {
         const upper = String(status || '').toUpperCase();
         if (upper === 'DRAFT') return 'Draft';
-        if (upper === 'EXPIRED') return 'Expired';
-        if (upper === 'FILLED') return 'Filled';
+        if (upper === 'EXPIRED' || upper === 'FILLED' || upper === 'REMOVED') return 'Closed';
         return 'Active';
     };
     
     // Derived values
     const isPublished = jobStatus === 'Active';
-    const isClosed = jobStatus === 'Expired' || jobStatus === 'Filled';
+    const isClosed = jobStatus === 'Closed';
     const allowedInitialAtsTabs = new Set([
         'matches',
         'all',
@@ -475,8 +474,12 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             // Navigate back to jobs list
             const listPath = location.pathname.includes('/admin/marketplace')
                 ? '/admin/marketplace'
-                : '/admin/jobs';
-            navigate(listPath);
+                : '/recruiter/jobs';
+            navigate(listPath, {
+                state: {
+                    refreshJobsAt: Date.now(),
+                },
+            });
         } catch (error) {
             console.error("Failed to delete job:", error);
         } finally {
@@ -631,19 +634,40 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                         )}
 
                         {showJobManagementActions ? (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const editPath = location.pathname.includes('/admin/marketplace')
-                                        ? '/admin/marketplace/create-job'
-                                        : '/admin/upload-job';
-                                    navigate(editPath, { state: { jobData: job, isEdit: true } });
-                                }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
-                            >
-                                <Edit2 className="h-4 w-4" />
-                                Edit Job
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const editPath = location.pathname.includes('/admin/marketplace')
+                                            ? '/admin/marketplace/create-job'
+                                            : '/recruiter/upload-job';
+                                        navigate(editPath, {
+                                            state: {
+                                                jobData: job,
+                                                isEdit: true,
+                                                dashboardType: 'recruiter',
+                                                returnPath: '/recruiter/jobs',
+                                            },
+                                        });
+                                    }}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-[#003971] text-white rounded-lg font-semibold hover:bg-[#002855] transition-colors"
+                                >
+                                    <Edit2 className="h-4 w-4" />
+                                    Edit Job
+                                </button>
+                                {!isClosed ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleJobStatusUpdate(isPublished ? 'DRAFT' : 'ACTIVE')}
+                                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-colors ${isPublished
+                                            ? 'border border-orange-300 text-orange-700 hover:bg-orange-50'
+                                            : 'bg-[#003971] text-white hover:bg-[#002855]'
+                                            }`}
+                                    >
+                                        {isPublished ? 'Save Draft' : 'Publish Job'}
+                                    </button>
+                                ) : null}
+                            </>
                         ) : null}
                         <button
                             type="button"
@@ -1046,7 +1070,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                 : 'bg-[#003971] hover:bg-[#002855]'
                                                 }`}
                                         >
-                                            {isPublished ? 'Unpublish' : 'Publish'}
+                                            {isPublished ? 'Save Draft' : 'Publish'}
                                         </button>
                                     )}
                                     {!isClosed ? (
