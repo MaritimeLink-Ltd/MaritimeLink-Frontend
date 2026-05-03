@@ -203,7 +203,7 @@ function AdminSearch({ onViewCandidate }) {
         filters.vesselType.length;
 
     return (
-        <div className="h-full flex flex-col overflow-hidden bg-gray-50">
+        <div className="h-full min-h-0 flex flex-col overflow-hidden bg-gray-50">
             <div className="flex-shrink-0 px-8 pt-4 pb-3 bg-gray-50">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
                     <div>
@@ -232,9 +232,9 @@ function AdminSearch({ onViewCandidate }) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden px-8 pb-4">
-                <div className="flex flex-col lg:flex-row gap-4 h-full">
-                    <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden px-8 pb-4">
+                <div className="flex flex-col lg:flex-row gap-4 h-full min-h-0">
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 flex-shrink-0">
                             <div className="text-sm font-bold text-gray-900">
                                 {isLoading ? 'Searching candidates...' : `Showing ${totalCandidates} candidates`}
@@ -290,7 +290,7 @@ function AdminSearch({ onViewCandidate }) {
                             </div>
                         )}
 
-                        <div className="relative flex-1 overflow-hidden">
+                        <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
                             {isLoading && candidates.length === 0 ? (
                                 <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white border border-gray-100">
                                     <div className="flex items-center gap-3 text-gray-600">
@@ -311,7 +311,7 @@ function AdminSearch({ onViewCandidate }) {
                             ) : (
                                 <>
                                     {viewMode === 'list' ? (
-                                        <div className="space-y-2 flex-1 overflow-y-auto pr-1">
+                                        <div className="space-y-2 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
                                             {candidates.map((candidate) => (
                                                 <div
                                                     key={candidate.id}
@@ -381,7 +381,7 @@ function AdminSearch({ onViewCandidate }) {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 flex-1 overflow-y-auto pr-1">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
                                             {candidates.map((candidate) => (
                                                 <div
                                                     key={candidate.id}
@@ -511,8 +511,8 @@ function AdminSearch({ onViewCandidate }) {
                         </div>
                     </div>
 
-                    <div className="lg:w-72 flex-shrink-0 h-full">
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm h-full flex flex-col">
+                    <div className="lg:w-72 flex-shrink-0 min-h-0 lg:h-full">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm h-full min-h-0 flex flex-col">
                             <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
                                 <div className="flex items-center gap-2 text-gray-900">
                                     <Filter className="h-5 w-5" />

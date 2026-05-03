@@ -251,7 +251,7 @@ function AdminLayout() {
                 </header>
 
                 {/* Main Page Content */}
-                <main className="flex-1 overflow-y-auto bg-gray-50 px-8 py-6">
+                <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-8 py-6">
                     {!isRecruiterVerified && isRestrictedRecruiterRoute ? (
                         <div className="h-full flex items-center justify-center">
                             <div className="max-w-2xl text-center space-y-3">
