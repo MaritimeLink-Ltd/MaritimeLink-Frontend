@@ -188,6 +188,8 @@ export const API_ENDPOINTS = {
     OPERATIONS_ACTIVITY: '/api/admin/operations/activity',
     OPERATIONS_ACTIVITY_DETAIL: (id) => `/api/admin/operations/activity/${id}`,
     OPERATIONS_STATS: '/api/admin/operations/stats',
+    SUPPORT_CASES: '/api/admin/support/cases',
+    SUPPORT_CASE_DETAIL: (id) => `/api/admin/support/cases/${id}`,
     /** Aggregated marketplace / training revenue, fees, and payouts */
     REVENUE: '/api/admin/revenue',
     RECRUITERS: '/api/admin/recruiters',
