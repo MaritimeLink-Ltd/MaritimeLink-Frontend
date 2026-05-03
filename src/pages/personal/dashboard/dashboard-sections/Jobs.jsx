@@ -5,6 +5,7 @@ import jobService from '../../../../services/jobService';
 
 const Jobs = () => {
     const navigate = useNavigate();
+    const PAGE_SIZE = 10;
 
 
     const [selectedJob, setSelectedJob] = useState(null);
@@ -70,7 +71,7 @@ const Jobs = () => {
             try {
                 setIsLoading(true);
                 const [jobsRes, appsRes] = await Promise.all([
-                    jobService.getProfessionalJobs().catch(() => null),
+                    jobService.getProfessionalJobs(1, PAGE_SIZE).catch(() => null),
                     jobService.getApplications().catch(() => null)
                 ]);
 
@@ -214,7 +215,7 @@ const Jobs = () => {
             {/* Jobs Layout */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Job List - Left Sidebar - Hidden on mobile when job detail is open */}
-                <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide`}>
+                <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-[calc(100vh-180px)]`}>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />

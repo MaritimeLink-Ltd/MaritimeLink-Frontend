@@ -419,7 +419,7 @@ const Dashboard = () => {
 
             <div className="flex-1 lg:overflow-hidden px-4 sm:px-6 pb-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:h-full">
-                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-auto">
+                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-[380px]">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
                             <h2 className="text-xl font-semibold text-gray-800">Alerts</h2>
                             {alertsError && (
@@ -532,7 +532,7 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-auto">
+                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-[380px]">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
                             <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
                             {activityError && (

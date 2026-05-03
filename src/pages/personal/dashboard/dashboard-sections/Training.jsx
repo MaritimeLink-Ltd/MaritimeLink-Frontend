@@ -24,6 +24,7 @@ const buildProfessionalCoursesUrl = ({ page = 1, limit = 50, search, category, p
 
 const Training = () => {
     const navigate = useNavigate();
+    const PAGE_SIZE = 10;
 
 
     const [selectedCourse, setSelectedCourse] = useState(null);
@@ -48,7 +49,7 @@ const Training = () => {
         const fetchCourses = async () => {
             try {
                 setIsLoading(true);
-                const listUrl = buildProfessionalCoursesUrl({ page: 1, limit: 50 });
+                const listUrl = buildProfessionalCoursesUrl({ page: 1, limit: PAGE_SIZE });
                 const [response, savedRes] = await Promise.all([
                     httpClient.get(listUrl),
                     httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_SAVED_COURSES).catch(() => null),
@@ -278,7 +279,7 @@ const Training = () => {
             {/* Main Content - Two Column Layout */}
             <div className="flex-1 flex lg:overflow-hidden">
                 {/* Course List - Left Sidebar - Hidden on mobile when course is selected */}
-                <div className={`${selectedCourse && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide`}>
+                <div className={`${selectedCourse && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-[calc(100vh-180px)]`}>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
