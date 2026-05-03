@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Clock, CheckCircle, Monitor, MapPin, Globe, Loader } from 'lucide-react';
 import adminOperationsService from '../../../services/adminOperationsService';
 
@@ -62,10 +62,6 @@ function ActivityDetails() {
     const actor = activityDetail?.actor || {};
     const meta = activityDetail?.meta || {};
     const statusKey = String(activityDetail?.status || '').toUpperCase();
-    const profileLink =
-        actor?.actorType === 'SYSTEM'
-            ? null
-            : `/admin/accounts/${actor.id}`;
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -166,19 +162,6 @@ function ActivityDetails() {
                                     <p className="text-sm text-gray-500">{actor.role || 'Unknown role'}</p>
                                 </div>
                             </div>
-
-                            {profileLink ? (
-                                <Link
-                                    to={profileLink}
-                                    className="w-full px-4 py-2 bg-blue-50 text-[#1e5a8f] rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors text-center block"
-                                >
-                                    View User Profile
-                                </Link>
-                            ) : (
-                                <div className="w-full px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-semibold text-center">
-                                    No profile link available
-                                </div>
-                            )}
                         </div>
 
                         {/* Session Metadata */}

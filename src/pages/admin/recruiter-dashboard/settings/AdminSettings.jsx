@@ -10,9 +10,7 @@ import {
     Save,
     Globe,
     Linkedin,
-    MapPin,
-    Smartphone,
-    Monitor
+    MapPin
 } from 'lucide-react';
 import { countryCodes } from '../../../../utils/countryCodes';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
@@ -751,44 +749,6 @@ function AdminSettings() {
                                             >
                                                 Update Password
                                             </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-
-                                {/* Active Sessions */}
-                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                    <h2 className="text-lg font-bold text-gray-900 mb-6">Active Sessions</h2>
-
-                                    <div className="space-y-4">
-                                        {/* Session 1 */}
-                                        <div className="flex items-center justify-between py-2">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-2.5 bg-blue-50 rounded-lg">
-                                                    <Monitor className="h-5 w-5 text-blue-600" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-gray-900">MacBook Pro 16"</h3>
-                                                    <p className="text-xs text-gray-500 mt-0.5">London, UK • 192.168.1.1</p>
-                                                </div>
-                                            </div>
-                                            <span className="text-xs font-bold text-green-600">Current Session</span>
-                                        </div>
-
-                                        <div className="h-px bg-gray-50" />
-
-                                        {/* Session 2 */}
-                                        <div className="flex items-center justify-between py-2">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-2.5 bg-gray-50 rounded-lg">
-                                                    <Smartphone className="h-5 w-5 text-gray-600" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-gray-900">iPhone 13 Pro</h3>
-                                                    <p className="text-xs text-gray-500 mt-0.5">London, UK • 192.168.1.45</p>
-                                                </div>
-                                            </div>
-                                            <span className="text-xs font-bold text-green-600">Active 2h ago</span>
                                         </div>
                                     </div>
                                 </div>
