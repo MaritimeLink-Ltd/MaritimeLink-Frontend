@@ -12,6 +12,7 @@ import {
     Loader2,
     MapPin,
     Search,
+    Crown,
 } from 'lucide-react';
 import recruiterCandidateService from '../../../../services/recruiterCandidateService';
 
@@ -57,6 +58,7 @@ const buildAvatarFallback = (name, seed = '') => {
 };
 
 const getCandidateName = (candidate) => candidate?.fullname || candidate?.name || 'Unknown candidate';
+const isPremiumCandidate = (candidate) => String(candidate?.tier || '').toUpperCase() === 'PRO' || Boolean(candidate?.isPremium);
 
 function AdminSearch({ onViewCandidate }) {
     const navigate = useNavigate();
@@ -340,6 +342,12 @@ function AdminSearch({ onViewCandidate }) {
                                                                             Verified
                                                                         </span>
                                                                     )}
+                                                                    {isPremiumCandidate(candidate) && (
+                                                                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 flex items-center gap-1">
+                                                                            <Crown className="h-3 w-3" />
+                                                                            Premium
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 <p className="text-sm text-gray-600 font-semibold mb-1">{candidate.rank}</p>
                                                                 <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
@@ -400,6 +408,12 @@ function AdminSearch({ onViewCandidate }) {
                                                             {candidate.verified && (
                                                                 <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
                                                                     Verified
+                                                                </span>
+                                                            )}
+                                                            {isPremiumCandidate(candidate) && (
+                                                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 flex items-center gap-1">
+                                                                    <Crown className="h-3 w-3" />
+                                                                    Premium
                                                                 </span>
                                                             )}
                                                         </div>

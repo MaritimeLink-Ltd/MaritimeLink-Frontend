@@ -22,6 +22,7 @@ import {
     Ship,
     Sparkles,
     Star,
+    Crown,
     Wallet,
     X,
 } from 'lucide-react';
@@ -568,6 +569,8 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
             rank,
             image: professional?.profilePhotoUrl || professional?.avatarUrl || professional?.photo || null,
             location: professional?.location || resume?.country || fallback.location || 'N/A',
+            tier: professional?.tier || fallback.tier || 'FREE',
+            isPremium: String(professional?.tier || fallback.tier || '').toUpperCase() === 'PRO',
             vesselTypes,
             seaTime: Number.isFinite(years) ? `${years} years experience` : (seaService.length ? `${seaService.length} sea service record(s)` : 'No sea service recorded'),
             compliant: professional?.isVerified || professional?.kyc?.status === 'APPROVED' || false,
@@ -970,7 +973,15 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
                             )}
 
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900 mb-1">{candidate.name}</h1>
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
+                                    {candidate.isPremium && (
+                                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 flex items-center gap-1">
+                                            <Crown className="h-3.5 w-3.5" />
+                                            Premium
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-lg text-gray-600 font-medium mb-3">{candidate.rank}</p>
                                 <div className="space-y-2">
                                     {candidate.vesselTypes.map((v, i) => (
