@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import SignIn from './pages/personal/auth/SignIn';
 import SignUp from './pages/personal/auth/SignUp';
@@ -86,6 +86,11 @@ import Operations from './pages/admin/admin-dashboard/Operations';
 import ActivityDetails from './pages/admin/admin-dashboard/ActivityDetails';
 import SupportCaseDetails from './pages/admin/admin-dashboard/SupportCaseDetails';
 import SystemJobDetail from './pages/admin/admin-dashboard/SystemJobDetail';
+
+function RecruiterSearchRedirect() {
+  const location = useLocation();
+  return <Navigate to="/recruiter/search" replace state={location.state} />;
+}
 import ManualActionReview from './pages/admin/admin-dashboard/ManualActionReview';
 import AdminProfile from './pages/admin/admin-dashboard/AdminProfile';
 import OversightRecruiterJobs from './pages/admin/admin-dashboard/OversightRecruiterJobs';
@@ -215,7 +220,8 @@ function App() {
           {/* Recruiter Protected Routes (With Layout) */}
           <Route element={<RecruiterLayout />}>
             <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
-            <Route path="/admin/search" element={<AdminSearch />} />
+            <Route path="/recruiter/search" element={<AdminSearch />} />
+            <Route path="/admin/search" element={<RecruiterSearchRedirect />} />
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/chats" element={<AdminChats />} />

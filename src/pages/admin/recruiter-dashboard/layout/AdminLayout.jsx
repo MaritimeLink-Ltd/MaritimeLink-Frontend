@@ -73,11 +73,14 @@ function AdminLayout() {
     }, []);
 
     const isRecruiterVerified = typeof window !== 'undefined' && localStorage.getItem('recruiterAdminVerified') === 'true';
-    const isRestrictedRecruiterRoute = ['/admin/search', '/admin/jobs', '/admin/chats'].some(
+    const recruiterSearchPaths = ['/recruiter/search', '/admin/search'];
+    const isRestrictedRecruiterRoute = [...recruiterSearchPaths, '/admin/jobs', '/admin/chats'].some(
         (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
     );
 
-    const isActive = (path) => location.pathname === path;
+    const isActive = (path) =>
+        location.pathname === path ||
+        (path === '/recruiter/search' && location.pathname === '/admin/search');
 
     const handleLogoutClick = () => {
         setDropdownOpen(false);
@@ -96,7 +99,7 @@ function AdminLayout() {
 
     const navItems = [
         { name: 'Dashboard', path: '/recruiter-dashboard', icon: LayoutDashboard },
-        { name: 'Search Candidates', path: '/admin/search', icon: Search },
+        { name: 'Search Candidates', path: '/recruiter/search', icon: Search },
         { name: 'Jobs', path: '/admin/jobs', icon: Briefcase },
         { name: 'Chats', path: '/admin/chats', icon: MessageSquare },
     ];

@@ -139,6 +139,7 @@ export function getLoginRouteFromStorage(pathname = typeof window !== 'undefined
         const recruiterPaths = [
             '/recruiter',
             '/agent',
+            '/recruiter/search',
             '/admin/search',
             '/admin/jobs',
             '/admin/chats',

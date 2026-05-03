@@ -241,7 +241,7 @@ function RecruiterDashboard({ onNavigate }) {
             // Map sections to routes
             const routeMap = {
                 'jobs': '/admin/jobs',
-                'search': '/admin/search',
+                'search': '/recruiter/search',
                 'chats': '/admin/chats',
                 'settings': '/recruiter/settings'
             };
@@ -264,7 +264,7 @@ function RecruiterDashboard({ onNavigate }) {
             }
             if (act === 'VIEW_MATCHES' && row.category) {
                 const label = String(row.category).replace(/_/g, ' ');
-                navigate('/admin/search', { state: { searchQuery: label } });
+                navigate('/recruiter/search', { state: { searchQuery: label } });
                 return;
             }
             if (row.jobId) {
@@ -347,7 +347,7 @@ function RecruiterDashboard({ onNavigate }) {
         if (onNavigate) {
             onNavigate('search');
         } else {
-            navigate('/admin/search', { state: { searchQuery: searchTerm } });
+            navigate('/recruiter/search', { state: { searchQuery: searchTerm } });
         }
     };
 
