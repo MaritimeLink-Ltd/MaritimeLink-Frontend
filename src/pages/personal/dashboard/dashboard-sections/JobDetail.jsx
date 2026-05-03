@@ -3,6 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
 
+const API_CATEGORY_LABEL = {
+    OFFICER: 'Officer',
+    RATINGS_AND_CREW: 'Ratings & Crew',
+    CATERING_AND_MEDICAL: 'Catering & Medical',
+};
+
+const API_JOB_TYPE_LABEL = {
+    TEMPORARY: 'Temporary',
+    CONTRACT: 'Contract',
+    PERMANENT: 'Permanent',
+};
+
+const formatJobCategory = (category) => API_CATEGORY_LABEL[String(category || '').trim()] || String(category || '');
+const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim()] || String(jobType || '');
+
 const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
     const { jobId } = useParams();
     const navigate = useNavigate();
@@ -28,8 +43,8 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                             company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
                             location: apiJob.location || 'Global',
                             salary: apiJob.salary,
-                            category: apiJob.category,
-                            jobType: apiJob.contractType,
+                            category: formatJobCategory(apiJob.category),
+                            jobType: formatJobType(apiJob.contractType),
                             datePosted: new Date(apiJob.createdAt),
                             jobDescription: apiJob.description,
                             aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,

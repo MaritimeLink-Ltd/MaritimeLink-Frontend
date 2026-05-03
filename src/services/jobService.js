@@ -184,11 +184,16 @@ class JobService {
      * @param {number} limit - Items per page
      * @returns {Promise<Object>} Response with paginated list of professional jobs
      */
-    async getProfessionalJobs(page = 1, limit = 10) {
+    async getProfessionalJobs(page = 1, limit = 10, filters = {}) {
         try {
             const params = new URLSearchParams();
             if (page !== null && page !== undefined) params.set('page', String(page));
             if (limit !== null && limit !== undefined) params.set('limit', String(limit));
+            Object.entries(filters || {}).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && String(value).trim() !== '') {
+                    params.set(key, String(value));
+                }
+            });
 
             const query = params.toString();
             const url = query

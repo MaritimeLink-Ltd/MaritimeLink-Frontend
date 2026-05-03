@@ -1,7 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
+
+const CATEGORY_TO_API = {
+    'Deck Officer': 'OFFICER',
+    'Engine Officer': 'OFFICER',
+    'Deck Ratings': 'RATINGS_AND_CREW',
+    'Engine Ratings': 'RATINGS_AND_CREW',
+    'Catering': 'CATERING_AND_MEDICAL',
+    'Medical': 'CATERING_AND_MEDICAL',
+};
+
+const API_CATEGORY_LABEL = {
+    OFFICER: 'Officer',
+    RATINGS_AND_CREW: 'Ratings & Crew',
+    CATERING_AND_MEDICAL: 'Catering & Medical',
+};
+
+const JOB_TYPE_TO_API = {
+    Temporary: 'TEMPORARY',
+    Contract: 'CONTRACT',
+    Permanent: 'PERMANENT',
+};
+
+const API_JOB_TYPE_LABEL = {
+    TEMPORARY: 'Temporary',
+    CONTRACT: 'Contract',
+    PERMANENT: 'Permanent',
+};
+
+const DATE_POSTED_TO_API = {
+    'Last 24 hours': '24h',
+    'Last 7 days': '7d',
+    'Last 30 days': '30d',
+};
+
+const normalizeSearch = (value) => String(value || '').trim().toLowerCase();
+
+const formatJobCategory = (category) => API_CATEGORY_LABEL[String(category || '').trim()] || String(category || '');
+
+const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim()] || String(jobType || '');
 
 const Jobs = () => {
     const navigate = useNavigate();
@@ -37,6 +76,14 @@ const Jobs = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
 
+    const buildJobsQuery = useCallback(() => ({
+        search: normalizeSearch(searchQuery) || undefined,
+        category: filters.category ? CATEGORY_TO_API[filters.category] || filters.category : undefined,
+        jobType: filters.jobType ? JOB_TYPE_TO_API[filters.jobType] || filters.jobType : undefined,
+        datePosted: filters.datePosted ? DATE_POSTED_TO_API[filters.datePosted] || filters.datePosted : undefined,
+        role: filters.role || undefined,
+    }), [searchQuery, filters.category, filters.role, filters.datePosted, filters.jobType]);
+
     const handleJobClick = async (job) => {
         setSelectedJob(job);
         setIsDetailLoading(true);
@@ -50,8 +97,8 @@ const Jobs = () => {
                     company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
                     location: apiJob.location || 'Global',
                     salary: apiJob.salary,
-                    category: apiJob.category,
-                    jobType: apiJob.contractType,
+                    category: formatJobCategory(apiJob.category),
+                    jobType: formatJobType(apiJob.contractType),
                     datePosted: new Date(apiJob.createdAt),
                     jobDescription: apiJob.description,
                     aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
@@ -71,7 +118,7 @@ const Jobs = () => {
             try {
                 setIsLoading(true);
                 const [jobsRes, appsRes] = await Promise.all([
-                    jobService.getProfessionalJobs(1, PAGE_SIZE).catch(() => null),
+                    jobService.getProfessionalJobs(1, PAGE_SIZE, buildJobsQuery()).catch(() => null),
                     jobService.getApplications().catch(() => null)
                 ]);
 
@@ -91,8 +138,8 @@ const Jobs = () => {
                             company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
                             location: apiJob.location || 'Global',
                             salary: apiJob.salary,
-                            category: apiJob.category,
-                            jobType: apiJob.contractType,
+                            category: formatJobCategory(apiJob.category),
+                            jobType: formatJobType(apiJob.contractType),
                             datePosted: new Date(apiJob.createdAt),
                             jobDescription: apiJob.description,
                             aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
@@ -100,6 +147,12 @@ const Jobs = () => {
                             responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
                         }));
                     setAllJobs(mappedJobs);
+                    setSelectedJob((current) => {
+                        if (current && mappedJobs.some((job) => job.id === current.id)) {
+                            return current;
+                        }
+                        return null;
+                    });
                 }
             } catch (error) {
                 console.error("Failed to fetch jobs:", error);
@@ -109,54 +162,9 @@ const Jobs = () => {
         };
 
         fetchJobs();
-    }, []);
+    }, [buildJobsQuery]);
 
-    // Filter jobs based on selected filters and search
-    const jobs = allJobs.filter(job => {
-        // Search filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesTitle = job.title.toLowerCase().includes(query);
-            const matchesCompany = job.company.toLowerCase().includes(query);
-            if (!matchesTitle && !matchesCompany) {
-                return false;
-            }
-        }
-
-        // Category filter
-        if (filters.category && job.category !== filters.category) {
-            return false;
-        }
-
-        // Role filter
-        if (filters.role && job.title !== filters.role) {
-            return false;
-        }
-
-        // Job Type filter
-        if (filters.jobType && job.jobType !== filters.jobType) {
-            return false;
-        }
-
-        // Date Posted filter
-        if (filters.datePosted) {
-            const now = new Date();
-            const jobDate = new Date(job.datePosted);
-            const diffHours = (now - jobDate) / (1000 * 60 * 60);
-
-            if (filters.datePosted === 'Last 24 hours' && diffHours > 24) {
-                return false;
-            }
-            if (filters.datePosted === 'Last 7 days' && diffHours > 24 * 7) {
-                return false;
-            }
-            if (filters.datePosted === 'Last 30 days' && diffHours > 24 * 30) {
-                return false;
-            }
-        }
-
-        return true;
-    });
+    const jobs = allJobs;
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
