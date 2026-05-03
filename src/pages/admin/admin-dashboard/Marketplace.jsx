@@ -24,8 +24,6 @@ function Marketplace() {
     const [totalOversight, setTotalOversight] = useState(0);
     const [coursesList, setCoursesList] = useState([]);
     const [totalCourses, setTotalCourses] = useState(0);
-    /** Admin-owned courses from GET /api/courses/my — MaritimeLink Listings → Training */
-    const [myMaritimeCourses, setMyMaritimeCourses] = useState([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -237,29 +235,9 @@ function Marketplace() {
         }
     };
 
-    const loadMyMaritimeCourses = async () => {
-        try {
-            setIsRefreshing(true);
-            const res = await httpClient.get(API_ENDPOINTS.COURSES.MY);
-            const raw = res?.data?.courses ?? [];
-            const adminOnly = raw.filter((c) => Boolean(c?.adminId));
-            setMyMaritimeCourses(adminOnly);
-        } catch (error) {
-            console.error('Failed to load my courses:', error);
-            setMyMaritimeCourses([]);
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
-
     useEffect(() => {
         loadStatsData();
     }, []);
-
-    useEffect(() => {
-        if (activeMainTab !== 'MaritimeLink Listings' || activeSubTab !== 'Training Courses') return;
-        loadMyMaritimeCourses();
-    }, [activeMainTab, activeSubTab]);
 
     useEffect(() => {
         if (activeMainTab === 'Oversight') {
@@ -270,6 +248,8 @@ function Marketplace() {
             }
         } else if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Jobs') {
             loadJobsData(currentPage);
+        } else if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Training Courses') {
+            loadCoursesData(currentPage);
         }
     }, [currentPage, activeSubTab, activeMainTab, searchQuery, timeFilter, statusFilter, riskFilter]);
 
@@ -292,8 +272,10 @@ function Marketplace() {
             }
         } else if (activeSubTab === 'Jobs') {
             loadJobsData(1);
+        } else if (activeSubTab === 'Training Courses') {
+            loadCoursesData(1);
         } else {
-            loadMyMaritimeCourses();
+            loadCoursesData(1);
         }
     };
 
@@ -407,7 +389,7 @@ function Marketplace() {
         {
             value: marketplaceStats?.jobs?.live?.count?.toString() || '0',
             label: 'Active Jobs',
-            sublabel: marketplaceStats?.jobs?.live?.today ? `+${marketplaceStats.jobs.live.today} today` : 'Live listings',
+            sublabel: marketplaceStats?.jobs?.live?.today ? `${marketplaceStats.jobs.live.today} in ${timeFilter === 'Today' ? 'today' : timeFilter === '7 Days' ? 'last 7 days' : 'last 30 days'}` : 'Live listings',
             icon: Briefcase,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
@@ -416,7 +398,7 @@ function Marketplace() {
         {
             value: marketplaceStats?.jobs?.applications?.count?.toString() || '0',
             label: 'Total Applications',
-            sublabel: marketplaceStats?.jobs?.applications?.today ? `+${marketplaceStats.jobs.applications.today} today` : 'All time',
+            sublabel: marketplaceStats?.jobs?.applications?.today ? `${marketplaceStats.jobs.applications.today} in ${timeFilter === 'Today' ? 'today' : timeFilter === '7 Days' ? 'last 7 days' : 'last 30 days'}` : 'All time',
             icon: CheckCircle,
             iconColor: 'text-purple-500',
             iconBg: 'bg-purple-50',
@@ -447,7 +429,7 @@ function Marketplace() {
         {
             value: marketplaceStats?.courses?.active?.count?.toString() || '0',
             label: 'Active Courses',
-            sublabel: marketplaceStats?.courses?.active?.today ? `+${marketplaceStats.courses.active.today} today` : 'Live listings',
+            sublabel: marketplaceStats?.courses?.active?.today ? `${marketplaceStats.courses.active.today} in ${timeFilter === 'Today' ? 'today' : timeFilter === '7 Days' ? 'last 7 days' : 'last 30 days'}` : 'Live listings',
             icon: GraduationCap,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
@@ -456,7 +438,7 @@ function Marketplace() {
         {
             value: marketplaceStats?.courses?.bookings?.count?.toString() || '0',
             label: 'Total Bookings',
-            sublabel: marketplaceStats?.courses?.bookings?.today ? `+${marketplaceStats.courses.bookings.today} today` : 'All time',
+            sublabel: marketplaceStats?.courses?.bookings?.today ? `${marketplaceStats.courses.bookings.today} in ${timeFilter === 'Today' ? 'today' : timeFilter === '7 Days' ? 'last 7 days' : 'last 30 days'}` : 'All time',
             icon: CheckCircle,
             iconColor: 'text-purple-500',
             iconBg: 'bg-purple-50',
@@ -496,7 +478,7 @@ function Marketplace() {
             if (activeSubTab === 'Jobs') {
                 data = remoteJobs.filter(job => job.adminId);
             } else {
-                data = myMaritimeCourses;
+                data = coursesList;
             }
         }
 
@@ -568,47 +550,6 @@ function Marketplace() {
             data = data.filter((record) => (record.riskLevel || '').toUpperCase() === want);
         }
 
-        // Apply Time Filter based on posted field (or createdAt for API courses)
-        if (timeFilter !== '30 Days') {
-            data = data.filter((record) => {
-                if (record.createdAt) {
-                    const daysAgo = Math.floor(
-                        (Date.now() - new Date(record.createdAt).getTime()) / 86400000
-                    );
-                    if (timeFilter === 'Today') return daysAgo === 0;
-                    if (timeFilter === '7 Days') return daysAgo <= 7;
-                    return true;
-                }
-                const posted = record.posted?.toLowerCase() || '';
-                let daysAgo = 0;
-
-                if (posted.includes('today')) {
-                    daysAgo = 0;
-                } else if (posted.includes('yesterday')) {
-                    daysAgo = 1;
-                } else if (posted.includes('hour')) {
-                    daysAgo = 0;
-                } else if (posted.includes('day')) {
-                    const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1], 10) : 1;
-                } else if (posted.includes('week')) {
-                    const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1], 10) * 7 : 7;
-                } else if (posted.includes('month')) {
-                    const match = posted.match(/(\d+)/);
-                    daysAgo = match ? parseInt(match[1], 10) * 30 : 30;
-                }
-
-                if (timeFilter === 'Today') {
-                    return daysAgo === 0;
-                }
-                if (timeFilter === '7 Days') {
-                    return daysAgo <= 7;
-                }
-                return true;
-            });
-        }
-
         return data;
     };
 
@@ -616,9 +557,10 @@ function Marketplace() {
     const currentData = getCurrentData();
     const isMaritimeLinkTab = activeMainTab === 'MaritimeLink Listings';
     const isCoursesOversightApi = activeMainTab === 'Oversight' && activeSubTab === 'Training Courses';
+    const isMaritimeLinkCourses = activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Training Courses';
 
     // Pagination Logic
-    // For MaritimeLink Jobs and Oversight courses, totalPages comes from backend totals.
+    // For MaritimeLink Jobs, MaritimeLink Courses, and Oversight courses, totalPages comes from backend totals.
     // For everything else, use filtered local length.
     const isOversightJobs = activeMainTab === 'Oversight' && activeSubTab === 'Jobs';
     const totalPages = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
@@ -627,18 +569,23 @@ function Marketplace() {
             ? Math.max(1, Math.ceil(totalOversight / itemsPerPage))
         : isCoursesOversightApi
             ? Math.max(1, Math.ceil(totalCourses / itemsPerPage))
+        : isMaritimeLinkCourses
+            ? Math.max(1, Math.ceil(totalCourses / itemsPerPage))
             : Math.max(1, Math.ceil(currentData.length / itemsPerPage));
 
     // Determine if backend correctly paginated, or if we need to manually slice it.
     const isBackendPaginated =
         (activeSubTab === 'Jobs' && isMaritimeLinkTab && currentData.length <= itemsPerPage) ||
         (isOversightJobs && currentData.length <= itemsPerPage) ||
-        (isCoursesOversightApi && currentData.length <= itemsPerPage);
+        (isCoursesOversightApi && currentData.length <= itemsPerPage) ||
+        (isMaritimeLinkCourses && currentData.length <= itemsPerPage);
     const totalItems = (activeSubTab === 'Jobs' && isMaritimeLinkTab)
         ? totalRemoteJobs
         : isOversightJobs
             ? totalOversight
         : isCoursesOversightApi
+            ? totalCourses
+        : isMaritimeLinkCourses
             ? totalCourses
             : currentData.length;
 

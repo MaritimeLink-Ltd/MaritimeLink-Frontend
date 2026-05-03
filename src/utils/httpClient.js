@@ -117,6 +117,7 @@ class HttpClient {
                 ...options,
                 skipAuth: undefined,
                 headers,
+                cache: 'no-store',
                 signal: controller.signal,
             });
 

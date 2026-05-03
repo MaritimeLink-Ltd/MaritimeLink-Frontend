@@ -16,9 +16,15 @@ import {
     Check
 } from 'lucide-react';
 
+const getSessionRole = () => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('userType') || localStorage.getItem('adminUserType') || '';
+};
+
 function AdminJobs({ onViewApplicants, onCreateJob }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const isAdminContext = getSessionRole() === 'admin';
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -92,10 +98,13 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     const fetchJobs = async () => {
         setIsLoading(true);
         try {
-            const response = await jobService.getMyJobs();
-            if (response?.data?.jobs) {
+            const response = isAdminContext
+                ? await jobService.getAllAdminJobs(1, 500)
+                : await jobService.getMyJobs();
+            const rawJobs = response?.data?.jobs || [];
+            if (Array.isArray(rawJobs)) {
                 // Map API data to the format expected by the component
-                const mappedJobs = response.data.jobs.map((job) => {
+                const mappedJobs = rawJobs.map((job) => {
                     const createdAt = job?.createdAt ? new Date(job.createdAt) : null;
                     const now = new Date();
                     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -132,6 +141,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         if (upper === 'DRAFT') return 'Draft';
                         if (upper === 'EXPIRED') return 'Expired';
                         if (upper === 'FILLED') return 'Filled';
+                        if (upper === 'REMOVED') return 'Closed';
                         return 'Active';
                     })();
 
@@ -140,9 +150,9 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                         id: job.id,
                         title: job.title || 'Untitled',
                         vessel: formatCategory(job.category) || 'General',
-                        domain: job.companyId || 'company.com',
+                        domain: job.recruiter?.email || job.admin?.email || job.companyId || 'company.com',
                         location: job.location || 'Global',
-                        applicants: job.applicantsCount || 0, // Fallback if API hasn't added it yet
+                        applicants: Number(job?._count?.applications ?? job.applicantsCount ?? 0),
                         posted: postedString,
                         postedDaysAgo: diffDays,
                         createdAt,
@@ -325,12 +335,29 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                             ))}
                         </div>
                         <button
-                            onClick={() => onCreateJob ? onCreateJob() : navigate('/recruiter/upload-job', {
-                                state: {
-                                    dashboardType: 'recruiter',
-                                    returnPath: '/recruiter/jobs'
+                            onClick={() => {
+                                if (isAdminContext) {
+                                    navigate('/admin/marketplace/create-job', {
+                                        state: {
+                                            dashboardType: 'admin',
+                                            returnPath: '/admin/jobs',
+                                        },
+                                    });
+                                    return;
                                 }
-                            })}
+
+                                if (onCreateJob) {
+                                    onCreateJob();
+                                    return;
+                                }
+
+                                navigate('/recruiter/upload-job', {
+                                    state: {
+                                        dashboardType: 'recruiter',
+                                        returnPath: '/recruiter/jobs'
+                                    }
+                                });
+                            }}
                             className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                         >
                             <Plus className="h-4 w-4" />
@@ -509,7 +536,12 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                                 onViewApplicants(job.id);
                                                             } else {
                                                                 // Use navigation for standalone route
-                                                                navigate(`/recruiter/jobs/${job.id}`, { state: { jobData: job } });
+                                                                navigate(
+                                                                    isAdminContext
+                                                                        ? `/admin/jobs/${job.id}`
+                                                                        : `/recruiter/jobs/${job.id}`,
+                                                                    { state: { jobData: job } }
+                                                                );
                                                             }
                                                         }}
                                                         className="text-[#003971] font-bold hover:underline text-sm"
@@ -518,14 +550,19 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={() => navigate('/recruiter/upload-job', {
-                                                            state: {
-                                                                jobData: job,
-                                                                isEdit: true,
-                                                                dashboardType: 'recruiter',
-                                                                returnPath: '/recruiter/jobs'
+                                                        onClick={() => navigate(
+                                                            isAdminContext
+                                                                ? '/admin/marketplace/create-job'
+                                                                : '/recruiter/upload-job',
+                                                            {
+                                                                state: {
+                                                                    jobData: job,
+                                                                    isEdit: true,
+                                                                    dashboardType: isAdminContext ? 'admin' : 'recruiter',
+                                                                    returnPath: isAdminContext ? '/admin/jobs' : '/recruiter/jobs',
+                                                                }
                                                             }
-                                                        })}
+                                                        )}
                                                         className="text-gray-600 font-bold hover:underline text-sm"
                                                     >
                                                         Edit Draft
