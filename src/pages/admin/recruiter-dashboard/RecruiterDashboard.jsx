@@ -453,6 +453,7 @@ function RecruiterDashboard({ onNavigate }) {
                         {headerUser.welcomeLine}{' '}
                         <span className="text-gray-400">{headerUser.dateLabel}</span>
                     </p>
+                    <p className="text-xs text-gray-400 mt-1">{headerUser.subtitle}</p>
                 </div>
 
                 {/* Time Filter */}
