@@ -102,9 +102,19 @@ class JobService {
      * @param {number} limit - Items per page
      * @returns {Promise<Object>} Response with paginated list of all jobs
      */
-    async getAllAdminJobs(page = 1, limit = 10) {
+    async getAllAdminJobs(page = 1, limit = 10, filters = {}) {
         try {
-            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.ADMIN_ALL}?page=${page}&limit=${limit}`);
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(limit),
+            });
+            Object.entries(filters || {}).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && String(value).trim() !== '') {
+                    params.set(key, String(value));
+                }
+            });
+
+            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.ADMIN_ALL}?${params.toString()}`);
             return response;
         } catch (error) {
             console.error('Get All Admin Jobs error:', error);

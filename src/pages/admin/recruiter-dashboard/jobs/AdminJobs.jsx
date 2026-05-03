@@ -25,6 +25,9 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     const navigate = useNavigate();
     const location = useLocation();
     const isAdminContext = getSessionRole() === 'admin';
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const recruiterIdFilter = searchParams.get('recruiterId') || '';
+    const adminIdFilter = searchParams.get('adminId') || '';
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -96,10 +99,13 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchJobs = async () => {
-        setIsLoading(true);
+            setIsLoading(true);
         try {
             const response = isAdminContext
-                ? await jobService.getAllAdminJobs(1, 500)
+                ? await jobService.getAllAdminJobs(1, 500, {
+                    recruiterId: recruiterIdFilter,
+                    adminId: adminIdFilter,
+                })
                 : await jobService.getMyJobs();
             const rawJobs = response?.data?.jobs || [];
             if (Array.isArray(rawJobs)) {
@@ -176,7 +182,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
     useEffect(() => {
         fetchJobs();
-    }, [location.state?.refreshJobsAt]);
+    }, [location.state?.refreshJobsAt, location.search, isAdminContext]);
 
     // If user changes filters/search, keep them on page 1 (otherwise it looks like filters "don't work").
     useEffect(() => {

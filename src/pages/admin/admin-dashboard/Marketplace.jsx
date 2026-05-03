@@ -1138,9 +1138,9 @@ function Marketplace() {
                                                     </button>
                                                 ) : (
                                                     <Link
-                                                        to={job.recruiterId
-                                                            ? `/admin/marketplace/oversight/jobs/${job.id}`
-                                                            : `/admin/marketplace/internal/jobs/${job.id}`
+                                                        to={job.creatorType === 'ADMIN'
+                                                            ? `/admin/jobs?adminId=${job.id}`
+                                                            : `/admin/marketplace/oversight/recruiter/${job.id}/jobs`
                                                         }
                                                         className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                     >
