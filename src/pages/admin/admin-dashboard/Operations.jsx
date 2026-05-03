@@ -100,6 +100,128 @@ const normalizeActivityStats = (stats = {}) => [
     },
 ];
 
+const supportStatusClassMap = {
+    OPEN: 'text-blue-600',
+    IN_PROGRESS: 'text-yellow-600',
+    WAITING: 'text-orange-600',
+    RESOLVED: 'text-green-600',
+    CLOSED: 'text-gray-500',
+};
+
+const supportPriorityClassMap = {
+    HIGH: 'text-red-500',
+    MEDIUM: 'text-orange-500',
+    LOW: 'text-gray-500',
+};
+
+const formatSupportCase = (supportCase) => {
+    const status = String(supportCase?.status || 'OPEN').toUpperCase();
+    const priority = String(supportCase?.priority || 'MEDIUM').toUpperCase();
+    const userType = String(supportCase?.user?.role || supportCase?.userType || 'User').replace(/_/g, ' ');
+    const userId = supportCase?.userId || 'Unknown';
+    const assignedTo = supportCase?.assignedTo?.name || supportCase?.assignedTo?.email || 'Unassigned';
+
+    return {
+        id: supportCase?.caseId || supportCase?.id,
+        caseId: supportCase?.caseId || supportCase?.id,
+        user: supportCase?.user?.name || supportCase?.userLabel || `${userType} ${String(userId).slice(0, 8)}`,
+        userRole: userType,
+        issueType: supportCase?.subject || 'Support case',
+        issueCategory: supportCase?.category || 'General',
+        priority,
+        priorityColor: supportPriorityClassMap[priority] || 'text-gray-500',
+        opened: formatShortDateTime(supportCase?.createdAt),
+        openedRaw: supportCase?.createdAt,
+        assignedTo,
+        status,
+        statusColor: supportStatusClassMap[status] || 'text-gray-600',
+        notesCount: Array.isArray(supportCase?.notes) ? supportCase.notes.length : 0,
+    };
+};
+
+const buildSupportStats = (cases = []) => {
+    const normalized = Array.isArray(cases) ? cases : [];
+    const countByStatus = (status) =>
+        normalized.filter((item) => String(item?.status || '').toUpperCase() === status).length;
+
+    return [
+        {
+            value: String(countByStatus('OPEN')),
+            label: 'Open Cases',
+            sublabel: 'Awaiting first response',
+            icon: MessageSquare,
+            iconColor: 'text-blue-500',
+            iconBg: 'bg-blue-50',
+            cardBg: 'bg-white',
+        },
+        {
+            value: String(countByStatus('IN_PROGRESS')),
+            label: 'In Progress',
+            sublabel: 'Assigned to admins',
+            icon: RefreshCw,
+            iconColor: 'text-yellow-500',
+            iconBg: 'bg-yellow-50',
+            cardBg: 'bg-white',
+        },
+        {
+            value: String(countByStatus('WAITING')),
+            label: 'Waiting',
+            sublabel: 'Pending user reply',
+            icon: Clock,
+            iconColor: 'text-orange-500',
+            iconBg: 'bg-orange-50',
+            cardBg: 'bg-white',
+        },
+        {
+            value: String(countByStatus('RESOLVED')),
+            label: 'Resolved',
+            sublabel: 'Closed successfully',
+            icon: CheckCircle,
+            iconColor: 'text-green-500',
+            iconBg: 'bg-green-50',
+            cardBg: 'bg-white',
+        },
+        {
+            value: String(countByStatus('CLOSED')),
+            label: 'Closed',
+            sublabel: 'Archived cases',
+            icon: XCircle,
+            iconColor: 'text-gray-500',
+            iconBg: 'bg-gray-100',
+            cardBg: 'bg-white',
+        },
+    ];
+};
+
+const buildSupportSubTabs = (cases = []) => {
+    const counts = {
+        All: Array.isArray(cases) ? cases.length : 0,
+        Open: 0,
+        'In Progress': 0,
+        Waiting: 0,
+        Resolved: 0,
+        Closed: 0,
+    };
+
+    for (const item of Array.isArray(cases) ? cases : []) {
+        const status = String(item?.status || '').toUpperCase();
+        if (status === 'OPEN') counts.Open += 1;
+        if (status === 'IN_PROGRESS') counts['In Progress'] += 1;
+        if (status === 'WAITING') counts.Waiting += 1;
+        if (status === 'RESOLVED') counts.Resolved += 1;
+        if (status === 'CLOSED') counts.Closed += 1;
+    }
+
+    return [
+        { name: 'All', count: counts.All || null },
+        { name: 'Open', count: counts.Open || null },
+        { name: 'In Progress', count: counts['In Progress'] || null },
+        { name: 'Waiting', count: counts.Waiting || null },
+        { name: 'Resolved', count: counts.Resolved || null },
+        { name: 'Closed', count: counts.Closed || null },
+    ];
+};
+
 function Operations() {
     const [activeMainTab, setActiveMainTab] = useState('Activity');
     const [activeSubTab, setActiveSubTab] = useState('All Activity');
@@ -112,6 +234,8 @@ function Operations() {
     const [activityStats, setActivityStats] = useState(normalizeActivityStats());
     const [activityData, setActivityData] = useState([]);
     const [activityError, setActivityError] = useState('');
+    const [supportCasesData, setSupportCasesData] = useState([]);
+    const [supportError, setSupportError] = useState('');
 
     // New State for Search, Filter, Pagination
     const [searchQuery, setSearchQuery] = useState('');
@@ -129,14 +253,6 @@ function Operations() {
     ];
 
     const subTabs = ['All Activity', 'User Actions', 'Admin Actions', 'System Actions', 'Security'];
-    const supportSubTabs = [
-        { name: 'All', count: null },
-        { name: 'Open', count: 12 },
-        { name: 'In Progress', count: null },
-        { name: 'Waiting', count: null },
-        { name: 'Resolved', count: null },
-        { name: 'Closed', count: null }
-    ];
     const systemJobSubTabs = ['All', 'Running', 'Completed', 'Failed', 'Queued', 'Paused'];
     const manualActionsSubTabs = [
         { name: 'Accounts', icon: Users },
@@ -146,66 +262,13 @@ function Operations() {
     ];
     const timeFilters = ['Today', '7 Days', '30 Days'];
 
-    // Support Cases Stats data
-    const supportStats = [
-        { value: '12', label: 'Open Cases', sublabel: '+4 new today', icon: MessageSquare, iconColor: 'text-blue-500', iconBg: 'bg-blue-50', cardBg: 'bg-white' },
-        { value: '1h 42m', label: 'Avg Response', sublabel: '↓ 12% vs last week', sublabelColor: 'text-green-600', icon: Clock, iconColor: 'text-yellow-500', iconBg: 'bg-yellow-50', cardBg: 'bg-white' },
-        { value: '28', label: 'Resolved Today', sublabel: 'Target: 30', icon: CheckCircle, iconColor: 'text-green-500', iconBg: 'bg-green-50', cardBg: 'bg-white' },
-        { value: '94%', label: 'Satisfaction', sublabel: 'Based on feedback', icon: Users, iconColor: 'text-orange-500', iconBg: 'bg-orange-50', cardBg: 'bg-white' },
-        { value: '3', label: 'Overdue', sublabel: '> 48h unanswered', sublabelColor: 'text-red-600', icon: AlertOctagon, iconColor: 'text-red-500', iconBg: 'bg-red-50', cardBg: 'bg-white' }
-    ];
-
-    // Support Cases data
-    const supportCasesData = [
-        { id: '#SC-2436', user: 'Mark Bennett', userRole: 'Seafarer', issueType: 'Account Access Problem - Password', issueCategory: 'Account Access', priority: 'High', priorityColor: 'text-red-500', opened: '14 mins ago', assignedTo: 'James T.', status: 'Open', statusColor: 'text-blue-600' },
-        { id: '#SC-2456', user: 'Seafarer LLC', userRole: 'Company', issueType: 'Document Upload Issue - Bulk CSV', issueCategory: 'Technical', priority: 'High', priorityColor: 'text-red-500', opened: '20 mins ago', assignedTo: 'Sarah M.', status: 'Open', statusColor: 'text-blue-600' },
-        { id: '#SC-2438', user: 'BrightSail Ltd', userRole: 'Recruiter', issueType: 'Recruiter Complaint regarding', issueCategory: 'Dispute', priority: 'Medium', priorityColor: 'text-orange-500', opened: '30 mins ago', assignedTo: 'Admin', status: 'In Progress', statusColor: 'text-yellow-600' },
-        { id: '#SC-2432', user: 'John Doe', userRole: 'Seafarer', issueType: 'How to update profile picture?', issueCategory: 'General', priority: 'Low', priorityColor: 'text-gray-500', opened: '2 hours ago', assignedTo: 'Bot', status: 'Resolved', statusColor: 'text-green-600' },
-        { id: '#SC-2420', user: 'Emily White', userRole: 'Seafarer', issueType: 'Payment not reflecting', issueCategory: 'Billing', priority: 'High', priorityColor: 'text-red-500', opened: '5 hours ago', assignedTo: 'Finance', status: 'Waiting', statusColor: 'text-orange-600' },
-        { id: '#SC-2415', user: 'Global Ship Co', userRole: 'Company', issueType: 'API Integration Access', issueCategory: 'Technical', priority: 'Medium', priorityColor: 'text-orange-500', opened: '1 day ago', assignedTo: 'Dev Team', status: 'Waiting', statusColor: 'text-orange-600' },
-        { id: '#SC-2401', user: 'Alex Brown', userRole: 'Seafarer', issueType: 'Login Attempt Issue', issueCategory: 'Security', priority: 'High', priorityColor: 'text-red-500', opened: '2 days ago', assignedTo: 'Security', status: 'Closed', statusColor: 'text-gray-500' },
-        { id: '#SC-2398', user: 'Sea Connect', userRole: 'Recruiter', issueType: 'Subscription Upgrade', issueCategory: 'Billing', priority: 'Low', priorityColor: 'text-gray-500', opened: '3 days ago', assignedTo: 'Sales', status: 'Closed', statusColor: 'text-gray-500' }
-    ];
-
-    // System Jobs Stats data
-    const systemJobsStats = [
-        { value: '124', label: 'Total Jobs', sublabel: 'Today', icon: Layers, iconColor: 'text-blue-500', iconBg: 'bg-blue-50', cardBg: 'bg-white' },
-        { value: '2', label: 'Running Now', sublabel: 'Healthy', sublabelColor: 'text-green-600', icon: RefreshCw, iconColor: 'text-green-500', iconBg: 'bg-green-50', cardBg: 'bg-white' },
-        { value: '5', label: 'Failed Jobs', sublabel: '3 Retrying', sublabelColor: 'text-red-600', icon: XCircle, iconColor: 'text-red-500', iconBg: 'bg-red-50', cardBg: 'bg-white' },
-        { value: '96.2%', label: 'Success Rate', sublabel: 'Last 24h', icon: CheckCircle, iconColor: 'text-[#003971]', iconBg: 'bg-blue-50', cardBg: 'bg-white' },
-        { value: '18', label: 'Queued', sublabel: 'Next: 2 mins', icon: Clock, iconColor: 'text-gray-500', iconBg: 'bg-gray-100', cardBg: 'bg-white' }
-    ];
-
-    // System Jobs Data
-    const systemJobsData = [
-        { id: 'JOB-9021', name: 'Daily Database Backup', icon: Database, status: 'Running', statusColor: 'text-blue-600', progress: 45, progressColor: 'bg-blue-600', timing: '10:00:00', duration: '-', stats: '14,050 items' },
-        { id: 'JOB-9020', name: 'User Activation Emails Batch', icon: Mail, status: 'Completed', statusColor: 'text-green-600', progress: 100, progressColor: 'bg-green-600', timing: '09:30:00', duration: '5m 12s', stats: '142 items' },
-        { id: 'JOB-9019', name: 'Compliance Document Sync', icon: Layers, status: 'Failed', statusColor: 'text-red-600', progress: 12, progressColor: 'bg-red-500', timing: '09:00:00', duration: '2m 45s', stats: '56 items', statsSub: '3 errors', statsSubColor: 'text-red-500' },
-        { id: 'JOB-9018', name: 'Monthly Analytics Report', icon: FileText, status: 'Queued', statusColor: 'text-gray-600', progress: 0, progressColor: 'bg-gray-200', timing: 'Scheduled: 11:00:00', duration: '-', stats: '0 items' },
-        { id: 'JOB-9017', name: 'Legacy Data Archival', icon: Database, status: 'Paused', statusColor: 'text-orange-500', progress: 78, progressColor: 'bg-orange-500', timing: '08:00:00', duration: '-', stats: '89,002 items' }
-    ];
-
-    // Manual Actions Data
-    const accountsData = [
-        { id: 'MA-001', type: 'Password Reset', target: 'user_882910', initiatedBy: 'System Admin', reason: 'User request via support ticket', riskLevel: 'Low', riskColor: 'text-gray-600', status: 'Completed', statusColor: 'text-green-600' },
-        { id: 'MA-002', type: 'Account Suspension', target: 'org_5521', initiatedBy: 'Compliance Officer', reason: 'Suspicious activity detected', riskLevel: 'High', riskColor: 'text-red-600', status: 'Pending', statusColor: 'text-orange-600' },
-        { id: 'MA-003', type: 'Role Update', target: 'user_123456', initiatedBy: 'Manager', reason: 'Promotion to Team Lead', riskLevel: 'Medium', riskColor: 'text-orange-600', status: 'In Progress', statusColor: 'text-blue-600' }
-    ];
-
-    const complianceData = [
-        { id: 'CP-001', type: 'Document Verification', target: 'doc_99881', initiatedBy: 'Automated System', reason: 'Routine quarterly check', riskLevel: 'Low', riskColor: 'text-gray-600', status: 'Pending', statusColor: 'text-orange-600' },
-        { id: 'CP-002', type: 'Risk Assessment', target: 'vendor_772', initiatedBy: 'Risk Team', reason: 'New vendor onboarding', riskLevel: 'High', riskColor: 'text-red-600', status: 'In Progress', statusColor: 'text-blue-600' }
-    ];
-
-    const supportData = [
-        { id: 'SP-001', type: 'Ticket Escalation', target: 'ticket_5510', initiatedBy: 'L1 Support', reason: 'Complex technical issue', riskLevel: 'Medium', riskColor: 'text-orange-600', status: 'Completed', statusColor: 'text-green-600' },
-        { id: 'SP-002', type: 'Refund Process', target: 'trans_9910', initiatedBy: 'Billing Dept', reason: 'Service outage compensation', riskLevel: 'Medium', riskColor: 'text-orange-600', status: 'Approved', statusColor: 'text-green-600' }
-    ];
-
-    const marketplaceData = [
-        { id: 'MK-001', type: 'Listing Removal', target: 'list_1120', initiatedBy: 'Moderator', reason: 'Policy violation', riskLevel: 'Low', riskColor: 'text-gray-600', status: 'Completed', statusColor: 'text-green-600' },
-        { id: 'MK-002', type: 'Feature Promo', target: 'promo_881', initiatedBy: 'Marketing', reason: 'Seasonal campaign', riskLevel: 'Low', riskColor: 'text-gray-600', status: 'Pending', statusColor: 'text-orange-600' }
-    ];
+    // Placeholder empty arrays for sections that are not live yet.
+    const systemJobsStats = [];
+    const systemJobsData = [];
+    const accountsData = [];
+    const complianceData = [];
+    const supportData = [];
+    const marketplaceData = [];
 
     // --- LOGIC ---
 
@@ -248,19 +311,47 @@ function Operations() {
         }
     };
 
+    const loadSupportCases = async () => {
+        setIsRefreshing(true);
+        setSupportError('');
+
+        try {
+            const response = await adminOperationsService.getSupportCases({
+                page: 1,
+                limit: 500,
+            });
+
+            const cases = response?.data?.cases || [];
+            const normalizedCases = cases.map(formatSupportCase);
+            setSupportCasesData(normalizedCases);
+        } catch (error) {
+            console.error('Failed to load support cases:', error);
+            setSupportCasesData([]);
+            setSupportError(error?.message || 'Failed to load support cases');
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     useEffect(() => {
         if (activeMainTab === 'Activity') {
             void loadActivityFeed();
+        } else if (activeMainTab === 'Support Cases') {
+            void loadSupportCases();
         }
     }, [activeMainTab]);
 
     useEffect(() => {
-        if (!autoRefresh || activeMainTab !== 'Activity') {
+        if (!autoRefresh || (activeMainTab !== 'Activity' && activeMainTab !== 'Support Cases')) {
             return undefined;
         }
 
         const timer = setInterval(() => {
-            void loadActivityFeed();
+            if (activeMainTab === 'Activity') {
+                void loadActivityFeed();
+            } else if (activeMainTab === 'Support Cases') {
+                void loadSupportCases();
+            }
         }, 30000);
 
         return () => clearInterval(timer);
@@ -350,12 +441,15 @@ function Operations() {
                 const matchesSearch = item.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.issueType.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.id.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesPriority = filterPriority === 'All' || item.priority === filterPriority;
+                const normalizedPriorityFilter = String(filterPriority || 'All').toUpperCase();
+                const matchesPriority = normalizedPriorityFilter === 'ALL' || item.priority === normalizedPriorityFilter;
                 // Filter by subtab (Status)
-                const matchesStatus = activeSupportSubTab === 'All' || item.status === activeSupportSubTab || (activeSupportSubTab === 'Open' && item.status === 'Open');
-                const matchesTime = matchesTimeFilter(item);
+                const normalizedSupportStatus = activeSupportSubTab === 'All'
+                    ? 'ALL'
+                    : activeSupportSubTab.toUpperCase().replace(/\s+/g, '_');
+                const matchesStatus = normalizedSupportStatus === 'ALL' || item.status === normalizedSupportStatus;
 
-                return matchesSearch && matchesPriority && matchesStatus && matchesTime;
+                return matchesSearch && matchesPriority && matchesStatus;
             });
         } else if (activeMainTab === 'System Jobs') {
             data = systemJobsData.filter(item => {
@@ -387,6 +481,8 @@ function Operations() {
     const totalItems = displayData.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const paginatedData = displayData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const supportStats = buildSupportStats(supportCasesData);
+    const supportSubTabs = buildSupportSubTabs(supportCasesData);
 
     const handleRefresh = () => {
         if (activeMainTab === 'Activity') {
@@ -395,6 +491,16 @@ function Operations() {
             setFilterStatus('All');
             setCurrentPage(1);
             setActiveSubTab('All Activity');
+            return;
+        }
+
+        if (activeMainTab === 'Support Cases') {
+            void loadSupportCases();
+            setSearchQuery('');
+            setFilterStatus('All');
+            setFilterPriority('All');
+            setCurrentPage(1);
+            setActiveSupportSubTab('Open');
             return;
         }
 
@@ -409,7 +515,6 @@ function Operations() {
         setCurrentPage(1);
 
         // Reset Logic dependent on active tab
-        if (activeMainTab === 'Support Cases') setActiveSupportSubTab('Open');
         if (activeMainTab === 'System Jobs') setActiveSystemJobSubTab('All');
         if (activeMainTab === 'Manual Actions') setActiveManualActionSubTab('Accounts');
     };
@@ -805,9 +910,9 @@ function Operations() {
                                         className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20"
                                     >
                                         <option value="All">All Priority</option>
-                                        <option value="High">High</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="Low">Low</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="LOW">Low</option>
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                 </div>
@@ -826,6 +931,11 @@ function Operations() {
                                 </button>
                             </div>
                         </div>
+                        {supportError && (
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {supportError}
+                            </div>
+                        )}
                     </div>
 
                     {/* Table - Scrollable Content */}
@@ -900,7 +1010,7 @@ function Operations() {
                                             </td>
                                             <td className="px-4 py-4">
                                                 <Link
-                                                    to={`/admin/operations/case/${caseItem.id.replace('#', '')}`}
+                                                    to={`/admin/operations/case/${caseItem.caseId || caseItem.id}`}
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >
                                                     View Details
