@@ -297,9 +297,9 @@ function RecruiterDashboard({ onNavigate }) {
         } else {
             // Map sections to routes
             const routeMap = {
-                'jobs': '/admin/jobs',
+                'jobs': '/recruiter/jobs',
                 'search': '/recruiter/search',
-                'chats': '/admin/chats',
+                'chats': '/recruiter/chats',
                 'settings': '/recruiter/settings'
             };
             if (routeMap[section]) {
@@ -312,11 +312,11 @@ function RecruiterDashboard({ onNavigate }) {
         (row) => {
             const act = (row.apiAction || '').toUpperCase();
             if (act === 'VIEW_APPLICANTS' && row.jobId) {
-                navigate(`/admin/jobs/${row.jobId}`, { state: { initialAtsTab: 'new' } });
+                navigate(`/recruiter/jobs/${row.jobId}`, { state: { initialAtsTab: 'new' } });
                 return;
             }
             if (act === 'VIEW_MATCHES' && row.jobId) {
-                navigate(`/admin/jobs/${row.jobId}`, { state: { initialAtsTab: 'matches' } });
+                navigate(`/recruiter/jobs/${row.jobId}`, { state: { initialAtsTab: 'matches' } });
                 return;
             }
             if (act === 'VIEW_MATCHES' && row.category) {
@@ -325,13 +325,13 @@ function RecruiterDashboard({ onNavigate }) {
                 return;
             }
             if (row.jobId) {
-                navigate(`/admin/jobs/${row.jobId}`);
+                navigate(`/recruiter/jobs/${row.jobId}`);
                 return;
             }
             if (onNavigate) {
                 onNavigate('jobs');
             } else {
-                navigate('/admin/jobs');
+                navigate('/recruiter/jobs');
             }
         },
         [navigate, onNavigate]
@@ -683,7 +683,7 @@ function RecruiterDashboard({ onNavigate }) {
                                             <div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => navigate(`/admin/jobs/${job.id}`)}
+                                                    onClick={() => navigate(`/recruiter/jobs/${job.id}`)}
                                                     className="text-sm font-bold text-gray-900 mb-0.5 hover:text-blue-600 text-left"
                                                 >
                                                     {job.title}
@@ -714,11 +714,12 @@ function RecruiterDashboard({ onNavigate }) {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        navigate('/admin/upload-job', {
+                                                        navigate('/recruiter/upload-job', {
                                                             state: {
                                                                 jobData: job,
                                                                 isEdit: true,
                                                                 dashboardType: 'recruiter',
+                                                                returnPath: '/recruiter/jobs',
                                                             },
                                                         })
                                                     }
@@ -730,7 +731,7 @@ function RecruiterDashboard({ onNavigate }) {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        navigate(`/admin/jobs/${job.id}`, {
+                                                        navigate(`/recruiter/jobs/${job.id}`, {
                                                             state: { initialAtsTab: 'new' },
                                                         })
                                                     }

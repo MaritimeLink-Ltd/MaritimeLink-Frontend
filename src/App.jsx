@@ -222,6 +222,9 @@ function App() {
             <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
             <Route path="/recruiter/search" element={<AdminSearch />} />
             <Route path="/admin/search" element={<RecruiterSearchRedirect />} />
+            <Route path="/recruiter/jobs" element={<AdminJobs />} />
+            <Route path="/recruiter/jobs/:jobId" element={<JobDetail />} />
+            <Route path="/recruiter/upload-job" element={<UploadJob />} />
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/chats" element={<AdminChats />} />

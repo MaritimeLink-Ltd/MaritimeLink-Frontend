@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import jobService from '../../../../services/jobService';
 import {
     Plus,
@@ -18,6 +18,7 @@ import {
 
 function AdminJobs({ onViewApplicants, onCreateJob }) {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -165,7 +166,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
 
     useEffect(() => {
         fetchJobs();
-    }, []);
+    }, [location.state?.refreshJobsAt]);
 
     // If user changes filters/search, keep them on page 1 (otherwise it looks like filters "don't work").
     useEffect(() => {
@@ -324,10 +325,10 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                             ))}
                         </div>
                         <button
-                            onClick={() => onCreateJob ? onCreateJob() : navigate('/admin/upload-job', {
+                            onClick={() => onCreateJob ? onCreateJob() : navigate('/recruiter/upload-job', {
                                 state: {
                                     dashboardType: 'recruiter',
-                                    returnPath: '/admin/jobs'
+                                    returnPath: '/recruiter/jobs'
                                 }
                             })}
                             className="bg-[#003971] text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
@@ -508,7 +509,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                                 onViewApplicants(job.id);
                                                             } else {
                                                                 // Use navigation for standalone route
-                                                                navigate(`/admin/jobs/${job.id}`, { state: { jobData: job } });
+                                                                navigate(`/recruiter/jobs/${job.id}`, { state: { jobData: job } });
                                                             }
                                                         }}
                                                         className="text-[#003971] font-bold hover:underline text-sm"
@@ -517,12 +518,12 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={() => navigate('/admin/upload-job', {
+                                                        onClick={() => navigate('/recruiter/upload-job', {
                                                             state: {
                                                                 jobData: job,
                                                                 isEdit: true,
                                                                 dashboardType: 'recruiter',
-                                                                returnPath: '/admin/jobs'
+                                                                returnPath: '/recruiter/jobs'
                                                             }
                                                         })}
                                                         className="text-gray-600 font-bold hover:underline text-sm"

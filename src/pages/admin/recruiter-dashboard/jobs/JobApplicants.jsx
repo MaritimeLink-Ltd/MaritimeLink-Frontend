@@ -40,7 +40,7 @@ function JobApplicants({ jobId, onBack, onViewCandidate }) {
 
     const handleOpenJobDetailsPage = () => {
         setShowJobDetailsModal(false);
-        navigate(`/admin/jobs/${jobId || '000001'}`, {
+        navigate(`/recruiter/jobs/${jobId || '000001'}`, {
             state: {
                 jobData: {
                     id: jobId || '000001',
