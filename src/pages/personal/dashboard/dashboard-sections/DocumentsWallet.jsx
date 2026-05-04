@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Download,
     Share2,
@@ -19,6 +19,8 @@ import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
+import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { API_CATEGORY_TO_WALLET_FOLDERS } from '../../../../constants/documentWalletCategories';
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -48,93 +50,80 @@ const DocumentsWallet = () => {
         'Compliance Ready',
         'Pending Approval',
         'Expiring Soon',
-        'Expired'
+        'Expired',
+        'Rejected',
     ];
 
-    // Mock data for categories based on design
-    const categories = [
+    /** Wallet grid categories only — resume/CV rows are stored but not shown here */
+    const categoryDefinitions = [
         {
             id: 'licenses',
             title: 'Licenses & Endorsements',
-            count: 8,
-            icon: FileText, // Using FileText as generic icon, closest to ID card
+            icon: FileText,
             iconBg: 'bg-gray-100',
             iconColor: 'text-gray-600',
-            status: { label: '1 Expiring soon', color: 'bg-orange-500' }
         },
         {
             id: 'stcw',
             title: 'STCW Certificates',
-            count: 12,
-            icon: Award, // Closest to Certificate
+            icon: Award,
             iconBg: 'bg-green-50',
             iconColor: 'text-green-600',
-            status: { label: '2 Compliance Ready', color: 'bg-emerald-600' }
         },
         {
             id: 'medical',
             title: 'Medical Certificates',
-            count: 4,
-            icon: Folder, // Placeholder for Med kit
+            icon: Folder,
             iconBg: 'bg-red-50',
             iconColor: 'text-red-500',
-            status: { label: '1 Pending Approval', color: 'bg-yellow-400' }
         },
         {
             id: 'seaman',
             title: 'Seaman Book data/Stamp pages',
-            count: 15,
-            icon: FileText, // Book icon preferred if available, using FileText
+            icon: FileText,
             iconBg: 'bg-blue-50',
             iconColor: 'text-blue-500',
-            status: { label: '2 Expiring soon', color: 'bg-orange-500' }
         },
         {
             id: 'travel',
             title: 'Travel Documents',
-            count: 3,
-            icon: Crown, // Globe icon preferred
+            icon: Crown,
             iconBg: 'bg-cyan-50',
             iconColor: 'text-cyan-500',
-            status: { label: '3 Expired', color: 'bg-pink-500' }
         },
         {
             id: 'academic',
             title: 'Academic Qualifications',
-            count: 7,
-            icon: Award, // Cap icon preferred
+            icon: Award,
             iconBg: 'bg-indigo-50',
             iconColor: 'text-indigo-500',
-            status: null
         },
         {
             id: 'company',
             title: 'Company Letters / Misc',
-            count: 5,
             icon: Folder,
-            iconBg: 'bg-cyan-50', // Light blue/cyan
+            iconBg: 'bg-cyan-50',
             iconColor: 'text-cyan-500',
-            status: null
         },
         {
             id: 'appraisals',
             title: 'Recent Appraisals',
-            count: 3,
-            icon: FileText, // Clipboard icon preferred
+            icon: FileText,
             iconBg: 'bg-orange-50',
             iconColor: 'text-orange-500',
-            status: { label: '1 Pending Approval', color: 'bg-yellow-400' }
-        }
+        },
     ];
 
-    // Dynamic categories with real counts
-    const [dynamicCategories, setDynamicCategories] = useState(categories);
+    const [dynamicCategories, setDynamicCategories] = useState(() =>
+        categoryDefinitions.map((c) => ({ ...c, count: 0, statusBadges: [] })),
+    );
+
+    const [uploadContextCategory, setUploadContextCategory] = useState(null);
 
     const fetchDocuments = async () => {
         try {
             setIsLoading(true);
             const response = await documentService.getDocuments();
-            // Extract documents array from the nested response structure
             let docs = [];
             if (response?.data?.documents) {
                 docs = response.data.documents;
@@ -145,34 +134,61 @@ const DocumentsWallet = () => {
             }
 
             setDocuments(docs);
-            
-            // Re-calculate counts
-            // Map backend ENUM to our frontend IDs
-            const categoryMap = {
-                'LICENSES_ENDORSEMENTS': 'licenses',
-                'STCW_CERTIFICATES': 'stcw',
-                'MEDICAL_CERTIFICATES': 'medical',
-                'SEAMANS_BOOK': 'seaman',
-                'TRAVEL_DOCUMENTS': 'travel',
-                'ACADEMIC_QUALIFICATIONS': 'academic',
-                'MISC_COMPANY_LETTERS': 'company',
-                'RECENT_APPRAISALS': 'appraisals'
+
+            const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
+
+            const STATUS_BADGE_META = {
+                ready: { label: 'Compliance Ready', color: 'bg-emerald-600' },
+                pending: { label: 'Pending Approval', color: 'bg-yellow-500' },
+                mismatch: { label: 'Needs Review', color: 'bg-red-500' },
+                'ocr-failed': { label: 'OCR Failed', color: 'bg-red-500' },
+                expiring: { label: 'Expiring Soon', color: 'bg-orange-500' },
+                expired: { label: 'Expired', color: 'bg-pink-500' },
+                rejected: { label: 'Rejected', color: 'bg-red-600' },
             };
-            
-            const counts = {};
-            docs.forEach(doc => {
-                const mappedId = categoryMap[doc.category] || 'company'; // fallback to misc
-                counts[mappedId] = (counts[mappedId] || 0) + 1;
+
+            const BADGE_KEY_ORDER = ['ready', 'pending', 'mismatch', 'ocr-failed', 'expiring', 'expired', 'rejected'];
+
+            const walletDocs = docs.filter((d) => d.category && !EXCLUDED_FROM_WALLET.has(d.category));
+
+            const docsByCategoryId = {};
+            walletDocs.forEach((doc) => {
+                const folderIds = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
+                if (!folderIds?.length) return;
+                folderIds.forEach((catId) => {
+                    if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
+                    docsByCategoryId[catId].push(doc);
+                });
             });
 
-            setDynamicCategories(prevCats => prevCats.map(cat => ({
-                ...cat,
-                count: counts[cat.id] || 0
-            })));
-            
+            setDynamicCategories(
+                categoryDefinitions.map((def) => {
+                    const catDocs = docsByCategoryId[def.id] || [];
+                    const statusCounts = {};
+                    catDocs.forEach((doc) => {
+                        const { key } = getDocumentStatusMeta(doc);
+                        statusCounts[key] = (statusCounts[key] || 0) + 1;
+                    });
+
+                    const statusBadges = BADGE_KEY_ORDER.filter((k) => statusCounts[k] > 0).map((k) => {
+                        const meta = STATUS_BADGE_META[k];
+                        const n = statusCounts[k];
+                        return {
+                            key: k,
+                            label: `${n} ${meta.label}`,
+                            color: meta.color,
+                        };
+                    });
+
+                    return {
+                        ...def,
+                        count: catDocs.length,
+                        statusBadges,
+                    };
+                }),
+            );
         } catch (error) {
-            console.error("Failed to fetch documents", error);
-            // toast error could go here
+            console.error('Failed to fetch documents', error);
         } finally {
             setIsLoading(false);
         }
@@ -182,29 +198,42 @@ const DocumentsWallet = () => {
         fetchDocuments();
     }, []);
 
-    const filteredDynamicCategories = dynamicCategories.filter(category => {
-        // Search Filter
-        const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const filteredDynamicCategories = useMemo(() => {
+        const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
 
-        // Category/Status Filter
-        let matchesFilter = true;
-        if (activeFilter !== 'All') {
-            if (!category.status) {
-                matchesFilter = false;
-            } else {
-                const statusText = category.status.label.toLowerCase();
-                const filterText = activeFilter.toLowerCase();
+        const docBelongsToWalletFolder = (doc, walletFolderId) => {
+            if (!doc.category || EXCLUDED_FROM_WALLET.has(doc.category)) return false;
+            const folders = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
+            return folders?.includes(walletFolderId) ?? false;
+        };
 
-                if (activeFilter === 'Expiring Soon' && statusText.includes('expiring soon')) matchesFilter = true;
-                else if (activeFilter === 'Compliance Ready' && statusText.includes('compliance ready')) matchesFilter = true;
-                else if (activeFilter === 'Pending Approval' && statusText.includes('pending approval')) matchesFilter = true;
-                else if (activeFilter === 'Expired' && statusText.includes('expired') && !statusText.includes('soon')) matchesFilter = true;
-                else matchesFilter = false;
+        const docMatchesWalletFilter = (doc, filter) => {
+            const meta = getDocumentStatusMeta(doc);
+            switch (filter) {
+                case 'Compliance Ready':
+                    return meta.key === 'ready';
+                case 'Pending Approval':
+                    return meta.key === 'pending' || meta.key === 'mismatch' || meta.key === 'ocr-failed';
+                case 'Expiring Soon':
+                    return meta.key === 'expiring';
+                case 'Expired':
+                    return meta.key === 'expired';
+                case 'Rejected':
+                    return meta.key === 'rejected';
+                default:
+                    return true;
             }
-        }
+        };
 
-        return matchesSearch && matchesFilter;
-    });
+        return dynamicCategories.filter((category) => {
+            const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
+            if (!matchesSearch) return false;
+            if (activeFilter === 'All') return true;
+
+            const catDocs = documents.filter((d) => docBelongsToWalletFolder(d, category.id));
+            return catDocs.some((d) => docMatchesWalletFilter(d, activeFilter));
+        });
+    }, [dynamicCategories, documents, activeFilter, searchQuery]);
 
     const handleUploadComplete = (newDoc) => {
         fetchDocuments(); // refresh list
@@ -231,11 +260,11 @@ const DocumentsWallet = () => {
         // Simulate zip file preparation
         setTimeout(() => {
             // Create dummy content for all documents
-            const allDocsContent = categories.map(cat =>
-                `${cat.title}:\n  Total Documents: ${cat.count}\n  Status: ${cat.status?.label || 'N/A'}\n`
+            const allDocsContent = dynamicCategories.map((cat) =>
+                `${cat.title}:\n  Total Documents: ${cat.count}\n  Status: ${(cat.statusBadges || []).map((b) => b.label).join(', ') || 'N/A'}\n`,
             ).join('\n');
 
-            const zipContent = `Maritime Document Pack\n\nExported on: ${new Date().toLocaleDateString()}\nTotal Categories: ${categories.length}\n\n${allDocsContent}`;
+            const zipContent = `Maritime Document Pack\n\nExported on: ${new Date().toLocaleDateString()}\nTotal Categories: ${dynamicCategories.length}\n\n${allDocsContent}`;
 
             // Create blob and download
             const blob = new Blob([zipContent], { type: 'application/zip' });
@@ -280,7 +309,16 @@ const DocumentsWallet = () => {
     };
 
     if (view === 'upload') {
-        return <UploadDocument onBack={() => setView('list')} onCompletion={handleUploadComplete} />;
+        return (
+            <UploadDocument
+                category={uploadContextCategory}
+                onBack={() => {
+                    setView('list');
+                    setUploadContextCategory(null);
+                }}
+                onCompletion={handleUploadComplete}
+            />
+        );
     }
 
     if (view === 'edit') {
@@ -304,11 +342,20 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'category') {
-        return <CategoryDocuments
-            category={selectedCategory}
-            onBack={() => { setView('list'); setSelectedCategory(null); fetchDocuments(); }}
-            onUploadClick={() => setView('upload')}
-        />;
+        return (
+            <CategoryDocuments
+                category={selectedCategory}
+                onBack={() => {
+                    setView('list');
+                    setSelectedCategory(null);
+                    fetchDocuments();
+                }}
+                onUploadClick={(cat) => {
+                    setUploadContextCategory(cat || selectedCategory);
+                    setView('upload');
+                }}
+            />
+        );
     }
 
     return (
@@ -384,7 +431,10 @@ const DocumentsWallet = () => {
                     </div>
 
                     <button
-                        onClick={() => setView('upload')}
+                        onClick={() => {
+                            setUploadContextCategory(null);
+                            setView('upload');
+                        }}
                         className="flex items-center justify-center gap-2 bg-blue-50 text-[#003366] px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-100 transition-colors min-h-[44px] flex-shrink-0"
                     >
                         <Upload size={16} />
@@ -420,12 +470,16 @@ const DocumentsWallet = () => {
                                     </div>
                                 </div>
 
-                                {/* Status Badge */}
-                                {cat.status && (
-                                    <div className="mt-2">
-                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${cat.status.color}`}>
-                                            {cat.status.label}
-                                        </span>
+                                {cat.statusBadges?.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {cat.statusBadges.map((b) => (
+                                            <span
+                                                key={b.key}
+                                                className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${b.color}`}
+                                            >
+                                                {b.label}
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -516,10 +570,12 @@ const DocumentsWallet = () => {
                         <div className="border-t border-gray-200 pt-4">
                             <p className="text-xs text-gray-500 mb-3">Documents included in this link:</p>
                             <div className="grid grid-cols-2 gap-2">
-                                {categories.map((cat) => (
+                                {dynamicCategories.map((cat) => (
                                     <div key={cat.id} className="flex items-center gap-2 text-xs text-gray-600">
                                         <cat.icon size={14} className={cat.iconColor} />
-                                        <span>{cat.count} {cat.title.split(' ')[0]}</span>
+                                        <span>
+                                            {cat.count} {cat.title.split(' ')[0]}
+                                        </span>
                                     </div>
                                 ))}
                             </div>

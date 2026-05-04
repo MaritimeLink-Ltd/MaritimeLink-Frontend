@@ -19,6 +19,14 @@ export const getDocumentStatusMeta = (doc = {}) => {
         };
     }
 
+    if (verificationStatus === 'REJECTED') {
+        return {
+            key: 'rejected',
+            label: 'Rejected',
+            color: 'bg-red-600',
+        };
+    }
+
     if (
         verificationStatus === 'APPROVED' ||
         verificationStatus === 'VERIFIED' ||

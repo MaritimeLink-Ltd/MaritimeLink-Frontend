@@ -20,6 +20,7 @@ import ProcessingDocumentModal from '../../../components/modals/ProcessingDocume
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import { useKycWizard } from '../../../hooks/useKycWizard';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
+import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 
 function toDateInputValue(d) {
     const x = new Date(d);
@@ -168,6 +169,10 @@ function RecruiterDashboard({ onNavigate }) {
 
     // Remote data states
     const [realJobs, setRealJobs] = useState([]);
+    const [jobsHasMore, setJobsHasMore] = useState(false);
+    const [jobsLoadingMore, setJobsLoadingMore] = useState(false);
+    const [actionItemsHasMore, setActionItemsHasMore] = useState(false);
+    const [actionItemsLoadingMore, setActionItemsLoadingMore] = useState(false);
     const [dashStats, setDashStats] = useState({
         activeJobs: 0,
         newApplications: 0,
@@ -231,19 +236,28 @@ function RecruiterDashboard({ onNavigate }) {
                 customRangeApplied.to
             );
             const [jobsOutcome, statsOutcome, actionsOutcome] = await Promise.allSettled([
-                recruiterDashboardService.getDashboardJobs(),
+                recruiterDashboardService.getDashboardJobs({
+                    limit: DASHBOARD_LIST_PAGE_SIZE,
+                    offset: 0,
+                }),
                 recruiterDashboardService.getDashboardStats(statsQuery),
-                recruiterDashboardService.getDashboardActionItems(),
+                recruiterDashboardService.getDashboardActionItems({
+                    limit: DASHBOARD_LIST_PAGE_SIZE,
+                    offset: 0,
+                }),
             ]);
 
             if (jobsOutcome.status === 'fulfilled') {
                 const res = jobsOutcome.value;
                 const list = res?.data?.jobs;
-                setRealJobs(Array.isArray(list) ? list : []);
+                const arr = Array.isArray(list) ? list : [];
+                setRealJobs(arr);
+                setJobsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
             } else {
                 console.error('Failed to fetch dashboard jobs:', jobsOutcome.reason);
                 setJobsError(jobsOutcome.reason?.message || 'Could not load jobs.');
                 setRealJobs([]);
+                setJobsHasMore(false);
             }
 
             if (statsOutcome.status === 'fulfilled') {
@@ -267,13 +281,16 @@ function RecruiterDashboard({ onNavigate }) {
             if (actionsOutcome.status === 'fulfilled') {
                 const res = actionsOutcome.value;
                 const list = res?.data?.actionItems;
-                setActionItemsList(Array.isArray(list) ? list : []);
+                const arr = Array.isArray(list) ? list : [];
+                setActionItemsList(arr);
+                setActionItemsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
             } else {
                 console.error('Failed to fetch action items:', actionsOutcome.reason);
                 setActionItemsError(
                     actionsOutcome.reason?.message || 'Could not load action items.'
                 );
                 setActionItemsList([]);
+                setActionItemsHasMore(false);
             }
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
@@ -290,6 +307,48 @@ function RecruiterDashboard({ onNavigate }) {
     const handleRefresh = () => {
         loadDashboardData();
     };
+
+    const loadMoreJobs = useCallback(async () => {
+        if (jobsLoadingMore || !jobsHasMore) return;
+        setJobsLoadingMore(true);
+        setJobsError(null);
+        try {
+            const res = await recruiterDashboardService.getDashboardJobs({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: realJobs.length,
+            });
+            const list = res?.data?.jobs;
+            const arr = Array.isArray(list) ? list : [];
+            setRealJobs((prev) => [...prev, ...arr]);
+            setJobsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more dashboard jobs:', e);
+            setJobsError(e?.message || 'Could not load more jobs.');
+        } finally {
+            setJobsLoadingMore(false);
+        }
+    }, [jobsHasMore, jobsLoadingMore, realJobs.length]);
+
+    const loadMoreActionItems = useCallback(async () => {
+        if (actionItemsLoadingMore || !actionItemsHasMore || actionItemsLoading) return;
+        setActionItemsLoadingMore(true);
+        setActionItemsError(null);
+        try {
+            const res = await recruiterDashboardService.getDashboardActionItems({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: actionItemsList.length,
+            });
+            const list = res?.data?.actionItems;
+            const arr = Array.isArray(list) ? list : [];
+            setActionItemsList((prev) => [...prev, ...arr]);
+            setActionItemsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more action items:', e);
+            setActionItemsError(e?.message || 'Could not load more actions.');
+        } finally {
+            setActionItemsLoadingMore(false);
+        }
+    }, [actionItemsHasMore, actionItemsList.length, actionItemsLoading, actionItemsLoadingMore]);
 
     const handleNavigate = (section) => {
         if (onNavigate) {
@@ -576,7 +635,8 @@ function RecruiterDashboard({ onNavigate }) {
                                 </p>
                             )}
 
-                            <div className="space-y-4">
+                            <div className="flex flex-col max-h-[360px] min-h-0">
+                            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
                                 {actionItemsLoading ? (
                                     [1, 2].map((k) => (
                                         <div
@@ -623,11 +683,22 @@ function RecruiterDashboard({ onNavigate }) {
                                     })
                                 )}
                             </div>
+                            {!actionItemsLoading && actionItemsHasMore && (
+                                <button
+                                    type="button"
+                                    onClick={loadMoreActionItems}
+                                    disabled={actionItemsLoadingMore}
+                                    className="mt-3 shrink-0 w-full sm:w-auto py-2 px-4 text-sm font-semibold text-[#003971] border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                    {actionItemsLoadingMore ? 'Loading…' : 'Load more'}
+                                </button>
+                            )}
+                            </div>
                         </div>
                     </div>
 
                     {/* Jobs at a Glance */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col max-h-[520px]">
                         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="text-lg font-bold text-gray-900">Your Jobs at a Glance</h2>
                             <button
@@ -643,14 +714,15 @@ function RecruiterDashboard({ onNavigate }) {
                             </div>
                         )}
 
-                        <div className="divide-y divide-gray-50">
-                            <div className="grid grid-cols-12 px-8 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <div className="divide-y divide-gray-50 flex-1 min-h-0 flex flex-col">
+                            <div className="grid grid-cols-12 px-8 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">
                                 <div className="col-span-6">Job Title</div>
                                 <div className="col-span-3">Status / Applicants</div>
                                 <div className="col-span-3 text-right">Matches (Not Applied)</div>
                             </div>
 
-                            {realJobs.slice(0, 5).map((job) => {
+                            <div className="overflow-y-auto flex-1 min-h-0 max-h-[340px]">
+                            {realJobs.map((job) => {
                                 const statusRaw = (job.status || '').toUpperCase();
                                 const formattedStatus =
                                     statusRaw === 'ACTIVE'
@@ -761,9 +833,23 @@ function RecruiterDashboard({ onNavigate }) {
                                     <p className="text-gray-500 font-medium pb-2">No jobs found in your account.</p>
                                 </div>
                             )}
+                            </div>
+
+                            {!jobsError && jobsHasMore && realJobs.length > 0 && (
+                                <div className="px-8 py-3 border-t border-gray-50 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={loadMoreJobs}
+                                        disabled={jobsLoadingMore}
+                                        className="w-full py-2 text-sm font-semibold text-[#003971] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                                    >
+                                        {jobsLoadingMore ? 'Loading…' : 'Load more jobs'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="px-8 py-5 border-t border-gray-100 text-center">
+                        <div className="px-8 py-5 border-t border-gray-100 text-center shrink-0">
                             <button
                                 onClick={() => handleNavigate('jobs')}
                                 className="text-sm font-bold text-[#003971] hover:underline flex items-center justify-center gap-1 w-full"

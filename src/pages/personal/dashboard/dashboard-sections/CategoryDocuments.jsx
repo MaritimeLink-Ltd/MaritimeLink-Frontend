@@ -5,6 +5,7 @@ import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { WALLET_FOLDER_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
@@ -21,29 +22,18 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
         'Compliance Ready',
         'Pending Approval',
         'Expiring Soon',
-        'Expired'
+        'Expired',
+        'Rejected',
     ];
 
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Map frontend IDs to backend ENUM strings if needed
-    const categoryMap = {
-        'licenses': 'LICENSES_ENDORSEMENTS',
-        'stcw': 'STCW_CERTIFICATES',
-        'medical': 'MEDICAL_CERTIFICATES',
-        'seaman': 'SEAMANS_BOOK',
-        'travel': 'TRAVEL_DOCUMENTS',
-        'academic': 'ACADEMIC_QUALIFICATIONS',
-        'company': 'MISC_COMPANY_LETTERS',
-        'appraisals': 'RECENT_APPRAISALS'
-    };
-
     const fetchDocuments = async () => {
         try {
             setIsLoading(true);
-            const categoryEnum = categoryMap[category?.id] || '';
+            const categoryEnum = WALLET_FOLDER_TO_API_CATEGORY[category?.id] || '';
             const response = await documentService.getDocuments(categoryEnum);
             
             // Transform backend data to frontend format if necessary
@@ -89,7 +79,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
     const handleUploadClick = () => {
         if (onUploadClick) {
-            onUploadClick();
+            onUploadClick(category);
         }
     };
 
@@ -186,6 +176,8 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                     return doc.status?.key === 'expiring';
                 case 'Expired':
                     return doc.status?.key === 'expired';
+                case 'Rejected':
+                    return doc.status?.key === 'rejected';
                 default:
                     return true;
             }

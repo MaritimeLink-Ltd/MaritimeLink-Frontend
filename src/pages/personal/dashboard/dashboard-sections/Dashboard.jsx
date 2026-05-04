@@ -13,6 +13,7 @@ import {
     LogIn,
 } from 'lucide-react';
 import professionalDashboardService from '../../../../services/professionalDashboardService';
+import { DASHBOARD_LIST_PAGE_SIZE } from '../../../../constants/dashboardPagination';
 
 const defaultOverview = {
     complianceStatus: '',
@@ -127,6 +128,10 @@ const Dashboard = () => {
     const [activityError, setActivityError] = useState(null);
     const [activityLog, setActivityLog] = useState([]);
     const markingReadIdsRef = useRef(new Set());
+    const [alertsHasMore, setAlertsHasMore] = useState(false);
+    const [activityHasMore, setActivityHasMore] = useState(false);
+    const [loadingMoreAlerts, setLoadingMoreAlerts] = useState(false);
+    const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
 
     const loadDashboard = useCallback(async () => {
         setLoading(true);
@@ -136,51 +141,98 @@ const Dashboard = () => {
         setAlertsError(null);
         setActivityError(null);
 
-        const overviewP = professionalDashboardService
-            .getOverview()
-            .then((res) => {
-                const next = res?.data?.overview;
-                if (next && typeof next === 'object') {
-                    setOverview({ ...defaultOverview, ...next });
-                } else {
-                    setOverview({ ...defaultOverview });
-                }
-            })
-            .catch((e) => {
-                console.error('Professional dashboard overview:', e);
-                setError(e?.message || 'Could not load dashboard metrics.');
-                setOverview(null);
-            });
+        try {
+            const overviewRes = await professionalDashboardService.getOverview();
+            const next = overviewRes?.data?.overview;
+            if (next && typeof next === 'object') {
+                setOverview({ ...defaultOverview, ...next });
+            } else {
+                setOverview({ ...defaultOverview });
+            }
+        } catch (e) {
+            console.error('Professional dashboard overview:', e);
+            setError(e?.message || 'Could not load dashboard metrics.');
+            setOverview(null);
+        }
 
-        const alertsP = professionalDashboardService
-            .getAlerts()
-            .then((res) => {
-                const list = res?.data?.alerts;
-                setApiAlerts(Array.isArray(list) ? list : []);
-            })
-            .catch((e) => {
-                console.error('Professional dashboard alerts:', e);
-                setAlertsError(e?.message || 'Could not load alerts.');
-                setApiAlerts([]);
+        try {
+            const res = await professionalDashboardService.getAlerts({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: 0,
             });
+            const list = res?.data?.alerts;
+            const arr = Array.isArray(list) ? list : [];
+            setApiAlerts(arr);
+            setAlertsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Professional dashboard alerts:', e);
+            setAlertsError(e?.message || 'Could not load alerts.');
+            setApiAlerts([]);
+            setAlertsHasMore(false);
+        }
 
-        const activityP = professionalDashboardService
-            .getActivity()
-            .then((res) => {
-                const list = res?.data?.activity;
-                setActivityLog(Array.isArray(list) ? list : []);
-            })
-            .catch((e) => {
-                console.error('Professional dashboard activity:', e);
-                setActivityError(e?.message || 'Could not load activity.');
-                setActivityLog([]);
+        try {
+            const res = await professionalDashboardService.getActivity({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: 0,
             });
+            const list = res?.data?.activity;
+            const arr = Array.isArray(list) ? list : [];
+            setActivityLog(arr);
+            setActivityHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Professional dashboard activity:', e);
+            setActivityError(e?.message || 'Could not load activity.');
+            setActivityLog([]);
+            setActivityHasMore(false);
+        }
 
-        await Promise.allSettled([overviewP, alertsP, activityP]);
         setLoading(false);
         setAlertsLoading(false);
         setActivityLoading(false);
     }, []);
+
+    const loadMoreAlerts = useCallback(async () => {
+        if (loadingMoreAlerts || !alertsHasMore || alertsLoading) return;
+        setLoadingMoreAlerts(true);
+        setAlertsError(null);
+        try {
+            const res = await professionalDashboardService.getAlerts({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: apiAlerts.length,
+            });
+            const list = res?.data?.alerts;
+            const arr = Array.isArray(list) ? list : [];
+            setApiAlerts((prev) => [...prev, ...arr]);
+            setAlertsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more alerts:', e);
+            setAlertsError(e?.message || 'Could not load more alerts.');
+        } finally {
+            setLoadingMoreAlerts(false);
+        }
+    }, [alertsHasMore, alertsLoading, apiAlerts.length, loadingMoreAlerts]);
+
+    const loadMoreActivity = useCallback(async () => {
+        if (loadingMoreActivity || !activityHasMore || activityLoading) return;
+        setLoadingMoreActivity(true);
+        setActivityError(null);
+        try {
+            const res = await professionalDashboardService.getActivity({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: activityLog.length,
+            });
+            const list = res?.data?.activity;
+            const arr = Array.isArray(list) ? list : [];
+            setActivityLog((prev) => [...prev, ...arr]);
+            setActivityHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more activity:', e);
+            setActivityError(e?.message || 'Could not load more activity.');
+        } finally {
+            setLoadingMoreActivity(false);
+        }
+    }, [activityHasMore, activityLoading, activityLog.length, loadingMoreActivity]);
 
     useEffect(() => {
         loadDashboard();
@@ -418,9 +470,9 @@ const Dashboard = () => {
             </div>
 
             <div className="flex-1 lg:overflow-hidden px-4 sm:px-6 pb-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:h-full">
-                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-[380px]">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:items-stretch">
+                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden h-[400px] sm:h-[420px]">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4 shrink-0">
                             <h2 className="text-xl font-semibold text-gray-800">Alerts</h2>
                             {alertsError && (
                                 <p className="text-red-600 text-xs sm:text-sm flex flex-wrap items-center gap-2">
@@ -436,7 +488,8 @@ const Dashboard = () => {
                                 </p>
                             )}
                         </div>
-                        <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-hide">
+                        <div className="flex-1 min-h-0 flex flex-col">
+                        <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
                             {alertsLoading ? (
                                 [1, 2, 3].map((k) => (
                                     <div
@@ -530,10 +583,21 @@ const Dashboard = () => {
                                 </>
                             )}
                         </div>
+                        {!alertsLoading && alertsHasMore && (
+                            <button
+                                type="button"
+                                onClick={loadMoreAlerts}
+                                disabled={loadingMoreAlerts}
+                                className="mt-3 shrink-0 w-full py-2 text-sm font-medium text-[#003971] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                            >
+                                {loadingMoreAlerts ? 'Loading…' : 'Load more'}
+                            </button>
+                        )}
+                        </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden min-h-[300px] lg:h-[380px]">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                    <div className="bg-white rounded-2xl shadow-md p-5 flex flex-col overflow-hidden h-[400px] sm:h-[420px]">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4 shrink-0">
                             <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
                             {activityError && (
                                 <p className="text-red-600 text-xs sm:text-sm flex flex-wrap items-center gap-2">
@@ -549,7 +613,8 @@ const Dashboard = () => {
                                 </p>
                             )}
                         </div>
-                        <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-hide">
+                        <div className="flex-1 min-h-0 flex flex-col">
+                        <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
                             {activityLoading ? (
                                 [1, 2, 3].map((k) => (
                                     <div
@@ -598,6 +663,17 @@ const Dashboard = () => {
                                     );
                                 })
                             )}
+                        </div>
+                        {!activityLoading && activityHasMore && (
+                            <button
+                                type="button"
+                                onClick={loadMoreActivity}
+                                disabled={loadingMoreActivity}
+                                className="mt-3 shrink-0 w-full py-2 text-sm font-medium text-[#003971] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                            >
+                                {loadingMoreActivity ? 'Loading…' : 'Load more'}
+                            </button>
+                        )}
                         </div>
                     </div>
                 </div>

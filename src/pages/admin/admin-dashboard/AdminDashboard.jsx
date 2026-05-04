@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Users,
@@ -26,6 +26,7 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import adminDashboardService from '../../../services/adminDashboardService';
+import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 
 function formatAdminCurrencyGbp(value) {
     const n = Number(value);
@@ -161,6 +162,8 @@ function AdminDashboard() {
     const [systemAlertsList, setSystemAlertsList] = useState([]);
     const [queuesLoading, setQueuesLoading] = useState(true);
     const [queuesError, setQueuesError] = useState(null);
+    const [reviewVisibleCount, setReviewVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
+    const [systemAlertsVisibleCount, setSystemAlertsVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
 
     useEffect(() => {
         let cancelled = false;
@@ -335,6 +338,22 @@ function AdminDashboard() {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    useEffect(() => {
+        setReviewVisibleCount(DASHBOARD_LIST_PAGE_SIZE);
+    }, [reviewQueueList]);
+
+    useEffect(() => {
+        setSystemAlertsVisibleCount(DASHBOARD_LIST_PAGE_SIZE);
+    }, [systemAlertsList]);
+
+    const loadMoreReviewQueue = useCallback(() => {
+        setReviewVisibleCount((n) => n + DASHBOARD_LIST_PAGE_SIZE);
+    }, []);
+
+    const loadMoreSystemAlerts = useCallback(() => {
+        setSystemAlertsVisibleCount((n) => n + DASHBOARD_LIST_PAGE_SIZE);
     }, []);
 
     const topStats = useMemo(() => {
@@ -533,6 +552,16 @@ function AdminDashboard() {
         }));
     }, [systemAlertsList]);
 
+    const reviewQueueShown = useMemo(
+        () => reviewQueueDisplay.slice(0, reviewVisibleCount),
+        [reviewQueueDisplay, reviewVisibleCount],
+    );
+
+    const systemAlertsShown = useMemo(
+        () => systemAlertsDisplay.slice(0, systemAlertsVisibleCount),
+        [systemAlertsDisplay, systemAlertsVisibleCount],
+    );
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -675,9 +704,9 @@ function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Review Queue */}
                         <div
-                            className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 ${queuesLoading ? 'opacity-90' : ''}`}
+                            className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col max-h-[440px] min-h-0 ${queuesLoading ? 'opacity-90' : ''}`}
                         >
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center justify-between mb-6 shrink-0">
                                 <h2 className="text-lg font-bold text-gray-900">Review Queue</h2>
                                 <span className="text-xs font-bold text-[#1e5a8f] bg-blue-50 px-3 py-1.5 rounded-full">
                                     {queuesLoading ? '…' : `${reviewQueueList.length} pending`}
@@ -689,8 +718,9 @@ function AdminDashboard() {
                             ) : reviewQueueDisplay.length === 0 ? (
                                 <p className="text-sm text-gray-500 py-6 text-center">No review items right now.</p>
                             ) : (
-                                <div className="space-y-3">
-                                    {reviewQueueDisplay.map((item) => (
+                                <>
+                                <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+                                    {reviewQueueShown.map((item) => (
                                         <div
                                             key={item.id}
                                             onClick={() => navigate(item.path)}
@@ -711,11 +741,21 @@ function AdminDashboard() {
                                         </div>
                                     ))}
                                 </div>
+                                {reviewVisibleCount < reviewQueueDisplay.length && (
+                                    <button
+                                        type="button"
+                                        onClick={loadMoreReviewQueue}
+                                        className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#1e5a8f] border border-gray-200 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Load more
+                                    </button>
+                                )}
+                                </>
                             )}
 
                             <button
                                 onClick={() => navigate('/admin/compliance')}
-                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2"
+                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2 shrink-0"
                             >
                                 View All Reviews
                             </button>
@@ -723,9 +763,9 @@ function AdminDashboard() {
 
                         {/* System Alerts */}
                         <div
-                            className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 ${queuesLoading ? 'opacity-90' : ''}`}
+                            className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col max-h-[440px] min-h-0 ${queuesLoading ? 'opacity-90' : ''}`}
                         >
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center justify-between mb-6 shrink-0">
                                 <h2 className="text-lg font-bold text-gray-900">System Alerts</h2>
                             </div>
 
@@ -734,8 +774,9 @@ function AdminDashboard() {
                             ) : systemAlertsDisplay.length === 0 ? (
                                 <p className="text-sm text-gray-500 py-6 text-center">No system alerts.</p>
                             ) : (
-                                <div className="space-y-3">
-                                    {systemAlertsDisplay.map((alert) => (
+                                <>
+                                <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+                                    {systemAlertsShown.map((alert) => (
                                         <div
                                             key={alert.rowKey}
                                             onClick={() => navigate('/admin/notifications')}
@@ -753,11 +794,21 @@ function AdminDashboard() {
                                         </div>
                                     ))}
                                 </div>
+                                {systemAlertsVisibleCount < systemAlertsDisplay.length && (
+                                    <button
+                                        type="button"
+                                        onClick={loadMoreSystemAlerts}
+                                        className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#1e5a8f] border border-gray-200 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Load more
+                                    </button>
+                                )}
+                                </>
                             )}
 
                             <button
                                 onClick={() => navigate('/admin/notifications')}
-                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2"
+                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2 shrink-0"
                             >
                                 View All Alerts
                             </button>

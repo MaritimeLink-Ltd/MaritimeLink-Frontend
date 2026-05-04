@@ -23,6 +23,7 @@ import ProcessingDocumentModal from '../../../components/modals/ProcessingDocume
 import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
 import { useKycWizard } from '../../../hooks/useKycWizard';
 import trainerDashboardService from '../../../services/trainerDashboardService';
+import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 
 function initialsFromDisplayName(name) {
     const parts = String(name || '')
@@ -242,6 +243,10 @@ function TrainingProviderDashboard() {
     const [dashboardCoursesList, setDashboardCoursesList] = useState([]);
     const [dashboardCoursesLoading, setDashboardCoursesLoading] = useState(false);
     const [dashboardCoursesError, setDashboardCoursesError] = useState(null);
+    const [actionItemsHasMore, setActionItemsHasMore] = useState(false);
+    const [actionItemsLoadingMore, setActionItemsLoadingMore] = useState(false);
+    const [coursesHasMore, setCoursesHasMore] = useState(false);
+    const [coursesLoadingMore, setCoursesLoadingMore] = useState(false);
     const [stripeStatus, setStripeStatus] = useState(null);
     const [stripeStatusError, setStripeStatusError] = useState(null);
     const [stripeActionLoading, setStripeActionLoading] = useState(false);
@@ -289,8 +294,14 @@ function TrainingProviderDashboard() {
             const query = getTrainerStatsQuery(timeFilter);
             const [statsOutcome, actionsOutcome, coursesOutcome, stripeOutcome] = await Promise.allSettled([
                 trainerDashboardService.getDashboardStats(query),
-                trainerDashboardService.getDashboardActionItems(),
-                trainerDashboardService.getDashboardCourses(),
+                trainerDashboardService.getDashboardActionItems({
+                    limit: DASHBOARD_LIST_PAGE_SIZE,
+                    offset: 0,
+                }),
+                trainerDashboardService.getDashboardCourses({
+                    limit: DASHBOARD_LIST_PAGE_SIZE,
+                    offset: 0,
+                }),
                 trainerDashboardService.getStripeStatus(),
             ]);
 
@@ -310,24 +321,30 @@ function TrainingProviderDashboard() {
 
             if (actionsOutcome.status === 'fulfilled') {
                 const list = actionsOutcome.value?.data?.actionItems;
-                setActionItemsList(Array.isArray(list) ? list : []);
+                const arr = Array.isArray(list) ? list : [];
+                setActionItemsList(arr);
+                setActionItemsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
             } else {
                 console.error('Failed to fetch trainer action items:', actionsOutcome.reason);
                 setActionItemsError(
                     actionsOutcome.reason?.message || 'Could not load alerts and tasks.'
                 );
                 setActionItemsList([]);
+                setActionItemsHasMore(false);
             }
 
             if (coursesOutcome.status === 'fulfilled') {
                 const list = coursesOutcome.value?.data?.courses;
-                setDashboardCoursesList(Array.isArray(list) ? list : []);
+                const arr = Array.isArray(list) ? list : [];
+                setDashboardCoursesList(arr);
+                setCoursesHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
             } else {
                 console.error('Failed to fetch trainer dashboard courses:', coursesOutcome.reason);
                 setDashboardCoursesError(
                     coursesOutcome.reason?.message || 'Could not load active courses.'
                 );
                 setDashboardCoursesList([]);
+                setCoursesHasMore(false);
             }
 
             if (stripeOutcome.status === 'fulfilled') {
@@ -349,6 +366,48 @@ function TrainingProviderDashboard() {
     useEffect(() => {
         loadTrainerDashboard();
     }, [loadTrainerDashboard]);
+
+    const loadMoreActionItems = useCallback(async () => {
+        if (actionItemsLoadingMore || !actionItemsHasMore || actionItemsLoading) return;
+        setActionItemsLoadingMore(true);
+        setActionItemsError(null);
+        try {
+            const res = await trainerDashboardService.getDashboardActionItems({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: actionItemsList.length,
+            });
+            const list = res?.data?.actionItems;
+            const arr = Array.isArray(list) ? list : [];
+            setActionItemsList((prev) => [...prev, ...arr]);
+            setActionItemsHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more trainer actions:', e);
+            setActionItemsError(e?.message || 'Could not load more items.');
+        } finally {
+            setActionItemsLoadingMore(false);
+        }
+    }, [actionItemsHasMore, actionItemsList.length, actionItemsLoading, actionItemsLoadingMore]);
+
+    const loadMoreCourses = useCallback(async () => {
+        if (coursesLoadingMore || !coursesHasMore || dashboardCoursesLoading) return;
+        setCoursesLoadingMore(true);
+        setDashboardCoursesError(null);
+        try {
+            const res = await trainerDashboardService.getDashboardCourses({
+                limit: DASHBOARD_LIST_PAGE_SIZE,
+                offset: dashboardCoursesList.length,
+            });
+            const list = res?.data?.courses;
+            const arr = Array.isArray(list) ? list : [];
+            setDashboardCoursesList((prev) => [...prev, ...arr]);
+            setCoursesHasMore(arr.length === DASHBOARD_LIST_PAGE_SIZE);
+        } catch (e) {
+            console.error('Load more courses:', e);
+            setDashboardCoursesError(e?.message || 'Could not load more courses.');
+        } finally {
+            setCoursesLoadingMore(false);
+        }
+    }, [coursesHasMore, coursesLoadingMore, dashboardCoursesList.length, dashboardCoursesLoading]);
 
     useEffect(() => {
         const syncHeader = () => setHeaderUser(readTrainerDashboardHeaderUser());
@@ -610,8 +669,8 @@ function TrainingProviderDashboard() {
                         {/* Action Required and Quick Overview */}
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                             {/* Action Required - 60% width (3 columns) */}
-                            <div className="lg:col-span-3">
-                                <h2 className="text-lg font-bold text-gray-900 mb-4">Action Required</h2>
+                            <div className="lg:col-span-3 flex flex-col min-h-0 max-h-[480px]">
+                                <h2 className="text-lg font-bold text-gray-900 mb-4 shrink-0">Action Required</h2>
                                 {actionItemsError && (
                                     <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-3">
                                         {actionItemsError}
@@ -622,7 +681,8 @@ function TrainingProviderDashboard() {
                                 ) : !actionItemsLoading && actionItems.length === 0 && !actionItemsError ? (
                                     <p className="text-sm text-gray-500 py-2">No urgent items right now.</p>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <>
+                                    <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
                                         {actionItems.map((item) => (
                                             <div
                                                 key={item.rowKey}
@@ -661,12 +721,23 @@ function TrainingProviderDashboard() {
                                             </div>
                                         ))}
                                     </div>
+                                    {!actionItemsLoading && actionItemsHasMore && (
+                                        <button
+                                            type="button"
+                                            onClick={loadMoreActionItems}
+                                            disabled={actionItemsLoadingMore}
+                                            className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#003971] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                                        >
+                                            {actionItemsLoadingMore ? 'Loading…' : 'Load more'}
+                                        </button>
+                                    )}
+                                    </>
                                 )}
                             </div>
 
                             {/* Quick Overview - 40% width (2 columns) */}
-                            <div className="lg:col-span-2">
-                                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full">
+                            <div className="lg:col-span-2 min-h-0 max-h-[480px] flex flex-col">
+                                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-full flex flex-col min-h-0 overflow-hidden">
                                     <div className="flex items-center justify-between mb-5">
                                         <h2 className="text-lg font-bold text-gray-900">Quick Overview</h2>
                                     </div>
@@ -696,7 +767,7 @@ function TrainingProviderDashboard() {
                                         <p className="text-sm text-gray-500 py-2">No active courses yet.</p>
                                     ) : (
                                         <div
-                                            className={`space-y-3 ${dashboardCoursesLoading ? 'opacity-70' : ''}`}
+                                            className={`space-y-3 overflow-y-auto flex-1 min-h-0 max-h-[280px] pr-1 ${dashboardCoursesLoading ? 'opacity-70' : ''}`}
                                         >
                                             {overviewCourses.map((course, index) => (
                                                 <div
@@ -737,8 +808,19 @@ function TrainingProviderDashboard() {
                                         </div>
                                     )}
 
+                                    {!dashboardCoursesLoading && coursesHasMore && overviewCourses.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={loadMoreCourses}
+                                            disabled={coursesLoadingMore}
+                                            className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#003971] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                                        >
+                                            {coursesLoadingMore ? 'Loading…' : 'Load more'}
+                                        </button>
+                                    )}
+
                                     {/* View All Courses Link */}
-                                    <div className="mt-5 pt-4 border-t border-gray-200">
+                                    <div className="mt-5 pt-4 border-t border-gray-200 shrink-0">
                                         <button
                                             onClick={() => navigate('/trainingprovider/courses')}
                                             className="w-full text-center text-sm font-bold text-[#003971] hover:text-[#002455] transition-colors"

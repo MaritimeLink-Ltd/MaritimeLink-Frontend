@@ -4,6 +4,14 @@
 
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
+import { DASHBOARD_LIST_PAGE_SIZE } from '../constants/dashboardPagination';
+
+function listPaginationQuery({ limit = DASHBOARD_LIST_PAGE_SIZE, offset = 0 } = {}) {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    return params.toString();
+}
 
 /** Custom range uses `from` / `to` as YYYY-MM-DD (adjust if backend expects different params). */
 function buildStatsPath({ timeframe, from, to } = {}) {
@@ -30,16 +38,24 @@ class RecruiterDashboardService {
      * GET /api/recruiter/dashboard/action-items
      * @returns {Promise<{ data?: { actionItems?: object[] }, results?: number }>}
      */
-    async getDashboardActionItems() {
-        return httpClient.get(API_ENDPOINTS.RECRUITER.DASHBOARD_ACTION_ITEMS);
+    async getDashboardActionItems(pagination = {}) {
+        const qs = listPaginationQuery(pagination);
+        const url = qs
+            ? `${API_ENDPOINTS.RECRUITER.DASHBOARD_ACTION_ITEMS}?${qs}`
+            : API_ENDPOINTS.RECRUITER.DASHBOARD_ACTION_ITEMS;
+        return httpClient.get(url);
     }
 
     /**
      * GET /api/recruiter/dashboard/jobs
      * @returns {Promise<{ data?: { jobs?: object[] }, results?: number }>}
      */
-    async getDashboardJobs() {
-        return httpClient.get(API_ENDPOINTS.RECRUITER.DASHBOARD_JOBS);
+    async getDashboardJobs(pagination = {}) {
+        const qs = listPaginationQuery(pagination);
+        const url = qs
+            ? `${API_ENDPOINTS.RECRUITER.DASHBOARD_JOBS}?${qs}`
+            : API_ENDPOINTS.RECRUITER.DASHBOARD_JOBS;
+        return httpClient.get(url);
     }
 
     /**

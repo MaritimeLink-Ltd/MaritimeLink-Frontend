@@ -3,6 +3,7 @@ import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
     const fileInputRef = useRef(null);
@@ -33,6 +34,12 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
 
     const defaultTab = category?.id ? (initialTabMap[category.id] || 'Licenses & Endorsements') : 'Licenses & Endorsements';
     const [activeTab, setActiveTab] = useState(defaultTab);
+
+    useEffect(() => {
+        if (category?.id && initialTabMap[category.id]) {
+            setActiveTab(initialTabMap[category.id]);
+        }
+    }, [category?.id]);
 
     // ─── State ────────────────────────────────────────────────────────────────
     const [selectedFile, setSelectedFile] = useState(null);
@@ -83,19 +90,8 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     /** Whether the active tab requires OCR & certificate fields */
     const isOcrRequired = !['Company Letters / Misc', 'Recent Appraisals'].includes(activeTab);
 
-    /** Map tab label → backend ENUM string */
-    const getCategoryEnum = (tabName) => {
-        const normalized = String(tabName).toLowerCase();
-        if (normalized.includes('license')) return 'LICENSES_ENDORSEMENTS';
-        if (normalized.includes('stcw')) return 'STCW_CERTIFICATES';
-        if (normalized.includes('medical')) return 'MEDICAL_CERTIFICATES';
-        if (normalized.includes('seaman')) return 'SEAMANS_BOOK';
-        if (normalized.includes('travel')) return 'TRAVEL_DOCUMENTS';
-        if (normalized.includes('academic')) return 'ACADEMIC_QUALIFICATIONS';
-        if (normalized.includes('company') || normalized.includes('misc')) return 'MISC_COMPANY_LETTERS';
-        if (normalized.includes('appraisal')) return 'RECENT_APPRAISALS';
-        return 'LICENSES_ENDORSEMENTS'; // Safe fallback
-    };
+    const getCategoryEnum = (tabName) =>
+        UPLOAD_TAB_TO_API_CATEGORY[tabName] || 'LICENSES_ENDORSEMENTS';
 
     /** Safely convert a date string to full ISO format expected by the backend */
     const toISODate = (dateStr) => {
@@ -283,6 +279,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                     issuingCountry: formData.issuingCountry || '',
                     issueDate: toISODate(formData.dateOfIssue),
                     expiryDate: toISODate(formData.validTill),
+                    category: getCategoryEnum(activeTab),
                 };
 
                 const response = await documentService.updateDocument(uploadedDocId, updatePayload);
