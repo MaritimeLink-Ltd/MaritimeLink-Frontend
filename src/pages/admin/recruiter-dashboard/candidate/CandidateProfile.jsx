@@ -1,27 +1,105 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Ship, Anchor, Clock, Star } from 'lucide-react';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 
 const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, onMessage }) => {
-    // Mock candidate data if not provided
-    const candidateData = candidate || {
-        name: 'Ali Shahzaib',
-        position: 'Deck Officer',
-        email: 'www.alishahzaib23@gmail.com',
-        profileImage: 'https://placehold.co/200x200/e5e7eb/6b7280?text=AS',
-        isCompliant: true,
-        vesselTypes: ['LNG Tanker', 'OffShore Support Vessel'],
-        seaTime: '8 years 9 months sea time',
-        experience: [
-            '8 years 9 months total sea service',
-            '8 years 9 months on LNG Tankers',
-            '5 years 9 months on Offshore Support tankers',
-            'Rank Progression: Second Engineer to Chief Engineer'
-        ],
-        skills: [
-            { name: 'Man B&W Engines', rating: 5 },
-            { name: 'Seamanship', rating: 5 }
-        ]
-    };
+    const [candidateData, setCandidateData] = useState(candidate || null);
+    const [isLoading, setIsLoading] = useState(!candidate);
+    const [loadError, setLoadError] = useState('');
+
+    useEffect(() => {
+        let mounted = true;
+        const candidateId = candidate?.id || candidate?.professionalId || candidate?.candidateId;
+
+        if (candidate) {
+            setCandidateData(candidate);
+            setIsLoading(false);
+            return () => {
+                mounted = false;
+            };
+        }
+
+        if (!candidateId) {
+            setIsLoading(false);
+            setLoadError('No candidate data available.');
+            return () => {
+                mounted = false;
+            };
+        }
+
+        const loadCandidate = async () => {
+            try {
+                setIsLoading(true);
+                const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId));
+                const responseData = response?.data?.data || response?.data;
+                const professional = responseData?.professional || responseData;
+                const resume = professional?.resume || responseData?.resume || {};
+                const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
+                const vesselTypes = [...new Set(seaService.map((s) => s.vesselType).filter(Boolean))];
+
+                const experience = seaService.length > 0
+                    ? seaService.map((s) => {
+                        const role = s.role || 'Role not provided';
+                        const vessel = s.vesselName || s.vesselType || 'Vessel not provided';
+                        return `${role} - ${vessel}`;
+                    })
+                    : ['No experience records available'];
+
+                const skills = Array.isArray(resume?.skills)
+                    ? resume.skills.map((s) => ({ name: s.skillName || s.name || 'Unnamed skill', rating: Number(s.rating) || 0 }))
+                    : [];
+
+                if (!mounted) return;
+                setCandidateData({
+                    name: professional?.fullname || 'Unknown candidate',
+                    position: professional?.profession || professional?.subcategory || resume?.subcategory || 'N/A',
+                    email: professional?.email || '',
+                    profileImage: professional?.profilePhotoUrl || professional?.avatarUrl || '',
+                    isCompliant: professional?.isVerified || false,
+                    vesselTypes: vesselTypes.length > 0 ? vesselTypes : ['No vessel experience available'],
+                    seaTime: professional?.totalYearsExperience ? `${professional.totalYearsExperience} years experience` : 'No sea time recorded',
+                    experience,
+                    skills,
+                });
+                setLoadError('');
+            } catch (error) {
+                if (!mounted) return;
+                setLoadError(error?.message || 'Failed to load candidate profile.');
+                setCandidateData(null);
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+
+        void loadCandidate();
+
+        return () => {
+            mounted = false;
+        };
+    }, [candidate]);
+
+    if (isLoading) {
+        return (
+            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                <div className="text-center text-gray-600 font-medium">Loading candidate profile...</div>
+            </div>
+        );
+    }
+
+    if (!candidateData) {
+        return (
+            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                <div className="text-center max-w-md px-6">
+                    <p className="text-lg font-semibold text-gray-800">Candidate profile unavailable</p>
+                    <p className="text-sm text-gray-500 mt-2">{loadError || 'Please try again or open the profile from a live candidate record.'}</p>
+                    <button onClick={onBack} className="mt-4 px-4 py-2 rounded-lg bg-[#003971] text-white">
+                        Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full h-full bg-gray-50 overflow-y-auto">

@@ -172,7 +172,7 @@ const extractUpdatedByRole = (source) => {
     return null;
 };
 
-function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicationStatus = false, onViewResume, onMessage }) {
+function CandidateSummary({ candidateId: propCandidateId, candidateData: propCandidateData, onBack, showApplicationStatus = false, onViewResume, onMessage }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { candidateId: urlCandidateId } = useParams();
@@ -406,7 +406,7 @@ function CandidateSummary({ candidateId: propCandidateId, onBack, showApplicatio
     }, [candidateId, isAdmin, currentUserType, location.state]);
 
     const resolveApplicantData = () => {
-        const fallback = location.state?.candidateData || {};
+        const fallback = propCandidateData || location.state?.candidateData || {};
         const source = fetchedCandidate || fallback.rawApplicant || null;
         const isApplicationScopedView = !!location.state?.fromJobDetail || showApplicationStatus === true;
         const trainerAttendanceAttachmentOnly =

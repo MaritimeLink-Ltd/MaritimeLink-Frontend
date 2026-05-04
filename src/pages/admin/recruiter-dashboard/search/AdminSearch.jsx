@@ -163,12 +163,14 @@ function AdminSearch({ onViewCandidate }) {
         void loadCandidates({ page: pageNumber });
     };
 
-    const handleCandidateView = (candidateId) => {
+    const handleCandidateView = (candidate) => {
         if (onViewCandidate) {
-            onViewCandidate(candidateId);
+            onViewCandidate(candidate);
             return;
         }
-        navigate(`/recruiter/candidate/${candidateId}`);
+        navigate(`/recruiter/candidate/${candidate?.id}`, {
+            state: { candidateData: candidate, isProfessionalView: true },
+        });
     };
 
     const clearAllFilters = () => {
@@ -369,7 +371,7 @@ function AdminSearch({ onViewCandidate }) {
                                                             </div>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleCandidateView(candidate.id)}
+                                                                onClick={() => handleCandidateView(candidate)}
                                                                 className="bg-[#003971] text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center gap-2 whitespace-nowrap"
                                                             >
                                                                 <FileText className="h-4 w-4" />
@@ -450,7 +452,7 @@ function AdminSearch({ onViewCandidate }) {
 
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleCandidateView(candidate.id)}
+                                                            onClick={() => handleCandidateView(candidate)}
                                                             className="w-full bg-[#003971] text-white py-3 rounded-xl text-sm font-bold hover:bg-[#002855] transition-colors flex items-center justify-center gap-2"
                                                         >
                                                             <FileText className="h-4 w-4" />

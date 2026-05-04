@@ -89,6 +89,7 @@ const RecruiterDashboardMain = () => {
         if (viewingCandidate) {
             return <CandidateSummary
                 candidateId={viewingCandidate.id}
+                candidateData={viewingCandidate.candidateData}
                 onBack={() => setViewingCandidate(null)}
                 showApplicationStatus={viewingCandidate.fromJobApplicants}
                 onViewResume={(candidateId, resumeData) => setViewingResume({ candidateId, resumeData })}
@@ -110,7 +111,7 @@ const RecruiterDashboardMain = () => {
             case 'dashboard':
                 return <RecruiterDashboard onNavigate={handleNavigateToSection} />;
             case 'search':
-                return <AdminSearch onViewCandidate={(candidateId) => setViewingCandidate({ id: candidateId, fromJobApplicants: false })} />;
+                return <AdminSearch onViewCandidate={(candidate) => setViewingCandidate({ id: candidate?.id, candidateData: candidate, fromJobApplicants: false })} />;
             case 'jobs':
                 return <AdminJobs onViewApplicants={(jobId) => setViewingJobApplicants(jobId)} onCreateJob={() => setCreatingJob(true)} />;
             case 'chats':
