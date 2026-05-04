@@ -5,7 +5,7 @@ import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
-import { WALLET_FOLDER_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
+import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [activeFilter, setActiveFilter] = useState('All');
@@ -33,8 +33,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const fetchDocuments = async () => {
         try {
             setIsLoading(true);
-            const categoryEnum = WALLET_FOLDER_TO_API_CATEGORY[category?.id] || '';
-            const response = await documentService.getDocuments(categoryEnum);
+            const response = await documentService.getDocuments();
             
             // Transform backend data to frontend format if necessary
             // Extract documents array from nested backend response
@@ -47,12 +46,16 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                 docs = response;
             }
 
-            const formattedDocs = docs.map(doc => ({
-                ...doc,
-                status: getDocumentStatusMeta(doc),
-                expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
-                type: category?.title || 'Document'
-            }));
+            const categoryId = category?.id || 'company';
+            const formattedDocs = docs
+                .filter((doc) => getDocumentDisplayCategory(doc) === categoryId)
+                .map(doc => ({
+                    ...doc,
+                    status: getDocumentStatusMeta(doc),
+                    expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
+                    type: getDocumentCategoryLabel(getDocumentDisplayCategory(doc)),
+                    displayCategory: getDocumentDisplayCategory(doc),
+                }));
             
             setDocuments(formattedDocs);
         } catch (error) {
