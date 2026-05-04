@@ -31,7 +31,7 @@ export const API_CATEGORY_TO_WALLET_FOLDERS = {
 
 export const UPLOAD_TAB_TO_API_CATEGORY = {
     'Licenses & Endorsements': 'LICENSES_ENDORSEMENTS',
-    'STCW Certificates': 'ACADEMIC_QUALIFICATIONS',
+    'STCW Certificates': 'STCW_CERTIFICATES',
     'Medical Certificates': 'MEDICAL_CERTIFICATES',
     'Seaman Book data/Stamp pages': 'SEAMANS_BOOK',
     'Travel Documents': 'TRAVEL_DOCUMENTS',
