@@ -45,12 +45,18 @@ const CATEGORY_FALLBACKS = {
 };
 
 export const getDocumentDisplayCategory = (doc = {}) => {
-    const directCategory = normalizeText(
+    const normalizedCategory = normalizeText(
         doc.displayCategory ||
         doc.sourceCategory ||
         doc?.ocrData?.sourceCategory ||
         doc.category,
-    ).toUpperCase();
+    );
+
+    if (normalizedCategory in DISPLAY_CATEGORY_LABELS) {
+        return normalizedCategory;
+    }
+
+    const directCategory = normalizedCategory.toUpperCase();
 
     const searchableText = [
         doc.name,
