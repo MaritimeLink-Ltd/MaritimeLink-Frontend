@@ -27,6 +27,10 @@ class RecruiterCandidateService {
 
         return httpClient.get(path);
     }
+
+    async getCandidateProfile(id) {
+        return httpClient.get(API_ENDPOINTS.RECRUITER.PROFESSIONAL_DETAIL(id));
+    }
 }
 
 export default new RecruiterCandidateService();

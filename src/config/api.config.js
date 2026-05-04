@@ -93,6 +93,7 @@ export const API_ENDPOINTS = {
     SETTINGS_NOTIFICATIONS: '/api/recruiter/settings/notifications',
     SETTINGS_PROFILE_PHOTO: '/api/recruiter/settings/profile-photo',
     APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
+    PROFESSIONAL_DETAIL: (id) => `/api/recruiter/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
     DASHBOARD_STATS: '/api/recruiter/dashboard/stats',
     DASHBOARD_ACTION_ITEMS: '/api/recruiter/dashboard/action-items',

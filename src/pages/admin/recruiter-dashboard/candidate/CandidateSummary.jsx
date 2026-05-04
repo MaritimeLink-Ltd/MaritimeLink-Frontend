@@ -4,6 +4,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import jobService from '../../../../services/jobService';
+import recruiterCandidateService from '../../../../services/recruiterCandidateService';
 import {
     AlertCircle,
     Briefcase,
@@ -152,6 +153,41 @@ function formatStatusPatchError(err) {
     return err?.message || 'Could not update status';
 }
 
+const normalizeCandidateFallback = (candidate = {}) => ({
+    ...candidate,
+    name:
+        candidate?.name ||
+        candidate?.fullname ||
+        [candidate?.firstName, candidate?.lastName].filter(Boolean).join(' ') ||
+        'Unknown',
+    fullname:
+        candidate?.fullname ||
+        candidate?.name ||
+        [candidate?.firstName, candidate?.lastName].filter(Boolean).join(' ') ||
+        'Unknown',
+    position:
+        candidate?.position ||
+        candidate?.rank ||
+        candidate?.profession ||
+        candidate?.subcategory ||
+        candidate?.resumeCategory ||
+        'N/A',
+    rank:
+        candidate?.rank ||
+        candidate?.position ||
+        candidate?.profession ||
+        candidate?.subcategory ||
+        candidate?.resumeCategory ||
+        'N/A',
+    image: candidate?.image || candidate?.profileImage || candidate?.avatarUrl || candidate?.profilePhotoUrl || null,
+    location: candidate?.location || candidate?.country || 'N/A',
+    tier: candidate?.tier || 'FREE',
+    isPremium: Boolean(candidate?.isPremium || String(candidate?.tier || '').toUpperCase() === 'PRO'),
+    seaTime: candidate?.seaTime || candidate?.experience || (Number.isFinite(Number(candidate?.experienceYears)) ? `${candidate.experienceYears} years experience` : 'No sea service recorded'),
+    experience: Array.isArray(candidate?.experience) ? candidate.experience : [],
+    skills: Array.isArray(candidate?.skills) ? candidate.skills : [],
+});
+
 const extractUpdatedByRole = (source) => {
     if (!source) return null;
 
@@ -218,6 +254,11 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
     const [isBookingActionLoading, setIsBookingActionLoading] = useState(false);
     const [showBookingRejectModal, setShowBookingRejectModal] = useState(false);
     const [bookingRejectReason, setBookingRejectReason] = useState('');
+
+    const normalizedFallback = useMemo(
+        () => normalizeCandidateFallback(propCandidateData || location.state?.candidateData || {}),
+        [propCandidateData, location.state?.candidateData],
+    );
 
     const statusPatchApplicationId = useMemo(
         () => resolveApplicantRecordIdForStatusPatch(location.state, candidateId, fetchedCandidate),
@@ -347,7 +388,27 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
             }
 
             if (!isAdmin) {
-                setIsLoading(false);
+                try {
+                    setIsLoading(true);
+                    const response = await recruiterCandidateService.getCandidateProfile(candidateId);
+                    const responseData = response?.data?.data || response?.data;
+                    const obj = responseData?.professional ? responseData.professional : responseData;
+
+                    if (obj) {
+                        setFetchedCandidate(obj);
+                        if (obj.application?.status || obj.status) {
+                            setApplicationStage(mapApiStatusToStage(obj.application?.status || obj.status));
+                        }
+                        setStatusUpdatedBy(extractUpdatedByRole(obj));
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch recruiter candidate profile:', error);
+                    if (normalizedFallback) {
+                        setFetchedCandidate(normalizedFallback);
+                    }
+                } finally {
+                    setIsLoading(false);
+                }
                 return;
             }
 
@@ -403,10 +464,10 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
         };
 
         fetchCandidateDetails();
-    }, [candidateId, isAdmin, currentUserType, location.state]);
+    }, [candidateId, isAdmin, currentUserType, location.state, normalizedFallback]);
 
     const resolveApplicantData = () => {
-        const fallback = propCandidateData || location.state?.candidateData || {};
+        const fallback = normalizedFallback;
         const source = fetchedCandidate || fallback.rawApplicant || null;
         const isApplicationScopedView = !!location.state?.fromJobDetail || showApplicationStatus === true;
         const trainerAttendanceAttachmentOnly =
@@ -565,9 +626,20 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
         const years = Number(professional?.totalYearsExperience);
 
         return {
-            name: professional?.fullname || [professional?.firstName, professional?.lastName].filter(Boolean).join(' ') || fallback.name || 'Unknown',
+            name:
+                professional?.fullname ||
+                [professional?.firstName, professional?.lastName].filter(Boolean).join(' ') ||
+                fallback.fullname ||
+                fallback.name ||
+                'Unknown',
             rank,
-            image: professional?.profilePhotoUrl || professional?.avatarUrl || professional?.photo || null,
+            image:
+                professional?.profilePhotoUrl ||
+                professional?.avatarUrl ||
+                professional?.photo ||
+                professional?.image ||
+                fallback.image ||
+                null,
             location: professional?.location || resume?.country || fallback.location || 'N/A',
             tier: professional?.tier || fallback.tier || 'FREE',
             isPremium: String(professional?.tier || fallback.tier || '').toUpperCase() === 'PRO',

@@ -3,17 +3,41 @@ import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Ship, Anchor, 
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
+const normalizeCandidateProfile = (candidate = {}) => ({
+    ...candidate,
+    name:
+        candidate?.name ||
+        candidate?.fullname ||
+        [candidate?.firstName, candidate?.lastName].filter(Boolean).join(' ') ||
+        'Unknown candidate',
+    position:
+        candidate?.position ||
+        candidate?.rank ||
+        candidate?.profession ||
+        candidate?.subcategory ||
+        candidate?.resumeCategory ||
+        'N/A',
+    image: candidate?.profileImage || candidate?.image || candidate?.avatarUrl || candidate?.profilePhotoUrl || '',
+    vesselTypes: Array.isArray(candidate?.vesselTypes) ? candidate.vesselTypes : [],
+    seaTime: candidate?.seaTime || candidate?.experience || 'No sea time recorded',
+    experience: Array.isArray(candidate?.experience) ? candidate.experience : [],
+    skills: Array.isArray(candidate?.skills) ? candidate.skills : [],
+});
+
 const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, onMessage }) => {
-    const [candidateData, setCandidateData] = useState(candidate || null);
+    const [candidateData, setCandidateData] = useState(candidate ? normalizeCandidateProfile(candidate) : null);
     const [isLoading, setIsLoading] = useState(!candidate);
     const [loadError, setLoadError] = useState('');
 
     useEffect(() => {
         let mounted = true;
         const candidateId = candidate?.id || candidate?.professionalId || candidate?.candidateId;
+        const currentUserType = typeof window !== 'undefined'
+            ? (localStorage.getItem('userType') || localStorage.getItem('adminUserType'))
+            : null;
 
         if (candidate) {
-            setCandidateData(candidate);
+            setCandidateData(normalizeCandidateProfile(candidate));
             setIsLoading(false);
             return () => {
                 mounted = false;
@@ -31,7 +55,10 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
         const loadCandidate = async () => {
             try {
                 setIsLoading(true);
-                const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId));
+                const profilePath = currentUserType === 'admin'
+                    ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId)
+                    : API_ENDPOINTS.RECRUITER.PROFESSIONAL_DETAIL(candidateId);
+                const response = await httpClient.get(profilePath);
                 const responseData = response?.data?.data || response?.data;
                 const professional = responseData?.professional || responseData;
                 const resume = professional?.resume || responseData?.resume || {};
@@ -120,7 +147,7 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                         {/* Profile Image */}
                         <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden bg-gray-200 flex-shrink-0">
                             <img
-                                src={candidateData.profileImage}
+                                src={candidateData.profileImage || candidateData.image}
                                 alt={candidateData.name}
                                 className="w-full h-full object-cover"
                             />
