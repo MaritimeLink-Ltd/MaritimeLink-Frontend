@@ -122,6 +122,8 @@ export const API_ENDPOINTS = {
     DASHBOARD_ACTION_ITEMS: '/api/trainer/dashboard/action-items',
     DASHBOARD_COURSES: '/api/trainer/dashboard/courses',
     DASHBOARD_NOTIFICATIONS: '/api/trainer/dashboard/notifications',
+    DEMAND_OVERVIEW: '/api/trainer/dashboard/demand/overview',
+    DEMAND_EXPIRIES: '/api/trainer/dashboard/demand/expiries',
     UPDATE_PASSWORD: '/api/trainer/update-password',
     SETTINGS: '/api/trainer/settings',
     SETTINGS_PROFILE: '/api/trainer/settings/profile',

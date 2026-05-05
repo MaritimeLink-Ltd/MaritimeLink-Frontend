@@ -1,32 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Download, Search, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, Download, Search, ArrowUpRight, AlertCircle, TrendingUp, MessageCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import trainerDashboardService from '../../../../services/trainerDashboardService';
 
 const periodTabs = ['30 Days', '60 Days', '90 Days'];
 
-const rowsByPeriod = {
-    '30 Days': [
-        { course: 'STCW Basic Safety', expiring: 4, trend: 3, locations: 'Liverpool • Aberdeen' },
-        { course: 'Advanced Firefighting', expiring: 3, trend: 2, locations: 'Aberdeen • Liverpool' },
-        { course: 'GWO Sea Survival', expiring: 2, trend: 2, locations: 'Liverpool • Aberdeen' },
-        { course: 'Medical Care Onboard', expiring: 1, trend: 1, locations: 'Aberdeen' },
-        { course: 'Energy Efficiency Program', expiring: 1, trend: 1, locations: 'Liverpool' }
-    ],
-    '60 Days': [
-        { course: 'STCW Basic Safety', expiring: 9, trend: 7, locations: 'Liverpool • Aberdeen' },
-        { course: 'Advanced Firefighting', expiring: 5, trend: 4, locations: 'Aberdeen • Liverpool' },
-        { course: 'GWO Sea Survival', expiring: 4, trend: 3, locations: 'Liverpool • Aberdeen' },
-        { course: 'Medical Care Onboard', expiring: 3, trend: 2, locations: 'Aberdeen' },
-        { course: 'Energy Efficiency Program', expiring: 2, trend: 2, locations: 'Liverpool' }
-    ],
-    '90 Days': [
-        { course: 'STCW Basic Safety', expiring: 14, trend: 11, locations: 'Liverpool • Aberdeen' },
-        { course: 'Advanced Firefighting', expiring: 8, trend: 6, locations: 'Aberdeen • Liverpool' },
-        { course: 'GWO Sea Survival', expiring: 6, trend: 5, locations: 'Liverpool • Aberdeen' },
-        { course: 'Medical Care Onboard', expiring: 4, trend: 3, locations: 'Aberdeen' },
-        { course: 'Energy Efficiency Program', expiring: 3, trend: 2, locations: 'Liverpool' }
-    ]
+const SUMMARY_FALLBACK = {
+    certificatesExpiring: 0,
+    certificatesExpiringWindowLabel: 'Next 30 days',
+    courseSearchDemand: 0,
+    activeEnquiries: 0,
 };
 
 function ExpiringCertificatesOverview() {
@@ -36,32 +20,67 @@ function ExpiringCertificatesOverview() {
     const [year, setYear] = useState('2026');
     const [course, setCourse] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [dashboardData, setDashboardData] = useState({
+        summary: SUMMARY_FALLBACK,
+        renewalDemand: [],
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const filteredRows = useMemo(() => {
-        const rows = rowsByPeriod[periodTab] || [];
-        const search = searchTerm.trim().toLowerCase();
+    const periodQuery = periodTab === '30 Days' ? '30d' : periodTab === '60 Days' ? '60d' : '90d';
+    const summary = dashboardData.summary || SUMMARY_FALLBACK;
+    const topTrendingCourse = dashboardData.renewalDemand[0]?.course || '—';
 
-        return rows.filter((row) => {
-            const matchesSearch =
-                !search ||
-                row.course.toLowerCase().includes(search) ||
-                row.locations.toLowerCase().includes(search);
+    useEffect(() => {
+        let alive = true;
 
-            if (!matchesSearch) return false;
-            if (course === 'all') return true;
+        const loadOverview = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await trainerDashboardService.getDemandOverview({
+                    period: periodQuery,
+                    region,
+                    year,
+                    course,
+                    search: searchTerm,
+                });
 
-            const c = row.course.toLowerCase();
-            if (course === 'stcw') return c.includes('stcw');
-            if (course === 'firefighting') return c.includes('firefighting');
-            if (course === 'gwo') return c.includes('gwo');
-            if (course === 'medical') return c.includes('medical');
-            return true;
-        });
-    }, [periodTab, searchTerm, course]);
+                if (!alive) return;
+
+                const data = response?.data || {};
+                setDashboardData({
+                    summary: data.summary || SUMMARY_FALLBACK,
+                    renewalDemand: Array.isArray(data.renewalDemand) ? data.renewalDemand : [],
+                });
+            } catch (err) {
+                if (!alive) return;
+                setError(err?.message || 'Could not load expiring certificates.');
+                setDashboardData({
+                    summary: SUMMARY_FALLBACK,
+                    renewalDemand: [],
+                });
+            } finally {
+                if (alive) setLoading(false);
+            }
+        };
+
+        loadOverview();
+        return () => {
+            alive = false;
+        };
+    }, [course, periodQuery, region, searchTerm, year]);
+
+    const filteredRows = dashboardData.renewalDemand;
 
     const handleExportCSV = () => {
-        const headers = ['Course', 'Expiring', 'Trend', 'Primary Locations'];
-        const csvRows = filteredRows.map((row) => [row.course, row.expiring, row.trend, row.locations]);
+        const headers = ['Course', 'Expiring', 'Trend Change', 'Primary Locations'];
+        const csvRows = filteredRows.map((row) => [
+            row.course,
+            row.expiring,
+            row.trendChange ?? row.trend ?? 0,
+            row.locations,
+        ]);
         const csv = [headers.join(','), ...csvRows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
 
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -86,10 +105,10 @@ function ExpiringCertificatesOverview() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <h1 className="text-[26px] md:text-[28px] font-bold text-gray-900">
-                            Demand &amp; Planning
+                            Expiring Certificates Overview
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            Monitor training demand, watch capacity, and plan renewal demands.
+                            Monitor upcoming renewals and move professionals into the right training window.
                         </p>
                     </div>
 
@@ -100,7 +119,7 @@ function ExpiringCertificatesOverview() {
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search courses, enquiries..."
+                                placeholder="Search courses, locations..."
                                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971]"
                             />
                         </div>
@@ -123,7 +142,7 @@ function ExpiringCertificatesOverview() {
                         options={[
                             { value: 'my-region', label: 'My Region' },
                             { value: 'north-sea', label: 'North Sea' },
-                            { value: 'global', label: 'Global' }
+                            { value: 'global', label: 'Global' },
                         ]}
                     />
                     <FilterSelect
@@ -132,7 +151,7 @@ function ExpiringCertificatesOverview() {
                         onChange={setYear}
                         options={[
                             { value: '2025', label: '2025' },
-                            { value: '2026', label: '2026' }
+                            { value: '2026', label: '2026' },
                         ]}
                     />
                     <FilterSelect
@@ -144,14 +163,76 @@ function ExpiringCertificatesOverview() {
                             { value: 'stcw', label: 'STCW Basic Safety' },
                             { value: 'firefighting', label: 'Advanced Firefighting' },
                             { value: 'gwo', label: 'GWO Sea Survival' },
-                            { value: 'medical', label: 'Medical Care Onboard' }
+                            { value: 'medical', label: 'Medical Care Onboard' },
                         ]}
                     />
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            {error && (
+                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Expiring Certificates
+                            </p>
+                            <p className="text-3xl font-bold text-gray-900 mt-1">
+                                {loading ? '—' : summary.certificatesExpiring}
+                            </p>
+                        </div>
+                        <div className="h-10 w-10 rounded-xl bg-rose-50 flex items-center justify-center">
+                            <AlertCircle className="h-5 w-5 text-rose-600" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{summary.certificatesExpiringWindowLabel}</span>
+                        <span>{topTrendingCourse !== '—' ? `Top: ${topTrendingCourse}` : 'No trend yet'}</span>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Course Search Demand
+                            </p>
+                            <p className="text-3xl font-bold text-gray-900 mt-1">
+                                {loading ? '—' : summary.courseSearchDemand}
+                            </p>
+                        </div>
+                        <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-blue-600" />
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500">Unique professionals in the selected period.</p>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Active Enquiries
+                            </p>
+                            <p className="text-3xl font-bold text-gray-900 mt-1">
+                                {loading ? '—' : summary.activeEnquiries}
+                            </p>
+                        </div>
+                        <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                            <MessageCircle className="h-5 w-5 text-emerald-600" />
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500">Pending bookings for active courses.</p>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100">
                     <h2 className="text-lg font-bold text-gray-900">Expiring Certificates</h2>
                     <div className="flex items-center gap-2">
                         <button
@@ -186,7 +267,8 @@ function ExpiringCertificatesOverview() {
                         <tbody>
                             {filteredRows.map((row, idx) => {
                                 const isLast = idx === filteredRows.length - 1;
-                                const trendUp = row.trend >= row.expiring;
+                                const trendValue = Number(row.trendChange ?? row.trend ?? 0);
+                                const trendUp = trendValue >= 0;
 
                                 return (
                                     <tr
@@ -196,19 +278,25 @@ function ExpiringCertificatesOverview() {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
-                                                <span className="font-semibold text-gray-900">{row.course}</span>
+                                                <span className="font-semibold text-gray-900">
+                                                    {row.course}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-semibold text-gray-900">{row.expiring}</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                                            {row.expiring}
+                                        </td>
                                         <td className="px-4 py-3 text-right">
                                             <span
                                                 className={`inline-flex items-center gap-1 text-xs font-semibold ${trendUp ? 'text-emerald-600' : 'text-amber-600'}`}
                                             >
                                                 <ArrowUpRight className="h-3 w-3" />
-                                                {row.trend}
+                                                {trendValue >= 0 ? `+${trendValue}` : trendValue}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{row.locations}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            {row.locations}
+                                        </td>
                                         <td className="px-4 py-3 text-right">
                                             <button
                                                 type="button"
@@ -225,10 +313,16 @@ function ExpiringCertificatesOverview() {
                     </table>
                 </div>
 
-                {filteredRows.length === 0 && (
-                    <p className="px-4 py-6 text-sm text-gray-500 text-center">
-                        No results match your filters.
-                    </p>
+                {loading && (
+                    <div className="py-12 text-center text-sm text-gray-500">
+                        Loading expiring certificate overview...
+                    </div>
+                )}
+
+                {!loading && filteredRows.length === 0 && (
+                    <div className="py-12 text-center text-sm text-gray-500">
+                        No results match your filters. Try adjusting region or course.
+                    </div>
                 )}
             </div>
         </div>
@@ -237,7 +331,6 @@ function ExpiringCertificatesOverview() {
 
 function FilterSelect({ label, value, onChange, options }) {
     const id = `filter-${label.toLowerCase().replace(/\s+/g, '-')}`;
-
     return (
         <div className="flex flex-col gap-1">
             <label htmlFor={id} className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider cursor-pointer">

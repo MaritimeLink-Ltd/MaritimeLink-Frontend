@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -7,6 +7,7 @@ import {
     Download,
     ChevronsUpDown
 } from 'lucide-react';
+import trainerDashboardService from '../../../../services/trainerDashboardService';
 
 const periodOptions = [
     { value: 'all', label: 'All' },
@@ -14,35 +15,6 @@ const periodOptions = [
     { value: '60', label: '60 Days' },
     { value: '90', label: '90 Days' }
 ];
-
-// Generate mock data with relative dates (days from today)
-function getMockExpiries() {
-    const today = new Date();
-    const base = [
-        { id: 1, certificateType: 'STCW Basic Safety', daysLeft: 6, location: 'Liverpool', rank: 'Able Seaman' },
-        { id: 2, certificateType: 'STCW Basic Safety', daysLeft: 7, location: 'Liverpool', rank: 'Officer' },
-        { id: 3, certificateType: 'Advanced Firefighting', daysLeft: 12, location: 'Aberdeen', rank: 'Master' },
-        { id: 4, certificateType: 'STCW Basic Safety', daysLeft: 15, location: 'Hull', rank: 'Able Seaman' },
-        { id: 5, certificateType: 'GWO Sea Survival', daysLeft: 20, location: 'Liverpool', rank: 'Officer' },
-        { id: 6, certificateType: 'Medical Care Onboard', daysLeft: 23, location: 'Aberdeen', rank: 'Master' },
-        { id: 7, certificateType: 'STCW Basic Safety', daysLeft: 27, location: 'Hull', rank: 'Able Seaman' },
-        { id: 8, certificateType: 'Advanced Firefighting', daysLeft: 30, location: 'Liverpool', rank: 'Officer' },
-        { id: 9, certificateType: 'STCW Basic Safety', daysLeft: 33, location: 'Aberdeen', rank: 'Able Seaman' },
-        { id: 10, certificateType: 'Energy Efficiency Program', daysLeft: 37, location: 'Liverpool', rank: 'Master' },
-        { id: 11, certificateType: 'STCW Basic Safety', daysLeft: 46, location: 'Hull', rank: 'Officer' },
-        { id: 12, certificateType: 'GWO Sea Survival', daysLeft: 56, location: 'Aberdeen', rank: 'Able Seaman' },
-        { id: 13, certificateType: 'STCW Basic Safety', daysLeft: 61, location: 'Liverpool', rank: 'Master' },
-        { id: 14, certificateType: 'Advanced Firefighting', daysLeft: 71, location: 'Aberdeen', rank: 'Officer' },
-        { id: 15, certificateType: 'STCW Basic Safety', daysLeft: 81, location: 'Hull', rank: 'Able Seaman' }
-    ];
-    return base.map((r) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() + r.daysLeft);
-        return { ...r, expiryDate: d.toISOString().slice(0, 10) };
-    });
-}
-
-const mockExpiries = getMockExpiries();
 
 function AllExpiries() {
     const navigate = useNavigate();
@@ -65,46 +37,50 @@ function AllExpiries() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 12;
+    const [rows, setRows] = useState([]);
+    const [pagination, setPagination] = useState({ page: 1, limit: pageSize, total: 0, pages: 1 });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const filteredExpiries = useMemo(() => {
-        const today = new Date();
-        return mockExpiries.filter((row) => {
-            const expiryDate = new Date(row.expiryDate);
-            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-            const expiryYear = expiryDate.getFullYear().toString();
+    const periodQuery = period === '30' ? '30d' : period === '60' ? '60d' : period === '90' ? '90d' : 'all';
 
-            if (period === '30' && daysUntilExpiry > 30) return false;
-            if (period === '60' && daysUntilExpiry > 60) return false;
-            if (period === '90' && daysUntilExpiry > 90) return false;
-            if (daysUntilExpiry < 0) return false;
+    useEffect(() => {
+        let alive = true;
+        const loadRows = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await trainerDashboardService.getDemandExpiries({
+                    period: periodQuery,
+                    region,
+                    year,
+                    city,
+                    certificate: certificateType,
+                    rank,
+                    search: searchTerm,
+                    page: currentPage,
+                    limit: pageSize,
+                });
 
-            if (year !== 'all' && expiryYear !== year) return false;
-
-            const loc = row.location.toLowerCase();
-            if (region === 'north-sea' && !['aberdeen', 'hull'].includes(loc)) return false;
-            if (region === 'my-region' && !['liverpool', 'aberdeen'].includes(loc)) return false;
-
-            const searchLower = searchTerm.trim().toLowerCase();
-            if (searchLower) {
-                const match = row.certificateType.toLowerCase().includes(searchLower) ||
-                    row.location.toLowerCase().includes(searchLower) ||
-                    row.rank.toLowerCase().includes(searchLower);
-                if (!match) return false;
+                if (!alive) return;
+                const data = response?.data || {};
+                setRows(Array.isArray(data.expiries) ? data.expiries : []);
+                setPagination(response?.pagination || { page: 1, limit: pageSize, total: 0, pages: 1 });
+            } catch (err) {
+                if (!alive) return;
+                setError(err?.message || 'Could not load expiries.');
+                setRows([]);
+                setPagination({ page: 1, limit: pageSize, total: 0, pages: 1 });
+            } finally {
+                if (alive) setLoading(false);
             }
+        };
 
-            if (certificateType !== 'all' && !row.certificateType.toLowerCase().includes(certificateType)) return false;
-            if (rank !== 'all' && row.rank.toLowerCase() !== rank) return false;
-            if (city !== 'all' && row.location.toLowerCase() !== city) return false;
-            return true;
-        });
-    }, [period, year, region, searchTerm, certificateType, rank, city]);
-
-    const paginatedExpiries = useMemo(() => {
-        const start = (currentPage - 1) * pageSize;
-        return filteredExpiries.slice(start, start + pageSize);
-    }, [filteredExpiries, currentPage]);
-
-    const totalPages = Math.ceil(filteredExpiries.length / pageSize);
+        loadRows();
+        return () => {
+            alive = false;
+        };
+    }, [certificateType, city, currentPage, pageSize, periodQuery, rank, region, searchTerm, year]);
 
     const formatDate = (dateStr) => {
         return new Date(dateStr).toLocaleDateString('en-US', {
@@ -116,11 +92,11 @@ function AllExpiries() {
 
     const handleExportCSV = () => {
         const headers = ['Certificate Type', 'Expiry Date', 'Days Left', 'Location', 'Rank'];
-        const rows = filteredExpiries.map((r) => {
+        const csvRows = rows.map((r) => {
             const daysLeft = Math.max(0, Math.ceil((new Date(r.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)));
             return [r.certificateType, formatDate(r.expiryDate), `${daysLeft} days`, r.location, r.rank];
         });
-        const csv = [headers.join(','), ...rows.map((row) => row.map((c) => `"${c}"`).join(','))].join('\n');
+        const csv = [headers.join(','), ...csvRows.map((row) => row.map((c) => `"${c}"`).join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -156,7 +132,10 @@ function AllExpiries() {
                             <input
                                 type="text"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 placeholder="Search certificates, locations..."
                                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971]"
                             />
@@ -177,7 +156,10 @@ function AllExpiries() {
                     <FilterSelect
                         label="Region"
                         value={region}
-                        onChange={setRegion}
+                        onChange={(v) => {
+                            setRegion(v);
+                            setCurrentPage(1);
+                        }}
                         options={[
                             { value: 'my-region', label: 'My Region' },
                             { value: 'north-sea', label: 'North Sea' },
@@ -187,7 +169,10 @@ function AllExpiries() {
                     <FilterSelect
                         label="Year"
                         value={year}
-                        onChange={setYear}
+                        onChange={(v) => {
+                            setYear(v);
+                            setCurrentPage(1);
+                        }}
                         options={[
                             { value: 'all', label: 'All Years' },
                             { value: '2025', label: '2025' },
@@ -197,7 +182,10 @@ function AllExpiries() {
                     <FilterSelect
                         label="City"
                         value={city}
-                        onChange={setCity}
+                        onChange={(v) => {
+                            setCity(v);
+                            setCurrentPage(1);
+                        }}
                         options={[
                             { value: 'all', label: 'All Cities' },
                             { value: 'liverpool', label: 'Liverpool' },
@@ -208,7 +196,10 @@ function AllExpiries() {
                     <FilterSelect
                         label="Certificate"
                         value={certificateType}
-                        onChange={setCertificateType}
+                        onChange={(v) => {
+                            setCertificateType(v);
+                            setCurrentPage(1);
+                        }}
                         options={[
                             { value: 'all', label: 'All Certificates' },
                             { value: 'stcw', label: 'STCW Basic Safety' },
@@ -220,7 +211,10 @@ function AllExpiries() {
                     <FilterSelect
                         label="Rank"
                         value={rank}
-                        onChange={setRank}
+                        onChange={(v) => {
+                            setRank(v);
+                            setCurrentPage(1);
+                        }}
                         options={[
                             { value: 'all', label: 'All Ranks' },
                             { value: 'able seaman', label: 'Able Seaman' },
@@ -287,8 +281,8 @@ function AllExpiries() {
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedExpiries.map((row, idx) => {
-                                const isLast = idx === paginatedExpiries.length - 1;
+                            {rows.map((row, idx) => {
+                                const isLast = idx === rows.length - 1;
 
                                 return (
                                     <tr
@@ -323,7 +317,13 @@ function AllExpiries() {
                     </table>
                 </div>
 
-                {paginatedExpiries.length === 0 && (
+                {loading && (
+                    <div className="flex-1 flex items-center justify-center py-12 text-gray-500 text-sm">
+                        Loading expiries...
+                    </div>
+                )}
+
+                {!loading && rows.length === 0 && (
                     <div className="flex-1 flex items-center justify-center py-12 text-gray-500 text-sm">
                         No expiries match your filters. Try adjusting period or filters.
                     </div>
@@ -332,8 +332,8 @@ function AllExpiries() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
                     <p className="text-xs text-gray-500">
-                        Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                        {Math.min(currentPage * pageSize, filteredExpiries.length)} of {filteredExpiries.length} expiries
+                        Showing {pagination.total === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
+                        {Math.min(currentPage * pageSize, pagination.total)} of {pagination.total} expiries
                     </p>
                     <div className="flex items-center gap-1">
                         <button
@@ -344,9 +344,9 @@ function AllExpiries() {
                         >
                             Prev
                         </button>
-                        {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                            const p = totalPages <= 3 ? i + 1 : Math.min(currentPage, totalPages - 2) + i;
-                            if (p < 1 || p > totalPages) return null;
+                        {Array.from({ length: Math.min(3, pagination.pages) }, (_, i) => {
+                            const p = pagination.pages <= 3 ? i + 1 : Math.min(currentPage, pagination.pages - 2) + i;
+                            if (p < 1 || p > pagination.pages) return null;
                             return (
                                 <button
                                     key={p}
@@ -363,8 +363,8 @@ function AllExpiries() {
                         })}
                         <button
                             type="button"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage((p) => Math.min(pagination.pages, p + 1))}
+                            disabled={currentPage === pagination.pages}
                             className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                             Next

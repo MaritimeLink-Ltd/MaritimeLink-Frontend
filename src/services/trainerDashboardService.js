@@ -21,6 +21,16 @@ function buildStatsPath({ timeframe } = {}) {
     return qs ? `${base}?${qs}` : base;
 }
 
+function buildQueryPath(base, query = {}) {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        params.set(key, String(value));
+    });
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
+}
+
 class TrainerDashboardService {
     /**
      * GET /api/trainer/dashboard/stats
@@ -52,6 +62,16 @@ class TrainerDashboardService {
         const url = qs
             ? `${API_ENDPOINTS.TRAINER.DASHBOARD_COURSES}?${qs}`
             : API_ENDPOINTS.TRAINER.DASHBOARD_COURSES;
+        return httpClient.get(url);
+    }
+
+    async getDemandOverview(query = {}) {
+        const url = buildQueryPath(API_ENDPOINTS.TRAINER.DEMAND_OVERVIEW, query);
+        return httpClient.get(url);
+    }
+
+    async getDemandExpiries(query = {}) {
+        const url = buildQueryPath(API_ENDPOINTS.TRAINER.DEMAND_EXPIRIES, query);
         return httpClient.get(url);
     }
 

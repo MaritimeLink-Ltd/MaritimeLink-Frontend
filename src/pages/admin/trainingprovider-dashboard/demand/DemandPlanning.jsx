@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     AlertCircle,
@@ -18,81 +18,17 @@ import {
     Tooltip,
     Legend
 } from 'recharts';
+import trainerDashboardService from '../../../../services/trainerDashboardService';
 
-const demandForecastData = [
-    { month: 'Jan', stcw: 40, firefighting: 32, gwo: 18, medical: 14, other: 10 },
-    { month: 'Feb', stcw: 42, firefighting: 30, gwo: 20, medical: 16, other: 11 },
-    { month: 'Mar', stcw: 45, firefighting: 34, gwo: 22, medical: 18, other: 12 },
-    { month: 'Apr', stcw: 48, firefighting: 36, gwo: 24, medical: 20, other: 13 },
-    { month: 'May', stcw: 52, firefighting: 38, gwo: 26, medical: 22, other: 14 },
-    { month: 'Jun', stcw: 55, firefighting: 40, gwo: 28, medical: 24, other: 15 },
-    { month: 'Jul', stcw: 58, firefighting: 42, gwo: 30, medical: 26, other: 16 },
-    { month: 'Aug', stcw: 60, firefighting: 44, gwo: 32, medical: 28, other: 17 },
-    { month: 'Sep', stcw: 62, firefighting: 46, gwo: 34, medical: 30, other: 18 },
-    { month: 'Oct', stcw: 65, firefighting: 48, gwo: 36, medical: 32, other: 19 },
-    { month: 'Nov', stcw: 67, firefighting: 50, gwo: 38, medical: 34, other: 20 },
-    { month: 'Dec', stcw: 70, firefighting: 52, gwo: 40, medical: 36, other: 21 }
-];
-
-const renewalTabs = ['30 Days', '60 Days', '90 Days'];
-
-const renewalDemandByTab = {
-    '30 Days': [
-        { course: 'STCW Basic Safety', expiring: 96, trend: 71, locations: 'Aberdeen • Liverpool' },
-        { course: 'Advanced Firefighting', expiring: 18, trend: 16, locations: 'Aberdeen' },
-        { course: 'GWO Sea Survival', expiring: 10, trend: 13, locations: 'Aberdeen • Hull' },
-        { course: 'Medical Care Onboard', expiring: 24, trend: 19, locations: 'Liverpool • Rotterdam' }
-    ],
-    '60 Days': [
-        { course: 'STCW Basic Safety', expiring: 144, trend: 128, locations: 'Aberdeen • Liverpool' },
-        { course: 'Advanced Firefighting', expiring: 32, trend: 28, locations: 'Aberdeen • Rotterdam' },
-        { course: 'GWO Sea Survival', expiring: 21, trend: 18, locations: 'Hull • Esbjerg' },
-        { course: 'Energy Efficiency Program', expiring: 20, trend: 17, locations: 'Aberdeen' }
-    ],
-    '90 Days': [
-        { course: 'STCW Basic Safety', expiring: 210, trend: 185, locations: 'Multi-region' },
-        { course: 'Advanced Firefighting', expiring: 52, trend: 46, locations: 'Multi-region' },
-        { course: 'GWO Sea Survival', expiring: 36, trend: 30, locations: 'North Sea' },
-        { course: 'Energy Efficiency Program', expiring: 29, trend: 24, locations: 'Offshore hubs' }
-    ]
+const SUMMARY_FALLBACK = {
+    certificatesExpiring: 0,
+    certificatesExpiringWindowLabel: 'Next 30 days',
+    courseSearchDemand: 0,
+    activeEnquiries: 0,
+    uniqueCurrentMonth: 0,
 };
 
-const engagementCourses = [
-    {
-        name: 'STCW Basic Safety',
-        status: 'Low availability',
-        statusVariant: 'warning',
-        views: '520',
-        enquiries: '32',
-        utilization: 92
-    },
-    {
-        name: 'Advanced Firefighting',
-        status: 'On track',
-        statusVariant: 'success',
-        views: '410',
-        enquiries: '24',
-        utilization: 78
-    },
-    {
-        name: 'GWO Sea Survival',
-        status: 'Growing',
-        statusVariant: 'info',
-        views: '260',
-        enquiries: '18',
-        utilization: 64
-    },
-    {
-        name: 'Energy Efficiency Program',
-        status: 'Emerging',
-        statusVariant: 'neutral',
-        views: '110',
-        enquiries: '9',
-        utilization: 38
-    }
-];
-
-
+const renewalTabs = ['30 Days', '60 Days', '90 Days'];
 
 const statusStyles = {
     warning: 'bg-amber-50 text-amber-700',
@@ -108,59 +44,65 @@ function DemandPlanning() {
     const [course, setCourse] = useState('all');
     const [rangeTab, setRangeTab] = useState('30 Days');
     const [searchTerm, setSearchTerm] = useState('');
+    const [dashboardData, setDashboardData] = useState({
+        summary: SUMMARY_FALLBACK,
+        forecast: [],
+        renewalDemand: [],
+        engagementCourses: [],
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const utilization = 75;
-    const totalSeats = 200;
-    const bookedSeats = 150;
+    const summary = dashboardData.summary || SUMMARY_FALLBACK;
+    const capacitySummary = summary.capacity || { utilization: 0, bookedSeats: 0, totalSeats: 0 };
+    const topTrendingCourse = dashboardData.renewalDemand[0]?.course || '—';
 
-    const searchLower = searchTerm.trim().toLowerCase();
+    const periodQuery = rangeTab === '30 Days' ? '30d' : rangeTab === '60 Days' ? '60d' : '90d';
 
-    const courseFilterMatch = (name) => {
-        if (course === 'all') return true;
-        const n = name.toLowerCase();
-        if (course === 'stcw') return n.includes('stcw');
-        if (course === 'firefighting') return n.includes('firefighting');
-        if (course === 'gwo') return n.includes('gwo');
-        if (course === 'medical') return n.includes('medical');
-        return true;
-    };
-
-    const forecastData = useMemo(() => {
-        const multiplierByRange = {
-            '30 Days': 1,
-            '60 Days': 1.18,
-            '90 Days': 1.35
+    useEffect(() => {
+        let alive = true;
+        const loadDemand = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await trainerDashboardService.getDemandOverview({
+                    period: periodQuery,
+                    region,
+                    year,
+                    course,
+                    search: searchTerm,
+                });
+                if (!alive) return;
+                const data = response?.data || {};
+                setDashboardData({
+                    summary: data.summary || SUMMARY_FALLBACK,
+                    forecast: Array.isArray(data.forecast) ? data.forecast : [],
+                    renewalDemand: Array.isArray(data.renewalDemand) ? data.renewalDemand : [],
+                    engagementCourses: Array.isArray(data.engagementCourses) ? data.engagementCourses : [],
+                });
+            } catch (err) {
+                if (!alive) return;
+                setError(err?.message || 'Could not load demand planning data.');
+                setDashboardData({
+                    summary: SUMMARY_FALLBACK,
+                    forecast: [],
+                    renewalDemand: [],
+                    engagementCourses: [],
+                });
+            } finally {
+                if (alive) setLoading(false);
+            }
         };
 
-        const multiplier = multiplierByRange[rangeTab] ?? 1;
+        loadDemand();
+        return () => {
+            alive = false;
+        };
+    }, [course, periodQuery, region, searchTerm, year]);
 
-        return demandForecastData.map((row) => ({
-            ...row,
-            stcw: Math.round(row.stcw * multiplier),
-            firefighting: Math.round(row.firefighting * multiplier),
-            gwo: Math.round(row.gwo * multiplier),
-            medical: Math.round(row.medical * multiplier)
-        }));
-    }, [rangeTab]);
-
-    const filteredEngagementCourses = useMemo(() => {
-        return engagementCourses.filter((c) => {
-            const matchSearch = !searchLower || c.name.toLowerCase().includes(searchLower) || c.status.toLowerCase().includes(searchLower);
-            const matchCourse = courseFilterMatch(c.name);
-            return matchSearch && matchCourse;
-        });
-    }, [searchLower, course]);
-
-
-
-    const filteredRenewalDemand = useMemo(() => {
-        const rows = renewalDemandByTab[rangeTab] || [];
-        return rows.filter((r) => {
-            const matchSearch = !searchLower || r.course.toLowerCase().includes(searchLower) || r.locations.toLowerCase().includes(searchLower);
-            const matchCourse = courseFilterMatch(r.course);
-            return matchSearch && matchCourse;
-        });
-    }, [rangeTab, searchLower, course]);
+    const forecastData = dashboardData.forecast;
+    const filteredEngagementCourses = dashboardData.engagementCourses;
+    const filteredRenewalDemand = dashboardData.renewalDemand;
 
     return (
         <div className="h-full flex flex-col">
@@ -234,6 +176,12 @@ function DemandPlanning() {
                 </div>
             </div>
 
+            {error && (
+                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                </div>
+            )}
+
             {/* Top Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
@@ -243,9 +191,11 @@ function DemandPlanning() {
                                 Certificates Expiring
                             </p>
                             <div className="flex items-end gap-2 mt-1">
-                                <p className="text-3xl font-bold text-gray-900">284</p>
+                                <p className="text-3xl font-bold text-gray-900">
+                                    {loading ? '—' : summary.certificatesExpiring}
+                                </p>
                                 <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">
-                                    +12% expires last month
+                                    {summary.certificatesExpiringWindowLabel}
                                 </span>
                             </div>
                         </div>
@@ -254,9 +204,8 @@ function DemandPlanning() {
                         </div>
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                        <span>30 Days: 96</span>
-                        <span>60 Days: 118</span>
-                        <span>90 Days: 70</span>
+                        <span>{error ? 'Live data unavailable' : `Current window: ${periodQuery}`}</span>
+                        <span>{topTrendingCourse !== '—' ? `Top: ${topTrendingCourse}` : 'No trend yet'}</span>
                     </div>
                 </div>
 
@@ -267,13 +216,15 @@ function DemandPlanning() {
                                 Course Search Demand
                             </p>
                             <div className="flex items-end gap-2 mt-1">
-                                <p className="text-3xl font-bold text-gray-900">623</p>
+                                <p className="text-3xl font-bold text-gray-900">
+                                    {loading ? '—' : summary.courseSearchDemand}
+                                </p>
                                 <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                    +18% last 30 days
+                                    unique professionals
                                 </span>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
-                                Top trending: STCW Basic Safety
+                                Top trending: {topTrendingCourse}
                             </p>
                         </div>
                         <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
@@ -289,9 +240,11 @@ function DemandPlanning() {
                                 Active Enquiries
                             </p>
                             <div className="flex items-end gap-2 mt-1">
-                                <p className="text-3xl font-bold text-gray-900">28</p>
+                                <p className="text-3xl font-bold text-gray-900">
+                                    {loading ? '—' : summary.activeEnquiries}
+                                </p>
                                 <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                                    +5 new this week
+                                    pending bookings
                                 </span>
                             </div>
                         </div>
@@ -411,15 +364,17 @@ function DemandPlanning() {
                         {/* Hero stat + progress bar */}
                         <div className="mb-5">
                             <div className="flex items-baseline justify-between mb-2">
-                                <span className="text-3xl font-bold text-gray-900">{utilization}%</span>
+                                <span className="text-3xl font-bold text-gray-900">
+                                    {loading ? '—' : `${capacitySummary.utilization}%`}
+                                </span>
                                 <span className="text-sm text-gray-500">
-                                    {bookedSeats} / {totalSeats} seats
+                                    {capacitySummary.bookedSeats} / {capacitySummary.totalSeats} seats
                                 </span>
                             </div>
                             <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div
                                     className="h-full rounded-full bg-gradient-to-r from-[#003971] to-[#0EA5E9] transition-all duration-500"
-                                    style={{ width: `${utilization}%` }}
+                                    style={{ width: `${capacitySummary.utilization}%` }}
                                 />
                             </div>
                         </div>
@@ -430,19 +385,23 @@ function DemandPlanning() {
                                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                     Available
                                 </p>
-                                <p className="text-lg font-bold text-gray-900 mt-0.5">{totalSeats - bookedSeats}</p>
+                                <p className="text-lg font-bold text-gray-900 mt-0.5">
+                                    {Math.max(0, (capacitySummary.totalSeats || 0) - (capacitySummary.bookedSeats || 0))}
+                                </p>
                             </div>
                             <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
                                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                     Scheduled
                                 </p>
-                                <p className="text-lg font-bold text-gray-900 mt-0.5">{bookedSeats}</p>
+                                <p className="text-lg font-bold text-gray-900 mt-0.5">{capacitySummary.bookedSeats}</p>
                             </div>
                             <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
                                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                                     In Review
                                 </p>
-                                <p className="text-lg font-bold text-gray-900 mt-0.5">12</p>
+                                <p className="text-lg font-bold text-gray-900 mt-0.5">
+                                    {summary.uniqueCurrentMonth || 0}
+                                </p>
                             </div>
                         </div>
 
@@ -502,7 +461,10 @@ function DemandPlanning() {
                             <tbody>
                                 {filteredRenewalDemand.map((row, idx) => {
                                     const isLast = idx === filteredRenewalDemand.length - 1;
-                                    const trendUp = row.trend >= row.expiring;
+                                    const trendUp = row.trendChange >= 0;
+                                    const trendValue = row.trendChange >= 0
+                                        ? `+${row.trendChange}`
+                                        : `${row.trendChange}`;
 
                                     return (
                                         <tr
@@ -529,7 +491,7 @@ function DemandPlanning() {
                                                         }`}
                                                 >
                                                     <ArrowUpRight className="h-3 w-3" />
-                                                    {row.trend}
+                                                    {trendValue}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-600">
