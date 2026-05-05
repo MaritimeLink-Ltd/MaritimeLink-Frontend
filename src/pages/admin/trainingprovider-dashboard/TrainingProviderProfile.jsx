@@ -632,58 +632,6 @@ const TrainingProviderProfile = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                <div className="flex items-start justify-between gap-6">
-                                    <div>
-                                        <h2 className="text-lg font-bold text-gray-900">
-                                            Billing & Payouts
-                                        </h2>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Your live billing plan and Stripe payout readiness.
-                                        </p>
-                                    </div>
-                                    <div
-                                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-                                            billing.stripeOnboardingComplete
-                                                ? 'bg-green-50 text-green-700'
-                                                : 'bg-amber-50 text-amber-700'
-                                        }`}
-                                    >
-                                        <CheckCircle2 className="h-4 w-4" />
-                                        {billing.stripeOnboardingComplete
-                                            ? 'Stripe Connected'
-                                            : 'Stripe Setup Pending'}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
-                                            <CreditCard className="h-4 w-4" />
-                                            Current Plan
-                                        </div>
-                                        <p className="mt-2 text-lg font-bold text-gray-900">
-                                            {billing.currentPlan}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                        <div className="text-sm font-semibold text-gray-500">
-                                            Billing Cycle
-                                        </div>
-                                        <p className="mt-2 text-lg font-bold text-gray-900 capitalize">
-                                            {billing.billingCycle}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                        <div className="text-sm font-semibold text-gray-500">
-                                            Amount
-                                        </div>
-                                        <p className="mt-2 text-lg font-bold text-gray-900">
-                                            {billing.currency} {billing.amount}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
                         </>
                     )}
 
