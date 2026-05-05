@@ -228,6 +228,7 @@ function App() {
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
             <Route path="/admin/chats" element={<AdminChats />} />
+            <Route path="/recruiter/chats" element={<AdminChats />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/recruiter/settings" element={<AdminSettings />} />
             <Route path="/admin/cv-resume" element={<CVResume isReadOnly={true} />} />
