@@ -471,7 +471,11 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                     {/* OCR mismatch details from API */}
                     {isOcrRequired && ocrCompleted && ocrMatchStatus?.details && ocrMatchStatus?.isFullyMatched === false && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                            <p className="font-semibold mb-2">OCR mismatch found</p>
+                            <p className="font-semibold mb-2">
+                                {ocrMatchStatus?.comparisonSource === 'resume'
+                                    ? 'Resume mismatch found'
+                                    : 'OCR mismatch found'}
+                            </p>
                             <ul className="space-y-1.5 list-disc pl-5">
                                 {Object.entries(ocrMatchStatus.details)
                                     .filter(([, detail]) => detail && detail.isMatched === false)
@@ -484,10 +488,14 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                             expiryDate: 'Valid Till',
                                         };
                                         const label = labelMap[key] || key;
+                                        const enteredLabel =
+                                            ocrMatchStatus?.comparisonSource === 'resume'
+                                                ? 'Resume'
+                                                : 'Entered';
                                         return (
                                             <li key={key}>
                                                 <span className="font-medium">{label}:</span>{' '}
-                                                Entered: <span className="font-medium">{formatMismatchValue(key, detail.entered)}</span>,
+                                                {enteredLabel}: <span className="font-medium">{formatMismatchValue(key, detail.entered)}</span>,
                                                 Extracted: <span className="font-medium">{formatMismatchValue(key, detail.extracted)}</span>
                                             </li>
                                         );
