@@ -12,6 +12,7 @@ import {
     LogOut,
     MessageSquare
 } from 'lucide-react';
+import authService from '../../../../services/authService';
 
 function initialsFromName(name) {
     const parts = String(name || '')
@@ -99,12 +100,9 @@ function TrainingProviderLayout() {
     };
 
     const handleLogoutConfirm = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('adminUserType');
-        // Navigate to landing page
+        authService.logout();
         navigate('/');
+        setShowLogoutModal(false);
     };
 
     const handleLogoutCancel = () => {

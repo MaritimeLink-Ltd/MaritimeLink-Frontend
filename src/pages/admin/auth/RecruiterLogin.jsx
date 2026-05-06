@@ -53,8 +53,6 @@ function RecruiterLogin() {
             localStorage.setItem('adminUserType', 'recruiter');
 
             if (approved) {
-                // Set KYC keys so the dashboard skips the KYC wizard/popup
-                localStorage.setItem('recruiterKycStatus', 'completed');
                 localStorage.setItem('recruiterAdminVerified', 'true');
                 // Recruiter is approved — go to dashboard
                 navigate('/recruiter-dashboard');

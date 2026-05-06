@@ -15,6 +15,7 @@ import {
     LogOut,
     AlertTriangle
 } from 'lucide-react';
+import authService from '../../../../services/authService';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
@@ -87,12 +88,6 @@ function PersonalDashboardLayout() {
         const adminFlag = localStorage.getItem('adminVerified');
         if (adminFlag === 'true') return true;
 
-        // Backwards compatibility: if you already use kycStatus === 'approved' we also treat as verified
-        const kycStatus = localStorage.getItem('kycStatus');
-        if (kycStatus && (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified')) {
-            return true;
-        }
-
         return false;
     }, []);
 
@@ -116,10 +111,7 @@ function PersonalDashboardLayout() {
     const isRestrictedRoute = !isVerifiedByAdmin && !isAlwaysAllowedPath;
 
     const handleLogout = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        // Navigate to landing page
+        authService.logout();
         navigate('/');
         setShowLogoutModal(false);
     };

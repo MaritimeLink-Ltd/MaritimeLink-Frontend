@@ -14,10 +14,10 @@ const AUTH_STORAGE_KEYS = [
     'adminVerified',
     'recruiterStatus',
     'recruiterIsApproved',
-    'recruiterKycStatus',
     'recruiterAdminVerified',
-    'trainingProviderKycStatus',
     'trainingProviderAdminVerified',
+    /** KYC / signup flow (RecruiterCompanyVerification, useKycWizard) */
+    'companyVerificationDecision',
 ];
 
 /** Routes that belong to the platform super-admin app (not recruiter `/admin/*` agent UI). */

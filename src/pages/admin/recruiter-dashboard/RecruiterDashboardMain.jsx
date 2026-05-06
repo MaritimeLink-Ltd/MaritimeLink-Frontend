@@ -23,6 +23,7 @@ import UploadJob from '../admin-dashboard/UploadJob';
 import CVResume from '../../personal/CVResume';
 import AdminChats from './chats/AdminChats';
 import AdminSettings from './settings/AdminSettings';
+import authService from '../../../services/authService';
 
 const RecruiterDashboardMain = () => {
     const navigate = useNavigate();
@@ -36,11 +37,7 @@ const RecruiterDashboardMain = () => {
     const [messagingCandidate, setMessagingCandidate] = useState(null); // { id, name }
 
     const handleLogout = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('adminUserType');
-        // Navigate to landing page
+        authService.logout();
         navigate('/');
     };
 

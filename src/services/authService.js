@@ -333,9 +333,7 @@ class AuthService {
                         localStorage.setItem('recruiterIsApproved', String(profile.isApproved));
                     }
 
-                    // Sync KYC wizard localStorage keys so the dashboard renders correctly.
-                    // The useKycWizard hook reads `{prefix}KycStatus` and `{prefix}AdminVerified`
-                    // to decide whether to show the KYC popup or the actual dashboard.
+                    // Account approval flags for layout/nav gating (not persisted KYC workflow state).
                     const isApproved =
                         profile.isApproved === true ||
                         profile.status === 'APPROVED' ||
@@ -346,16 +344,8 @@ class AuthService {
                     const prefix = isTrainingProvider ? 'trainingProvider' : 'recruiter';
 
                     if (isApproved) {
-                        localStorage.setItem(`${prefix}KycStatus`, 'completed');
                         localStorage.setItem(`${prefix}AdminVerified`, 'true');
                     } else {
-                        // If the profile has kycStatus from backend, persist it
-                        const backendKycStatus = profile.kycStatus || profile.kyc_status;
-                        if (backendKycStatus) {
-                            localStorage.setItem(`${prefix}KycStatus`, backendKycStatus);
-                        } else {
-                            localStorage.setItem(`${prefix}KycStatus`, 'pending');
-                        }
                         localStorage.setItem(`${prefix}AdminVerified`, 'false');
                     }
                 }
