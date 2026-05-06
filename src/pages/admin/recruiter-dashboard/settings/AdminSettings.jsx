@@ -15,6 +15,7 @@ import {
 import { countryCodes } from '../../../../utils/countryCodes';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import authService from '../../../../services/authService';
+import SupportCenterSection from '../../../../components/support/SupportCenterSection';
 
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
@@ -351,7 +352,8 @@ function AdminSettings() {
     const accountSections = [
         { id: 'my-profile', label: 'My Profile', icon: User },
         { id: 'company-profile', label: 'Company Profile', icon: Building2 },
-        { id: 'security', label: 'Security', icon: Shield }
+        { id: 'security', label: 'Security', icon: Shield },
+        { id: 'support', label: 'Support', icon: Mail }
     ];
 
     const preferenceSections = [
@@ -869,8 +871,18 @@ function AdminSettings() {
                             </>
                         )}
 
+                        {activeSection === 'support' && (
+                            <SupportCenterSection
+                                basePath="recruiter"
+                                title="Recruiter Support"
+                                description="Open support requests for account access, job posting, billing, or platform issues. Recruiter and trainer requests default to Medium priority."
+                                priorityDefault="MEDIUM"
+                                caseLabel="support case"
+                            />
+                        )}
+
                         {/* Placeholder for other sections */}
-                        {activeSection !== 'my-profile' && activeSection !== 'company-profile' && activeSection !== 'security' && activeSection !== 'notifications' && (
+                        {activeSection !== 'my-profile' && activeSection !== 'company-profile' && activeSection !== 'security' && activeSection !== 'notifications' && activeSection !== 'support' && (
                             <div className="text-center py-12">
                                 <h2 className="text-lg font-bold text-gray-900 mb-2">
                                     {accountSections.find(s => s.id === activeSection)?.label ||

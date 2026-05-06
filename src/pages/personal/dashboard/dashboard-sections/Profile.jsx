@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot, Loader2 } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot, Loader2, MessageSquare } from 'lucide-react';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
+import SupportCenterSection from '../../../../components/support/SupportCenterSection';
 import toast, { Toaster } from 'react-hot-toast';
 
 function resolveProfessionalId() {
@@ -20,6 +21,7 @@ const Profile = () => {
     const navigate = useNavigate();
     const [showPremiumPlans, setShowPremiumPlans] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [showSupportModal, setShowSupportModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -414,6 +416,16 @@ const Profile = () => {
                                     </div>
                                     <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
                                 </button>
+                                <button
+                                    onClick={() => setShowSupportModal(true)}
+                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <MessageSquare size={16} className="text-[#003971]" />
+                                        <span className="text-gray-800 text-sm">Support</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
+                                </button>
                             </div>
                         </div>
 
@@ -637,6 +649,34 @@ const Profile = () => {
                                     </button>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {showSupportModal && (
+                <>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowSupportModal(false)} />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="w-full max-w-6xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                            <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
+                                <div>
+                                    <h2 className="text-xl font-semibold text-gray-800">Support</h2>
+                                    <p className="text-sm text-gray-500">Create a support case and continue the conversation with admin.</p>
+                                </div>
+                                <button onClick={() => setShowSupportModal(false)} className="rounded-full p-2 hover:bg-gray-100">
+                                    <X size={20} className="text-gray-600" />
+                                </button>
+                            </div>
+                            <div className="p-4 sm:p-6">
+                                <SupportCenterSection
+                                    basePath="professional"
+                                    title="Professional Support"
+                                    description="Tell us what you need help with. Premium professionals default to High priority so urgent issues get seen first."
+                                    priorityDefault={membershipTier === 'PRO' ? 'HIGH' : 'MEDIUM'}
+                                    caseLabel="support case"
+                                />
+                            </div>
                         </div>
                     </div>
                 </>

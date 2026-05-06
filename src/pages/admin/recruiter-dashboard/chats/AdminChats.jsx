@@ -20,8 +20,8 @@ import { subscribeConversationMessages } from '../../../../services/socketClient
 
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
-
-    const candidateId = propCandidateId || location.state?.candidateId;
+    const searchParams = new URLSearchParams(location.search || '');
+    const candidateId = propCandidateId || location.state?.candidateId || searchParams.get('candidateId');
 
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
@@ -82,12 +82,40 @@ function AdminChats({ candidateId: propCandidateId }) {
                 const list = await conversationService.listConversations();
                 if (cancelled) return;
                 const rows = (list || []).map(mapConversationToChatItem).filter(Boolean);
-                rows.sort((a, b) => {
-                    const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
-                    const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
-                    return tb - ta;
+                setChats((prev) => {
+                    const merged = new Map();
+                    const hydrate = (item) => {
+                        if (!item?.id) return null;
+                        const existing = merged.get(item.id);
+                        if (!existing) return item;
+
+                        const existingMessages = existing?.raw?.messages;
+                        const nextMessages = item?.raw?.messages;
+                        if ((!Array.isArray(nextMessages) || nextMessages.length === 0) && Array.isArray(existingMessages) && existingMessages.length > 0) {
+                            return {
+                                ...item,
+                                raw: {
+                                    ...item.raw,
+                                    messages: existingMessages,
+                                    lastMessageAt: existing.raw?.lastMessageAt || item.raw?.lastMessageAt,
+                                },
+                            };
+                        }
+
+                        return item;
+                    };
+
+                    [...prev, ...(rows || [])].forEach((item) => {
+                        const hydrated = hydrate(item);
+                        if (hydrated?.id) merged.set(hydrated.id, hydrated);
+                    });
+
+                    return [...merged.values()].sort((a, b) => {
+                        const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
+                        const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
+                        return tb - ta;
+                    });
                 });
-                setChats(rows);
             } catch (err) {
                 if (!cancelled) {
                     setListError(err?.message || 'Could not load conversations.');
@@ -100,6 +128,24 @@ function AdminChats({ candidateId: propCandidateId }) {
             cancelled = true;
         };
     }, []);
+
+    useEffect(() => {
+        if (!candidateId || chats.length === 0) return;
+
+        const normalized = String(candidateId);
+        const existing = chats.find((chat) => {
+            const raw = chat?.raw || {};
+            return (
+                String(raw.professionalId || '') === normalized ||
+                String(raw.recruiterId || '') === normalized ||
+                String(raw.adminId || '') === normalized
+            );
+        });
+
+        if (existing?.id && selectedChat !== existing.id) {
+            setSelectedChat(existing.id);
+        }
+    }, [candidateId, chats, selectedChat]);
 
     useEffect(() => {
         if (!candidateId) return undefined;

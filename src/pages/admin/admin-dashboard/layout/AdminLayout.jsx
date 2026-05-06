@@ -120,7 +120,7 @@ function AdminLayout() {
         { name: 'Compliance', path: '/admin/compliance', icon: FileCheck },
         { name: 'Marketplace', path: '/admin/marketplace', icon: Store },
         { name: 'Operations', path: '/admin/operations', icon: SettingsIcon },
-        { name: 'Chats', path: '/admin/admin-chats', icon: MessageSquare }
+        { name: 'Chats', path: '/admin/chats', icon: MessageSquare }
     ];
 
     const settingsItems = [

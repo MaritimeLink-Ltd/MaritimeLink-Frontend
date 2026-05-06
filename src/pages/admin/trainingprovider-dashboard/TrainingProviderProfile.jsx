@@ -11,9 +11,11 @@ import {
     Phone,
     CreditCard,
     CheckCircle2,
+    MessageSquare,
 } from 'lucide-react';
 import { countryCodes } from '../../../utils/countryCodes';
 import trainerSettingsService from '../../../services/trainerSettingsService';
+import SupportCenterSection from '../../../components/support/SupportCenterSection';
 
 const defaultNotifications = {
     securityAlerts: true,
@@ -93,6 +95,7 @@ const TrainingProviderProfile = () => {
         { id: 'general', label: 'General Profile', icon: User },
         { id: 'security', label: 'Security', icon: Shield },
         { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'support', label: 'Support', icon: MessageSquare },
     ];
 
     const organizationSummary = useMemo(
@@ -770,6 +773,16 @@ const TrainingProviderProfile = () => {
                                 </button>
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'support' && (
+                        <SupportCenterSection
+                            basePath="trainer"
+                            title="Trainer Support"
+                            description="Use this area for account access, billing, course management, or platform issues. Training providers default to Medium priority."
+                            priorityDefault="MEDIUM"
+                            caseLabel="support case"
+                        />
                     )}
                 </div>
             </div>

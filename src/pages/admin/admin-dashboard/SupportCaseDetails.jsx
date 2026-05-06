@@ -9,9 +9,7 @@ import {
     RefreshCw,
     Paperclip,
     AlertTriangle,
-    Send,
     CheckCircle,
-    X,
     Shield,
     MessageSquare,
     FileText,
@@ -62,8 +60,6 @@ const getInitials = (name) => {
 function SupportCaseDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('Reply to User');
-    const [replyText, setReplyText] = useState('');
     const [activeModal, setActiveModal] = useState(null);
     const [caseData, setCaseData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -71,7 +67,6 @@ function SupportCaseDetails() {
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
     const conversationEndRef = useRef(null);
-    const replyTabs = ['Reply to User', 'Internal Note'];
 
     const loadCase = async () => {
         setLoading(true);
@@ -107,6 +102,7 @@ function SupportCaseDetails() {
 
     const caseStatus = String(caseData?.status || 'OPEN').toUpperCase();
     const user = caseData?.user || null;
+    const userType = String(user?.role || caseData?.userType || caseData?.actorType || '').toUpperCase();
     const notes = Array.isArray(caseData?.notes) ? caseData.notes : [];
     const publicReplies = notes.filter((note) => !note.isInternal);
     const internalNotes = notes.filter((note) => note.isInternal);
@@ -141,30 +137,6 @@ function SupportCaseDetails() {
         }
     };
 
-    const handleSend = async () => {
-        const message = replyText.trim();
-        if (!message || saving) return;
-
-        setSaving(true);
-        setError('');
-        setFeedback('');
-
-        try {
-            await adminOperationsService.addSupportCaseNote(id, {
-                content: message,
-                isInternal: activeTab === 'Internal Note',
-            });
-            setReplyText('');
-            setFeedback(activeTab === 'Internal Note' ? 'Internal note added.' : 'Reply recorded.');
-            await loadCase();
-        } catch (err) {
-            console.error('Failed to add note:', err);
-            setError(err?.message || 'Failed to add note');
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const caseStatusLabel = useMemo(() => {
         const map = {
             OPEN: 'Open',
@@ -190,6 +162,27 @@ function SupportCaseDetails() {
         RESOLVED: 'bg-green-50 text-green-700 border-green-100',
         CLOSED: 'bg-gray-100 text-gray-700 border-gray-200',
     }[caseStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
+
+    const openChat = () => {
+        const recipientId = user?.id || caseData?.userId;
+        if (!recipientId) {
+            setError('Unable to open chat because the user id is missing.');
+            return;
+        }
+
+        navigate({
+            pathname: '/admin/chats',
+            search: `?candidateId=${encodeURIComponent(recipientId)}`,
+        }, {
+            state: { candidateId: recipientId },
+        });
+    };
+
+    const supportUserId = user?.id || caseData?.userId;
+    const profileLink =
+        userType.includes('RECRUIT') || userType.includes('TRAIN') || userType.includes('TRAINER')
+            ? `/admin/accounts/${supportUserId}`
+            : `/admin/candidate/${supportUserId}`;
 
     if (loading) {
         return (
@@ -305,26 +298,36 @@ function SupportCaseDetails() {
                             </span>
                         </div>
 
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
-                                <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                <span>{user?.email || 'No email available'}</span>
-                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
+                                    <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                    <span>{user?.email || 'No email available'}</span>
+                                </div>
                             <div className="flex items-center gap-3 text-xs text-gray-600 pl-1">
                                 <Phone className="h-3.5 w-3.5 text-gray-400" />
                                 <span>{caseData?.userPhone || 'No phone available'}</span>
                             </div>
-                            {user?.id && (
+                            {supportUserId && (
                                 <Link
-                                    to={`/admin/accounts/${user.id}`}
+                                    to={profileLink}
                                     className="flex items-center gap-3 text-xs text-blue-600 hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
                                 >
                                     <User className="h-3.5 w-3.5" />
                                     <span>View Profile</span>
                                 </Link>
-                            )}
+                                )}
+                                {(user?.id || caseData?.userId) && (
+                                    <button
+                                        type="button"
+                                        onClick={openChat}
+                                        className="flex items-center gap-3 text-xs text-[#003971] hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
+                                    >
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        <span>Chat with User</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
                     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                         <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">CASE DETAILS</h4>
@@ -455,55 +458,20 @@ function SupportCaseDetails() {
 
                         <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col min-h-0">
                             <div className="p-5 border-b border-gray-100">
-                                <h4 className="text-sm font-bold text-gray-900">Reply / Note</h4>
-                                <p className="text-xs text-gray-500">Choose whether this is public or internal.</p>
+                                <h4 className="text-sm font-bold text-gray-900">Chat with User</h4>
+                                <p className="text-xs text-gray-500">Open the existing chat thread to continue the conversation.</p>
                             </div>
 
                             <div className="p-5 flex flex-col gap-4 min-h-0">
-                                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                    {replyTabs.map((tab) => (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setActiveTab(tab)}
-                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === tab
-                                                ? 'bg-white shadow-sm text-[#003971]'
-                                                : 'text-gray-500 hover:text-gray-700'
-                                                }`}
-                                        >
-                                            {tab}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <textarea
-                                    value={replyText}
-                                    onChange={(e) => setReplyText(e.target.value)}
-                                    rows={10}
-                                    placeholder={
-                                        activeTab === 'Reply to User'
-                                            ? 'Write a reply that will be recorded against the case...'
-                                            : 'Add an internal note for other admins...'
-                                    }
-                                    className="w-full flex-1 min-h-[220px] resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
-                                />
-
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    <button
-                                        onClick={handleSend}
-                                        disabled={saving || !replyText.trim()}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-[#003971] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                        {activeTab === 'Reply to User' ? 'Record Reply' : 'Save Note'}
-                                    </button>
-                                    <button
-                                        onClick={() => setReplyText('')}
-                                        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <X className="h-4 w-4" />
-                                        Clear
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={openChat}
+                                    disabled={!user?.id && !caseData?.userId}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003971] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    Open Chat
+                                </button>
 
                                 <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 space-y-2">
                                     <div className="flex items-center gap-2 font-semibold text-gray-800">

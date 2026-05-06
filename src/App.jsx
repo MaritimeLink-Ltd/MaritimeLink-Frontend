@@ -227,7 +227,6 @@ function App() {
             <Route path="/recruiter/upload-job" element={<UploadJob />} />
             <Route path="/admin/jobs" element={<AdminJobs />} />
             <Route path="/admin/jobs/:jobId" element={<JobDetail />} />
-            <Route path="/admin/chats" element={<AdminChats />} />
             <Route path="/recruiter/chats" element={<AdminChats />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/recruiter/settings" element={<AdminSettings />} />
@@ -300,6 +299,7 @@ function App() {
             <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
             <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
+            <Route path="/admin/chats" element={<AdminDashboardChats />} />
             <Route path="/admin/admin-chats" element={<AdminDashboardChats />} />
             <Route path="/admin/admin-cv-resume" element={<CVResume isReadOnly={true} />} />
           </Route>

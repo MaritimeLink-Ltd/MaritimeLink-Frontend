@@ -48,6 +48,11 @@ export const API_ENDPOINTS = {
     KYC_SUBMIT: '/api/professional/kyc/submit',
     KYC_UPLOAD_SELFIE: '/api/professional/kyc/upload-selfie',
     UPDATE_PASSWORD: '/api/professional/update-password',
+    SUPPORT: {
+      CASES: '/api/professional/support/cases',
+      CASE_DETAIL: (id) => `/api/professional/support/cases/${id}`,
+      REPLY: (id) => `/api/professional/support/cases/${id}/reply`,
+    },
   },
   // Document Endpoints
   DOCUMENTS: {
@@ -92,6 +97,11 @@ export const API_ENDPOINTS = {
     SETTINGS_COMPANY: '/api/recruiter/settings/company',
     SETTINGS_NOTIFICATIONS: '/api/recruiter/settings/notifications',
     SETTINGS_PROFILE_PHOTO: '/api/recruiter/settings/profile-photo',
+    SUPPORT: {
+      CASES: '/api/recruiter/support/cases',
+      CASE_DETAIL: (id) => `/api/recruiter/support/cases/${id}`,
+      REPLY: (id) => `/api/recruiter/support/cases/${id}/reply`,
+    },
     APPLICANT_DETAILS: (id) => `/api/recruiter/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/recruiter/professionals/${id}`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/recruiter/applicants/${id}/status`,
@@ -131,6 +141,11 @@ export const API_ENDPOINTS = {
     SETTINGS_NOTIFICATIONS: '/api/trainer/settings/notifications',
     SETTINGS_BILLING: '/api/trainer/settings/billing',
     SETTINGS_PROFILE_PHOTO: '/api/trainer/settings/profile-photo',
+    SUPPORT: {
+      CASES: '/api/trainer/support/cases',
+      CASE_DETAIL: (id) => `/api/trainer/support/cases/${id}`,
+      REPLY: (id) => `/api/trainer/support/cases/${id}/reply`,
+    },
     STRIPE_STATUS: '/api/trainer/stripe/status',
     STRIPE_ONBOARDING: '/api/trainer/stripe/onboarding',
     STRIPE_ONBOARDING_REFRESH: '/api/trainer/stripe/onboarding/refresh',

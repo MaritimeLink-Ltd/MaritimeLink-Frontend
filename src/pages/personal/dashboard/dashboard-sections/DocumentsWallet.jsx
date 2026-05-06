@@ -20,7 +20,7 @@ import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
-import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
+import { API_CATEGORY_TO_WALLET_FOLDERS } from '../../../../constants/documentWalletCategories';
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -119,13 +119,17 @@ const DocumentsWallet = () => {
         categoryDefinitions.map((c) => ({ ...c, count: 0, statusBadges: [] })),
     );
 
+    const [uploadContextCategory, setUploadContextCategory] = useState(null);
+
     const fetchDocuments = async () => {
         try {
             setIsLoading(true);
             const response = await documentService.getDocuments();
             let docs = [];
+            let summary = null;
             if (response?.data?.documents) {
                 docs = response.data.documents;
+                summary = response?.data?.summary || null;
             } else if (Array.isArray(response?.data)) {
                 docs = response.data;
             } else if (Array.isArray(response)) {
@@ -133,6 +137,9 @@ const DocumentsWallet = () => {
             }
 
             setDocuments(docs);
+
+            const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
+
             const STATUS_BADGE_META = {
                 ready: { label: 'Compliance Ready', color: 'bg-emerald-600' },
                 pending: { label: 'Pending Approval', color: 'bg-yellow-500' },
@@ -145,12 +152,16 @@ const DocumentsWallet = () => {
 
             const BADGE_KEY_ORDER = ['ready', 'pending', 'mismatch', 'ocr-failed', 'expiring', 'expired', 'rejected'];
 
+            const walletDocs = docs.filter((d) => d.category && !EXCLUDED_FROM_WALLET.has(d.category));
+
             const docsByCategoryId = {};
-            docs.forEach((doc) => {
-                const categoryId = getDocumentDisplayCategory(doc);
-                if (!categoryId || categoryId === 'resume' || categoryId === 'cover-letter') return;
-                if (!docsByCategoryId[categoryId]) docsByCategoryId[categoryId] = [];
-                docsByCategoryId[categoryId].push(doc);
+            walletDocs.forEach((doc) => {
+                const folderIds = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
+                if (!folderIds?.length) return;
+                folderIds.forEach((catId) => {
+                    if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
+                    docsByCategoryId[catId].push(doc);
+                });
             });
 
             setDynamicCategories(
@@ -191,6 +202,14 @@ const DocumentsWallet = () => {
     }, []);
 
     const filteredDynamicCategories = useMemo(() => {
+        const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
+
+        const docBelongsToWalletFolder = (doc, walletFolderId) => {
+            if (!doc.category || EXCLUDED_FROM_WALLET.has(doc.category)) return false;
+            const folders = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
+            return folders?.includes(walletFolderId) ?? false;
+        };
+
         const docMatchesWalletFilter = (doc, filter) => {
             const meta = getDocumentStatusMeta(doc);
             switch (filter) {
@@ -214,7 +233,7 @@ const DocumentsWallet = () => {
             if (!matchesSearch) return false;
             if (activeFilter === 'All') return true;
 
-            const catDocs = documents.filter((d) => getDocumentDisplayCategory(d) === category.id);
+            const catDocs = documents.filter((d) => docBelongsToWalletFolder(d, category.id));
             return catDocs.some((d) => docMatchesWalletFilter(d, activeFilter));
         });
     }, [dynamicCategories, documents, activeFilter, searchQuery]);
@@ -303,6 +322,16 @@ const DocumentsWallet = () => {
                 category={uploadCategory || selectedCategory || undefined}
             />
         );
+        return (
+            <UploadDocument
+                category={uploadContextCategory}
+                onBack={() => {
+                    setView('list');
+                    setUploadContextCategory(null);
+                }}
+                onCompletion={handleUploadComplete}
+            />
+        );
     }
 
     if (view === 'edit') {
@@ -326,21 +355,11 @@ const DocumentsWallet = () => {
     }
 
     if (view === 'category') {
-        return (
-            <CategoryDocuments
-                category={selectedCategory}
-                onBack={() => {
-                    setView('list');
-                    setSelectedCategory(null);
-                    setUploadCategory(null);
-                    fetchDocuments();
-                }}
-                onUploadClick={(cat) => {
-                    setUploadCategory(cat || selectedCategory);
-                    setView('upload');
-                }}
-            />
-        );
+        return <CategoryDocuments
+            category={selectedCategory}
+            onBack={() => { setView('list'); setSelectedCategory(null); fetchDocuments(); }}
+            onUploadClick={() => setView('upload')}
+        />;
     }
 
     return (
@@ -416,10 +435,7 @@ const DocumentsWallet = () => {
                     </div>
 
                     <button
-                        onClick={() => {
-                            setUploadCategory(null);
-                            setView('upload');
-                        }}
+                        onClick={() => setView('upload')}
                         className="flex items-center justify-center gap-2 bg-blue-50 text-[#003366] px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-100 transition-colors min-h-[44px] flex-shrink-0"
                     >
                         <Upload size={16} />

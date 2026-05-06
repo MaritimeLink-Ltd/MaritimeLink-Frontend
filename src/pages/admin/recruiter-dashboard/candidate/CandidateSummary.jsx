@@ -271,6 +271,16 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
             const fromJobDetail = !!location.state?.fromJobDetail;
             const rowFromJob = location.state?.candidateData;
             const isMatchesRow = rowFromJob?.status === 'matches';
+            const isDirectAdminProfessionalRoute =
+                isAdmin &&
+                !fromJobDetail &&
+                !rawApplicantLooksLikeApplicationRow(rawApplicant) &&
+                !rawApplicantLooksLikeApplicationRow(rowFromJob) &&
+                (
+                    location.state?.isProfessionalView ||
+                    location.pathname.includes('/admin/candidate/') ||
+                    location.pathname.includes('/admin/marketplace/candidate/')
+                );
 
             if (!candidateId) {
                 setIsLoading(false);
@@ -412,9 +422,8 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
                 return;
             }
 
-            const isProfessionalView = location.state?.isProfessionalView;
             if (
-                isProfessionalView &&
+                isDirectAdminProfessionalRoute &&
                 rawApplicant &&
                 candidateId &&
                 String(rawApplicant.id) === String(candidateId)
@@ -432,7 +441,7 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
 
             try {
                 setIsLoading(true);
-                if (isProfessionalView) {
+                if (isDirectAdminProfessionalRoute) {
                     const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId));
                     const responseData = response?.data?.data || response?.data;
                     const obj = responseData?.professional ? responseData.professional : responseData;
@@ -443,11 +452,22 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
                         }
                         setStatusUpdatedBy(extractUpdatedByRole(obj));
                     }
-                } else {
+                } else if (fromJobDetail || rawApplicantLooksLikeApplicationRow(rawApplicant) || rawApplicantLooksLikeApplicationRow(rowFromJob)) {
                     const response = await jobService.getApplicantDetails(candidateId, { asAdmin: true });
                     const responseData = response?.data?.data || response?.data;
                     const obj = responseData;
 
+                    if (obj) {
+                        setFetchedCandidate(obj);
+                        if (obj.application?.status || obj.status) {
+                            setApplicationStage(mapApiStatusToStage(obj.application?.status || obj.status));
+                        }
+                        setStatusUpdatedBy(extractUpdatedByRole(obj));
+                    }
+                } else {
+                    const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(candidateId));
+                    const responseData = response?.data?.data || response?.data;
+                    const obj = responseData?.professional ? responseData.professional : responseData;
                     if (obj) {
                         setFetchedCandidate(obj);
                         if (obj.application?.status || obj.status) {
@@ -1099,9 +1119,9 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
                             <button
                                 type="button"
                                 onClick={() => onMessage
-                                    ? onMessage((professional?.id || professional?.professionalId || candidateId), candidate.name)
-                                    : navigate(
-                                        location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' : (isAdmin ? '/admin/admin-chats' : '/admin/chats'),
+                            ? onMessage((professional?.id || professional?.professionalId || candidateId), candidate.name)
+                            : navigate(
+                                        location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' : '/admin/chats',
                                         { state: { candidateId: (professional?.id || professional?.professionalId || candidateId), candidateName: candidate.name } },
                                     )
                                 }
