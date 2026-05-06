@@ -24,8 +24,11 @@ const UUID_RE =
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search || '');
-    const candidateId = propCandidateId || location.state?.candidateId || searchParams.get('candidateId');
     const initialConversation = location.state?.conversation || null;
+    const requestedConversationId = initialConversation?.id || searchParams.get('conversationId');
+    const candidateId = requestedConversationId
+        ? null
+        : propCandidateId || location.state?.candidateId || searchParams.get('candidateId');
 
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
@@ -82,6 +85,14 @@ function AdminChats({ candidateId: propCandidateId }) {
             upsertChatFromConversation(initialConversation);
         }
     }, [initialConversation, upsertChatFromConversation]);
+
+    useEffect(() => {
+        if (!requestedConversationId || chats.length === 0) return;
+        const existing = chats.find((chat) => String(chat.id) === String(requestedConversationId));
+        if (existing?.id && selectedChat !== existing.id) {
+            setSelectedChat(existing.id);
+        }
+    }, [requestedConversationId, chats, selectedChat]);
 
     useEffect(() => {
         let cancelled = false;
@@ -159,6 +170,7 @@ function AdminChats({ candidateId: propCandidateId }) {
 
     useEffect(() => {
         if (!candidateId) return undefined;
+        if (requestedConversationId) return undefined;
         if (listLoading) return undefined;
         if (initialConversation?.id) return undefined;
         if (!UUID_RE.test(String(candidateId))) {
@@ -201,7 +213,7 @@ function AdminChats({ candidateId: propCandidateId }) {
         return () => {
             cancelled = true;
         };
-    }, [candidateId, upsertChatFromConversation, listLoading, chats, initialConversation]);
+    }, [candidateId, requestedConversationId, upsertChatFromConversation, listLoading, chats, initialConversation]);
 
     useEffect(() => {
         if (!selectedChat) return undefined;

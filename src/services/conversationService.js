@@ -4,6 +4,59 @@ import { API_ENDPOINTS } from '../config/api.config';
 /** Default page size for GET .../conversations/:id/messages */
 export const CONVERSATION_MESSAGE_PAGE_SIZE = 20;
 
+const decodeTokenPayload = () => {
+    if (typeof window === 'undefined') return null;
+    const token = localStorage.getItem('authToken');
+    if (!token || typeof token !== 'string') return null;
+
+    try {
+        const [, payload] = token.split('.');
+        if (!payload) return null;
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+        return JSON.parse(atob(padded));
+    } catch {
+        return null;
+    }
+};
+
+const getCurrentUserId = () => {
+    if (typeof window === 'undefined') return '';
+    const userType = getCurrentUserType();
+    const stored =
+        userType === 'professional'
+            ? localStorage.getItem('professionalId')
+            : userType === 'recruiter' || userType === 'training-provider'
+              ? localStorage.getItem('recruiterId') || localStorage.getItem('trainingProviderId')
+              : userType === 'admin'
+                ? localStorage.getItem('adminId')
+                : localStorage.getItem('professionalId') ||
+                  localStorage.getItem('recruiterId') ||
+                  localStorage.getItem('trainingProviderId') ||
+                  localStorage.getItem('adminId');
+    if (stored) return stored;
+
+    const tokenPayload = decodeTokenPayload();
+    return (
+        tokenPayload?.id ||
+        tokenPayload?.sub ||
+        tokenPayload?.userId ||
+        tokenPayload?.professionalId ||
+        tokenPayload?.recruiterId ||
+        ''
+    );
+};
+
+const getCurrentUserType = () => {
+    if (typeof window === 'undefined') return '';
+    return String(localStorage.getItem('userType') || localStorage.getItem('adminUserType') || '').toLowerCase();
+};
+
+const getAdminDisplayName = (admin) => {
+    if (!admin) return '';
+    return admin.role ? 'Support Admin' : admin.email || 'Support Admin';
+};
+
 /**
  * Map API conversation to list row + profile routing fields.
  * Uses embedded `messages` when present for preview and unread counts.
@@ -22,10 +75,15 @@ export function mapConversationToChatItem(conv) {
         const t = String(lastMsg.content).trim();
         lastMessage = t.length > 120 ? `${t.slice(0, 117)}…` : t;
     }
-    const unread = msgs.filter((m) => {
-        const st = String(m.senderType || '').toUpperCase();
-        return st === 'PROFESSIONAL' && !m.isRead;
-    }).length;
+    const currentUserId = getCurrentUserId();
+    const unread =
+        typeof conv._count?.messages === 'number'
+            ? conv._count.messages
+            : msgs.filter((m) => {
+                  if (currentUserId) return String(m.senderId || '') !== String(currentUserId) && !m.isRead;
+                  const st = String(m.senderType || '').toUpperCase();
+                  return st === 'PROFESSIONAL' && !m.isRead;
+              }).length;
 
     const iso = conv.lastMessageAt || lastMsg?.createdAt || conv.updatedAt || conv.createdAt;
     let time = '';
@@ -39,12 +97,37 @@ export function mapConversationToChatItem(conv) {
     } catch {
         time = '';
     }
-    const name =
-        (conv.professional?.fullname && String(conv.professional.fullname).trim()) ||
-        'Professional';
+    const currentUserType = getCurrentUserType();
+    const professionalName = conv.professional
+        ? conv.professional.fullname || conv.professional.email || 'Professional'
+        : '';
+    const recruiterName = conv.recruiter
+        ? conv.recruiter.organizationName || conv.recruiter.email || 'Recruiter'
+        : '';
+    const adminName = getAdminDisplayName(conv.admin) || 'Support Admin';
+    let name = professionalName;
+
+    if (currentUserId) {
+        if (conv.professionalId && String(conv.professionalId) !== String(currentUserId)) {
+            name = professionalName;
+        } else if (conv.recruiterId && String(conv.recruiterId) !== String(currentUserId)) {
+            name = recruiterName;
+        } else if (conv.adminId && String(conv.adminId) !== String(currentUserId)) {
+            name = adminName;
+        } else {
+            name = professionalName || recruiterName || adminName || 'Conversation';
+        }
+    } else if (currentUserType === 'admin') {
+        name = professionalName || recruiterName || adminName;
+    } else {
+        name = professionalName || adminName || recruiterName;
+    }
+
     return {
         id: conv.id,
         professionalId: conv.professionalId,
+        recruiterId: conv.recruiterId,
+        adminId: conv.adminId,
         name,
         lastMessage,
         time,
@@ -71,11 +154,16 @@ export function mapConversationToProfessionalChatItem(conv) {
         const t = String(lastMsg.content).trim();
         lastMessage = t.length > 120 ? `${t.slice(0, 117)}…` : t;
     }
-    const unread = msgs.filter((m) => {
-        const st = String(m.senderType || '').toUpperCase();
-        const fromProfessional = st === 'PROFESSIONAL';
-        return !fromProfessional && !m.isRead;
-    }).length;
+    const currentUserId = getCurrentUserId();
+    const unread =
+        typeof conv._count?.messages === 'number'
+            ? conv._count.messages
+            : msgs.filter((m) => {
+                  if (currentUserId) return String(m.senderId || '') !== String(currentUserId) && !m.isRead;
+                  const st = String(m.senderType || '').toUpperCase();
+                  const fromProfessional = st === 'PROFESSIONAL';
+                  return !fromProfessional && !m.isRead;
+              }).length;
 
     const iso = conv.lastMessageAt || lastMsg?.createdAt || conv.updatedAt || conv.createdAt;
     let time = '';
@@ -92,7 +180,7 @@ export function mapConversationToProfessionalChatItem(conv) {
     const company =
         (conv.recruiter?.organizationName && String(conv.recruiter.organizationName).trim()) ||
         (conv.recruiter?.email && String(conv.recruiter.email).trim()) ||
-        (conv.admin?.email && 'Support Admin') ||
+        getAdminDisplayName(conv.admin) ||
         'Recruiter';
 
     return {
@@ -125,10 +213,11 @@ export function mapApiMessageToChatMessage(msg) {
     if (!msg?.id) return null;
     const st = String(msg.senderType || '').toUpperCase();
     const isFromProfessional = st === 'PROFESSIONAL';
+    const currentUserId = getCurrentUserId();
     return {
         id: msg.id,
         text: msg.content ?? '',
-        sent: !isFromProfessional,
+        sent: currentUserId ? String(msg.senderId || '') === String(currentUserId) : !isFromProfessional,
         seen: msg.isRead === true,
         createdAt: msg.createdAt,
     };

@@ -72,6 +72,12 @@ const getInitials = (name = '') =>
         .map((part) => part.charAt(0).toUpperCase())
         .join('') || 'SC';
 
+const getSupportChatRoute = (basePath) => {
+    if (basePath === 'recruiter') return '/recruiter/chats';
+    if (basePath === 'trainer') return '/trainingprovider/chats';
+    return '/personal/chats';
+};
+
 function SupportCenterSection({
     basePath,
     title = 'Support',
@@ -119,44 +125,29 @@ function SupportCenterSection({
     const openCase = async (caseItem) => {
         if (!caseItem) return;
 
-        if (basePath === 'professional') {
-            setSelectedCaseLoading(true);
-            setMessage({ type: '', text: '' });
-            try {
-                const conversation = await conversationService.openSupportConversation();
-                if (conversation?.id) {
-                    navigate(`/personal/chats?conversationId=${encodeURIComponent(conversation.id)}&supportChat=1`, {
-                        state: {
-                            conversation,
-                            supportChat: true,
-                        },
-                    });
-                    return;
-                }
-                setMessage({
-                    type: 'error',
-                    text: 'Unable to open support chat right now.',
-                });
-            } catch (error) {
-                setMessage({
-                    type: 'error',
-                    text: error.message || 'Unable to open support chat right now.',
-                });
-            } finally {
-                setSelectedCaseLoading(false);
-            }
-            return;
-        }
-
         setSelectedCaseLoading(true);
-        setSelectedCase(null);
-        setReplyText('');
+        setMessage({ type: '', text: '' });
         try {
-            const response = await userSupportService.getCaseById(basePath, caseItem.caseId || caseItem.id);
-            setSelectedCase(response?.data?.case || caseItem);
+            const conversation = await conversationService.openSupportConversation();
+            if (conversation?.id) {
+                const chatRoute = getSupportChatRoute(basePath);
+                navigate(`${chatRoute}?conversationId=${encodeURIComponent(conversation.id)}&supportChat=1`, {
+                    state: {
+                        conversation,
+                        supportChat: true,
+                    },
+                });
+                return;
+            }
+            setMessage({
+                type: 'error',
+                text: 'Unable to open support chat right now.',
+            });
         } catch (error) {
-            setMessage({ type: 'error', text: error.message || `Failed to open ${caseLabel.toLowerCase()}.` });
-            setSelectedCase(caseItem);
+            setMessage({
+                type: 'error',
+                text: error.message || 'Unable to open support chat right now.',
+            });
         } finally {
             setSelectedCaseLoading(false);
         }

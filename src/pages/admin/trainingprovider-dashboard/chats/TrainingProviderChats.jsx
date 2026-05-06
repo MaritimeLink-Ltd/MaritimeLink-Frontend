@@ -20,8 +20,11 @@ import { subscribeConversationMessages } from '../../../../services/socketClient
 
 function TrainingProviderChats({ candidateId: propCandidateId }) {
     const location = useLocation();
+    const searchParams = new URLSearchParams(location.search || '');
+    const initialConversation = location.state?.conversation || null;
+    const requestedConversationId = initialConversation?.id || searchParams.get('conversationId');
 
-    const candidateId = propCandidateId || location.state?.candidateId;
+    const candidateId = requestedConversationId ? null : propCandidateId || location.state?.candidateId;
 
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
@@ -74,6 +77,12 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
     }, []);
 
     useEffect(() => {
+        if (initialConversation?.id) {
+            upsertChatFromConversation(initialConversation);
+        }
+    }, [initialConversation, upsertChatFromConversation]);
+
+    useEffect(() => {
         let cancelled = false;
         (async () => {
             setListLoading(true);
@@ -82,12 +91,17 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
                 const list = await conversationService.listConversations();
                 if (cancelled) return;
                 const rows = (list || []).map(mapConversationToChatItem).filter(Boolean);
-                rows.sort((a, b) => {
-                    const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
-                    const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
-                    return tb - ta;
+                setChats((prev) => {
+                    const merged = new Map();
+                    [...prev, ...rows].forEach((item) => {
+                        if (item?.id) merged.set(item.id, item);
+                    });
+                    return [...merged.values()].sort((a, b) => {
+                        const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
+                        const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
+                        return tb - ta;
+                    });
                 });
-                setChats(rows);
             } catch (err) {
                 if (!cancelled) {
                     setListError(err?.message || 'Could not load conversations.');
@@ -102,7 +116,16 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
     }, []);
 
     useEffect(() => {
+        if (!requestedConversationId || chats.length === 0) return;
+        const existing = chats.find((chat) => String(chat.id) === String(requestedConversationId));
+        if (existing?.id && selectedChat !== existing.id) {
+            setSelectedChat(existing.id);
+        }
+    }, [requestedConversationId, chats, selectedChat]);
+
+    useEffect(() => {
         if (!candidateId) return undefined;
+        if (requestedConversationId) return undefined;
 
         let cancelled = false;
         (async () => {
@@ -124,7 +147,7 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
         return () => {
             cancelled = true;
         };
-    }, [candidateId, upsertChatFromConversation]);
+    }, [candidateId, requestedConversationId, upsertChatFromConversation]);
 
     useEffect(() => {
         if (!selectedChat) return undefined;

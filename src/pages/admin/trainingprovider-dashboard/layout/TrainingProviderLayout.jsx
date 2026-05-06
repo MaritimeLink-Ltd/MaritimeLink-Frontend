@@ -88,9 +88,12 @@ function TrainingProviderLayout() {
     }, []);
 
     const isTrainingProviderVerified = typeof window !== 'undefined' && localStorage.getItem('trainingProviderAdminVerified') === 'true';
+    const isSupportChatRoute =
+        location.pathname === '/trainingprovider/chats' &&
+        new URLSearchParams(location.search || '').get('supportChat') === '1';
     const isRestrictedTrainingRoute = ['/trainingprovider/demand', '/trainingprovider/courses', '/trainingprovider/bookings', '/trainingprovider/chats'].some(
         (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
-    );
+    ) && !isSupportChatRoute;
 
     const isActive = (path) => location.pathname === path || (path === '/trainingprovider/demand' && ['/trainingprovider/expiries-overview', '/trainingprovider/expiries'].includes(location.pathname));
 

@@ -76,9 +76,12 @@ function AdminLayout() {
     const recruiterSearchPaths = ['/recruiter/search', '/admin/search'];
     const recruiterJobPaths = ['/recruiter/jobs', '/admin/jobs'];
     const recruiterChatPaths = ['/recruiter/chats', '/admin/chats'];
+    const isSupportChatRoute =
+        location.pathname === '/recruiter/chats' &&
+        new URLSearchParams(location.search || '').get('supportChat') === '1';
     const isRestrictedRecruiterRoute = [...recruiterSearchPaths, ...recruiterJobPaths, ...recruiterChatPaths].some(
         (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
-    );
+    ) && !isSupportChatRoute;
 
     const isActive = (path) =>
         location.pathname === path ||
