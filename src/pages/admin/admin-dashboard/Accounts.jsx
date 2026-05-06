@@ -11,7 +11,11 @@ function normalizeUserRole(role) {
 
 /** Supports `{ data: { recruiters|trainers } }`, nested `data.data`, or a raw array fallback. */
 function accountRiskDisplay(activeTab, account) {
-    if (activeTab === 'Professionals') return { text: '—', mismatch: false };
+    if (activeTab === 'Professionals') {
+        const raw = account.riskLevel || account.kyc?.riskLevel || account.tier;
+        const text = raw != null && raw !== '' && raw !== 'N/A' ? String(raw).toUpperCase() : '—';
+        return { text, mismatch: Boolean(account.hasDocumentMismatch) };
+    }
     if (activeTab === 'KYC Status') {
         const raw = account.riskLevel || account.tier;
         const t = raw != null && raw !== '' && raw !== 'N/A' ? String(raw).toUpperCase() : '';
@@ -347,8 +351,9 @@ function Accounts() {
                     domain: item.email || 'N/A',
                     country: item.country || 'N/A',
                     tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
-                    riskLevel: null,
+                    riskLevel: item.riskLevel || item.kyc?.riskLevel || null,
                     hasCompanyMismatch: false,
+                    hasDocumentMismatch: Boolean(item.hasDocumentMismatch),
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
                     status: statusLabel,
                     statusColor: statusColor,
@@ -577,7 +582,7 @@ function Accounts() {
     };
 
     const accounts = getCurrentTabData();
-    const dataTableColSpan = isProfessionalTab ? 6 : 8;
+    const dataTableColSpan = isProfessionalTab ? 7 : 8;
 
     // Tab-specific stats
     const getTabStats = () => {
@@ -823,7 +828,7 @@ function Accounts() {
     const handleExportCSV = () => {
         const currentData = getFilteredAccounts();
         const headers = isProfessionalTab
-            ? ['ID', 'Name', 'Country', 'Tier', 'Last Active', 'Status']
+            ? ['ID', 'Name', 'Country', 'Tier', 'Risk', 'Last Active', 'Status']
             : ['ID', 'Name', 'Company', 'Domain', 'Country', 'Tier', 'Risk', 'Last Active', 'Status'];
         const csvRows = [headers.join(',')];
 
@@ -834,6 +839,7 @@ function Accounts() {
                     `"${account.name}"`,
                     account.country,
                     account.tier,
+                    `"${accountRiskDisplay(activeTab, account).text}${account.hasDocumentMismatch ? ' (document mismatch)' : ''}"`,
                     `"${account.lastActive}"`,
                     account.status
                 ]
@@ -1209,11 +1215,9 @@ function Accounts() {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Tier
                                 </th>
-                                {!isProfessionalTab && (
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Risk
-                                    </th>
-                                )}
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Risk
+                                </th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Last Active
                                 </th>
@@ -1298,14 +1302,16 @@ function Accounts() {
                                                 {account.tier}
                                             </span>
                                         </td>
-                                        {!isProfessionalTab && (() => {
+                                        {(() => {
                                             const risk = accountRiskDisplay(activeTab, account);
                                             return (
                                                 <td className="px-4 py-4">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className={`text-sm ${riskCellTextClass(risk.text)}`}>{risk.text}</span>
                                                         {risk.mismatch && (
-                                                            <span className="text-xs font-semibold text-amber-700">Company mismatch</span>
+                                                            <span className="text-xs font-semibold text-amber-700">
+                                                                {isProfessionalTab ? 'Document mismatch' : 'Company mismatch'}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </td>
