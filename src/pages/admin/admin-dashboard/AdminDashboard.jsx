@@ -159,11 +159,9 @@ function AdminDashboard() {
     const [revenueError, setRevenueError] = useState(null);
     const [financeAnalyticsError, setFinanceAnalyticsError] = useState(null);
     const [reviewQueueList, setReviewQueueList] = useState([]);
-    const [systemAlertsList, setSystemAlertsList] = useState([]);
     const [queuesLoading, setQueuesLoading] = useState(true);
     const [queuesError, setQueuesError] = useState(null);
     const [reviewVisibleCount, setReviewVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
-    const [systemAlertsVisibleCount, setSystemAlertsVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
 
     useEffect(() => {
         let cancelled = false;
@@ -313,10 +311,8 @@ function AdminDashboard() {
                 if (queuesOutcome.status === 'fulfilled') {
                     const d = queuesOutcome.value?.data;
                     const rq = d?.reviewQueue;
-                    const sa = d?.systemAlerts;
                     if (!cancelled) {
                         setReviewQueueList(Array.isArray(rq) ? rq : []);
-                        setSystemAlertsList(Array.isArray(sa) ? sa : []);
                     }
                 } else if (!cancelled) {
                     console.error('Failed to load admin dashboard queues:', queuesOutcome.reason);
@@ -324,7 +320,6 @@ function AdminDashboard() {
                         queuesOutcome.reason?.message || 'Could not load review queue or alerts.'
                     );
                     setReviewQueueList([]);
-                    setSystemAlertsList([]);
                 }
             } finally {
                 if (!cancelled) {
@@ -344,25 +339,12 @@ function AdminDashboard() {
         setReviewVisibleCount(DASHBOARD_LIST_PAGE_SIZE);
     }, [reviewQueueList]);
 
-    useEffect(() => {
-        setSystemAlertsVisibleCount(DASHBOARD_LIST_PAGE_SIZE);
-    }, [systemAlertsList]);
-
     const loadMoreReviewQueue = useCallback(() => {
         setReviewVisibleCount((n) => n + DASHBOARD_LIST_PAGE_SIZE);
     }, []);
 
-    const loadMoreSystemAlerts = useCallback(() => {
-        setSystemAlertsVisibleCount((n) => n + DASHBOARD_LIST_PAGE_SIZE);
-    }, []);
-
     const topStats = useMemo(() => {
         const fmt = (n) => (adminStatsLoading ? '—' : String(n));
-        const pendingBadge = adminStatsLoading
-            ? '…'
-            : adminStats.pendingToday > 0
-                ? `+${adminStats.pendingToday} today`
-                : 'No new today';
         const flaggedBadge =
             adminStatsLoading ? '…' : adminStats.flaggedIssues > 0 ? 'Needs attention' : 'None open';
         const expiringBadge = adminStatsLoading
@@ -375,7 +357,7 @@ function AdminDashboard() {
                 icon: Users,
                 value: fmt(adminStats.pendingTotal),
                 label: 'Pending Approvals',
-                badge: pendingBadge,
+                badge: null,
                 gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]',
                 path: '/admin/compliance',
             },
@@ -436,17 +418,7 @@ function AdminDashboard() {
 
     const platformMetrics = useMemo(() => {
         const fmt = (n) => (activityLoading ? '—' : String(Number(n) || 0));
-        const successDisplay = activityLoading
-            ? '…'
-            : adminActivity.successRate || '—';
         return [
-            {
-                label: 'SUCCESS RATE',
-                sublabel: successDisplay,
-                icon: CheckCircle,
-                iconColor: 'text-green-500',
-                iconBg: 'bg-green-50',
-            },
             { label: 'Providers', value: fmt(adminUserBreakdown.providers) },
             { label: 'Recruiters', value: fmt(adminUserBreakdown.recruiters) },
             { label: 'Professionals', value: fmt(adminUserBreakdown.professionals) },
@@ -542,24 +514,9 @@ function AdminDashboard() {
         });
     }, [reviewQueueList]);
 
-    const systemAlertsDisplay = useMemo(() => {
-        return systemAlertsList.map((item, index) => ({
-            rowKey: `${item.type || 'alert'}-${index}-${item.timestamp || ''}`,
-            message: item.message || 'Alert',
-            time: formatAdminRelativeTime(item.timestamp),
-            dotClass: mapAlertSeverityColor(item.severity),
-            badgeLabel: String(index + 1),
-        }));
-    }, [systemAlertsList]);
-
     const reviewQueueShown = useMemo(
         () => reviewQueueDisplay.slice(0, reviewVisibleCount),
         [reviewQueueDisplay, reviewVisibleCount],
-    );
-
-    const systemAlertsShown = useMemo(
-        () => systemAlertsDisplay.slice(0, systemAlertsVisibleCount),
-        [systemAlertsDisplay, systemAlertsVisibleCount],
     );
 
     return (
@@ -611,8 +568,7 @@ function AdminDashboard() {
                 {topStats.map((stat) => (
                     <div
                         key={stat.id}
-                        onClick={() => navigate(stat.path)}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-pointer ${adminStatsLoading ? 'opacity-90' : ''}`}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-default ${adminStatsLoading ? 'opacity-90' : ''}`}
                     >
                         <div className="relative z-10">
                             {/* Icon and Badge */}
@@ -620,9 +576,11 @@ function AdminDashboard() {
                                 <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm">
                                     <stat.icon className="h-6 w-6 text-white" />
                                 </div>
-                                <span className="text-xs font-semibold text-white/80 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                                    {stat.badge}
-                                </span>
+                                {stat.badge ? (
+                                    <span className="text-xs font-semibold text-white/80 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                                        {stat.badge}
+                                    </span>
+                                ) : null}
                             </div>
 
                             {/* Value and Label */}
@@ -646,13 +604,6 @@ function AdminDashboard() {
                                 <h2 className="text-lg font-bold text-gray-900">Platform Activity</h2>
                                 <p className="text-sm text-gray-500 mt-1">Real-time overview of system events</p>
                             </div>
-                            <Link
-                                to="/admin/platform-activity"
-                                className="text-sm font-bold text-[#1e5a8f] hover:underline flex items-center gap-1"
-                            >
-                                View Full Report
-                                <ChevronRight className="h-4 w-4" />
-                            </Link>
                         </div>
 
                         {/* Activity Stats Grid */}
@@ -678,7 +629,7 @@ function AdminDashboard() {
                         </div>
 
                         {/* Additional Metrics */}
-                        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${activityLoading ? 'opacity-80' : ''}`}>
+                        <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 ${activityLoading ? 'opacity-80' : ''}`}>
                             {platformMetrics.map((metric, index) => (
                                 <div key={index} className="bg-gray-50 rounded-xl p-4">
                                     {metric.icon ? (
@@ -701,7 +652,7 @@ function AdminDashboard() {
                     </div>
 
                     {/* Review Queue & System Alerts */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                         {/* Review Queue */}
                         <div
                             className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col max-h-[440px] min-h-0 ${queuesLoading ? 'opacity-90' : ''}`}
@@ -758,59 +709,6 @@ function AdminDashboard() {
                                 className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2 shrink-0"
                             >
                                 View All Reviews
-                            </button>
-                        </div>
-
-                        {/* System Alerts */}
-                        <div
-                            className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col max-h-[440px] min-h-0 ${queuesLoading ? 'opacity-90' : ''}`}
-                        >
-                            <div className="flex items-center justify-between mb-6 shrink-0">
-                                <h2 className="text-lg font-bold text-gray-900">System Alerts</h2>
-                            </div>
-
-                            {queuesLoading ? (
-                                <p className="text-sm text-gray-500 py-6 text-center">Loading alerts…</p>
-                            ) : systemAlertsDisplay.length === 0 ? (
-                                <p className="text-sm text-gray-500 py-6 text-center">No system alerts.</p>
-                            ) : (
-                                <>
-                                <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
-                                    {systemAlertsShown.map((alert) => (
-                                        <div
-                                            key={alert.rowKey}
-                                            onClick={() => navigate('/admin/notifications')}
-                                            className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors -mx-2"
-                                        >
-                                            <div
-                                                className={`w-8 h-8 rounded-full ${alert.dotClass} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}
-                                            >
-                                                {alert.badgeLabel}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-gray-900 font-medium">{alert.message}</p>
-                                                <span className="text-xs text-gray-400">{alert.time}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                {systemAlertsVisibleCount < systemAlertsDisplay.length && (
-                                    <button
-                                        type="button"
-                                        onClick={loadMoreSystemAlerts}
-                                        className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#1e5a8f] border border-gray-200 rounded-lg hover:bg-gray-50"
-                                    >
-                                        Load more
-                                    </button>
-                                )}
-                                </>
-                            )}
-
-                            <button
-                                onClick={() => navigate('/admin/notifications')}
-                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2 shrink-0"
-                            >
-                                View All Alerts
                             </button>
                         </div>
                     </div>
@@ -930,22 +828,7 @@ function AdminDashboard() {
                                     {trainerRevenueRows.map((row) => (
                                         <div
                                             key={row.key}
-                                            role={row.recruiterId ? 'button' : undefined}
-                                            tabIndex={row.recruiterId ? 0 : undefined}
-                                            onClick={() =>
-                                                row.recruiterId &&
-                                                navigate(`/admin/accounts/${row.recruiterId}`)
-                                            }
-                                            onKeyDown={(e) => {
-                                                if (
-                                                    row.recruiterId &&
-                                                    (e.key === 'Enter' || e.key === ' ')
-                                                ) {
-                                                    e.preventDefault();
-                                                    navigate(`/admin/accounts/${row.recruiterId}`);
-                                                }
-                                            }}
-                                            className={`flex items-center justify-between ${row.recruiterId ? 'cursor-pointer hover:bg-gray-50 rounded-xl p-2 -mx-2' : ''}`}
+                                            className="flex items-center justify-between"
                                         >
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="p-2 rounded-lg bg-blue-50 flex-shrink-0">

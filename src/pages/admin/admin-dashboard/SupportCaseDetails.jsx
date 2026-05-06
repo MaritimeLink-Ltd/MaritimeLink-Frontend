@@ -18,7 +18,6 @@ import {
     Loader2,
 } from 'lucide-react';
 import adminOperationsService from '../../../services/adminOperationsService';
-import { parseJwtPayload } from '../../../utils/sessionManager';
 
 const formatDateTime = (value) => {
     if (!value) return '—';
@@ -60,13 +59,6 @@ const getInitials = (name) => {
         .join('') || 'SC';
 };
 
-const getCurrentAdminId = () => {
-    if (typeof window === 'undefined') return null;
-    const payload = parseJwtPayload(localStorage.getItem('authToken'));
-    if (!payload || typeof payload !== 'object') return null;
-    return payload.adminId || payload.admin_id || payload.id || payload.userId || payload.sub || null;
-};
-
 function SupportCaseDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -80,8 +72,6 @@ function SupportCaseDetails() {
     const [feedback, setFeedback] = useState('');
     const conversationEndRef = useRef(null);
     const replyTabs = ['Reply to User', 'Internal Note'];
-
-    const currentAdminId = useMemo(() => getCurrentAdminId(), []);
 
     const loadCase = async () => {
         setLoading(true);
@@ -116,8 +106,6 @@ function SupportCaseDetails() {
     };
 
     const caseStatus = String(caseData?.status || 'OPEN').toUpperCase();
-    const assignedToId = caseData?.assignedTo?.id || caseData?.assignedToId || null;
-    const isAssignedToMe = Boolean(currentAdminId && assignedToId && String(assignedToId) === String(currentAdminId));
     const user = caseData?.user || null;
     const notes = Array.isArray(caseData?.notes) ? caseData.notes : [];
     const publicReplies = notes.filter((note) => !note.isInternal);
@@ -131,17 +119,7 @@ function SupportCaseDetails() {
         setFeedback('');
 
         try {
-            if (activeModal === 'assign') {
-                if (!currentAdminId) {
-                    throw new Error('Unable to determine the current admin session.');
-                }
-
-                await adminOperationsService.updateSupportCase(id, {
-                    assignedToId: currentAdminId,
-                    status: caseStatus === 'OPEN' ? 'IN_PROGRESS' : caseStatus,
-                });
-                setFeedback('Case assigned successfully.');
-            } else if (activeModal === 'resolve') {
+            if (activeModal === 'resolve') {
                 await adminOperationsService.updateSupportCase(id, {
                     status: 'RESOLVED',
                 });
@@ -242,7 +220,7 @@ function SupportCaseDetails() {
     }
 
     return (
-        <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        <div className="min-h-[100dvh] flex flex-col bg-gray-50 overflow-y-auto">
             <div className="flex-shrink-0 mb-4 pt-2 px-6">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
@@ -265,16 +243,6 @@ function SupportCaseDetails() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => !isAssignedToMe && openModal('assign')}
-                            disabled={saving || isAssignedToMe}
-                            className={`px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors shadow-sm ${isAssignedToMe
-                                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                : 'border-gray-200 text-gray-700 hover:bg-gray-50 bg-white'
-                                }`}
-                        >
-                            {isAssignedToMe ? 'Assigned to Me' : 'Assign to Me'}
-                        </button>
                         <button
                             onClick={() => !saving && openModal('resolve')}
                             disabled={saving || caseStatus === 'RESOLVED'}
@@ -314,8 +282,8 @@ function SupportCaseDetails() {
                 )}
             </div>
 
-            <div className="flex-1 flex gap-6 overflow-hidden pb-4 px-6 min-h-0">
-                <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="flex-1 flex gap-6 pb-4 px-6 min-h-0">
+                <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar min-h-0">
                     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                         <div className="flex flex-col items-center mb-4">
                             <div className="w-16 h-16 rounded-full bg-gray-100 mb-2 overflow-hidden flex items-center justify-center">
@@ -565,18 +533,12 @@ function SupportCaseDetails() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
                         <h3 className="text-lg font-bold text-gray-900 mb-2">
-                            {activeModal === 'assign'
-                                ? 'Assign this case to yourself?'
-                                : activeModal === 'resolve'
-                                    ? 'Mark this case as resolved?'
-                                    : 'Close this case?'}
+                            {activeModal === 'resolve' ? 'Mark this case as resolved?' : 'Close this case?'}
                         </h3>
                         <p className="text-sm text-gray-600">
-                            {activeModal === 'assign'
-                                ? 'This will assign the case to your admin account and move it into active handling.'
-                                : activeModal === 'resolve'
-                                    ? 'This will mark the support case as resolved.'
-                                    : 'This will close the case and archive it from active support work.'}
+                            {activeModal === 'resolve'
+                                ? 'This will mark the support case as resolved.'
+                                : 'This will close the case and archive it from active support work.'}
                         </p>
                         <div className="mt-6 flex items-center justify-end gap-3">
                             <button
