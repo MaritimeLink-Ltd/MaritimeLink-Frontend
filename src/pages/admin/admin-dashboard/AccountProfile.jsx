@@ -91,6 +91,51 @@ function kycViewerDocument(label, url) {
     };
 }
 
+function formatReadableFileSize(value) {
+    const raw = Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return '—';
+    if (raw < 1024) return `${raw} B`;
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let size = raw / 1024;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
+    }
+    return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function normalizeAccountDocument(doc, index = 0) {
+    if (!doc || typeof doc !== 'object') return null;
+    const url = doc.fileUrl || doc.url || doc.documentUrl || doc.path || '';
+    const mime = String(doc.mimeType || doc.mimetype || '').toLowerCase();
+    const lowerUrl = String(url).toLowerCase();
+    const isPdf = mime.includes('pdf') || lowerUrl.includes('.pdf');
+    const isImage = mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|heic|heif)(\?|$)/i.test(lowerUrl);
+    const categoryLabel = formatDocumentTypeLabel(doc.category || doc.documentType || 'Document');
+    const name = doc.name || doc.title || categoryLabel || `Document ${index + 1}`;
+    const uploadDate = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }) : doc.uploadTime || doc.uploadedAt || 'N/A';
+
+    return {
+        ...doc,
+        id: doc.id || `${index}-${name}`,
+        name,
+        category: categoryLabel,
+        url,
+        type: isPdf ? 'pdf' : 'image',
+        size: formatReadableFileSize(doc.fileSize || doc.size || doc.bytes || doc.fileBytes),
+        date: uploadDate,
+        uploadTime: uploadDate,
+        iconBg: doc.iconBg || 'bg-blue-50',
+        iconColor: doc.iconColor || 'text-blue-500',
+        Icon: doc.Icon || (isPdf ? FileText : isImage ? ImageIcon : FileText),
+    };
+}
+
 function recruiterKycSubmitted(kyc) {
     if (!kyc || typeof kyc !== 'object') return false;
     return Boolean(
@@ -189,6 +234,169 @@ function riskValueToneClass(tone) {
     return 'font-semibold text-gray-500';
 }
 
+function normalizeAccountTypeHint(value) {
+    if (!value) return '';
+    return String(value).trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function buildAccountDetailEndpoint(id, accountTypeHint) {
+    const hint = normalizeAccountTypeHint(accountTypeHint);
+    const qs = hint ? `?accountType=${encodeURIComponent(hint)}` : '';
+    return `${API_ENDPOINTS.ADMIN.ACCOUNT_DETAIL(id)}${qs}`;
+}
+
+function resolveAccountKind(profileData) {
+    const role = normalizeAccountTypeHint(profileData?.accountRole || profileData?.role || profileData?.userType);
+    if (role === 'professional') return 'professional';
+    if (role === 'trainer' || role === 'training_agent') return 'trainer';
+    return 'recruiter';
+}
+
+function mapRecruiterOrTrainerDetail(r, accountKind = 'recruiter') {
+    const fullName = [r.firstName, r.middleName, r.lastName]
+        .filter(Boolean)
+        .join(' ') || r.organizationName || 'Unknown';
+    const applied = r.createdAt
+        ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'N/A';
+    const isTrainer = accountKind === 'trainer' || r.role === 'TRAINING_AGENT';
+    return {
+        name: fullName,
+        role: isTrainer ? 'TRAINING AGENT' : 'RECRUITER',
+        accountRole: r.role,
+        roleDetail: isTrainer ? 'Training Agent at' : 'Recruiter at',
+        company: r.organizationName || 'N/A',
+        email: r.email || 'N/A',
+        phone: r.phoneCode && r.phoneNumber ? `${r.phoneCode} ${r.phoneNumber}` : 'N/A',
+        applied,
+        ip: 'N/A',
+        companyName: r.organizationName || 'N/A',
+        companyWeb: r.website || 'N/A',
+        address: r.address || [r.companyCity, r.companyState, r.companyCountry].filter(Boolean).join(', ') || 'N/A',
+        plan: r.tier ? `${r.tier.charAt(0).toUpperCase()}${r.tier.slice(1).toLowerCase()} Plan` : 'Free Plan',
+        stats: {
+            activeJobs: isTrainer ? countActiveCourses(r.courses || []) : countActiveJobs(r.jobs || []),
+            candidatesHired: isTrainer ? resolveStudentsTrained(r) : resolveCandidatesHired(r),
+        },
+        statsLabels: isTrainer
+            ? { stat1: 'Active Courses', stat2: 'Students Trained' }
+            : { stat1: 'Active Jobs', stat2: 'Candidates Hired' },
+        stage1Status: r.status === 'APPROVED' ? 'COMPLETED' : 'PENDING',
+        stage2Status: r.kyc ? (r.kyc.status === 'APPROVED' ? 'COMPLETED' : 'PENDING') : 'PENDING',
+        stage1Checks: {
+            email: Boolean(r.isVerified),
+            phone: Boolean(r.phoneVerified),
+            company: companyDetailsSubmitted(r),
+        },
+        stage2Checks: {
+            idDocuments: hasKycIdDocuments(r.kyc, r),
+            addressVerified: hasKycAddressVerified(r.kyc),
+        },
+        personalRole: r.personalRole || 'N/A',
+        isVerified: r.isVerified,
+        phoneVerified: r.phoneVerified,
+        isAuthorized: r.isAuthorized,
+        agreedToTerms: r.agreedToTerms,
+        howDidYouHear: r.howDidYouHear || 'N/A',
+        status: r.status,
+        companyLinkedIn: r.companyLinkedIn || null,
+        companyCity: r.companyCity || 'N/A',
+        companyState: r.companyState || 'N/A',
+        companyZip: r.companyZip || 'N/A',
+        companyCountry: r.companyCountry || 'N/A',
+        profilePhotoUrl: r.profilePhotoUrl || null,
+        idPassportUrl: r.idPassportUrl || null,
+        jobs: r.jobs || [],
+        courses: r.courses || [],
+        kyc: r.kyc,
+        riskLevel: r.kyc?.riskLevel ?? r.riskLevel ?? null,
+        hasCompanyMismatch: Boolean(r.hasCompanyMismatch ?? r.kyc?.hasCompanyMismatch),
+        ipReputation: r.ipReputation || r.ipReputationStatus || null,
+        stripeAccountId: r.stripeAccountId || null,
+        stripeOnboardingComplete: Boolean(r.stripeOnboardingComplete),
+    };
+}
+
+function mapProfessionalDetail(p) {
+    const fullName =
+        p.fullname ||
+        [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') ||
+        p.name ||
+        'Unknown';
+    const applied = p.createdAt
+        ? new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'N/A';
+    const phone = p.phoneCode && p.phoneNumber ? `${p.phoneCode} ${p.phoneNumber}` : p.phone || 'N/A';
+    const resumeCountry = p.resume?.country || p.country || 'N/A';
+    const hasMismatch = Boolean(
+        p.hasDocumentMismatch ||
+            p.kyc?.mismatchDetected ||
+            p.documents?.some?.((doc) => String(doc?.verificationStatus || '').toUpperCase() === 'MISMATCH')
+    );
+
+    return {
+        name: fullName,
+        role: 'PROFESSIONAL',
+        accountRole: 'PROFESSIONAL',
+        roleDetail: 'Maritime Professional',
+        company: 'N/A',
+        email: p.email || 'N/A',
+        phone,
+        applied,
+        ip: 'N/A',
+        companyName: 'N/A',
+        companyWeb: 'N/A',
+        address: [p.address, p.city, p.state, p.country].filter(Boolean).join(', ') || resumeCountry,
+        plan: p.tier ? `${String(p.tier).charAt(0).toUpperCase()}${String(p.tier).slice(1).toLowerCase()} Plan` : 'Free Plan',
+        stats: {
+            activeJobs: Array.isArray(p.applications) ? p.applications.length : 0,
+            candidatesHired: Array.isArray(p.bookings) ? p.bookings.length : 0,
+        },
+        statsLabels: { stat1: 'Applications', stat2: 'Bookings' },
+        stage1Status: p.status === 'APPROVED' || p.status === 'VERIFIED' ? 'COMPLETED' : 'PENDING',
+        stage2Status: p.kyc ? (p.kyc.status === 'APPROVED' ? 'COMPLETED' : 'PENDING') : 'PENDING',
+        stage1Checks: {
+            email: Boolean(p.isVerified),
+            phone: Boolean(p.phoneVerified),
+            company: true,
+        },
+        stage2Checks: {
+            idDocuments: Boolean(p.documents?.length),
+            addressVerified: Boolean(p.resume?.country || p.kyc?.addressVerified),
+        },
+        personalRole: p.personalRole || p.role || 'PROFESSIONAL',
+        isVerified: p.isVerified,
+        phoneVerified: p.phoneVerified,
+        isAuthorized: p.isAuthorized,
+        agreedToTerms: p.agreedToTerms,
+        howDidYouHear: p.howDidYouHear || 'N/A',
+        status: p.status,
+        companyLinkedIn: null,
+        companyCity: p.city || 'N/A',
+        companyState: p.state || 'N/A',
+        companyZip: p.zipCode || 'N/A',
+        companyCountry: p.country || 'N/A',
+        profilePhotoUrl: p.profilePhotoUrl || null,
+        idPassportUrl: p.idPassportUrl || null,
+        jobs: p.savedJobs?.map((entry) => entry.job).filter(Boolean) || [],
+        courses: p.savedCourses?.map((entry) => entry.course).filter(Boolean) || [],
+        kyc: p.kyc,
+        riskLevel: p.kyc?.riskLevel ?? p.riskLevel ?? (hasMismatch ? 'HIGH' : null),
+        hasCompanyMismatch: hasMismatch,
+        ipReputation: p.ipReputation || p.ipReputationStatus || null,
+        stripeAccountId: p.stripeAccountId || null,
+        stripeOnboardingComplete: Boolean(p.stripeOnboardingComplete),
+        documents: Array.isArray(p.documents)
+            ? p.documents
+                .map((doc, index) => normalizeAccountDocument(doc, index))
+                .filter(Boolean)
+            : [],
+        resume: p.resume || null,
+        bookings: p.bookings || [],
+        applications: p.applications || [],
+    };
+}
+
 /** Address verification tick — uses KYC proof URLs or flags if the API sends them. */
 function hasKycAddressVerified(kyc) {
     if (!kyc || typeof kyc !== 'object') return false;
@@ -281,10 +489,12 @@ function mapApiNoteToUi(apiNote, fallbackContent) {
 }
 
 /** POST admin note — tries common paths/bodies (backends vary). */
-async function postAccountAdminNote(client, { accountId, isTrainer, content }) {
-    const base = isTrainer
-        ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
-        : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
+async function postAccountAdminNote(client, { accountId, accountKind, content }) {
+    const base = accountKind === 'professional'
+        ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(accountId)
+        : accountKind === 'trainer'
+            ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
+            : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
     const trimmed = content.trim();
     const attempts = [
         { url: `${base}/notes`, body: { content: trimmed } },
@@ -307,10 +517,12 @@ async function postAccountAdminNote(client, { accountId, isTrainer, content }) {
 }
 
 /** PATCH admin note — tries common paths/bodies. */
-async function patchAccountAdminNote(client, { accountId, isTrainer, noteId, content }) {
-    const base = isTrainer
-        ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
-        : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
+async function patchAccountAdminNote(client, { accountId, accountKind, noteId, content }) {
+    const base = accountKind === 'professional'
+        ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(accountId)
+        : accountKind === 'trainer'
+            ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
+            : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
     const trimmed = content.trim();
     const attempts = [
         { url: `${base}/notes/${noteId}`, body: { content: trimmed } },
@@ -334,7 +546,9 @@ function AccountProfile() {
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams(); // Get ID from URL
-    const isTrainerAccount = location.state?.accountType === 'trainer';
+    const accountTypeHint = normalizeAccountTypeHint(location.state?.accountType || location.state?.userType);
+    const isProfessionalHint = Boolean(location.state?.isProfessionalView || accountTypeHint === 'professional');
+    const isTrainerHint = accountTypeHint === 'trainer';
 
     const [activeTab, setActiveTab] = useState('Overview');
     const [timeFilter, setTimeFilter] = useState('Today');
@@ -369,134 +583,146 @@ function AccountProfile() {
     const isUUID = UUID_REGEX.test(id || '');
     const isKYC = id?.startsWith('KYC');
     const isTrainingProvider = id?.startsWith('TP');
-    const isProfessional = id?.startsWith('PRO');
     const loadedAccountRole = recruiterData?.accountRole;
-    const isTrainer = isUUID && (isTrainerAccount || loadedAccountRole === 'TRAINING_AGENT');
-    // A recruiter if old mock prefix OR a real UUID that is not a loaded trainer account.
-    const isRecruiter = id?.startsWith('REC') || (isUUID && !isTrainer);
+    const isTrainer = isUUID && (isTrainerHint || loadedAccountRole === 'TRAINING_AGENT');
+    const isProfessionalAccount = isUUID && (isProfessionalHint || loadedAccountRole === 'PROFESSIONAL');
+    const isProfessional = isProfessionalAccount;
+    // A recruiter if old mock prefix OR a real UUID that is not trainer/professional.
+    const isRecruiter = id?.startsWith('REC') || (isUUID && !isTrainer && !isProfessionalAccount);
 
     useEffect(() => {
         if (isUUID) {
             setIsLoadingRecruiter(true);
             setRecruiterFetchError('');
-            const detailEndpoint = isTrainerAccount
-                ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(id)
-                : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(id);
-            httpClient.get(detailEndpoint)
-                .then((response) => {
-                    const r = response?.data?.trainer || response?.data?.recruiter || response?.trainer || response?.recruiter || response;
-                    if (r && r.id) {
-                        const fullName = [r.firstName, r.middleName, r.lastName]
-                            .filter(Boolean).join(' ') || r.organizationName || 'Unknown';
-                        setRecruiterData({
-                            name: fullName,
-                            role: r.role === 'TRAINING_AGENT' ? 'TRAINING AGENT' : 'RECRUITER',
-                            accountRole: r.role,
-                            roleDetail: r.role === 'TRAINING_AGENT' ? 'Training Agent at' : 'Recruiter at',
-                            company: r.organizationName || 'N/A',
-                            email: r.email || 'N/A',
-                            phone: r.phoneCode && r.phoneNumber ? `${r.phoneCode} ${r.phoneNumber}` : 'N/A',
-                            applied: r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
-                            ip: 'N/A',
-                            companyName: r.organizationName || 'N/A',
-                            companyWeb: r.website || 'N/A',
-                            address: r.address || [r.companyCity, r.companyState, r.companyCountry].filter(Boolean).join(', ') || 'N/A',
-                            plan: r.tier ? `${r.tier.charAt(0).toUpperCase()}${r.tier.slice(1).toLowerCase()} Plan` : 'Free Plan',
-                            stats: {
-                                activeJobs: isTrainerAccount
-                                    ? countActiveCourses(r.courses || [])
-                                    : countActiveJobs(r.jobs || []),
-                                candidatesHired: isTrainerAccount
-                                    ? resolveStudentsTrained(r)
-                                    : resolveCandidatesHired(r),
-                            },
-                            statsLabels: isTrainerAccount
-                                ? { stat1: 'Active Courses', stat2: 'Students Trained' }
-                                : { stat1: 'Active Jobs', stat2: 'Candidates Hired' },
-                            stage1Status: r.status === 'APPROVED' ? 'COMPLETED' : 'PENDING',
-                            stage2Status: r.kyc ? (r.kyc.status === 'APPROVED' ? 'COMPLETED' : 'PENDING') : 'PENDING',
-                            stage1Checks: {
-                                email: Boolean(r.isVerified),
-                                phone: Boolean(r.phoneVerified),
-                                company: companyDetailsSubmitted(r),
-                            },
-                            stage2Checks: {
-                                idDocuments: hasKycIdDocuments(r.kyc, r),
-                                addressVerified: hasKycAddressVerified(r.kyc),
-                            },
-                            // Extra raw fields for Submitted Details
-                            personalRole: r.personalRole || 'N/A',
-                            isVerified: r.isVerified,
-                            phoneVerified: r.phoneVerified,
-                            isAuthorized: r.isAuthorized,
-                            agreedToTerms: r.agreedToTerms,
-                            howDidYouHear: r.howDidYouHear || 'N/A',
-                            status: r.status,
-                            companyLinkedIn: r.companyLinkedIn || null,
-                            companyCity: r.companyCity || 'N/A',
-                            companyState: r.companyState || 'N/A',
-                            companyZip: r.companyZip || 'N/A',
-                            companyCountry: r.companyCountry || 'N/A',
-                            profilePhotoUrl: r.profilePhotoUrl || null,
-                            idPassportUrl: r.idPassportUrl || null,
-                            jobs: r.jobs || [],
-                            courses: r.courses || [],
-                            kyc: r.kyc,
-                            riskLevel: r.kyc?.riskLevel ?? r.riskLevel ?? null,
-                            hasCompanyMismatch: Boolean(r.hasCompanyMismatch ?? r.kyc?.hasCompanyMismatch),
-                            ipReputation: r.ipReputation || r.ipReputationStatus || null,
-                            stripeAccountId: r.stripeAccountId || null,
-                            stripeOnboardingComplete: Boolean(r.stripeOnboardingComplete),
-                        });
-                        
-                        // Extract and set admin notes from API response
-                        if (r.adminNotes && Array.isArray(r.adminNotes)) {
-                            setNotes(r.adminNotes.map(note => ({
+            const genericHint = isProfessionalHint
+                ? 'professional'
+                : isTrainerHint
+                    ? 'trainer'
+                    : normalizeAccountTypeHint(location.state?.accountType || location.state?.userType);
+            const detailAttempts = [
+                { kind: 'account', endpoint: buildAccountDetailEndpoint(id, genericHint) },
+                { kind: 'professional', endpoint: API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(id) },
+                { kind: 'trainer', endpoint: API_ENDPOINTS.ADMIN.TRAINER_DETAIL(id) },
+                { kind: 'recruiter', endpoint: API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(id) },
+            ];
+
+            const extractAdminNotes = (source) => {
+                if (source?.adminNotes && Array.isArray(source.adminNotes)) return source.adminNotes;
+                if (source?.kyc?.notes && Array.isArray(source.kyc.notes)) return source.kyc.notes;
+                return [];
+            };
+
+            const extractDocuments = (source) => {
+                if (source?.documents && Array.isArray(source.documents)) {
+                    return source.documents
+                        .map((doc, index) => normalizeAccountDocument(doc, index))
+                        .filter(Boolean);
+                }
+                return [];
+            };
+
+            const extractTimeline = (source) => {
+                if (source?.timeline && Array.isArray(source.timeline)) return source.timeline;
+                if (source?.alerts && Array.isArray(source.alerts)) {
+                    return source.alerts.map((alert) => ({
+                        id: alert.id,
+                        title: alert.title || alert.alertType || 'Alert',
+                        description: alert.message || alert.description || '',
+                        timestamp: alert.createdAt || alert.timestamp || '',
+                    }));
+                }
+                return [];
+            };
+
+            const extractActivityLog = (source) => {
+                if (source?.activityLog && Array.isArray(source.activityLog)) return source.activityLog;
+                return [];
+            };
+
+            (async () => {
+                let lastErr = null;
+                for (const attempt of detailAttempts) {
+                    try {
+                        const response = await httpClient.get(attempt.endpoint);
+                        const responseData = response?.data?.data || response?.data;
+                        let source = responseData?.professional || responseData?.trainer || responseData?.recruiter || response?.data?.professional || response?.data?.trainer || response?.data?.recruiter || responseData || response;
+                        const resolvedKind = normalizeAccountTypeHint(
+                            responseData?.accountType || responseData?.accountKind || responseData?.type || attempt.kind,
+                        );
+                        if (attempt.kind === 'professional' && source?.professional) {
+                            source = source.professional;
+                        }
+                        if (attempt.kind === 'trainer' && source?.trainer) {
+                            source = source.trainer;
+                        }
+                        if (attempt.kind === 'recruiter' && source?.recruiter) {
+                            source = source.recruiter;
+                        }
+                        if (attempt.kind === 'account' && source?.account) {
+                            source = source.account;
+                        }
+
+                        if (!source || !source.id) {
+                            throw new Error('Account not found');
+                        }
+
+                        setRecruiterData(
+                            resolvedKind === 'professional'
+                                ? mapProfessionalDetail(source)
+                                : mapRecruiterOrTrainerDetail(source, resolvedKind === 'trainer' ? 'trainer' : 'recruiter'),
+                        );
+
+                        const adminNotes = extractAdminNotes(source);
+                        if (adminNotes.length > 0) {
+                            setNotes(adminNotes.map((note) => ({
                                 id: note.id || Date.now(),
-                                author: note.author || 'Admin',
-                                initials: (note.author || 'A').substring(0, 1).toUpperCase(),
+                                author: note.author || note.admin?.email || 'Admin',
+                                initials: (note.author || note.admin?.email || 'A').substring(0, 2).toUpperCase(),
                                 time: note.createdAt ? new Date(note.createdAt).toLocaleString() : 'N/A',
-                                content: note.content || note.text || ''
+                                content: note.content || note.text || note.note || '',
                             })));
-                        }
-                        
-                        // Extract and set documents from API response
-                        if (r.documents && Array.isArray(r.documents)) {
-                            setApiDocuments(r.documents);
+                        } else {
+                            setNotes([]);
                         }
 
-                        // Extract and set timeline events from API response
-                        if (r.timeline && Array.isArray(r.timeline)) {
-                            setTimelineEvents(r.timeline.map((event, index) => ({
-                                id: event.id || index,
-                                title: event.title || event.eventType || '',
-                                description: event.description || event.message || '',
-                                timestamp: event.timestamp || event.createdAt || '',
-                                color: event.color || (index % 3 === 0 ? 'blue' : index % 3 === 1 ? 'green' : 'gray')
-                            })));
-                        }
+                        const docs = extractDocuments(source);
+                        setApiDocuments(docs);
 
-                        // Extract and set activity logs from API response
-                        if (r.activityLog && Array.isArray(r.activityLog)) {
-                            setActivityLogs(r.activityLog.map(activity => ({
-                                id: activity.id || Date.now(),
-                                title: activity.title || activity.activityType || '',
-                                description: activity.description || activity.message || '',
-                                timestamp: activity.timestamp || activity.createdAt || '',
-                                user: activity.user || activity.userId || 'System',
-                                icon: activity.icon || 'default',
-                                color: activity.color || 'blue'
-                            })));
-                        }
+                        const timeline = extractTimeline(source);
+                        setTimelineEvents(timeline.map((event, index) => ({
+                            id: event.id || index,
+                            title: event.title || event.eventType || '',
+                            description: event.description || event.message || '',
+                            timestamp: event.timestamp || event.createdAt || '',
+                            color: event.color || (index % 3 === 0 ? 'blue' : index % 3 === 1 ? 'green' : 'gray'),
+                        })));
+
+                        const activityLog = extractActivityLog(source);
+                        setActivityLogs(activityLog.map((activity) => ({
+                            id: activity.id || Date.now(),
+                            title: activity.title || activity.activityType || '',
+                            description: activity.description || activity.message || '',
+                            timestamp: activity.timestamp || activity.createdAt || '',
+                            user: activity.user || activity.userId || 'System',
+                            icon: activity.icon || 'default',
+                            color: activity.color || 'blue',
+                        })));
+                        return;
+                    } catch (err) {
+                        lastErr = err;
+                        if (err?.status === 404) continue;
+                        throw err;
                     }
-                })
+                }
+                throw lastErr || new Error('Failed to load account details');
+            })()
                 .catch((err) => {
                     console.error('Failed to fetch detail:', err);
                     setRecruiterFetchError(err.message || 'Failed to load details');
                 })
                 .finally(() => setIsLoadingRecruiter(false));
         }
-    }, [id, isUUID, isTrainerAccount]);
+    }, [id, isUUID, isProfessionalHint, isTrainerHint]);
 
     // Only use real API data - no mock data
     const getProfileData = () => {
@@ -532,6 +758,7 @@ function AccountProfile() {
     };
 
     const profileData = getProfileData();
+    const resolvedAccountKind = resolveAccountKind(profileData);
     const stage1BadgeDone = profileData.stage1Status === 'COMPLETED';
     const stage2BadgeDone = profileData.stage2Status === 'COMPLETED';
     const s1 = profileData.stage1Checks || { email: false, phone: false, company: false };
@@ -539,10 +766,14 @@ function AccountProfile() {
     const riskAnalysis = buildRiskAnalysisDisplay(profileData);
 
     // Use API documents if available, otherwise empty array (no mock data)
-    const documents = apiDocuments || [];
+    const documents = Array.isArray(apiDocuments) ? apiDocuments : [];
 
     const allTabs = ['Overview', 'Submitted Details', `Documents (${documents.length})`, 'KYC', 'Activity Log', 'Admin Notes'];
-    const tabs = isRecruiter || isTrainer ? allTabs.filter(tab => !tab.startsWith('Documents')) : allTabs;
+    const tabs = isRecruiter || isTrainer
+        ? allTabs.filter((tab) => !tab.startsWith('Documents'))
+        : isProfessional
+            ? allTabs.filter((tab) => tab !== 'Admin Notes')
+            : allTabs;
     const timeFilters = ['Today', '7 Days', '30 Days'];
 
     // Handle posting a new note
@@ -560,7 +791,7 @@ function AccountProfile() {
             try {
                 const response = await postAccountAdminNote(httpClient, {
                     accountId: id,
-                    isTrainer: isTrainerAccount,
+                    accountKind: resolvedAccountKind,
                     content: text,
                 });
                 const apiNote = extractCreatedNoteFromPostResponse(response);
@@ -626,7 +857,7 @@ function AccountProfile() {
             try {
                 await patchAccountAdminNote(httpClient, {
                     accountId: id,
-                    isTrainer: isTrainerAccount,
+                    accountKind: resolvedAccountKind,
                     noteId,
                     content: editNoteContent.trim(),
                 });
@@ -686,8 +917,12 @@ function AccountProfile() {
                 setShowActionNotification(true);
                 setShowRejectPopup(false);
                 setRejectReason('');
-                const navTab = isTrainerAccount ? 'Training Providers' : 'Recruiters';
-                const navMsg = isTrainerAccount ? 'Training provider account rejected successfully!' : 'Recruiter account rejected successfully!';
+                const navTab = isTrainer ? 'Training Providers' : isProfessionalAccount ? 'Professionals' : 'Recruiters';
+                const navMsg = isTrainer
+                    ? 'Training provider account rejected successfully!'
+                    : isProfessionalAccount
+                        ? 'Professional account rejected successfully!'
+                        : 'Recruiter account rejected successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
                     navigate('/admin/accounts', { state: { activeTab: navTab, successMessage: navMsg } });
@@ -733,8 +968,12 @@ function AccountProfile() {
                 setActionNotificationMessage('Account approved successfully!');
                 setShowActionNotification(true);
                 setShowApprovePopup(false);
-                const navTab = isTrainerAccount ? 'Training Providers' : 'Recruiters';
-                const navMsg = isTrainerAccount ? 'Training provider account approved successfully!' : 'Recruiter account approved successfully!';
+                const navTab = isTrainer ? 'Training Providers' : isProfessionalAccount ? 'Professionals' : 'Recruiters';
+                const navMsg = isTrainer
+                    ? 'Training provider account approved successfully!'
+                    : isProfessionalAccount
+                        ? 'Professional account approved successfully!'
+                        : 'Recruiter account approved successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
                     navigate('/admin/accounts', { state: { activeTab: navTab, successMessage: navMsg } });
@@ -884,7 +1123,7 @@ function AccountProfile() {
             <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <Loader className="h-8 w-8 text-[#1e5a8f] animate-spin" />
-                    <p className="text-gray-600 font-medium">Loading recruiter details...</p>
+                    <p className="text-gray-600 font-medium">Loading account details...</p>
                 </div>
             </div>
         );
@@ -900,7 +1139,7 @@ function AccountProfile() {
                 </button>
                 <div className="bg-white rounded-2xl border border-red-100 p-8 text-center">
                     <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">Failed to Load Recruiter</h2>
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">Failed to Load Account</h2>
                     <p className="text-sm text-red-600">{recruiterFetchError}</p>
                 </div>
             </div>
@@ -1316,12 +1555,16 @@ function AccountProfile() {
                                     {documents.slice(0, 2).map((doc) => (
                                         <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 ${doc.iconBg} rounded-lg`}>
-                                                    <doc.Icon className={`h-5 w-5 ${doc.iconColor}`} />
+                                                <div className={`p-2 ${doc.iconBg || 'bg-blue-50'} rounded-lg`}>
+                                                    {doc.Icon ? (
+                                                        <doc.Icon className={`h-5 w-5 ${doc.iconColor || 'text-blue-500'}`} />
+                                                    ) : (
+                                                        <FileText className="h-5 w-5 text-blue-500" />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="text-sm font-semibold text-gray-900">{doc.name}</div>
-                                                    <div className="text-xs text-gray-500">Uploaded {doc.uploadTime} • {doc.size}</div>
+                                                    <div className="text-xs text-gray-500">Uploaded {doc.uploadTime || doc.date || 'N/A'} • {doc.size || '—'}</div>
                                                 </div>
                                             </div>
                                             <button

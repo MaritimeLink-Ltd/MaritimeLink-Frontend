@@ -673,7 +673,7 @@ const Profile = () => {
                                     basePath="professional"
                                     title="Professional Support"
                                     description="Tell us what you need help with. Premium professionals default to High priority so urgent issues get seen first."
-                                    priorityDefault={membershipTier === 'PRO' ? 'HIGH' : 'MEDIUM'}
+                                    priorityDefault={membershipTier === 'PRO' ? 'HIGH' : 'LOW'}
                                     caseLabel="support case"
                                 />
                             </div>

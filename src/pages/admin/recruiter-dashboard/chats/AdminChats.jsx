@@ -25,6 +25,7 @@ function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search || '');
     const candidateId = propCandidateId || location.state?.candidateId || searchParams.get('candidateId');
+    const initialConversation = location.state?.conversation || null;
 
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
@@ -75,6 +76,12 @@ function AdminChats({ candidateId: propCandidateId }) {
         });
         setSelectedChat(conv.id);
     }, []);
+
+    useEffect(() => {
+        if (initialConversation?.id) {
+            upsertChatFromConversation(initialConversation);
+        }
+    }, [initialConversation, upsertChatFromConversation]);
 
     useEffect(() => {
         let cancelled = false;
@@ -153,6 +160,7 @@ function AdminChats({ candidateId: propCandidateId }) {
     useEffect(() => {
         if (!candidateId) return undefined;
         if (listLoading) return undefined;
+        if (initialConversation?.id) return undefined;
         if (!UUID_RE.test(String(candidateId))) {
             setBootstrapError('Could not start chat: invalid user id.');
             return undefined;
@@ -193,7 +201,7 @@ function AdminChats({ candidateId: propCandidateId }) {
         return () => {
             cancelled = true;
         };
-    }, [candidateId, upsertChatFromConversation, listLoading, chats]);
+    }, [candidateId, upsertChatFromConversation, listLoading, chats, initialConversation]);
 
     useEffect(() => {
         if (!selectedChat) return undefined;

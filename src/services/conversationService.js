@@ -92,6 +92,7 @@ export function mapConversationToProfessionalChatItem(conv) {
     const company =
         (conv.recruiter?.organizationName && String(conv.recruiter.organizationName).trim()) ||
         (conv.recruiter?.email && String(conv.recruiter.email).trim()) ||
+        (conv.admin?.email && 'Support Admin') ||
         'Recruiter';
 
     return {
@@ -151,6 +152,17 @@ class ConversationService {
         const body = await httpClient.post(API_ENDPOINTS.CONVERSATIONS.CREATE, {
             recipientId,
         });
+        const conv = body?.data?.conversation;
+        return conv || null;
+    }
+
+    /**
+     * POST /api/conversations/support/bootstrap
+     * Opens or creates the shared support conversation with admin.
+     * @returns {Promise<object|null>}
+     */
+    async openSupportConversation() {
+        const body = await httpClient.post(API_ENDPOINTS.CONVERSATIONS.SUPPORT_BOOTSTRAP, {});
         const conv = body?.data?.conversation;
         return conv || null;
     }

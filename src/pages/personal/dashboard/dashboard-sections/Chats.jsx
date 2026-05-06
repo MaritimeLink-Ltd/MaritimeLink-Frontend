@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageCircle, Building2, ArrowUp, ArrowLeft, Loader2 } from 'lucide-react';
 
 import conversationService, {
@@ -10,6 +11,9 @@ import conversationService, {
 import { subscribeConversationMessages } from '../../../../services/socketClient';
 
 const Chats = ({ onViewJob }) => {
+    const location = useLocation();
+    const initialConversation = location.state?.conversation || null;
+    const bootstrapConversationId = new URLSearchParams(location.search).get('conversationId');
     const [chats, setChats] = useState([]);
     const [selectedChatId, setSelectedChatId] = useState(null);
     const [messageInput, setMessageInput] = useState('');
@@ -28,6 +32,30 @@ const Chats = ({ onViewJob }) => {
     const [sendError, setSendError] = useState(null);
 
     useEffect(() => {
+        const bootstrapConversation = initialConversation?.id
+            ? initialConversation
+            : bootstrapConversationId
+                ? { id: bootstrapConversationId }
+                : null;
+        if (!bootstrapConversation?.id) return;
+        const mapped = mapConversationToProfessionalChatItem(bootstrapConversation);
+        if (!mapped) return;
+
+        setChats((prev) => {
+            const next = prev.filter((chat) => chat.id !== mapped.id);
+            next.unshift(mapped);
+            next.sort((a, b) => {
+                const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
+                const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
+                return tb - ta;
+            });
+            return next;
+        });
+
+        setSelectedChatId((prev) => prev || mapped.id);
+    }, [initialConversation?.id, bootstrapConversationId]);
+
+    useEffect(() => {
         let cancelled = false;
         (async () => {
             setListLoading(true);
@@ -38,6 +66,17 @@ const Chats = ({ onViewJob }) => {
                 const rows = (list || [])
                     .map(mapConversationToProfessionalChatItem)
                     .filter(Boolean);
+                if (initialConversation?.id || bootstrapConversationId) {
+                    const bootstrapSource = initialConversation?.id
+                        ? initialConversation
+                        : { id: bootstrapConversationId };
+                    const bootstrap = mapConversationToProfessionalChatItem(bootstrapSource);
+                    if (bootstrap?.id) {
+                        const existingIndex = rows.findIndex((row) => row.id === bootstrap.id);
+                        if (existingIndex >= 0) rows[existingIndex] = bootstrap;
+                        else rows.unshift(bootstrap);
+                    }
+                }
                 rows.sort((a, b) => {
                     const ta = new Date(a.raw?.lastMessageAt || a.raw?.updatedAt || 0).getTime();
                     const tb = new Date(b.raw?.lastMessageAt || b.raw?.updatedAt || 0).getTime();
@@ -55,7 +94,7 @@ const Chats = ({ onViewJob }) => {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [initialConversation?.id, bootstrapConversationId]);
 
     useEffect(() => {
         if (!selectedChatId) {
@@ -266,7 +305,7 @@ const Chats = ({ onViewJob }) => {
             <div className="w-full max-w-7xl mx-auto px-8 py-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-semibold text-gray-800">Chats</h1>
-                    <p className="text-gray-500 mt-1 text-lg">Connect with recruiters</p>
+                <p className="text-gray-500 mt-1 text-lg">Connect with recruiters and support</p>
                 </div>
                 <div className="flex flex-col items-center justify-center mt-32">
                     <div className="mb-6">
@@ -286,7 +325,7 @@ const Chats = ({ onViewJob }) => {
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
             <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white lg:sticky lg:top-0 lg:z-10">
                 <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">Chats</h1>
-                <p className="text-gray-500 mt-1 text-base sm:text-lg">Connect with recruiters</p>
+                <p className="text-gray-500 mt-1 text-base sm:text-lg">Connect with recruiters and support</p>
                 {listError && (
                     <p className="text-sm text-red-600 mt-2">{listError}</p>
                 )}

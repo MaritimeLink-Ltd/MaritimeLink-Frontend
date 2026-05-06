@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     MessageSquare,
     Send,
@@ -11,6 +12,7 @@ import {
     Info,
 } from 'lucide-react';
 import userSupportService from '../../services/userSupportService';
+import conversationService from '../../services/conversationService';
 
 const DEFAULT_CATEGORIES = [
     'Account Access',
@@ -78,10 +80,10 @@ function SupportCenterSection({
     categoryOptions = DEFAULT_CATEGORIES,
     caseLabel = 'Support case',
 }) {
+    const navigate = useNavigate();
     const [subject, setSubject] = useState('');
     const [descriptionText, setDescriptionText] = useState('');
     const [category, setCategory] = useState(categoryOptions[0] || 'Other');
-    const [priority, setPriority] = useState(priorityDefault);
     const [loadingCases, setLoadingCases] = useState(true);
     const [creating, setCreating] = useState(false);
     const [replying, setReplying] = useState(false);
@@ -91,7 +93,10 @@ function SupportCenterSection({
     const [replyText, setReplyText] = useState('');
     const [message, setMessage] = useState({ type: '', text: '' });
 
-    const resolvedPriority = useMemo(() => String(priority || priorityDefault || 'MEDIUM').toUpperCase(), [priority, priorityDefault]);
+    const resolvedPriority = useMemo(
+        () => String(priorityDefault || 'MEDIUM').toUpperCase(),
+        [priorityDefault],
+    );
 
     const loadCases = async () => {
         setLoadingCases(true);
@@ -108,12 +113,41 @@ function SupportCenterSection({
 
     useEffect(() => {
         void loadCases();
-        setPriority(priorityDefault);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [basePath, priorityDefault]);
 
     const openCase = async (caseItem) => {
         if (!caseItem) return;
+
+        if (basePath === 'professional') {
+            setSelectedCaseLoading(true);
+            setMessage({ type: '', text: '' });
+            try {
+                const conversation = await conversationService.openSupportConversation();
+                if (conversation?.id) {
+                    navigate(`/personal/chats?conversationId=${encodeURIComponent(conversation.id)}&supportChat=1`, {
+                        state: {
+                            conversation,
+                            supportChat: true,
+                        },
+                    });
+                    return;
+                }
+                setMessage({
+                    type: 'error',
+                    text: 'Unable to open support chat right now.',
+                });
+            } catch (error) {
+                setMessage({
+                    type: 'error',
+                    text: error.message || 'Unable to open support chat right now.',
+                });
+            } finally {
+                setSelectedCaseLoading(false);
+            }
+            return;
+        }
+
         setSelectedCaseLoading(true);
         setSelectedCase(null);
         setReplyText('');
@@ -143,12 +177,10 @@ function SupportCenterSection({
                 subject: nextSubject,
                 description: nextDescription,
                 category,
-                priority: resolvedPriority,
             });
 
             setSubject('');
             setDescriptionText('');
-            setPriority(priorityDefault);
             await loadCases();
             const createdCase = response?.data?.case;
             if (createdCase) {
@@ -197,7 +229,7 @@ function SupportCenterSection({
                         <p className="text-sm text-gray-500 mt-1 max-w-2xl">{description}</p>
                     </div>
                     <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#003971]">
-                        Priority default: {priorityInfo.label}
+                        Priority assigned automatically: {priorityInfo.label}
                     </div>
                 </div>
 
@@ -258,24 +290,8 @@ function SupportCenterSection({
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-2">Priority</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['LOW', 'MEDIUM', 'HIGH'].map((item) => (
-                                        <button
-                                            key={item}
-                                            type="button"
-                                            onClick={() => setPriority(item)}
-                                            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                                                resolvedPriority === item
-                                                    ? 'border-[#003971] bg-[#003971] text-white'
-                                                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            {item}
-                                        </button>
-                                    ))}
-                                </div>
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs text-blue-800">
+                                Priority is assigned automatically based on your account type and subscription tier.
                             </div>
 
                             <button
@@ -341,6 +357,7 @@ function SupportCenterSection({
                                                 <button
                                                     type="button"
                                                     onClick={() => openCase(caseItem)}
+                                                    disabled={selectedCaseLoading}
                                                     className="inline-flex items-center gap-2 rounded-lg bg-[#003971] px-3 py-2 text-xs font-semibold text-white hover:bg-[#002855]"
                                                 >
                                                     <MessageSquare className="h-3.5 w-3.5" />

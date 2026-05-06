@@ -15,6 +15,7 @@ import {
     FileText,
     Loader2,
 } from 'lucide-react';
+import conversationService from '../../../services/conversationService';
 import adminOperationsService from '../../../services/adminOperationsService';
 
 const UUID_RE =
@@ -69,6 +70,7 @@ function SupportCaseDetails() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [openingChat, setOpeningChat] = useState(false);
     const conversationEndRef = useRef(null);
 
     const loadCase = async () => {
@@ -166,7 +168,7 @@ function SupportCaseDetails() {
         CLOSED: 'bg-gray-100 text-gray-700 border-gray-200',
     }[caseStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
 
-    const openChat = () => {
+    const openChat = async () => {
         const candidates = [
             user?.id,
             user?.userId,
@@ -185,19 +187,42 @@ function SupportCaseDetails() {
             return;
         }
 
-        navigate({
-            pathname: '/admin/chats',
-            search: `?candidateId=${encodeURIComponent(recipientId)}`,
-        }, {
-            state: { candidateId: recipientId },
-        });
+        setOpeningChat(true);
+        setError('');
+
+        try {
+            const conversation = await conversationService.createConversation(recipientId);
+            navigate('/admin/chats?candidateId=' + encodeURIComponent(recipientId), {
+                state: {
+                    candidateId: recipientId,
+                    conversation,
+                },
+            });
+        } catch (err) {
+            console.error('Failed to open chat:', err);
+            navigate('/admin/chats?candidateId=' + encodeURIComponent(recipientId), {
+                state: { candidateId: recipientId },
+            });
+        } finally {
+            setOpeningChat(false);
+        }
     };
 
     const supportUserId = user?.id || caseData?.userId;
-    const profileLink =
-        userType.includes('RECRUIT') || userType.includes('TRAIN') || userType.includes('TRAINER')
-            ? `/admin/accounts/${supportUserId}`
-            : `/admin/candidate/${supportUserId}`;
+    const profileLink = supportUserId
+        ? {
+            pathname: `/admin/accounts/${supportUserId}`,
+            state: {
+                accountType:
+                    userType === 'PROFESSIONAL'
+                        ? 'professional'
+                        : userType === 'TRAINING_AGENT'
+                            ? 'trainer'
+                            : 'recruiter',
+                userType: userType || 'RECRUITER',
+            },
+        }
+        : null;
 
     if (loading) {
         return (
@@ -322,7 +347,7 @@ function SupportCaseDetails() {
                                 <Phone className="h-3.5 w-3.5 text-gray-400" />
                                 <span>{caseData?.userPhone || 'No phone available'}</span>
                             </div>
-                            {supportUserId && (
+                            {supportUserId && profileLink && (
                                 <Link
                                     to={profileLink}
                                     className="flex items-center gap-3 text-xs text-blue-600 hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
@@ -334,11 +359,12 @@ function SupportCaseDetails() {
                                 {(user?.id || caseData?.userId) && (
                                     <button
                                         type="button"
-                                        onClick={openChat}
+                                        onClick={() => void openChat()}
+                                        disabled={openingChat}
                                         className="flex items-center gap-3 text-xs text-[#003971] hover:underline cursor-pointer pl-1 font-medium bg-transparent border-0 p-0"
                                     >
                                         <MessageSquare className="h-3.5 w-3.5" />
-                                        <span>Chat with User</span>
+                                        <span>{openingChat ? 'Opening Chat...' : 'Chat with User'}</span>
                                     </button>
                                 )}
                             </div>

@@ -213,6 +213,7 @@ export const API_ENDPOINTS = {
     RECRUITERS: '/api/admin/recruiters',
     RECRUITERS_STATS: '/api/admin/recruiters/stats',
     RECRUITER_DETAIL: (id) => `/api/admin/recruiters/${id}`,
+    ACCOUNT_DETAIL: (id) => `/api/admin/accounts/${id}`,
     /** Login/account status for both recruiters and training agents (same route). */
     UPDATE_RECRUITER_STATUS: (id) => `/api/admin/recruiters/${id}/status`,
     TRAINERS: '/api/admin/trainers',
@@ -245,6 +246,7 @@ export const API_ENDPOINTS = {
   CONVERSATIONS: {
     LIST: '/api/conversations',
     CREATE: '/api/conversations',
+    SUPPORT_BOOTSTRAP: '/api/conversations/support/bootstrap',
     MESSAGES: (conversationId) => `/api/conversations/${conversationId}/messages`,
     MARK_READ: (conversationId) => `/api/conversations/${conversationId}/read`,
   },
