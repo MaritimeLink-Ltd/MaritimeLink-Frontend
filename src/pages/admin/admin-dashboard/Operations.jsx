@@ -164,15 +164,6 @@ const buildSupportStats = (cases = []) => {
             cardBg: 'bg-white',
         },
         {
-            value: String(countByStatus('WAITING')),
-            label: 'Waiting',
-            sublabel: 'Pending user reply',
-            icon: Clock,
-            iconColor: 'text-orange-500',
-            iconBg: 'bg-orange-50',
-            cardBg: 'bg-white',
-        },
-        {
             value: String(countByStatus('RESOLVED')),
             label: 'Resolved',
             sublabel: 'Closed successfully',
@@ -198,7 +189,6 @@ const buildSupportSubTabs = (cases = []) => {
         All: Array.isArray(cases) ? cases.length : 0,
         Open: 0,
         'In Progress': 0,
-        Waiting: 0,
         Resolved: 0,
         Closed: 0,
     };
@@ -207,7 +197,6 @@ const buildSupportSubTabs = (cases = []) => {
         const status = String(item?.status || '').toUpperCase();
         if (status === 'OPEN') counts.Open += 1;
         if (status === 'IN_PROGRESS') counts['In Progress'] += 1;
-        if (status === 'WAITING') counts.Waiting += 1;
         if (status === 'RESOLVED') counts.Resolved += 1;
         if (status === 'CLOSED') counts.Closed += 1;
     }
@@ -216,7 +205,6 @@ const buildSupportSubTabs = (cases = []) => {
         { name: 'All', count: counts.All || null },
         { name: 'Open', count: counts.Open || null },
         { name: 'In Progress', count: counts['In Progress'] || null },
-        { name: 'Waiting', count: counts.Waiting || null },
         { name: 'Resolved', count: counts.Resolved || null },
         { name: 'Closed', count: counts.Closed || null },
     ];
@@ -589,7 +577,7 @@ function Operations() {
 
             {/* Stats Cards - Hidden for Manual Actions */}
             {activeMainTab !== 'Manual Actions' && (
-                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' || activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' ? 'md:grid-cols-4' : activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
                     {stats.map((stat, index) => (
                         <div key={index} className={`${stat.cardBg} rounded-xl border border-gray-100 p-5`}>
                             <div className="flex items-start gap-4">
@@ -959,9 +947,6 @@ function Operations() {
                                         Opened
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                        Assigned To
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         Status
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -996,11 +981,6 @@ function Operations() {
                                             <td className="px-4 py-4">
                                                 <div className="text-sm text-gray-600">
                                                     {caseItem.opened}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm text-gray-900">
-                                                    {caseItem.assignedTo}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4">

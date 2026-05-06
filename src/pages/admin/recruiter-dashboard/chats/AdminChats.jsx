@@ -18,6 +18,9 @@ import conversationService, {
 } from '../../../../services/conversationService';
 import { subscribeConversationMessages } from '../../../../services/socketClient';
 
+const UUID_RE =
+    /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
+
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search || '');
@@ -149,13 +152,33 @@ function AdminChats({ candidateId: propCandidateId }) {
 
     useEffect(() => {
         if (!candidateId) return undefined;
+        if (listLoading) return undefined;
+        if (!UUID_RE.test(String(candidateId))) {
+            setBootstrapError('Could not start chat: invalid user id.');
+            return undefined;
+        }
 
         let cancelled = false;
         (async () => {
             setBootstrapError(null);
             setBootstrapLoading(true);
             try {
-                const conv = await conversationService.createConversation(String(candidateId));
+                const normalized = String(candidateId);
+                const existing = chats.find((chat) => {
+                    const raw = chat?.raw || {};
+                    return (
+                        String(raw.professionalId || '') === normalized ||
+                        String(raw.recruiterId || '') === normalized ||
+                        String(raw.adminId || '') === normalized
+                    );
+                });
+
+                if (existing?.id) {
+                    setSelectedChat(existing.id);
+                    return;
+                }
+
+                const conv = await conversationService.createConversation(normalized);
                 if (cancelled || !conv) return;
                 upsertChatFromConversation(conv);
             } catch (err) {
@@ -170,7 +193,7 @@ function AdminChats({ candidateId: propCandidateId }) {
         return () => {
             cancelled = true;
         };
-    }, [candidateId, upsertChatFromConversation]);
+    }, [candidateId, upsertChatFromConversation, listLoading, chats]);
 
     useEffect(() => {
         if (!selectedChat) return undefined;

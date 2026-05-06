@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import adminOperationsService from '../../../services/adminOperationsService';
 
+const UUID_RE =
+    /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
+
 const formatDateTime = (value) => {
     if (!value) return '—';
     const date = new Date(value);
@@ -164,9 +167,21 @@ function SupportCaseDetails() {
     }[caseStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
 
     const openChat = () => {
-        const recipientId = user?.id || caseData?.userId;
+        const candidates = [
+            user?.id,
+            user?.userId,
+            user?.uuid,
+            user?.professionalId,
+            caseData?.userId,
+            caseData?.professionalId,
+        ]
+            .map((v) => (v == null ? '' : String(v)))
+            .map((v) => v.trim())
+            .filter(Boolean);
+
+        const recipientId = candidates.find((v) => UUID_RE.test(v));
         if (!recipientId) {
-            setError('Unable to open chat because the user id is missing.');
+            setError('Unable to open chat: user id is not a valid UUID.');
             return;
         }
 
@@ -236,30 +251,30 @@ function SupportCaseDetails() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => !saving && openModal('resolve')}
-                            disabled={saving || caseStatus === 'RESOLVED'}
-                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${caseStatus === 'RESOLVED'
-                                ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
-                                : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
-                                }`}
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                            Resolve
-                        </button>
-                        <button
-                            onClick={() => !saving && openModal('close')}
-                            disabled={saving || caseStatus === 'CLOSED'}
-                            className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${caseStatus === 'CLOSED'
-                                ? 'bg-orange-50 text-orange-400 border-orange-100 cursor-not-allowed'
-                                : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
-                                }`}
-                        >
-                            <span className={`font-bold text-lg leading-none ${caseStatus === 'CLOSED' ? 'text-orange-400' : 'text-orange-600'}`}>
-                                &times;
-                            </span>
-                            Close Case
-                        </button>
+                        {caseStatus !== 'CLOSED' ? (
+                            <button
+                                onClick={() => !saving && openModal('resolve')}
+                                disabled={saving || caseStatus === 'RESOLVED'}
+                                className={`flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors ${caseStatus === 'RESOLVED'
+                                    ? 'bg-green-50 text-green-400 border-green-100 cursor-not-allowed'
+                                    : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                                    }`}
+                            >
+                                <CheckCircle className="h-4 w-4" />
+                                {caseStatus === 'RESOLVED' ? 'Resolved' : 'Resolve'}
+                            </button>
+                        ) : null}
+
+                        {caseStatus !== 'RESOLVED' && caseStatus !== 'CLOSED' ? (
+                            <button
+                                onClick={() => !saving && openModal('close')}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-4 py-1.5 border rounded-lg text-sm font-semibold transition-colors bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <span className="font-bold text-lg leading-none text-orange-600">&times;</span>
+                                Close Case
+                            </button>
+                        ) : null}
                     </div>
                 </div>
 
@@ -362,22 +377,6 @@ function SupportCaseDetails() {
                                     <p className="text-xs text-gray-700">{formatDateTime(caseData?.updatedAt)}</p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4">STATUS</h4>
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs text-gray-500">Current status</span>
-                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClass}`}>
-                                {caseStatusLabel}
-                            </span>
-                        </div>
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                            <span className="text-xs text-gray-500">Assigned to</span>
-                            <span className="text-xs font-semibold text-gray-900">
-                                {caseData?.assignedTo?.name || caseData?.assignedTo?.email || 'Unassigned'}
-                            </span>
                         </div>
                     </div>
                 </div>
