@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, CircleDot, Loader2, MessageSquare } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, Loader2, MessageSquare } from 'lucide-react';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
@@ -41,8 +41,6 @@ const Profile = () => {
         }
         return localStorage.getItem('profileImage') || defaultAvatar;
     });
-    const [isAvailable, setIsAvailable] = useState(false);
-    const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [membershipTier, setMembershipTier] = useState('FREE');
@@ -59,7 +57,6 @@ const Profile = () => {
                 const accountResponse = await authService.getMyAccount();
                 const professional = accountResponse?.data?.professional;
                 if (professional) {
-                    setIsAvailable(Boolean(professional.availableForWork));
                     setMembershipTier(professional.tier || 'FREE');
                     setUserEmail(professional.email || '');
 
@@ -156,22 +153,6 @@ const Profile = () => {
         } finally {
             setIsDeletingAccount(false);
             setShowDeleteModal(false);
-        }
-    };
-
-    const handleAvailabilityToggle = async () => {
-        const nextAvailability = !isAvailable;
-        setIsAvailable(nextAvailability);
-
-        try {
-            setIsUpdatingAvailability(true);
-            await authService.updateAvailability(nextAvailability);
-            toast.success(nextAvailability ? 'You are now available for work' : 'Availability turned off', { position: 'top-right' });
-        } catch (error) {
-            setIsAvailable(!nextAvailability);
-            toast.error(error.message || 'Failed to update availability', { position: 'top-right' });
-        } finally {
-            setIsUpdatingAvailability(false);
         }
     };
 
@@ -307,11 +288,6 @@ const Profile = () => {
                             </div>
                             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">{userName}</h3>
                             <p className="text-xs sm:text-sm text-gray-500 mb-2">{userEmail}</p>
-                            {/* Availability Badge */}
-                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-3 ${isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                                {isAvailable ? 'Available Now' : 'Not Available'}
-                            </div>
                             <div className="flex items-center gap-3">
                                 <label
                                     htmlFor="profile-photo-upload"
@@ -346,27 +322,6 @@ const Profile = () => {
 
                     {/* Right Column - Settings Options */}
                     <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-                        {/* Availability Section */}
-                        <div className="mb-8">
-                            <p className="text-xs text-gray-400 mb-3">Availability</p>
-                            <div className="flex items-center justify-between p-3 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <CircleDot size={16} className={isAvailable ? 'text-green-500' : 'text-gray-400'} />
-                                    <div>
-                                        <span className="text-gray-800 text-sm">Available for work</span>
-                                        <p className="text-xs text-gray-400 mt-0.5">Let recruiters know you're open to opportunities</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleAvailabilityToggle}
-                                    disabled={isUpdatingAvailability}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-60 ${isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
-                                >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm ${isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
-                                </button>
-                            </div>
-                        </div>
-
                         {/* Password Section */}
                         <div className="mb-8">
                             <p className="text-xs text-gray-400 mb-3">Password</p>

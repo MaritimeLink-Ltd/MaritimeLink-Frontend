@@ -19,6 +19,7 @@ import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
+import authService from '../../../../services/authService';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { API_CATEGORY_TO_WALLET_FOLDERS } from '../../../../constants/documentWalletCategories';
 
@@ -31,6 +32,9 @@ const DocumentsWallet = () => {
     const [uploadCategory, setUploadCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Pro membership
+    const [membershipTier, setMembershipTier] = useState('FREE');
+
     // Modal states for export and share
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
@@ -38,10 +42,6 @@ const DocumentsWallet = () => {
     const [generatedLink, setGeneratedLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
-    // Track if user clicked already
-    const [exportClickedOnce, setExportClickedOnce] = useState(false);
-    const [shareClickedOnce, setShareClickedOnce] = useState(false);
-    
     // Real data state
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -201,6 +201,24 @@ const DocumentsWallet = () => {
         fetchDocuments();
     }, []);
 
+    useEffect(() => {
+        let mounted = true;
+        const loadTier = async () => {
+            try {
+                const accountResponse = await authService.getMyAccount();
+                const professional = accountResponse?.data?.professional || null;
+                const tier = professional?.tier || professional?.membershipTier || professional?.membership?.tier || 'FREE';
+                if (mounted) setMembershipTier(tier || 'FREE');
+            } catch {
+                // keep FREE as fallback
+            }
+        };
+        loadTier();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
     const filteredDynamicCategories = useMemo(() => {
         const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
 
@@ -251,10 +269,8 @@ const DocumentsWallet = () => {
 
     // Handle Export Document Pack
     const handleExportDocumentPack = () => {
-        if (!exportClickedOnce) {
-            // Show premium modal instead of export modal directly
+        if (String(membershipTier).toUpperCase() !== 'PRO') {
             setShowPremiumModal(true);
-            setExportClickedOnce(true);
             return;
         }
 
@@ -289,10 +305,8 @@ const DocumentsWallet = () => {
 
     // Handle Share Secure Link
     const handleShareSecureLink = () => {
-        if (!shareClickedOnce) {
-            // Show premium modal instead of share modal directly
+        if (String(membershipTier).toUpperCase() !== 'PRO') {
             setShowPremiumModal(true);
-            setShareClickedOnce(true);
             return;
         }
 

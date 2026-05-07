@@ -168,6 +168,7 @@ function SupportCenterSection({
                 subject: nextSubject,
                 description: nextDescription,
                 category,
+                priority: resolvedPriority,
             });
 
             setSubject('');

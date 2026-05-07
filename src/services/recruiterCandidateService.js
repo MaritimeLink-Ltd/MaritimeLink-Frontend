@@ -9,6 +9,7 @@ class RecruiterCandidateService {
         if (query.limit) params.set('limit', query.limit);
         if (query.search) params.set('search', query.search);
         if (query.sortBy) params.set('sortBy', query.sortBy);
+        if (query.boostPremium) params.set('boostPremium', '1');
 
         const appendMulti = (key, value) => {
             if (!value) return;

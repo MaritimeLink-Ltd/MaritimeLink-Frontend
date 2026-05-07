@@ -59,6 +59,16 @@ const buildAvatarFallback = (name, seed = '') => {
 
 const getCandidateName = (candidate) => candidate?.fullname || candidate?.name || 'Unknown candidate';
 const isPremiumCandidate = (candidate) => String(candidate?.tier || '').toUpperCase() === 'PRO' || Boolean(candidate?.isPremium);
+const stablePremiumBoost = (items = []) => {
+    const enriched = items.map((item, index) => ({ item, index }));
+    enriched.sort((a, b) => {
+        const ap = isPremiumCandidate(a.item) ? 1 : 0;
+        const bp = isPremiumCandidate(b.item) ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        return a.index - b.index;
+    });
+    return enriched.map((entry) => entry.item);
+};
 
 function AdminSearch({ onViewCandidate }) {
     const navigate = useNavigate();
@@ -101,6 +111,7 @@ function AdminSearch({ onViewCandidate }) {
                     limit: PAGE_SIZE,
                     search: query,
                     sortBy: nextSortBy,
+                    boostPremium: true,
                     rankPosition: nextFilters.rankPosition,
                     experienceLevel: nextFilters.experienceLevel,
                     vesselType: nextFilters.vesselType,
@@ -112,7 +123,8 @@ function AdminSearch({ onViewCandidate }) {
                 const items = payload?.data?.candidates || payload?.candidates || [];
                 const pagination = payload?.pagination || {};
 
-                setCandidates(Array.isArray(items) ? items : []);
+                const resolvedItems = Array.isArray(items) ? items : [];
+                setCandidates(nextSortBy === 'Best Matches' ? stablePremiumBoost(resolvedItems) : resolvedItems);
                 setTotalCandidates(
                     Number.isFinite(Number(pagination.total))
                         ? Number(pagination.total)
