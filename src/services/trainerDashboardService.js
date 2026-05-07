@@ -83,12 +83,25 @@ class TrainerDashboardService {
         return httpClient.get(API_ENDPOINTS.TRAINER.STRIPE_STATUS);
     }
 
+    buildStripeOnboardingRedirects() {
+        if (typeof window === 'undefined') return {};
+        const origin = window.location.origin;
+        return {
+            returnUrl: `${origin}/trainingprovider/payouts/success`,
+            refreshUrl: `${origin}/trainingprovider/payouts/reauth`,
+        };
+    }
+
     async startStripeOnboarding() {
-        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING, {});
+        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING, {
+            ...this.buildStripeOnboardingRedirects(),
+        });
     }
 
     async refreshStripeOnboarding() {
-        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING_REFRESH, {});
+        return httpClient.post(API_ENDPOINTS.TRAINER.STRIPE_ONBOARDING_REFRESH, {
+            ...this.buildStripeOnboardingRedirects(),
+        });
     }
 }
 

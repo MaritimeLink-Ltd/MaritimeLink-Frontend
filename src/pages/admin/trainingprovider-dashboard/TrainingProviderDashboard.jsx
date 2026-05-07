@@ -11,6 +11,7 @@ import {
     ExternalLink,
     RefreshCcw,
     Wallet,
+    Loader2,
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -249,6 +250,7 @@ function TrainingProviderDashboard() {
     const [coursesLoadingMore, setCoursesLoadingMore] = useState(false);
     const [stripeStatus, setStripeStatus] = useState(null);
     const [stripeStatusError, setStripeStatusError] = useState(null);
+    const [stripeStatusLoading, setStripeStatusLoading] = useState(false);
     const [stripeActionLoading, setStripeActionLoading] = useState(false);
 
     const {
@@ -287,9 +289,11 @@ function TrainingProviderDashboard() {
         setStatsLoading(true);
         setActionItemsLoading(true);
         setDashboardCoursesLoading(true);
+        setStripeStatusLoading(true);
         setStatsError(null);
         setActionItemsError(null);
         setDashboardCoursesError(null);
+        setStripeStatusError(null);
         try {
             const query = getTrainerStatsQuery(timeFilter);
             const [statsOutcome, actionsOutcome, coursesOutcome, stripeOutcome] = await Promise.allSettled([
@@ -360,6 +364,7 @@ function TrainingProviderDashboard() {
             setStatsLoading(false);
             setActionItemsLoading(false);
             setDashboardCoursesLoading(false);
+            setStripeStatusLoading(false);
         }
     }, [hasFullAccess, timeFilter]);
 
@@ -617,7 +622,9 @@ function TrainingProviderDashboard() {
                                             ? 'bg-green-50'
                                             : 'bg-[#003971]/10'
                                     }`}>
-                                        {stripeStatus?.onboardingComplete ? (
+                                        {stripeStatusLoading ? (
+                                            <Loader2 className="h-6 w-6 text-[#003971] animate-spin" />
+                                        ) : stripeStatus?.onboardingComplete ? (
                                             <CheckCircle2 className="h-6 w-6 text-green-600" />
                                         ) : (
                                             <Wallet className="h-6 w-6 text-[#003971]" />
@@ -627,15 +634,23 @@ function TrainingProviderDashboard() {
                                         <div className="flex flex-wrap items-center gap-2 mb-1">
                                             <h2 className="text-base font-bold text-gray-900">Payout setup</h2>
                                             <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                                                stripeStatus?.onboardingComplete
+                                                stripeStatusLoading
+                                                    ? 'bg-gray-100 text-gray-700'
+                                                    : stripeStatus?.onboardingComplete
                                                     ? 'bg-green-50 text-green-700'
                                                     : 'bg-amber-50 text-amber-700'
                                             }`}>
-                                                {stripeStatus?.onboardingComplete ? 'Ready' : 'Action needed'}
+                                                {stripeStatusLoading
+                                                    ? 'Loading'
+                                                    : stripeStatus?.onboardingComplete
+                                                        ? 'Ready'
+                                                        : 'Action needed'}
                                             </span>
                                         </div>
                                         <p className="text-sm text-gray-500 max-w-2xl">
-                                            {stripeStatus?.onboardingComplete
+                                            {stripeStatusLoading
+                                                ? 'Loading payout onboarding details…'
+                                                : stripeStatus?.onboardingComplete
                                                 ? 'Your Stripe Connect account is ready. Approved bookings can be paid out to your connected account.'
                                                 : 'Connect Stripe to receive trainer payouts after bookings are completed and approved.'}
                                         </p>
@@ -644,7 +659,7 @@ function TrainingProviderDashboard() {
                                         )}
                                     </div>
                                 </div>
-                                {!stripeStatus?.onboardingComplete && (
+                                {!stripeStatusLoading && !stripeStatus?.onboardingComplete && (
                                     <button
                                         type="button"
                                         onClick={handleStripeOnboarding}
