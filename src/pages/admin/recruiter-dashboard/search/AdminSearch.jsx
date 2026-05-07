@@ -58,7 +58,10 @@ const buildAvatarFallback = (name, seed = '') => {
 };
 
 const getCandidateName = (candidate) => candidate?.fullname || candidate?.name || 'Unknown candidate';
-const isPremiumCandidate = (candidate) => String(candidate?.tier || '').toUpperCase() === 'PRO' || Boolean(candidate?.isPremium);
+const isPremiumCandidate = (candidate) => {
+    const tier = String(candidate?.tier || '').toUpperCase();
+    return tier === 'PRO' || tier === 'PREMIUM' || Boolean(candidate?.isPremium);
+};
 const stablePremiumBoost = (items = []) => {
     const enriched = items.map((item, index) => ({ item, index }));
     enriched.sort((a, b) => {

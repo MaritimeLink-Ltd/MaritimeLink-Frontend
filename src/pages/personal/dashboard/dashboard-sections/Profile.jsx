@@ -5,6 +5,7 @@ import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
 import toast, { Toaster } from 'react-hot-toast';
+import { isPremiumTier } from '../../../../utils/isPremiumTier';
 
 function resolveProfessionalId() {
     const direct = localStorage.getItem('professionalId');
@@ -628,7 +629,7 @@ const Profile = () => {
                                     basePath="professional"
                                     title="Professional Support"
                                     description="Tell us what you need help with. Premium professionals default to High priority so urgent issues get seen first."
-                                    priorityDefault={membershipTier === 'PRO' ? 'HIGH' : 'LOW'}
+                                    priorityDefault={isPremiumTier(membershipTier) ? 'HIGH' : 'LOW'}
                                     caseLabel="support case"
                                 />
                             </div>

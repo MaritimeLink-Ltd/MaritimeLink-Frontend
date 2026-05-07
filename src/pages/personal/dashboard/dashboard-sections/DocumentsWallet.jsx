@@ -20,7 +20,9 @@ import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
+import { API_CONFIG } from '../../../../config/api.config';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import { API_CATEGORY_TO_WALLET_FOLDERS } from '../../../../constants/documentWalletCategories';
 
 const DocumentsWallet = () => {
@@ -39,6 +41,8 @@ const DocumentsWallet = () => {
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [exportProgress, setExportProgress] = useState({ done: 0, total: 0, label: '' });
+    const [exportError, setExportError] = useState('');
     const [generatedLink, setGeneratedLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
@@ -267,45 +271,164 @@ const DocumentsWallet = () => {
         setView('category');
     };
 
+    const isInternalUrl = (url) => {
+        try {
+            const fileOrigin = new URL(url).origin;
+            const apiOrigin = new URL(API_CONFIG.BASE_URL).origin;
+            return fileOrigin === apiOrigin;
+        } catch {
+            return true;
+        }
+    };
+
+    const resolveFileUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('http') || url.startsWith('blob:')) return url;
+        const base = API_CONFIG.BASE_URL.replace(/\/+$/, '');
+        const path = url.startsWith('/') ? url : `/${url}`;
+        return `${base}${path}`;
+    };
+
+    const sanitizeFileName = (value) =>
+        String(value || 'document')
+            .trim()
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+            .replace(/\s+/g, '_')
+            .slice(0, 140) || 'document';
+
+    const guessExtension = ({ url, contentType }) => {
+        const ct = String(contentType || '').toLowerCase();
+        if (ct.includes('pdf')) return '.pdf';
+        if (ct.includes('png')) return '.png';
+        if (ct.includes('jpeg') || ct.includes('jpg')) return '.jpg';
+        if (ct.includes('webp')) return '.webp';
+        if (ct.includes('heic')) return '.heic';
+        if (ct.includes('zip')) return '.zip';
+        if (ct.includes('msword')) return '.doc';
+        if (ct.includes('officedocument.wordprocessingml')) return '.docx';
+        if (ct.includes('officedocument.spreadsheetml')) return '.xlsx';
+        if (ct.includes('spreadsheet')) return '.xls';
+        if (ct.includes('text/plain')) return '.txt';
+
+        const u = String(url || '').toLowerCase();
+        const match = u.match(/\.([a-z0-9]{2,6})(?:\?|#|$)/);
+        if (match) return `.${match[1]}`;
+        return '';
+    };
+
     // Handle Export Document Pack
-    const handleExportDocumentPack = () => {
-        if (String(membershipTier).toUpperCase() !== 'PRO') {
+    const handleExportDocumentPack = async () => {
+        if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
 
         setShowExportModal(true);
+        setExportError('');
 
-        // Simulate zip file preparation
-        setTimeout(() => {
-            // Create dummy content for all documents
-            const allDocsContent = dynamicCategories.map((cat) =>
-                `${cat.title}:\n  Total Documents: ${cat.count}\n  Status: ${(cat.statusBadges || []).map((b) => b.label).join(', ') || 'N/A'}\n`,
-            ).join('\n');
+        try {
+            const docs = Array.isArray(documents) ? documents : [];
+            const exportable = docs
+                .map((doc) => {
+                    const rawUrl =
+                        doc?.fileUrl ||
+                        doc?.url ||
+                        doc?.documentUrl ||
+                        doc?.path ||
+                        doc?.image ||
+                        null;
+                    const resolvedUrl = resolveFileUrl(rawUrl);
+                    return { doc, resolvedUrl };
+                })
+                .filter((x) => Boolean(x.resolvedUrl));
 
-            const zipContent = `Maritime Document Pack\n\nExported on: ${new Date().toLocaleDateString()}\nTotal Categories: ${dynamicCategories.length}\n\n${allDocsContent}`;
+            if (exportable.length === 0) {
+                setExportError('No downloadable files found in your documents yet.');
+                setExportProgress({ done: 0, total: 0, label: '' });
+                return;
+            }
 
-            // Create blob and download
-            const blob = new Blob([zipContent], { type: 'application/zip' });
-            const url = URL.createObjectURL(blob);
+            const { default: JSZip } = await import('jszip');
+            const zip = new JSZip();
+
+            const total = exportable.length;
+            setExportProgress({ done: 0, total, label: 'Starting export…' });
+
+            for (let i = 0; i < exportable.length; i += 1) {
+                const { doc, resolvedUrl } = exportable[i];
+
+                const displayName =
+                    doc?.name ||
+                    doc?.title ||
+                    doc?.documentName ||
+                    doc?.category ||
+                    `document_${i + 1}`;
+                const folderName = sanitizeFileName(doc?.category || doc?.type || 'documents');
+
+                setExportProgress({
+                    done: i,
+                    total,
+                    label: `Downloading ${i + 1}/${total}: ${displayName}`,
+                });
+
+                const needsAuth = isInternalUrl(resolvedUrl);
+                const token = needsAuth
+                    ? (localStorage.getItem('authToken') ||
+                        localStorage.getItem('token') ||
+                        localStorage.getItem('accessToken') ||
+                        null)
+                    : null;
+
+                const response = await fetch(resolvedUrl, {
+                    method: 'GET',
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to download "${displayName}" (${response.status} ${response.statusText})`,
+                    );
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                const blob = await response.blob();
+                const ext = guessExtension({ url: resolvedUrl, contentType });
+                const baseFileName = sanitizeFileName(displayName);
+                const fileName = baseFileName.toLowerCase().endsWith(ext) ? baseFileName : `${baseFileName}${ext}`;
+
+                zip.folder(folderName).file(fileName, blob);
+
+                setExportProgress({
+                    done: i + 1,
+                    total,
+                    label: `Added ${i + 1}/${total}`,
+                });
+            }
+
+            setExportProgress({ done: total, total, label: 'Building zip…' });
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(zipBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'DocumentPack_Maritime.zip';
+            link.download = `DocumentPack_${new Date().toISOString().slice(0, 10)}.zip`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            // Close modal after 2 seconds
+            setExportProgress({ done: total, total, label: 'Done' });
             setTimeout(() => {
                 setShowExportModal(false);
-            }, 2000);
-        }, 1500);
+            }, 800);
+        } catch (err) {
+            console.error('Export document pack failed', err);
+            setExportError(err?.message || 'Failed to export document pack.');
+        }
     };
 
     // Handle Share Secure Link
     const handleShareSecureLink = () => {
-        if (String(membershipTier).toUpperCase() !== 'PRO') {
+        if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
@@ -519,13 +642,33 @@ const DocumentsWallet = () => {
                                 </div>
                             </div>
                             <h3 className="text-xl font-semibold text-gray-800 mb-2">Preparing Document Pack</h3>
-                            <p className="text-gray-500 mb-4">
-                                Compressing all your documents into a zip file...
-                            </p>
+                            <p className="text-gray-500 mb-4">{exportProgress.label || 'Compressing all your documents into a zip file…'}</p>
                             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div className="bg-[#003366] h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+                                <div
+                                    className="bg-[#003366] h-2 rounded-full transition-all"
+                                    style={{
+                                        width:
+                                            exportProgress.total > 0
+                                                ? `${Math.round((exportProgress.done / exportProgress.total) * 100)}%`
+                                                : '30%',
+                                    }}
+                                />
                             </div>
-                            <p className="text-sm text-gray-400 mt-3">This will take just a moment</p>
+                            {exportError ? (
+                                <div className="mt-4 text-sm text-red-600">{exportError}</div>
+                            ) : (
+                                <p className="text-sm text-gray-400 mt-3">
+                                    {exportProgress.total > 0
+                                        ? `${exportProgress.done}/${exportProgress.total} files`
+                                        : 'This will take just a moment'}
+                                </p>
+                            )}
+                            <button
+                                onClick={() => setShowExportModal(false)}
+                                className="mt-6 w-full py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors border border-gray-200 hover:bg-gray-50 bg-white rounded-xl"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
