@@ -10,7 +10,7 @@ const PLAN_DETAILS = {
         subtitle: 'Good for getting started',
         description: 'Basic profile visibility and standard support.',
         highlights: [
-            'Apply to standard job opportunities',
+            'Apply to job opportunities',
             'Basic profile visibility',
             'Email support',
         ],
@@ -20,7 +20,7 @@ const PLAN_DETAILS = {
         subtitle: 'Best for active professionals',
         description: 'Boosted visibility, priority support, and premium badge.',
         highlights: [
-            'Unlimited job applications',
+            'Apply to job opportunities',
             'Priority profile visibility',
             'Featured in searches',
             'Priority support',

@@ -462,7 +462,7 @@ const Profile = () => {
                                         <ul className="space-y-3 mb-6">
                                             <li className="flex items-start gap-2">
                                                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Apply to unlimited jobs</span>
+                                                <span className="text-sm text-gray-600">Apply to jobs</span>
                                             </li>
                                             <li className="flex items-start gap-2">
                                                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
