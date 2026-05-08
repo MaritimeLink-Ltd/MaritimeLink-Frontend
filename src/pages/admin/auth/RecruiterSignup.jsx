@@ -51,18 +51,18 @@ function RecruiterSignup() {
             return;
         }
 
-        // Validate work email
-        const emailLower = formData.email.toLowerCase();
-        const personalDomains = [
-            '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
-            '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
-        ];
-
-        const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
-        if (isPersonalEmail) {
-            setError('Please use a valid work email address');
-            return;
-        }
+        // Local testing only: work email validation is temporarily disabled.
+        // const emailLower = formData.email.toLowerCase();
+        // const personalDomains = [
+        //     '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
+        //     '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
+        // ];
+        //
+        // const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
+        // if (isPersonalEmail) {
+        //     setError('Please use a valid work email address');
+        //     return;
+        // }
 
         if (!formData.agreeToTerms) {
             setError('You must agree to the Terms & Conditions');
