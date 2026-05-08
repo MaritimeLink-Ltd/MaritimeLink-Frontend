@@ -45,6 +45,17 @@ function resolveStudentsTrained(r) {
     return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+function formatCurrencyCompact(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '£0';
+    return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(n);
+}
+
 function companyDetailsSubmitted(r) {
     const org = (r.organizationName || '').trim();
     if (!org) return false;
@@ -275,11 +286,11 @@ function mapRecruiterOrTrainerDetail(r, accountKind = 'recruiter') {
         address: r.address || [r.companyCity, r.companyState, r.companyCountry].filter(Boolean).join(', ') || 'N/A',
         plan: r.tier ? `${r.tier.charAt(0).toUpperCase()}${r.tier.slice(1).toLowerCase()} Plan` : 'Free Plan',
         stats: {
-            activeJobs: isTrainer ? countActiveCourses(r.courses || []) : countActiveJobs(r.jobs || []),
-            candidatesHired: isTrainer ? resolveStudentsTrained(r) : resolveCandidatesHired(r),
+            activeJobs: isTrainer ? resolveStudentsTrained(r) : countActiveJobs(r.jobs || []),
+            candidatesHired: isTrainer ? formatCurrencyCompact(r.grossRevenue) : resolveCandidatesHired(r),
         },
         statsLabels: isTrainer
-            ? { stat1: 'Active Courses', stat2: 'Students Trained' }
+            ? { stat1: 'Bookings Sold', stat2: 'Gross Sales' }
             : { stat1: 'Active Jobs', stat2: 'Candidates Hired' },
         stage1Status: r.status === 'APPROVED' ? 'COMPLETED' : 'PENDING',
         stage2Status: r.kyc ? (r.kyc.status === 'APPROVED' ? 'COMPLETED' : 'PENDING') : 'PENDING',
