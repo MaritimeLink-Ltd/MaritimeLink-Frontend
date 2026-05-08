@@ -112,7 +112,6 @@ function AdminDashboard() {
     const navigate = useNavigate();
     const [adminStats, setAdminStats] = useState({
         pendingTotal: 0,
-        pendingToday: 0,
         flaggedIssues: 0,
         expiringCount: 0,
         expiringTimeframe: '30d',
@@ -124,7 +123,6 @@ function AdminDashboard() {
         coursesPosted: 0,
         applicationsSubmitted: 0,
         bookingsMade: 0,
-        successRate: '',
     });
     const [adminUserBreakdown, setAdminUserBreakdown] = useState({
         providers: 0,
@@ -159,6 +157,7 @@ function AdminDashboard() {
     const [revenueError, setRevenueError] = useState(null);
     const [financeAnalyticsError, setFinanceAnalyticsError] = useState(null);
     const [reviewQueueList, setReviewQueueList] = useState([]);
+    const [systemAlerts, setSystemAlerts] = useState([]);
     const [queuesLoading, setQueuesLoading] = useState(true);
     const [queuesError, setQueuesError] = useState(null);
     const [reviewVisibleCount, setReviewVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
@@ -192,7 +191,6 @@ function AdminDashboard() {
                         const exp = s.expiringCompliance || {};
                         setAdminStats({
                             pendingTotal: Number(pending.total) || 0,
-                            pendingToday: Number(pending.today) || 0,
                             flaggedIssues: Number(s.flaggedIssues) || 0,
                             expiringCount: Number(exp.count) || 0,
                             expiringTimeframe: exp.timeframe || '30d',
@@ -215,10 +213,6 @@ function AdminDashboard() {
                             coursesPosted: Number(a.coursesPosted) || 0,
                             applicationsSubmitted: Number(a.applicationsSubmitted) || 0,
                             bookingsMade: Number(a.bookingsMade) || 0,
-                            successRate:
-                                a.successRate != null && a.successRate !== ''
-                                    ? String(a.successRate)
-                                    : '',
                         });
                     }
                     if (!cancelled && ub && typeof ub === 'object') {
@@ -311,8 +305,10 @@ function AdminDashboard() {
                 if (queuesOutcome.status === 'fulfilled') {
                     const d = queuesOutcome.value?.data;
                     const rq = d?.reviewQueue;
+                    const sa = d?.systemAlerts;
                     if (!cancelled) {
                         setReviewQueueList(Array.isArray(rq) ? rq : []);
+                        setSystemAlerts(Array.isArray(sa) ? sa : []);
                     }
                 } else if (!cancelled) {
                     console.error('Failed to load admin dashboard queues:', queuesOutcome.reason);
@@ -320,6 +316,7 @@ function AdminDashboard() {
                         queuesOutcome.reason?.message || 'Could not load review queue or alerts.'
                     );
                     setReviewQueueList([]);
+                    setSystemAlerts([]);
                 }
             } finally {
                 if (!cancelled) {
@@ -519,6 +516,29 @@ function AdminDashboard() {
         [reviewQueueDisplay, reviewVisibleCount],
     );
 
+    const systemAlertDisplay = useMemo(() => {
+        return systemAlerts.map((alert, index) => {
+            const severity = String(alert?.severity || '').toLowerCase();
+            const dotClass =
+                severity === 'red'
+                    ? 'bg-red-500'
+                    : severity === 'yellow'
+                        ? 'bg-orange-500'
+                        : severity === 'blue'
+                            ? 'bg-blue-500'
+                            : 'bg-gray-400';
+            return {
+                id: alert?.id || `system-alert-${index}`,
+                message: alert?.message || 'System alert',
+                type: alert?.type || 'GENERAL',
+                severity: severity || 'info',
+                timestamp: alert?.timestamp || null,
+                time: formatAdminRelativeTime(alert?.timestamp),
+                dotClass,
+            };
+        });
+    }, [systemAlerts]);
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -651,8 +671,8 @@ function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Review Queue & System Alerts */}
-                    <div className="grid grid-cols-1 gap-6">
+                    {/* Review Queue */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         {/* Review Queue */}
                         <div
                             className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col max-h-[440px] min-h-0 ${queuesLoading ? 'opacity-90' : ''}`}
@@ -670,37 +690,37 @@ function AdminDashboard() {
                                 <p className="text-sm text-gray-500 py-6 text-center">No review items right now.</p>
                             ) : (
                                 <>
-                                <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
-                                    {reviewQueueShown.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => navigate(item.path)}
-                                            className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+                                    <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+                                        {reviewQueueShown.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                onClick={() => navigate(item.path)}
+                                                className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+                                            >
+                                                <div className={`p-2 rounded-lg ${item.iconBg} flex-shrink-0`}>
+                                                    <item.icon className={`h-4 w-4 ${item.iconColor}`} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-gray-900 truncate">{item.title}</p>
+                                                    <p className={`text-xs font-medium ${item.reasonClass}`}>
+                                                        {item.reason}
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                                                    {item.time}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {reviewVisibleCount < reviewQueueDisplay.length && (
+                                        <button
+                                            type="button"
+                                            onClick={loadMoreReviewQueue}
+                                            className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#1e5a8f] border border-gray-200 rounded-lg hover:bg-gray-50"
                                         >
-                                            <div className={`p-2 rounded-lg ${item.iconBg} flex-shrink-0`}>
-                                                <item.icon className={`h-4 w-4 ${item.iconColor}`} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-gray-900 truncate">{item.title}</p>
-                                                <p className={`text-xs font-medium ${item.reasonClass}`}>
-                                                    {item.reason}
-                                                </p>
-                                            </div>
-                                            <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                                                {item.time}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                                {reviewVisibleCount < reviewQueueDisplay.length && (
-                                    <button
-                                        type="button"
-                                        onClick={loadMoreReviewQueue}
-                                        className="mt-3 shrink-0 w-full py-2 text-sm font-semibold text-[#1e5a8f] border border-gray-200 rounded-lg hover:bg-gray-50"
-                                    >
-                                        Load more
-                                    </button>
-                                )}
+                                            Load more
+                                        </button>
+                                    )}
                                 </>
                             )}
 
@@ -709,6 +729,38 @@ function AdminDashboard() {
                                 className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-4 py-2 shrink-0"
                             >
                                 View All Reviews
+                            </button>
+                        </div>
+
+                        {/* System Alerts (real API-driven only) */}
+                        <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 ${queuesLoading ? 'opacity-90' : ''}`}>
+                            <h2 className="text-lg font-bold text-gray-900 mb-6">System Alerts</h2>
+                            {queuesLoading ? (
+                                <p className="text-sm text-gray-500 py-6 text-center">Loading system alerts…</p>
+                            ) : systemAlertDisplay.length === 0 ? (
+                                <p className="text-sm text-gray-500 py-6 text-center">No live system alerts.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {systemAlertDisplay.map((alert, index) => (
+                                        <div key={alert.id} className="flex items-start gap-3">
+                                            <span
+                                                className={`h-7 w-7 rounded-full text-white text-xs font-bold flex items-center justify-center ${alert.dotClass}`}
+                                            >
+                                                {index + 1}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-base font-semibold text-gray-900">{alert.message}</p>
+                                                <p className="text-sm text-gray-400 mt-0.5">{alert.time || 'Just now'}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                onClick={() => navigate('/admin/system-alerts', { state: { alerts: systemAlertDisplay } })}
+                                className="w-full text-center text-sm font-bold text-[#1e5a8f] hover:underline mt-6 py-2"
+                            >
+                                View All System Alerts
                             </button>
                         </div>
                     </div>
@@ -828,7 +880,13 @@ function AdminDashboard() {
                                     {trainerRevenueRows.map((row) => (
                                         <div
                                             key={row.key}
-                                            className="flex items-center justify-between"
+                                            onClick={() =>
+                                                row.recruiterId &&
+                                                navigate(`/admin/accounts/${row.recruiterId}?accountType=training_agent`)
+                                            }
+                                            className={`flex items-center justify-between ${
+                                                row.recruiterId ? 'cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1 -mx-2 transition-colors' : ''
+                                            }`}
                                         >
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="p-2 rounded-lg bg-blue-50 flex-shrink-0">

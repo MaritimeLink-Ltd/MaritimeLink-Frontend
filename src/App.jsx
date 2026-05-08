@@ -86,6 +86,7 @@ import Operations from './pages/admin/admin-dashboard/Operations';
 import ActivityDetails from './pages/admin/admin-dashboard/ActivityDetails';
 import SupportCaseDetails from './pages/admin/admin-dashboard/SupportCaseDetails';
 import SystemJobDetail from './pages/admin/admin-dashboard/SystemJobDetail';
+import SystemAlerts from './pages/admin/admin-dashboard/SystemAlerts';
 
 function RecruiterSearchRedirect() {
   const location = useLocation();
@@ -296,6 +297,7 @@ function App() {
             <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
             <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />
             <Route path="/admin/operations/job/:id" element={<SystemJobDetail />} />
+            <Route path="/admin/system-alerts" element={<SystemAlerts />} />
             <Route path="/admin/operations/manual-action/:id" element={<ManualActionReview />} />
             <Route path="/admin/marketplace/candidate/:candidateId" element={<CandidateSummary />} />
             <Route path="/admin/candidate/:candidateId" element={<CandidateSummary />} />
