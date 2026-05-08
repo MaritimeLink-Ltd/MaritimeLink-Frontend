@@ -666,8 +666,8 @@ function CandidateSummary({
     const walletJobApplicationOnly =
         (!!location.state?.fromJobDetail || showApplicationStatus === true) &&
         !adminCreatedJobApplicationView;
-    const recruiterApplicationScopedView =
-        walletJobApplicationOnly && !isAdmin && !location.state?.fromAttendance;
+    const canOpenDocumentWallet =
+        isAdmin || walletJobApplicationOnly || Boolean(location.state?.fromAttendance);
 
     const candidate = useMemo(() => {
         const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
@@ -718,6 +718,16 @@ function CandidateSummary({
         }
         return true;
     }, [resume, currentUserType, isAdmin, location.state]);
+
+    const chatRoute = useMemo(() => {
+        if (location.pathname.includes('/trainingprovider/') || currentUserType === 'training-provider') {
+            return '/trainingprovider/chats';
+        }
+        if (isAdmin) {
+            return '/admin/chats';
+        }
+        return '/recruiter/chats';
+    }, [currentUserType, isAdmin, location.pathname]);
 
     const documentWallet = useMemo(() => {
         const applicationSubmissionDocs = [];
@@ -816,30 +826,7 @@ function CandidateSummary({
             walletKind: 'file',
         }));
 
-        const resumeDocs = [];
-        const pushResumeDoc = (category, arr, defaultName) => {
-            (Array.isArray(arr) ? arr : []).forEach((item, idx) => {
-                resumeDocs.push({
-                    id: `${category}-${idx}-${item?.id || 'x'}`,
-                    category,
-                    name: item?.name || item?.qualification || defaultName,
-                    expiryDate: toDisplayDate(item?.expiryDate),
-                    status: getDocStatus(item?.expiryDate),
-                    url: item?.fileUrl || '',
-                    mimeType: item?.mimeType || null,
-                    uploadedOn: 'N/A',
-                    verificationStatus: 'N/A',
-                    walletKind: 'file',
-                });
-            });
-        };
-
-        pushResumeDoc('LICENSES_ENDORSEMENTS', resume?.licenses, 'License');
-        pushResumeDoc('MEDICAL_CERTIFICATES', resume?.medicalCertificates, 'Medical Certificate');
-        pushResumeDoc('TRAVEL_DOCUMENTS', resume?.travelDocuments, 'Travel Document');
-        pushResumeDoc('STCW_CERTIFICATES', resume?.stcwCertificates, 'STCW Certificate');
-
-        const allDocs = [...applicationSubmissionDocs, ...docsFromAttached, ...resumeDocs];
+        const allDocs = [...applicationSubmissionDocs, ...docsFromAttached];
         const categories = [...new Set(allDocs.map((d) => d.category))];
         categories.sort((a, b) => {
             if (a === WALLET_APP_CATEGORY) return -1;
@@ -1151,7 +1138,7 @@ function CandidateSummary({
                             </button>
                         )}
 
-                        {!suppressDocumentWallet ? (
+                        {!suppressDocumentWallet && canOpenDocumentWallet ? (
                             <button onClick={() => setShowDocumentWallet(true)} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <Wallet className="h-5 w-5" />
                                 View Document Wallet
@@ -1490,7 +1477,7 @@ function CandidateSummary({
                                                 ? (currentUserType === 'training-provider' && !isAdmin
                                                     ? 'Only the files attached to this specific course booking.'
                                                     : 'Course booking attachments, profile wallet documents, and resume-linked certificates.')
-                                                : 'Documents from this application submission, profile wallet, and resume-linked certificates.'}
+                                                : 'Documents from this application submission and profile wallet uploads.'}
                                     </p>
                                 </div>
                                 <button onClick={() => setShowDocumentWallet(false)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors">
