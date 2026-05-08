@@ -98,6 +98,14 @@ class DocumentService {
             throw error;
         }
     }
+
+    async markReportGenerated() {
+        return httpClient.post(API_ENDPOINTS.DOCUMENTS.MARK_REPORT_GENERATED, {});
+    }
+
+    async createShareLink() {
+        return httpClient.post(API_ENDPOINTS.DOCUMENTS.CREATE_SHARE_LINK, {});
+    }
 }
 
 // Create and export a singleton instance

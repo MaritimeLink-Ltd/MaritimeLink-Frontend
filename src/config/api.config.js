@@ -58,6 +58,8 @@ export const API_ENDPOINTS = {
   DOCUMENTS: {
     UPLOAD: '/api/professional/documents/upload',
     LIST: '/api/professional/documents',
+    MARK_REPORT_GENERATED: '/api/professional/documents/report-generated',
+    CREATE_SHARE_LINK: '/api/professional/documents/share-link',
     UPDATE: (id) => `/api/professional/documents/${id}`,
     DELETE: (id) => `/api/professional/documents/${id}`,
   },

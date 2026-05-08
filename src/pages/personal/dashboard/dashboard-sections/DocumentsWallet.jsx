@@ -22,8 +22,8 @@ import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
 import { API_CONFIG } from '../../../../config/api.config';
 import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
-import { API_CATEGORY_TO_WALLET_FOLDERS } from '../../../../constants/documentWalletCategories';
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -160,12 +160,10 @@ const DocumentsWallet = () => {
 
             const docsByCategoryId = {};
             walletDocs.forEach((doc) => {
-                const folderIds = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
-                if (!folderIds?.length) return;
-                folderIds.forEach((catId) => {
-                    if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
-                    docsByCategoryId[catId].push(doc);
-                });
+                const catId = getDocumentDisplayCategory(doc);
+                if (!catId) return;
+                if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
+                docsByCategoryId[catId].push(doc);
             });
 
             setDynamicCategories(
@@ -228,8 +226,7 @@ const DocumentsWallet = () => {
 
         const docBelongsToWalletFolder = (doc, walletFolderId) => {
             if (!doc.category || EXCLUDED_FROM_WALLET.has(doc.category)) return false;
-            const folders = API_CATEGORY_TO_WALLET_FOLDERS[doc.category];
-            return folders?.includes(walletFolderId) ?? false;
+            return getDocumentDisplayCategory(doc) === walletFolderId;
         };
 
         const docMatchesWalletFilter = (doc, filter) => {
@@ -416,6 +413,7 @@ const DocumentsWallet = () => {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
+            await documentService.markReportGenerated();
             setExportProgress({ done: total, total, label: 'Done' });
             setTimeout(() => {
                 setShowExportModal(false);
@@ -427,22 +425,31 @@ const DocumentsWallet = () => {
     };
 
     // Handle Share Secure Link
-    const handleShareSecureLink = () => {
+    const handleShareSecureLink = async () => {
         if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
 
-        // Generate a dummy secure link
-        const randomId = Math.random().toString(36).substring(2, 15);
-        const secureLink = `https://maritimelink.com/shared/documents/${randomId}`;
-        setGeneratedLink(secureLink);
-        setShowShareModal(true);
-        setLinkCopied(false);
+        try {
+            const response = await documentService.createShareLink();
+            const secureLink = response?.data?.secureLink || '';
+            if (!secureLink) {
+                throw new Error('Could not generate secure link.');
+            }
+            setGeneratedLink(secureLink);
+            setShowShareModal(true);
+            setLinkCopied(false);
+        } catch (error) {
+            console.error('Create share link failed', error);
+            setGeneratedLink('');
+            setShowShareModal(true);
+        }
     };
 
     // Copy link to clipboard
     const handleCopyLink = () => {
+        if (!generatedLink) return;
         navigator.clipboard.writeText(generatedLink);
         setLinkCopied(true);
         setTimeout(() => setLinkCopied(false), 2000);
@@ -690,8 +697,12 @@ const DocumentsWallet = () => {
 
                         <div className="mb-6">
                             <div className="flex items-center gap-2 mb-3">
-                                <CheckCircle size={20} className="text-green-500" />
-                                <p className="text-sm text-gray-600">Secure link generated successfully!</p>
+                                <CheckCircle size={20} className={generatedLink ? "text-green-500" : "text-amber-500"} />
+                                <p className="text-sm text-gray-600">
+                                    {generatedLink
+                                        ? 'Secure link generated successfully!'
+                                        : 'We could not generate a secure link right now.'}
+                                </p>
                             </div>
                             <p className="text-sm text-gray-500 mb-4">
                                 This link provides access to all your documents. Share it securely with trusted parties only.
@@ -699,15 +710,18 @@ const DocumentsWallet = () => {
 
                             {/* Generated Link */}
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 break-all text-sm text-gray-700 mb-4">
-                                {generatedLink}
+                                {generatedLink || 'Unable to generate secure link right now. Please try again.'}
                             </div>
 
                             {/* Copy Button */}
                             <button
                                 onClick={handleCopyLink}
+                                disabled={!generatedLink}
                                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${linkCopied
                                     ? 'bg-green-50 text-green-600 border-2 border-green-500'
-                                    : 'bg-[#003366] text-white hover:bg-blue-900'
+                                    : generatedLink
+                                        ? 'bg-[#003366] text-white hover:bg-blue-900'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 {linkCopied ? (
