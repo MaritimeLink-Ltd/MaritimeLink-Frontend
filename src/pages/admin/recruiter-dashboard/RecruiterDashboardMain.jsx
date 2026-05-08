@@ -89,8 +89,10 @@ const RecruiterDashboardMain = () => {
                 candidateData={viewingCandidate.candidateData}
                 onBack={() => setViewingCandidate(null)}
                 showApplicationStatus={viewingCandidate.fromJobApplicants}
+                hideDocumentWallet={Boolean(viewingCandidate.fromCandidateSearch)}
                 onViewResume={(candidateId, resumeData) => setViewingResume({ candidateId, resumeData })}
                 onMessage={(candidateId, candidateName) => {
+                    setViewingCandidate(null);
                     setMessagingCandidate({ id: candidateId, name: candidateName });
                     setActiveTab('chats');
                 }}
@@ -108,7 +110,18 @@ const RecruiterDashboardMain = () => {
             case 'dashboard':
                 return <RecruiterDashboard onNavigate={handleNavigateToSection} />;
             case 'search':
-                return <AdminSearch onViewCandidate={(candidate) => setViewingCandidate({ id: candidate?.id, candidateData: candidate, fromJobApplicants: false })} />;
+                return (
+                    <AdminSearch
+                        onViewCandidate={(candidate) =>
+                            setViewingCandidate({
+                                id: candidate?.id,
+                                candidateData: candidate,
+                                fromJobApplicants: false,
+                                fromCandidateSearch: true,
+                            })
+                        }
+                    />
+                );
             case 'jobs':
                 return <AdminJobs onViewApplicants={(jobId) => setViewingJobApplicants(jobId)} onCreateJob={() => setCreatingJob(true)} />;
             case 'chats':

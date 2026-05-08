@@ -208,7 +208,32 @@ const extractUpdatedByRole = (source) => {
     return null;
 };
 
-function CandidateSummary({ candidateId: propCandidateId, candidateData: propCandidateData, onBack, showApplicationStatus = false, onViewResume, onMessage }) {
+function resolveMessagingProfessionalId(professional, fallbackCandidateId) {
+    const raw =
+        professional?.id ??
+        professional?.professionalId ??
+        professional?.userId ??
+        professional?._id ??
+        fallbackCandidateId;
+    return raw != null ? String(raw) : '';
+}
+
+function resolveChatsPathForCurrentUser(locationPathname) {
+    const p = String(locationPathname || '');
+    if (p.includes('/trainingprovider/')) return '/trainingprovider/chats';
+    if (p.includes('/recruiter/')) return '/recruiter/chats';
+    return '/admin/chats';
+}
+
+function CandidateSummary({
+    candidateId: propCandidateId,
+    candidateData: propCandidateData,
+    onBack,
+    showApplicationStatus = false,
+    hideDocumentWallet: hideDocumentWalletProp = false,
+    onViewResume,
+    onMessage,
+}) {
     const navigate = useNavigate();
     const location = useLocation();
     const { candidateId: urlCandidateId } = useParams();
@@ -609,6 +634,22 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
 
     const { professional, resume, attachedDocuments, applicationAttachments, cvUrl, coverLetter, coverLetterUrl, fallback } =
         resolveApplicantData();
+
+    /**
+     * Recruiter discovery (global search): hide wallet; job applicant views use `fromJobDetail: true` in location state.
+     * Also treat `/recruiter/candidate/...` without `fromJobDetail` as search when state was lost (refresh / direct URL).
+     */
+    const isRecruiterSearchCandidateDetail =
+        !isAdmin &&
+        typeof location.pathname === 'string' &&
+        location.pathname.startsWith('/recruiter/candidate/') &&
+        !location.state?.fromJobDetail;
+
+    /** Recruiter “search candidates” profile: hide wallet / sensitive docs (resume still via View Resume). */
+    const suppressDocumentWallet =
+        Boolean(hideDocumentWalletProp) ||
+        Boolean(location.state?.fromCandidateSearch) ||
+        isRecruiterSearchCandidateDetail;
 
     const adminCreatedJobApplicationView =
         isAdmin &&
@@ -1110,21 +1151,27 @@ function CandidateSummary({ candidateId: propCandidateId, candidateData: propCan
                             </button>
                         )}
 
-                        <button onClick={() => setShowDocumentWallet(true)} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
-                            <Wallet className="h-5 w-5" />
-                            View Document Wallet
-                        </button>
+                        {!suppressDocumentWallet ? (
+                            <button onClick={() => setShowDocumentWallet(true)} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
+                                <Wallet className="h-5 w-5" />
+                                View Document Wallet
+                            </button>
+                        ) : null}
 
                         {adminMessagingAllowed ? (
                             <button
                                 type="button"
-                                onClick={() => onMessage
-                            ? onMessage((professional?.id || professional?.professionalId || candidateId), candidate.name)
-                            : navigate(
-                                        location.pathname.includes('/trainingprovider/') ? '/trainingprovider/chats' : '/admin/chats',
-                                        { state: { candidateId: (professional?.id || professional?.professionalId || candidateId), candidateName: candidate.name } },
-                                    )
-                                }
+                                onClick={() => {
+                                    const pid = resolveMessagingProfessionalId(professional, candidateId);
+                                    if (onMessage) {
+                                        onMessage(pid, candidate.name);
+                                        return;
+                                    }
+                                    const chatsPath = resolveChatsPathForCurrentUser(location.pathname);
+                                    navigate(chatsPath, {
+                                        state: { candidateId: pid, candidateName: candidate.name },
+                                    });
+                                }}
                                 className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
                             >
                                 <MessageSquare className="h-5 w-5" />

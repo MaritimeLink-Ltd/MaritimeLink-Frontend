@@ -184,7 +184,7 @@ function AdminSearch({ onViewCandidate }) {
             return;
         }
         navigate(`/recruiter/candidate/${candidate?.id}`, {
-            state: { candidateData: candidate, isProfessionalView: true },
+            state: { candidateData: candidate, isProfessionalView: true, fromCandidateSearch: true },
         });
     };
 

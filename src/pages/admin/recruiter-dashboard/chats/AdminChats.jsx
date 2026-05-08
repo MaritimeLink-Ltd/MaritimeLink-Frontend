@@ -18,8 +18,11 @@ import conversationService, {
 } from '../../../../services/conversationService';
 import { subscribeConversationMessages } from '../../../../services/socketClient';
 
-const UUID_RE =
-    /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
+/** UUID v1–v8 or common 24-char hex ids (e.g. Mongo ObjectId) */
+const ACCEPTABLE_CHAT_PEER_ID_RE =
+    /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff|[a-fA-F0-9]{24})$/;
+
+const isAcceptableChatPeerId = (value) => ACCEPTABLE_CHAT_PEER_ID_RE.test(String(value || '').trim());
 
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
@@ -173,7 +176,7 @@ function AdminChats({ candidateId: propCandidateId }) {
         if (requestedConversationId) return undefined;
         if (listLoading) return undefined;
         if (initialConversation?.id) return undefined;
-        if (!UUID_RE.test(String(candidateId))) {
+        if (!isAcceptableChatPeerId(candidateId)) {
             setBootstrapError('Could not start chat: invalid user id.');
             return undefined;
         }
