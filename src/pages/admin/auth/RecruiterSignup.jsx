@@ -6,6 +6,11 @@ function RecruiterSignup() {
     const navigate = useNavigate();
     const location = useLocation();
     const isTrainingProvider = location.pathname.includes('training-provider');
+    // Keep work-email validation enabled by default; only bypass on local/dev.
+    const isLocalOnlyBypass =
+        Boolean(import.meta.env.DEV) ||
+        (typeof window !== 'undefined' &&
+            ['localhost', '127.0.0.1'].includes(window.location.hostname));
 
     const [formData, setFormData] = useState({
         email: '',
@@ -51,18 +56,20 @@ function RecruiterSignup() {
             return;
         }
 
-        // Local testing only: work email validation is temporarily disabled.
-        // const emailLower = formData.email.toLowerCase();
-        // const personalDomains = [
-        //     '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
-        //     '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
-        // ];
-        //
-        // const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
-        // if (isPersonalEmail) {
-        //     setError('Please use a valid work email address');
-        //     return;
-        // }
+        // Disable this check only on local/dev.
+        if (!isLocalOnlyBypass) {
+            const emailLower = formData.email.toLowerCase();
+            const personalDomains = [
+                '@gmail.com', '@yahoo.com', '@outlook.com', '@hotmail.com',
+                '@aol.com', '@icloud.com', '@mail.com', '@zoho.com', '@protonmail.com'
+            ];
+
+            const isPersonalEmail = personalDomains.some(domain => emailLower.endsWith(domain));
+            if (isPersonalEmail) {
+                setError('Please use a valid work email address');
+                return;
+            }
+        }
 
         if (!formData.agreeToTerms) {
             setError('You must agree to the Terms & Conditions');
