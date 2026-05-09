@@ -61,9 +61,13 @@ function DemandPlanning() {
   const capacitySummary = summary.capacity || {
     utilization: 0,
     bookedSeats: 0,
+    seatsUnderReview: 0,
     totalSeats: 0,
   };
   const capacityUtilization = capacitySummary.utilization;
+  const totalAvailableSeats = capacitySummary.totalSeats || 0;
+  const seatsFilled = capacitySummary.bookedSeats || 0;
+  const seatsUnderReview = capacitySummary.seatsUnderReview || 0;
   const topTrendingCourse = dashboardData.renewalDemand[0]?.course || "—";
 
   const periodQuery =
@@ -379,7 +383,7 @@ function DemandPlanning() {
           <div className="p-6">
             <h2 className="text-lg font-bold text-gray-900">Capacity</h2>
             <p className="text-xs text-gray-500 mt-0.5 mb-5">
-              Overall utilization across scheduled sessions
+              Total seats available on your posted courses
             </p>
 
             {/* Hero stat + progress bar */}
@@ -393,15 +397,19 @@ function DemandPlanning() {
                       : `${capacityUtilization}%`}
                 </span>
                 <span className="text-sm text-gray-500">
-                  {capacitySummary.bookedSeats} / {capacitySummary.totalSeats}{" "}
-                  seats
+                  {seatsFilled} / {totalAvailableSeats}{" "}
+                  seats filled
                 </span>
               </div>
-              {capacitySummary.totalSeats === 0 &&
-                (capacitySummary.bookedSeats ?? 0) > 0 && (
+              {totalAvailableSeats === 0 && seatsFilled > 0 && (
                   <p className="text-xs text-amber-700 mb-2">
                     Set per-course capacity to see utilization. Bookings:{" "}
-                    {capacitySummary.bookedSeats}
+                    {seatsFilled}
+                  </p>
+                )}
+              {totalAvailableSeats === 0 && seatsFilled === 0 && (
+                  <p className="text-xs text-gray-600 mb-2">
+                    Create courses with capacity to see utilization metrics.
                   </p>
                 )}
               <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -421,27 +429,23 @@ function DemandPlanning() {
                   Available
                 </p>
                 <p className="text-lg font-bold text-gray-900 mt-0.5">
-                  {Math.max(
-                    0,
-                    (capacitySummary.totalSeats || 0) -
-                      (capacitySummary.bookedSeats || 0),
-                  )}
+                  {loading ? "—" : Math.max(0, totalAvailableSeats - seatsFilled - seatsUnderReview)}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Scheduled
+                  Filled
                 </p>
                 <p className="text-lg font-bold text-gray-900 mt-0.5">
-                  {capacitySummary.bookedSeats}
+                  {loading ? "—" : seatsFilled}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
                 <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  In Review
+                  Under Review
                 </p>
                 <p className="text-lg font-bold text-gray-900 mt-0.5">
-                  {summary.uniqueCurrentMonth || 0}
+                  {loading ? "—" : seatsUnderReview}
                 </p>
               </div>
             </div>
