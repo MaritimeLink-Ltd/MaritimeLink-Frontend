@@ -4,11 +4,10 @@ import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
-import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+// import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 
 const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
-    const [activeFilter, setActiveFilter] = useState('All');
     const [view, setView] = useState('list'); // 'list', 'detail', 'edit'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -16,15 +15,6 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
     const [replaceDocId, setReplaceDocId] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteTargetDoc, setDeleteTargetDoc] = useState(null);
-
-    const filters = [
-        'All',
-        'Compliance Ready',
-        'Pending Approval',
-        'Expiring Soon',
-        'Expired',
-        'Rejected',
-    ];
 
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +41,6 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                 .filter((doc) => getDocumentDisplayCategory(doc) === categoryId)
                 .map(doc => ({
                     ...doc,
-                    status: getDocumentStatusMeta(doc),
                     expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
                     type: getDocumentCategoryLabel(getDocumentDisplayCategory(doc)),
                     displayCategory: getDocumentDisplayCategory(doc),
@@ -163,28 +152,9 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
         }
     };
 
-    // Filter documents based on active filter
+    // Get all documents
     const getFilteredDocuments = () => {
-        if (activeFilter === 'All') {
-            return documents;
-        }
-        
-        return documents.filter(doc => {
-            switch (activeFilter) {
-                case 'Compliance Ready':
-                    return doc.status?.key === 'ready';
-                case 'Pending Approval':
-                    return doc.status?.key === 'pending' || doc.status?.key === 'mismatch' || doc.status?.key === 'ocr-failed';
-                case 'Expiring Soon':
-                    return doc.status?.key === 'expiring';
-                case 'Expired':
-                    return doc.status?.key === 'expired';
-                case 'Rejected':
-                    return doc.status?.key === 'rejected';
-                default:
-                    return true;
-            }
-        });
+        return documents;
     };
 
     const filteredDocuments = getFilteredDocuments();
@@ -236,22 +206,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                     </button>
                 </div>
 
-                {/* Filters - Horizontal scroll on mobile */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                    {filters.map((filter) => (
-                        <button
-                            key={filter}
-                            onClick={() => setActiveFilter(filter)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === filter
-                                ? 'bg-[#003971] text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            {filter}
-                        </button>
-                    ))}
                 </div>
-            </div>
 
             {/* Documents Grid - Single column on mobile */}
             <div className="px-4 sm:px-6 pt-3 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto bg-white" style={{ maxHeight: 'calc(100vh - 200px)' }}>

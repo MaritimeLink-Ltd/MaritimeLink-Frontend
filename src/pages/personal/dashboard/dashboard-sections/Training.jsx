@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, MessageCircle, Loader2 } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, Loader2 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
@@ -339,18 +339,6 @@ const Training = () => {
                                         className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors min-h-[44px] flex-1 sm:flex-initial disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
                                         {hasBookableSelectedCourseSession ? 'Book now' : 'No seats available'}
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/personal/chats', {
-                                            state: {
-                                                provider: selectedCourse.provider,
-                                                courseTitle: selectedCourse.title
-                                            }
-                                        })}
-                                        className="flex items-center justify-center gap-2 px-5 py-2.5 border-2 border-[#003971] text-[#003971] rounded-full text-sm font-medium hover:bg-blue-50 transition-colors min-h-[44px] flex-1 sm:flex-initial"
-                                    >
-                                        <MessageCircle size={16} />
-                                        Chat
                                     </button>
                                     <button
                                         type="button"

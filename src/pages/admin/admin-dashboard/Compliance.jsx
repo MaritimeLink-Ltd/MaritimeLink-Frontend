@@ -33,12 +33,30 @@ function Compliance() {
         const fetchSubmissions = async () => {
             setIsLoading(true);
             try {
-                const [submissionsResponse, statsResponse] = await Promise.all([
-                    httpClient.get(API_ENDPOINTS.ADMIN.KYC_SUBMISSIONS),
+                // Fetch all records by looping through pages
+                let allSubmissions = [];
+                let page = 1;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const response = await httpClient.get(
+                        `${API_ENDPOINTS.ADMIN.KYC_SUBMISSIONS}?page=${page}&limit=50`
+                    );
+                    const submissions = response?.data?.submissions || [];
+                    allSubmissions = [...allSubmissions, ...submissions];
+                    // Check if there are more pages
+                    if (submissions.length < 50 || allSubmissions.length >= (response?.data?.total || 9999)) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+
+                const [statsResponse] = await Promise.all([
                     httpClient.get(API_ENDPOINTS.ADMIN.KYC_STATS)
                 ]);
-                
-                const data = submissionsResponse?.data?.submissions || [];
+
+                const data = allSubmissions;
                 const statsData = statsResponse?.data || null;
                 setApiStats(statsData);
                 

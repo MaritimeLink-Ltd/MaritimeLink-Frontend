@@ -236,6 +236,9 @@ export const API_ENDPOINTS = {
     MARKETPLACE_STATS: '/api/admin/marketplace/stats',
     MARKETPLACE_OVERSIGHT: '/api/admin/marketplace/oversight',
     MARKETPLACE_LISTINGS: '/api/admin/marketplace/listings',
+    ADMIN_JOBS: '/api/admin/jobs',
+    ADMIN_JOB_DETAIL: (id) => `/api/admin/jobs/${id}`,
+    ADMIN_COURSES: '/api/admin/courses',
     /** All bookings for a course (attendees / payment summary) — SUPER_ADMIN */
     COURSE_BOOKINGS: (courseId) => `/api/admin/courses/${courseId}/bookings`,
     /** Full course booking (documents, resume snapshot) — align with backend route. */

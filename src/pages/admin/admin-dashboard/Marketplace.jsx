@@ -138,30 +138,27 @@ function Marketplace() {
     const loadJobsData = async (page) => {
         try {
             setIsRefreshing(true);
+            // Use admin jobs API with pagination
             const params = new URLSearchParams({
-                type: 'JOBS',
                 page: String(page),
                 limit: String(itemsPerPage),
-                timeframe: mapTimeFilterToParam(timeFilter),
             });
             if (searchQuery.trim()) params.set('search', searchQuery.trim());
-            const statusParam = mapStatusFilterToParam(statusFilter);
-            if (statusParam) params.set('status', statusParam);
 
             const res = await httpClient.get(
-                `${API_ENDPOINTS.ADMIN.MARKETPLACE_LISTINGS}?${params.toString()}`
+                `${API_ENDPOINTS.ADMIN.ADMIN_JOBS}?${params.toString()}`
             );
 
             // Always update state even if listings are empty to prevent stale data
-            const listings = res?.data?.listings || res?.listings || [];
+            const jobs = res?.data?.jobs || res?.jobs || [];
             const total =
+                res?.data?.pagination?.total ||
                 res?.data?.total ||
-                res?.pagination?.total ||
                 res?.total ||
-                listings.length ||
+                jobs.length ||
                 0;
 
-            setRemoteJobs(listings);
+            setRemoteJobs(jobs);
             setTotalRemoteJobs(total);
         } catch (error) {
             console.error('Failed to load listings:', error);
@@ -222,8 +219,18 @@ function Marketplace() {
             const res = await httpClient.get(
                 `${API_ENDPOINTS.COURSES.LIST}?page=${page}&limit=${itemsPerPage}`
             );
-            const courses = res?.data?.courses ?? [];
-            const total = typeof res?.total === 'number' ? res.total : courses.length;
+            let courses = res?.data?.courses ?? [];
+
+            // For MaritimeLink Listings, filter to show only admin-created courses
+            if (activeMainTab === 'MaritimeLink Listings' && activeSubTab === 'Training Courses') {
+                courses = courses.filter(course => course.adminId !== null);
+            }
+            // For Oversight, filter to show only trainer/recruiter-created courses
+            else if (activeMainTab === 'Oversight' && activeSubTab === 'Training Courses') {
+                courses = courses.filter(course => course.recruiterId !== null);
+            }
+
+            const total = courses.length;
             setCoursesList(courses);
             setTotalCourses(total);
         } catch (error) {
@@ -476,7 +483,7 @@ function Marketplace() {
             data = activeSubTab === 'Training Courses' ? coursesList : oversightData;
         } else {
             if (activeSubTab === 'Jobs') {
-                data = remoteJobs.filter(job => job.adminId);
+                data = remoteJobs;
             } else {
                 data = coursesList;
             }
@@ -721,20 +728,24 @@ function Marketplace() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <input
-                            type="file"
-                            ref={fileInputRef} // I need to verify if I have declared this ref
-                            style={{ display: 'none' }}
-                            accept=".csv"
-                            onChange={handleBulkUploadFile}
-                        />
-                        <button
-                            onClick={handleBulkUploadClick}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#003971] rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                            <Upload className="h-4 w-4" />
-                            Bulk Upload (CSV)
-                        </button>
+                        {activeSubTab === 'Jobs' && (
+                            <>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    style={{ display: 'none' }}
+                                    accept=".csv"
+                                    onChange={handleBulkUploadFile}
+                                />
+                                <button
+                                    onClick={handleBulkUploadClick}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-[#003971] rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                                >
+                                    <Upload className="h-4 w-4" />
+                                    Bulk Upload (CSV)
+                                </button>
+                            </>
+                        )}
                         <button
                             onClick={handleCreateNew}
                             className="flex items-center gap-2 px-4 py-2 bg-[#003971] text-white rounded-lg text-sm font-semibold hover:bg-[#002855] transition-colors"
@@ -1138,10 +1149,7 @@ function Marketplace() {
                                                     </button>
                                                 ) : (
                                                     <Link
-                                                        to={job.creatorType === 'ADMIN'
-                                                            ? `/admin/jobs?adminId=${job.id}`
-                                                            : `/admin/marketplace/oversight/recruiter/${job.id}/jobs`
-                                                        }
+                                                        to={`/admin/marketplace/internal/jobs/${job.id}`}
                                                         className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                     >
                                                         View Details

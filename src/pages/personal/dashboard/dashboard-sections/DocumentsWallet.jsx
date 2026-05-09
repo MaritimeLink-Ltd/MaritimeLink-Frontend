@@ -21,13 +21,12 @@ import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
 import { API_CONFIG } from '../../../../config/api.config';
-import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
+// import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
-    const [activeFilter, setActiveFilter] = useState('All');
     const [view, setView] = useState('list'); // 'list', 'upload', 'edit', 'detail', 'category'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -49,15 +48,6 @@ const DocumentsWallet = () => {
     // Real data state
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    const filters = [
-        'All',
-        'Compliance Ready',
-        'Pending Approval',
-        'Expiring Soon',
-        'Expired',
-        'Rejected',
-    ];
 
     /** Wallet grid categories only — resume/CV rows are stored but not shown here */
     const categoryDefinitions = [
@@ -120,7 +110,7 @@ const DocumentsWallet = () => {
     ];
 
     const [dynamicCategories, setDynamicCategories] = useState(() =>
-        categoryDefinitions.map((c) => ({ ...c, count: 0, statusBadges: [] })),
+        categoryDefinitions.map((c) => ({ ...c, count: 0 })),
     );
 
     const [uploadContextCategory, setUploadContextCategory] = useState(null);
@@ -144,18 +134,6 @@ const DocumentsWallet = () => {
 
             const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
 
-            const STATUS_BADGE_META = {
-                ready: { label: 'Compliance Ready', color: 'bg-emerald-600' },
-                pending: { label: 'Pending Approval', color: 'bg-yellow-500' },
-                mismatch: { label: 'Needs Review', color: 'bg-red-500' },
-                'ocr-failed': { label: 'OCR Failed', color: 'bg-red-500' },
-                expiring: { label: 'Expiring Soon', color: 'bg-orange-500' },
-                expired: { label: 'Expired', color: 'bg-pink-500' },
-                rejected: { label: 'Rejected', color: 'bg-red-600' },
-            };
-
-            const BADGE_KEY_ORDER = ['ready', 'pending', 'mismatch', 'ocr-failed', 'expiring', 'expired', 'rejected'];
-
             const walletDocs = docs.filter((d) => d.category && !EXCLUDED_FROM_WALLET.has(d.category));
 
             const docsByCategoryId = {};
@@ -169,26 +147,9 @@ const DocumentsWallet = () => {
             setDynamicCategories(
                 categoryDefinitions.map((def) => {
                     const catDocs = docsByCategoryId[def.id] || [];
-                    const statusCounts = {};
-                    catDocs.forEach((doc) => {
-                        const { key } = getDocumentStatusMeta(doc);
-                        statusCounts[key] = (statusCounts[key] || 0) + 1;
-                    });
-
-                    const statusBadges = BADGE_KEY_ORDER.filter((k) => statusCounts[k] > 0).map((k) => {
-                        const meta = STATUS_BADGE_META[k];
-                        const n = statusCounts[k];
-                        return {
-                            key: k,
-                            label: `${n} ${meta.label}`,
-                            color: meta.color,
-                        };
-                    });
-
                     return {
                         ...def,
                         count: catDocs.length,
-                        statusBadges,
                     };
                 }),
             );
@@ -229,33 +190,12 @@ const DocumentsWallet = () => {
             return getDocumentDisplayCategory(doc) === walletFolderId;
         };
 
-        const docMatchesWalletFilter = (doc, filter) => {
-            const meta = getDocumentStatusMeta(doc);
-            switch (filter) {
-                case 'Compliance Ready':
-                    return meta.key === 'ready';
-                case 'Pending Approval':
-                    return meta.key === 'pending' || meta.key === 'mismatch' || meta.key === 'ocr-failed';
-                case 'Expiring Soon':
-                    return meta.key === 'expiring';
-                case 'Expired':
-                    return meta.key === 'expired';
-                case 'Rejected':
-                    return meta.key === 'rejected';
-                default:
-                    return true;
-            }
-        };
-
         return dynamicCategories.filter((category) => {
             const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
             if (!matchesSearch) return false;
-            if (activeFilter === 'All') return true;
-
-            const catDocs = documents.filter((d) => docBelongsToWalletFolder(d, category.id));
-            return catDocs.some((d) => docMatchesWalletFilter(d, activeFilter));
+            return true;
         });
-    }, [dynamicCategories, documents, activeFilter, searchQuery]);
+    }, [dynamicCategories, searchQuery]);
 
     const handleUploadComplete = (newDoc) => {
         fetchDocuments(); // refresh list
@@ -552,32 +492,8 @@ const DocumentsWallet = () => {
                     </div>
                 </div>
 
-                {/* Filters Row - Horizontal scroll on mobile */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-                        <button
-                            onClick={() => setActiveFilter('All')}
-                            className={`px-4 sm:px-5 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeFilter === 'All'
-                                ? 'bg-[#003366] text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-50'
-                                }`}
-                        >
-                            All
-                        </button>
-                        {filters.slice(1).map((filter) => (
-                            <button
-                                key={filter}
-                                onClick={() => setActiveFilter(filter)}
-                                className={`px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeFilter === filter
-                                    ? 'bg-[#003366] text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                            >
-                                {filter}
-                            </button>
-                        ))}
-                    </div>
-
+                {/* Upload Button */}
+                <div className="flex justify-end">
                     <button
                         onClick={() => setView('upload')}
                         className="flex items-center justify-center gap-2 bg-blue-50 text-[#003366] px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-100 transition-colors min-h-[44px] flex-shrink-0"
@@ -614,19 +530,6 @@ const DocumentsWallet = () => {
                                         <p className="text-gray-400 text-sm mt-0.5 font-medium">{cat.count} Documents</p>
                                     </div>
                                 </div>
-
-                                {cat.statusBadges?.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                        {cat.statusBadges.map((b) => (
-                                            <span
-                                                key={b.key}
-                                                className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${b.color}`}
-                                            >
-                                                {b.label}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     ))
