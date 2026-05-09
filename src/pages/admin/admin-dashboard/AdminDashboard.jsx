@@ -115,6 +115,7 @@ function AdminDashboard() {
         flaggedIssues: 0,
         expiringCount: 0,
         expiringTimeframe: '30d',
+        expiringExpiredLookbackDays: 365,
     });
     const [adminStatsLoading, setAdminStatsLoading] = useState(true);
     const [adminStatsError, setAdminStatsError] = useState(null);
@@ -194,6 +195,7 @@ function AdminDashboard() {
                             flaggedIssues: Number(s.flaggedIssues) || 0,
                             expiringCount: Number(exp.count) || 0,
                             expiringTimeframe: exp.timeframe || '30d',
+                            expiringExpiredLookbackDays: Number(exp.expiredLookbackDays) || 365,
                         });
                     }
                 } else if (!cancelled) {
@@ -346,7 +348,7 @@ function AdminDashboard() {
             adminStatsLoading ? '…' : adminStats.flaggedIssues > 0 ? 'Needs attention' : 'None open';
         const expiringBadge = adminStatsLoading
             ? '…'
-            : `Next ${formatAdminExpiringTimeframe(adminStats.expiringTimeframe)}`;
+            : `Past ${adminStats.expiringExpiredLookbackDays}d expired · next ${formatAdminExpiringTimeframe(adminStats.expiringTimeframe)}`;
 
         return [
             {
@@ -588,7 +590,29 @@ function AdminDashboard() {
                 {topStats.map((stat) => (
                     <div
                         key={stat.id}
-                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden cursor-default ${adminStatsLoading ? 'opacity-90' : ''}`}
+                        role={stat.path && !adminStatsLoading ? 'button' : undefined}
+                        tabIndex={stat.path && !adminStatsLoading ? 0 : undefined}
+                        aria-label={
+                            stat.path && !adminStatsLoading
+                                ? `Open ${stat.label}`
+                                : undefined
+                        }
+                        onClick={() => {
+                            if (adminStatsLoading || !stat.path) return;
+                            navigate(stat.path);
+                        }}
+                        onKeyDown={(e) => {
+                            if (adminStatsLoading || !stat.path) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                navigate(stat.path);
+                            }
+                        }}
+                        className={`bg-gradient-to-br ${stat.gradient} rounded-[24px] p-7 text-white shadow-lg relative overflow-hidden ${
+                            stat.path && !adminStatsLoading
+                                ? 'cursor-pointer hover:brightness-110 hover:ring-2 hover:ring-white/40 transition duration-150'
+                                : 'cursor-default'
+                        } ${adminStatsLoading ? 'opacity-90' : ''}`}
                     >
                         <div className="relative z-10">
                             {/* Icon and Badge */}

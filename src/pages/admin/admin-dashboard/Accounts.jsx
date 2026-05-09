@@ -124,6 +124,14 @@ function Accounts() {
         }
     }, [location]);
 
+    useEffect(() => {
+        const q = new URLSearchParams(location.search);
+        if (q.get('view') === 'expiring_compliance') {
+            setActiveTab('Professionals');
+            setStatusFilter('Expiring Soon');
+        }
+    }, [location.search]);
+
     // Filter states
     const [companyFilter, setCompanyFilter] = useState('All');
     const [domainFilter, setDomainFilter] = useState('All');
@@ -296,7 +304,17 @@ function Accounts() {
         setIsLoadingProfessionals(true);
         setProfessionalsError('');
         try {
-            const response = await httpClient.get(`${API_ENDPOINTS.ADMIN.PROFESSIONALS}?limit=1000`);
+            const params = new URLSearchParams({ limit: '1000' });
+            if (statusFilter === 'Expiring Soon') {
+                params.set('complianceAttention', 'true');
+                let timeframe = '30d';
+                if (timeFilter === 'Today') timeframe = 'today';
+                else if (timeFilter === '7 Days') timeframe = '7d';
+                params.set('timeframe', timeframe);
+            }
+            const response = await httpClient.get(
+                `${API_ENDPOINTS.ADMIN.PROFESSIONALS}?${params.toString()}`
+            );
             
             // Fetch stats
             try {
@@ -337,27 +355,40 @@ function Accounts() {
                 return `${diffWeeks} weeks ago`;
             };
 
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
             const mappedProfessionals = professionalsList.map((item) => {
                 let statusLabel = item.status === 'VERIFIED' || item.isVerified ? 'Verified' : 'Pending Verification';
                 if (item.status === 'FLAGGED') statusLabel = 'Flagged';
                 let statusColor = 'text-green-500';
                 if (statusLabel === 'Pending Verification') statusColor = 'text-orange-500';
                 if (statusLabel === 'Flagged') statusColor = 'text-red-500';
-                
+
+                const exp = item.nearestComplianceExpiry ? new Date(item.nearestComplianceExpiry) : null;
+                let complianceRowStatus = null;
+                if (exp && !Number.isNaN(exp.getTime())) {
+                    complianceRowStatus = exp < startOfToday ? 'Expired' : 'Expiring Soon';
+                    statusColor =
+                        complianceRowStatus === 'Expired' ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold';
+                }
+
                 return {
                     id: item.id,
                     name: item.fullname || 'Unknown',
                     company: 'Self-Employed',
                     domain: item.email || 'N/A',
-                    country: item.country || 'N/A',
+                    country: item.country || item.resume?.country || 'N/A',
                     tier: item.tier ? item.tier.charAt(0).toUpperCase() + item.tier.slice(1).toLowerCase() : 'Free',
                     riskLevel: item.riskLevel || item.kyc?.riskLevel || null,
                     hasCompanyMismatch: false,
                     hasDocumentMismatch: Boolean(item.hasDocumentMismatch),
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
-                    status: statusLabel,
+                    status: complianceRowStatus || statusLabel,
                     statusColor: statusColor,
-                    isVerified: item.isVerified
+                    isVerified: item.isVerified,
+                    nearestComplianceExpiry: item.nearestComplianceExpiry || null,
+                    nearestComplianceDocumentName: item.nearestComplianceDocumentName || null,
                 };
             });
             
@@ -547,14 +578,17 @@ function Accounts() {
     useEffect(() => {
         if (activeTab === 'KYC Status') {
             fetchKycSubmissions();
-        } else if (activeTab === 'Professionals') {
-            fetchProfessionals();
         } else if (activeTab === 'Recruiters') {
             fetchRecruiters();
         } else if (activeTab === 'Training Providers') {
             fetchTrainers();
         }
     }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab !== 'Professionals') return;
+        fetchProfessionals();
+    }, [activeTab, statusFilter, timeFilter]);
 
     // Tab-specific data
     const recruitersData = recruiters;
@@ -786,8 +820,12 @@ function Accounts() {
                 (!isProfessionalTab && account.domain?.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 account.country?.toLowerCase().includes(searchQuery.toLowerCase());
 
-            // Status filter
-            const matchesStatus = statusFilter === 'All' || account.status === statusFilter;
+            // Status filter (compliance view uses Expired / Expiring Soon from API)
+            const matchesStatus =
+                statusFilter === 'All' ||
+                account.status === statusFilter ||
+                (statusFilter === 'Expiring Soon' &&
+                    (account.status === 'Expiring Soon' || account.status === 'Expired'));
 
             // Company filter
             const matchesCompany = isProfessionalTab || companyFilter === 'All' || account.company === companyFilter;
@@ -795,9 +833,11 @@ function Accounts() {
             // Domain filter
             const matchesDomain = isProfessionalTab || domainFilter === 'All' || account.domain === domainFilter;
 
-            // Time filter - parse lastActive to determine days ago
+            // Time filter - parse lastActive to determine days ago (skip when listing compliance; API uses timeframe)
             let matchesTime = true;
-            if (timeFilter !== '30 Days') {
+            if (isProfessionalTab && statusFilter === 'Expiring Soon') {
+                matchesTime = true;
+            } else if (timeFilter !== '30 Days') {
                 const lastActive = account.lastActive?.toLowerCase() || '';
                 let daysAgo = 0;
 
