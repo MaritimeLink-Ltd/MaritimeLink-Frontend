@@ -44,6 +44,8 @@ const DocumentsWallet = () => {
     const [exportError, setExportError] = useState('');
     const [generatedLink, setGeneratedLink] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
+    const [shareLoading, setShareLoading] = useState(false);
+    const [shareDetails, setShareDetails] = useState(null);
 
     // Real data state
     const [documents, setDocuments] = useState([]);
@@ -181,6 +183,11 @@ const DocumentsWallet = () => {
             mounted = false;
         };
     }, []);
+
+    const walletDocumentsForShare = useMemo(() => {
+        const EXCLUDED = new Set(['CV_RESUME', 'COVER_LETTER']);
+        return documents.filter((d) => d.category && !EXCLUDED.has(d.category));
+    }, [documents]);
 
     const filteredDynamicCategories = useMemo(() => {
         const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
@@ -371,19 +378,31 @@ const DocumentsWallet = () => {
             return;
         }
 
+        setShowShareModal(true);
+        setShareLoading(true);
+        setGeneratedLink('');
+        setShareDetails(null);
+        setLinkCopied(false);
+
         try {
             const response = await documentService.createShareLink();
-            const secureLink = response?.data?.secureLink || '';
+            const d = response?.data ?? response ?? {};
+            const secureLink = d.secureLink || '';
             if (!secureLink) {
                 throw new Error('Could not generate secure link.');
             }
             setGeneratedLink(secureLink);
-            setShowShareModal(true);
-            setLinkCopied(false);
+            setShareDetails({
+                expiresAt: d.expiresAt || null,
+                previewOnly: d.previewOnly !== false,
+                expiresInSeconds: d.expiresInSeconds ?? null,
+            });
         } catch (error) {
             console.error('Create share link failed', error);
             setGeneratedLink('');
-            setShowShareModal(true);
+            setShareDetails(null);
+        } finally {
+            setShareLoading(false);
         }
     };
 
@@ -587,39 +606,96 @@ const DocumentsWallet = () => {
             {/* Share Secure Link Modal */}
             {showShareModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-semibold text-gray-800">Share Secure Link</h3>
                             <button
-                                onClick={() => setShowShareModal(false)}
+                                type="button"
+                                onClick={() => {
+                                    setShowShareModal(false);
+                                    setShareLoading(false);
+                                }}
                                 className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
 
+                        <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-3 py-2.5 mb-4 text-xs text-gray-700 space-y-1">
+                            <p>
+                                <span className="font-semibold text-[#003366]">7-day access.</span>{' '}
+                                This link stops working after seven days.
+                            </p>
+                            <p>
+                                <span className="font-semibold text-[#003366]">Preview only.</span>{' '}
+                                Recipients can view documents in the browser; direct downloads are not provided on the shared page.
+                            </p>
+                            {shareDetails?.expiresAt && (
+                                <p className="text-gray-600">
+                                    Expires:{' '}
+                                    <strong>
+                                        {new Date(shareDetails.expiresAt).toLocaleString(undefined, {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short',
+                                        })}
+                                    </strong>
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                                Documents included ({walletDocumentsForShare.length})
+                            </p>
+                            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-gray-50/50">
+                                {walletDocumentsForShare.length === 0 ? (
+                                    <p className="p-3 text-sm text-gray-500">No wallet documents to share yet.</p>
+                                ) : (
+                                    walletDocumentsForShare.map((doc) => (
+                                        <div key={doc.id} className="px-3 py-2 text-sm">
+                                            <p className="font-medium text-gray-900 line-clamp-2">{doc.name || 'Untitled'}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5 capitalize">
+                                                {String(getDocumentDisplayCategory(doc) || '').replace(/-/g, ' ')}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
                         <div className="mb-6">
                             <div className="flex items-center gap-2 mb-3">
-                                <CheckCircle size={20} className={generatedLink ? "text-green-500" : "text-amber-500"} />
-                                <p className="text-sm text-gray-600">
-                                    {generatedLink
-                                        ? 'Secure link generated successfully!'
-                                        : 'We could not generate a secure link right now.'}
-                                </p>
+                                {shareLoading ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#003366] border-t-transparent" />
+                                        <p className="text-sm text-gray-600">Generating secure link…</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle size={20} className={generatedLink ? 'text-green-500' : 'text-amber-500'} />
+                                        <p className="text-sm text-gray-600">
+                                            {generatedLink
+                                                ? 'Secure link generated! Copy and send it only to people you trust.'
+                                                : 'We could not generate a secure link right now.'}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                             <p className="text-sm text-gray-500 mb-4">
-                                This link provides access to all your documents. Share it securely with trusted parties only.
+                                The link opens a MaritimeLink page (not a raw file URL). Share it securely.
                             </p>
 
-                            {/* Generated Link */}
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 break-all text-sm text-gray-700 mb-4">
-                                {generatedLink || 'Unable to generate secure link right now. Please try again.'}
+                                {shareLoading
+                                    ? '…'
+                                    : generatedLink ||
+                                      'Unable to generate secure link right now. Please try again.'}
                             </div>
 
-                            {/* Copy Button */}
                             <button
+                                type="button"
                                 onClick={handleCopyLink}
-                                disabled={!generatedLink}
+                                disabled={!generatedLink || shareLoading}
                                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${linkCopied
                                     ? 'bg-green-50 text-green-600 border-2 border-green-500'
                                     : generatedLink
@@ -641,9 +717,8 @@ const DocumentsWallet = () => {
                             </button>
                         </div>
 
-                        {/* Document Summary */}
                         <div className="border-t border-gray-200 pt-4">
-                            <p className="text-xs text-gray-500 mb-3">Documents included in this link:</p>
+                            <p className="text-xs text-gray-500 mb-3">Summary by folder</p>
                             <div className="grid grid-cols-2 gap-2">
                                 {dynamicCategories.map((cat) => (
                                     <div key={cat.id} className="flex items-center gap-2 text-xs text-gray-600">
@@ -656,9 +731,12 @@ const DocumentsWallet = () => {
                             </div>
                         </div>
 
-                        {/* Close Button */}
                         <button
-                            onClick={() => setShowShareModal(false)}
+                            type="button"
+                            onClick={() => {
+                                setShowShareModal(false);
+                                setShareLoading(false);
+                            }}
                             className="w-full mt-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
                         >
                             Close

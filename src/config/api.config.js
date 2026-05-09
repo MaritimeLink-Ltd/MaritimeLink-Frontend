@@ -60,6 +60,10 @@ export const API_ENDPOINTS = {
     LIST: '/api/professional/documents',
     MARK_REPORT_GENERATED: '/api/professional/documents/report-generated',
     CREATE_SHARE_LINK: '/api/professional/documents/share-link',
+    SHARED_PACK: (token) =>
+      `/api/professional/documents/shared/${encodeURIComponent(token)}`,
+    SHARED_FILE: (token, documentId) =>
+      `/api/professional/documents/shared/${encodeURIComponent(token)}/file/${documentId}`,
     UPDATE: (id) => `/api/professional/documents/${id}`,
     DELETE: (id) => `/api/professional/documents/${id}`,
   },

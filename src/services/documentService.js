@@ -106,6 +106,16 @@ class DocumentService {
     async createShareLink() {
         return httpClient.post(API_ENDPOINTS.DOCUMENTS.CREATE_SHARE_LINK, {});
     }
+
+    /**
+     * Public: list documents for a share token (no auth).
+     */
+    async getSharedDocumentPack(shareToken) {
+        if (!shareToken) throw new Error('Share token is required');
+        return httpClient.get(API_ENDPOINTS.DOCUMENTS.SHARED_PACK(shareToken), {
+            skipAuth: true,
+        });
+    }
 }
 
 // Create and export a singleton instance

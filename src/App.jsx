@@ -116,6 +116,7 @@ import ChangePassword from './pages/personal/dashboard/dashboard-sections/Change
 import ManageSubscription from './pages/personal/dashboard/dashboard-sections/ManageSubscription';
 import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
+import SharedDocumentPack from './pages/personal/SharedDocumentPack';
 import { expireSessionAndRedirect, parseJwtExpiryMs } from './utils/sessionManager';
 
 function App() {
@@ -197,6 +198,7 @@ function App() {
           <Route path="/select-medical" element={<SelectMedical />} />
           <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
           <Route path="/cv-resume" element={<CVResume />} />
+          <Route path="/personal/documents/shared/:token" element={<SharedDocumentPack />} />
 
           {/* Admin/Recruiter Setup Routes (No Layout) */}
           <Route path="/admin/login" element={<AdminLogin />} />
