@@ -13,6 +13,37 @@ export const API_CONFIG = {
   },
 };
 
+/** Deployed frontend host for copied links (share token path stays unchanged). */
+const DEFAULT_PUBLIC_APP_ORIGIN = 'https://maritme-link-web.vercel.app';
+
+/**
+ * Origin used in user-facing links (e.g. document share). The API may return
+ * `localhost`; the client rewrites to this origin. Set VITE_APP_PUBLIC_URL (or
+ * VITE_PUBLIC_APP_URL) to override — e.g. `http://localhost:5173` for local-only links.
+ */
+export function getPublicAppOrigin() {
+  const fromEnv = import.meta.env.VITE_APP_PUBLIC_URL || import.meta.env.VITE_PUBLIC_APP_URL;
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return fromEnv.trim().replace(/\/+$/, '');
+  }
+  return DEFAULT_PUBLIC_APP_ORIGIN;
+}
+
+/** Rebuilds a full share URL so the host matches the public app, not the API’s default. */
+export function rewriteShareLinkForSharing(secureLink) {
+  if (!secureLink || typeof secureLink !== 'string') return secureLink;
+  const publicOrigin = getPublicAppOrigin();
+  if (!publicOrigin) return secureLink;
+  try {
+    const u = secureLink.startsWith('http')
+      ? new URL(secureLink)
+      : new URL(secureLink, publicOrigin);
+    return `${publicOrigin}${u.pathname}${u.search}${u.hash}`;
+  } catch {
+    return secureLink;
+  }
+}
+
 export const API_ENDPOINTS = {
   // Authentication Endpoints
   AUTH: {

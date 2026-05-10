@@ -20,7 +20,7 @@ import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
-import { API_CONFIG } from '../../../../config/api.config';
+import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.config';
 // import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
@@ -391,7 +391,7 @@ const DocumentsWallet = () => {
             if (!secureLink) {
                 throw new Error('Could not generate secure link.');
             }
-            setGeneratedLink(secureLink);
+            setGeneratedLink(rewriteShareLinkForSharing(secureLink));
             setShareDetails({
                 expiresAt: d.expiresAt || null,
                 previewOnly: d.previewOnly !== false,
