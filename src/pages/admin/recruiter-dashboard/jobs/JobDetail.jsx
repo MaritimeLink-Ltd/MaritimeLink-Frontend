@@ -104,6 +104,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         isAdminPath && location.pathname.includes('/admin/marketplace/oversight/jobs/');
     const isMarketplaceInternalAdminJob =
         isAdminPath && location.pathname.includes('/admin/marketplace/internal/jobs/');
+
     /**
      * Recruiters always manage their listings.
      * Platform admins: hide edit/delete/publish/close on recruiter jobs (oversight); allow on admin-created jobs
@@ -116,6 +117,31 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             (isMarketplaceInternalAdminJob || isAdminCreatedJob(job)));
     const [job, setJob] = useState(jobData || null);
     const [isLoadingJob, setIsLoadingJob] = useState(!jobData); // Only load if no jobData provided initially, or always load to get fresh data
+
+    /** Candidate profile navigation: flag ML internal listings; suppress ATS card for recruiter-owned jobs on admin marketplace candidate URLs. */
+    const buildApplicantProfileNavState = (applicant) => {
+        const jobForNav = job || jobData || null;
+        const toAdminMarketplaceCandidate =
+            location.pathname.includes('/marketplace') && isAdminPath;
+        const state = {
+            candidateData: applicant,
+            fromJobDetail: true,
+            applicantStatus: applicant.status,
+        };
+        if (isMarketplaceInternalAdminJob) {
+            state.fromMaritimeLinkListingsJob = true;
+        }
+        /** Never mark ML Listings internal route as recruiter-posted — keeps Application Status visible even if API omits adminId. */
+        if (
+            toAdminMarketplaceCandidate &&
+            jobForNav &&
+            !isAdminCreatedJob(jobForNav) &&
+            !isMarketplaceInternalAdminJob
+        ) {
+            state.recruiterPostedJob = true;
+        }
+        return state;
+    };
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -341,6 +367,23 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         }
     ];
 
+    /**
+     * Platform admin + recruiter-posted job (not MaritimeLink Listings internal): read-only applicant list — no invite or ATS advance/reject.
+     * `/admin/marketplace/internal/jobs/*` (admin listings) is never suppressed.
+     */
+    const suppressAdminRecruiterInviteHireFlow =
+        isAdminPath &&
+        !isRecruiterContext &&
+        !isMarketplaceInternalAdminJob &&
+        Boolean(job) &&
+        !isAdminCreatedJob(job);
+
+    useEffect(() => {
+        if (suppressAdminRecruiterInviteHireFlow && activeTab === 'matches') {
+            setActiveTab('all');
+        }
+    }, [suppressAdminRecruiterInviteHireFlow, activeTab]);
+
     // Get the cutoff date based on selected time filter
     const getTimeFilterDate = () => {
         const now = new Date();
@@ -419,6 +462,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     };
 
     const handleInviteToApply = async (professionalId) => {
+        if (suppressAdminRecruiterInviteHireFlow) return;
         setInvitedApplicants((prev) => [...prev, professionalId]);
         try {
             // Must use the same `isAdminPath` as applicants fetch (path + not recruiter).
@@ -435,6 +479,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     };
 
     const patchApplicantListStatus = async (applicant, nextApiStatus) => {
+        if (suppressAdminRecruiterInviteHireFlow) return;
         if (!applicant?.id || applicant.status === 'matches') return;
         setApplicantListActionError('');
         setApplicantStatusPatchingId(applicant.id);
@@ -538,6 +583,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     };
 
     const renderApplicantPipelineButtons = (applicant) => {
+        if (suppressAdminRecruiterInviteHireFlow) return null;
         if (applicant.status === 'matches') return null;
         const terminal = ['hired', 'rejected', 'withdrawn'].includes(applicant.status);
         if (terminal) return null;
@@ -739,17 +785,19 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div className="border-b border-gray-100 p-4">
                         <div className="flex items-center gap-4">
-                            {/* Matches Tab */}
-                            <button
-                                onClick={() => {
-                                    setActiveTab('matches');
-                                    setIsATSDropdownOpen(false);
-                                    setCurrentPage(1);
-                                }}
-                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'matches' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Matches ({allApplicants.filter(a => a.status === 'matches').length})
-                            </button>
+                            {/* Matches Tab — invite flow hidden for admin viewing recruiter-owned jobs */}
+                            {!suppressAdminRecruiterInviteHireFlow ? (
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('matches');
+                                        setIsATSDropdownOpen(false);
+                                        setCurrentPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'matches' ? 'bg-[#003971] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    Matches ({allApplicants.filter(a => a.status === 'matches').length})
+                                </button>
+                            ) : null}
 
                             {/* All Tab */}
                             <button
@@ -861,7 +909,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                             const candidateRoute = location.pathname.includes('/marketplace')
                                                                 ? `/admin/marketplace/candidate/${applicant.id}`
                                                                 : `/recruiter/candidate/${applicant.id}`;
-                                                            navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                            navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
                                                         }}
                                                         className="font-semibold text-gray-900 hover:text-blue-600 text-left"
                                                     >
@@ -903,7 +951,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                                 const candidateRoute = location.pathname.includes('/marketplace')
                                                                     ? `/admin/marketplace/candidate/${applicant.id}`
                                                                     : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
                                                             }}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
@@ -919,7 +967,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                                 const candidateRoute = location.pathname.includes('/marketplace')
                                                                     ? `/admin/marketplace/candidate/${applicant.id}`
                                                                     : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
                                                             }}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
@@ -935,7 +983,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                                 const candidateRoute = location.pathname.includes('/marketplace')
                                                                     ? `/admin/marketplace/candidate/${applicant.id}`
                                                                     : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
                                                             }}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
@@ -963,7 +1011,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                                 const candidateRoute = location.pathname.includes('/marketplace')
                                                                     ? `/admin/marketplace/candidate/${applicant.id}`
                                                                     : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: { candidateData: applicant, fromJobDetail: true, applicantStatus: applicant.status } });
+                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
                                                             }}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >

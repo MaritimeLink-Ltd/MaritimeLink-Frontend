@@ -239,10 +239,11 @@ function CandidateSummary({
     const { candidateId: urlCandidateId } = useParams();
     const candidateId = propCandidateId || urlCandidateId;
 
-    const currentUserType = typeof window !== 'undefined'
-        ? (localStorage.getItem('userType') || localStorage.getItem('adminUserType'))
-        : null;
-    const isAdmin = currentUserType === 'admin';
+    const userTypeLs = typeof window !== 'undefined' ? localStorage.getItem('userType') : null;
+    const adminUserTypeLs = typeof window !== 'undefined' ? localStorage.getItem('adminUserType') : null;
+    /** Prefer explicit admin session (`adminUserType`) so stale `userType` from a prior recruiter login does not drop admin privileges. */
+    const currentUserType = userTypeLs || adminUserTypeLs;
+    const isAdmin = adminUserTypeLs === 'admin' || userTypeLs === 'admin';
 
     const [fetchedCandidate, setFetchedCandidate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -844,10 +845,19 @@ function CandidateSummary({
         };
     }, [attachedDocuments, resume, cvUrl, coverLetter, coverLetterUrl, applicationAttachments, walletJobApplicationOnly]);
 
+    /**
+     * Application pipeline: recruiters keep it on `/recruiter/candidate/*`.
+     * Admins: MaritimeLink Listings (`fromMaritimeLinkListingsJob`) always eligible; `recruiterPostedJob` hides only for oversight/other recruiter jobs (not ML internal).
+     */
+    const fromMaritimeLinkListingsJob = Boolean(location.state?.fromMaritimeLinkListingsJob);
+    const hideRecruiterPostedPipeline =
+        Boolean(location.state?.recruiterPostedJob) && !fromMaritimeLinkListingsJob;
     const shouldShowApplicationStatus =
-        (showApplicationStatus || location.state?.fromJobDetail) &&
         location.state?.applicantStatus !== 'matches' &&
-        !location.state?.fromAttendance;
+        !location.state?.fromAttendance &&
+        !hideRecruiterPostedPipeline &&
+        ((isAdmin && fromMaritimeLinkListingsJob) ||
+            (!isAdmin && (showApplicationStatus || location.state?.fromJobDetail)));
     /** Visible stepper only (UNDER_REVIEW / APPLIED use `applicationStage` null or `under-review` — not shown here). */
     const stages = [
         { id: 'shortlisted', label: 'Shortlisted' },

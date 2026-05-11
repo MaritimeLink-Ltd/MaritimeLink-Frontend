@@ -107,9 +107,6 @@ function OversightRecruiterJobs() {
                                     Status
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                    Risk Level
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Posted
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -120,13 +117,13 @@ function OversightRecruiterJobs() {
                         <tbody className="bg-white divide-y divide-gray-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                                         Loading jobs...
                                     </td>
                                 </tr>
                             ) : jobs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                                         No jobs found for this recruiter.
                                     </td>
                                 </tr>
@@ -135,10 +132,6 @@ function OversightRecruiterJobs() {
                                     const formattedStatus = job.status === 'ACTIVE' ? 'Active' : (job.status === 'DRAFT' ? 'Draft' : 'Closed');
                                     let statusColor = 'text-gray-600';
                                     if (formattedStatus === 'Active') statusColor = 'text-green-600';
-                                    
-                                    let riskColor = 'text-green-600';
-                                    if (job.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
-                                    if (job.riskLevel === 'HIGH') riskColor = 'text-red-600';
                                     
                                     const jobType = job.category === 'CATERING_AND_MEDICAL' ? 'Catering & Medical' : 
                                                    (job.category === 'OFFICER' ? 'Officer' : 'Ratings & Crew');
@@ -160,11 +153,6 @@ function OversightRecruiterJobs() {
                                             <td className="px-4 py-4">
                                                 <span className={`text-sm font-semibold ${statusColor}`}>
                                                     {formattedStatus}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${riskColor}`}>
-                                                    {job.riskLevel || 'LOW'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">

@@ -198,7 +198,7 @@ function Marketplace() {
             if (search.trim()) params.set('search', search.trim());
             const statusParam = mapStatusFilterToParam(statusFilter);
             if (statusParam) params.set('status', statusParam);
-            if (riskFilter !== 'Risk Level' && riskFilter !== 'All') {
+            if (subTabKey === 'Training Courses' && riskFilter !== 'Risk Level' && riskFilter !== 'All') {
                 params.set('riskLevel', riskFilter.toUpperCase());
             }
 
@@ -300,10 +300,10 @@ function Marketplace() {
         const currentData = getCurrentData();
         const headers = isMaritimeLinkTab
             ? (activeSubTab === 'Jobs'
-                ? ['ID', 'Job Title', 'Creator', 'Type', 'Location', 'Status', 'Risk Level', 'Posted']
+                ? ['ID', 'Job Title', 'Creator', 'Type', 'Location', 'Status', 'Posted']
                 : ['ID', 'Title', 'Category', 'Location', 'Price', 'Bookings', 'Status', 'Risk', 'Posted'])
             : (activeSubTab === 'Jobs'
-                ? ['ID', 'Recruiter/Company', 'Email', 'Total Active', 'Total Posted', 'Interactions', 'Flagged Jobs', 'Risk Level']
+                ? ['ID', 'Recruiter/Company', 'Email', 'Total Active', 'Total Posted', 'Interactions', 'Flagged Jobs']
                 : ['ID', 'Title', 'Category', 'Location', 'Price', 'Provider', 'Status', 'Flagged', 'Risk Level']);
 
         const csvRows = [headers.join(',')];
@@ -320,7 +320,6 @@ function Marketplace() {
                         `"${(record.jobType || record.category || '').replace(/"/g, '""')}"`,
                         `"${(record.location || '').replace(/"/g, '""')}"`,
                         getJobDisplayStatus(record),
-                        record.riskLevel || '',
                         `"${record.createdAt ? new Date(record.createdAt).toLocaleDateString() : ''}"`
                     ];
                 } else {
@@ -349,8 +348,7 @@ function Marketplace() {
                         record.totalActive || 0,
                         record.totalPosted || 0,
                         record.totalInteractions || 0,
-                        record.flaggedCount || 0,
-                        record.riskLevel || 'LOW'
+                        record.flaggedCount || 0
                     ];
                 } else {
                     const provider =
@@ -551,8 +549,8 @@ function Marketplace() {
             });
         }
 
-        // Apply Risk Filter (Oversight + MaritimeLink Training API courses)
-        if (riskFilter !== 'Risk Level' && riskFilter !== 'All') {
+        // Apply Risk Filter (training courses only; jobs lists do not expose risk)
+        if (activeSubTab === 'Training Courses' && riskFilter !== 'Risk Level' && riskFilter !== 'All') {
             const want = riskFilter.toUpperCase();
             data = data.filter((record) => (record.riskLevel || '').toUpperCase() === want);
         }
@@ -804,8 +802,8 @@ function Marketplace() {
                                 )}
                             </div>
 
-                            {/* Risk: Oversight tabs + MaritimeLink Training (API courses) */}
-                            {(!isMaritimeLinkTab || activeSubTab === 'Training Courses') && (
+                            {/* Risk: training courses only */}
+                            {activeSubTab === 'Training Courses' && (
                                 <div className="relative">
                                     <button
                                         onClick={() => setShowRiskDropdown(!showRiskDropdown)}
@@ -876,9 +874,6 @@ function Marketplace() {
                                                 Flagged
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                                Risk Level
-                                            </th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                                 Actions
                                             </th>
                                         </>
@@ -931,9 +926,6 @@ function Marketplace() {
                                             Status
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Risk Level
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                             Posted
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -978,10 +970,6 @@ function Marketplace() {
                             {!isMaritimeLinkTab ? (
                                 activeSubTab === 'Jobs' ? (
                                     paginatedData.map((record) => {
-                                        let riskColor = 'text-green-600';
-                                        if (record.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
-                                        if (record.riskLevel === 'HIGH') riskColor = 'text-red-600';
-
                                         return (
                                             <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-4">
@@ -1000,11 +988,6 @@ function Marketplace() {
                                                 <td className="px-4 py-4">
                                                     <span className={`text-sm ${record.flaggedCount > 0 ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
                                                         {record.flaggedCount}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className={`text-sm font-semibold ${riskColor}`}>
-                                                        {record.riskLevel || 'LOW'}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -1097,10 +1080,6 @@ function Marketplace() {
                                     if (formattedStatus === 'Closed') statusColor = 'text-red-600';
                                     if (formattedStatus === 'Flagged') statusColor = 'text-orange-600';
 
-                                    let riskColor = 'text-green-600';
-                                    if (job.riskLevel === 'MEDIUM') riskColor = 'text-orange-600';
-                                    if (job.riskLevel === 'HIGH') riskColor = 'text-red-600';
-
                                     const jobType = job.category ? job.category.replace(/_/g, ' ') : 'JOB';
                                     const postedDate = new Date(job.createdAt).toLocaleDateString();
 
@@ -1122,11 +1101,6 @@ function Marketplace() {
                                             <td className="px-4 py-4">
                                                 <span className={`text-sm font-semibold ${statusColor}`}>
                                                     {formattedStatus}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`text-sm font-semibold ${riskColor}`}>
-                                                    {job.riskLevel || 'LOW'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">
