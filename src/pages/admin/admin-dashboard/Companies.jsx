@@ -1,36 +1,167 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ChevronDown, Building, CheckCircle, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import adminDashboardService from '../../../services/adminDashboardService';
+
+function formatCompaniesRelativeTime(iso) {
+    if (!iso) return '—';
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '—';
+        const diffMs = Date.now() - d.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return `${days}d ago`;
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+        return '—';
+    }
+}
+
+function mapApiCompany(c) {
+    const typeLabel =
+        c.type === 'TRAINING_AGENT'
+            ? 'Training Provider'
+            : c.type === 'RECRUITMENT_AGENT'
+              ? 'Recruiting Agency'
+              : c.type || '—';
+    const site = (c.website || '').trim();
+    const domain = (c.domain || '').trim();
+    const displaySite = site || domain || '—';
+    const href =
+        site && /^https?:\/\//i.test(site)
+            ? site
+            : site
+              ? `https://${site.replace(/^\/\//, '')}`
+              : domain
+                ? `https://${domain}`
+                : '';
+    const tierRaw = String(c.tier || '').toUpperCase();
+    const tierLabel = tierRaw === 'PRO' ? 'Pro' : tierRaw === 'FREE' ? 'Free' : c.tier || '—';
+    const verified = Boolean(c.isVerified);
+    return {
+        id: c.id,
+        name: c.name || '—',
+        type: typeLabel,
+        rawType: c.type,
+        website: displaySite,
+        websiteHref: href,
+        country: c.country || '—',
+        claimed: Boolean(c.isClaimed),
+        tier: tierLabel,
+        profile: verified ? 'Complete' : 'Incomplete',
+        profileColor: verified ? 'text-green-600' : 'text-orange-600',
+        joinedAt: formatCompaniesRelativeTime(c.createdAt),
+        lastActive: formatCompaniesRelativeTime(c.lastActive),
+        members: Number(c._count?.members) || 0,
+    };
+}
 
 function Companies() {
     const [activeTab, setActiveTab] = useState('All Companies');
     const [searchQuery, setSearchQuery] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [companies, setCompanies] = useState([]);
+    const [companyStats, setCompanyStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
 
     const tabs = ['All Companies', 'Recruiters', 'Training Providers'];
 
-    // Stats data
+    // Filter states (declared before loadCompanies so callbacks can depend on them)
+    const [statusFilter, setStatusFilter] = useState('');
+    const [typeFilter, setTypeFilter] = useState('');
+    const [countryFilter, setCountryFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [openDropdown, setOpenDropdown] = useState(''); // 'status', 'type', 'country' or ''
+
+    const loadCompanies = useCallback(async () => {
+        setIsRefreshing(true);
+        setLoadError(null);
+        try {
+            const query = {};
+            if (activeTab === 'Recruiters') query.type = 'RECRUITMENT_AGENT';
+            else if (activeTab === 'Training Providers') query.type = 'TRAINING_AGENT';
+            if (typeFilter === 'Claimed') query.status = 'CLAIMED';
+            else if (typeFilter === 'Unclaimed') query.status = 'UNCLAIMED';
+
+            const res = await adminDashboardService.getCompanies(query);
+            const payload = res?.data?.data ?? res?.data ?? res;
+            const list =
+                payload?.companies ??
+                res?.data?.companies ??
+                res?.companies ??
+                [];
+            const stats = payload?.stats ?? res?.data?.stats ?? res?.stats ?? null;
+            setCompanies(Array.isArray(list) ? list.map(mapApiCompany) : []);
+            setCompanyStats(stats && typeof stats === 'object' ? stats : null);
+        } catch (e) {
+            console.error('Failed to load companies:', e);
+            setLoadError(e?.message || 'Could not load companies');
+            setCompanies([]);
+            setCompanyStats(null);
+        } finally {
+            setIsRefreshing(false);
+            setLoading(false);
+        }
+    }, [activeTab, typeFilter]);
+
+    useEffect(() => {
+        loadCompanies();
+    }, [loadCompanies]);
+
+    /** Tab + Claimed/Unclaimed are applied via API query params; search/profile/country stay client-side */
+    const filteredCompanies = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        return companies.filter((company) => {
+            const matchesSearch =
+                !q ||
+                company.name.toLowerCase().includes(q) ||
+                company.website.toLowerCase().includes(q) ||
+                company.country.toLowerCase().includes(q);
+
+            const matchesStatus = statusFilter ? company.profile === statusFilter : true;
+            const matchesCountry = countryFilter ? company.country === countryFilter : true;
+
+            return matchesSearch && matchesStatus && matchesCountry;
+        });
+    }, [companies, searchQuery, statusFilter, countryFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery, statusFilter, typeFilter, countryFilter]);
+
+    const totalCount = companyStats?.total?.count ?? companies.length;
+    const totalToday = companyStats?.total?.today ?? 0;
+    const claimedCount = companyStats?.claimed ?? companies.filter((c) => c.claimed).length;
+    const unclaimedCount = companyStats?.unclaimed ?? companies.filter((c) => !c.claimed).length;
+    const mergeRequestsCount = companyStats?.mergeRequests ?? 0;
+
     const stats = [
         {
-            value: '401',
+            value: String(totalCount),
             label: 'Total Companies',
-            sublabel: '+6 today',
+            sublabel: totalToday > 0 ? `+${totalToday} today` : 'No new today',
             icon: Building,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
             cardBg: 'bg-blue-50'
         },
         {
-            value: '368',
+            value: String(claimedCount),
             label: 'Claimed',
-            sublabel: '+8 today',
+            sublabel: 'Verified organizations',
             icon: CheckCircle,
             iconColor: 'text-green-500',
             iconBg: 'bg-green-50',
             cardBg: 'bg-white'
         },
         {
-            value: '29',
+            value: String(unclaimedCount),
             label: 'Unclaimed',
             sublabel: 'Action needed',
             icon: AlertTriangle,
@@ -39,7 +170,7 @@ function Companies() {
             cardBg: 'bg-white'
         },
         {
-            value: '4',
+            value: String(mergeRequestsCount),
             label: 'Merge Requests',
             sublabel: 'Pending review',
             icon: () => (
@@ -53,110 +184,11 @@ function Companies() {
         }
     ];
 
-    // Sample companies data
-    const companies = [
-        {
-            id: '1',
-            name: 'OceanhHire Agency',
-            type: 'Recruiting Agency',
-            website: 'oceanhire.com',
-            country: 'UK',
-            countryFlag: '🇬🇧',
-            claimed: true,
-            tier: 'Pro',
-            profile: 'Complete',
-            profileColor: 'text-green-600',
-            joinedAt: '5 hours ago',
-            lastActive: '15 mins ago'
-        },
-        {
-            id: '2',
-            name: 'BlueWave Crewing',
-            type: 'Recruiting Agency',
-            website: 'bluewavecrew.com',
-            country: 'Canada',
-            countryFlag: '🇨🇦',
-            claimed: true,
-            tier: 'Pro',
-            profile: 'Complete',
-            profileColor: 'text-green-600',
-            joinedAt: '2 days ago',
-            lastActive: '2 days ago'
-        },
-        {
-            id: '3',
-            name: 'Global Marine Talent',
-            type: 'Recruiting Agency',
-            website: 'managitalent.com',
-            country: 'Italy',
-            countryFlag: '🇮🇹',
-            claimed: false,
-            tier: 'Free',
-            profile: 'Complete',
-            profileColor: 'text-green-600',
-            joinedAt: '5 days ago',
-            lastActive: '5 days ago'
-        },
-        {
-            id: '4',
-            name: 'SeaCrew Recruiters',
-            type: 'Recruiting Agency',
-            website: 'managitalent.com',
-            country: 'Sweden',
-            countryFlag: '🇸🇪',
-            claimed: false,
-            tier: 'Free',
-            profile: 'Incomplete',
-            profileColor: 'text-orange-600',
-            joinedAt: '3 days ago',
-            lastActive: '3 weeks ago'
-        },
-        {
-            id: '5',
-            name: 'SeamanShip Recruiting',
-            type: 'Training Provider',
-            website: 'managitalent.com',
-            country: 'Japan',
-            countryFlag: '🇯🇵',
-            claimed: true,
-            tier: 'Pro',
-            profile: 'Complete',
-            profileColor: 'text-green-600',
-            joinedAt: '1 week ago',
-            lastActive: '2 weeks ago'
-        },
-        {
-            id: '6',
-            name: 'Worldwide Crew Now',
-            type: 'Recruiting Agency',
-            website: 'managitalent.com',
-            country: 'Philippines',
-            countryFlag: '🇵🇭',
-            claimed: true,
-            tier: 'Pro',
-            profile: 'Complete',
-            profileColor: 'text-green-600',
-            joinedAt: '6 days ago',
-            lastActive: '2 weeks ago'
-        }
-    ];
-
-    // Filter companies based on active tab and search query
-    // Filter states
-    const [statusFilter, setStatusFilter] = useState('');
-    const [typeFilter, setTypeFilter] = useState('');
-    const [countryFilter, setCountryFilter] = useState('');
-
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
-
-    // Dropdown visibility states
-    const [openDropdown, setOpenDropdown] = useState(''); // 'status', 'type', 'country' or ''
 
     // Get unique values for filters
     const uniqueTypes = ['Claimed', 'Unclaimed'];
-    const uniqueCountries = [...new Set(companies.map(c => c.country))];
+    const uniqueCountries = [...new Set(companies.map((c) => c.country).filter(Boolean))].sort();
     const uniqueStatuses = ['Complete', 'Incomplete']; // Based on profile field
 
     // Close dropdowns when clicking outside (simple implementation by detecting clicks on backdrop if needed, or just toggle)
@@ -167,27 +199,6 @@ function Companies() {
             setOpenDropdown(name);
         }
     };
-
-    // Filter companies based on active tab, search query, and dropdown filters
-    const filteredCompanies = companies.filter(company => {
-        const matchesTab =
-            activeTab === 'All Companies' ||
-            (activeTab === 'Recruiters' && company.type === 'Recruiting Agency') ||
-            (activeTab === 'Training Providers' && company.type === 'Training Provider');
-
-        const matchesSearch =
-            company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            company.website.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            company.country.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesStatus = statusFilter ? company.profile === statusFilter : true;
-        const matchesType = typeFilter
-            ? (typeFilter === 'Claimed' ? company.claimed === true : company.claimed === false)
-            : true;
-        const matchesCountry = countryFilter ? company.country === countryFilter : true;
-
-        return matchesTab && matchesSearch && matchesStatus && matchesType && matchesCountry;
-    });
 
     // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -232,6 +243,12 @@ function Companies() {
             <div className="flex-shrink-0 mb-6">
                 <h1 className="text-[28px] font-bold text-gray-900 mb-2">Companies Overview</h1>
                 <p className="text-sm text-gray-500 mb-6">Manage organizations and company profiles</p>
+
+                {loadError && (
+                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        {loadError}
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div className="flex items-center gap-6 border-b border-gray-200">
@@ -406,17 +423,16 @@ function Companies() {
 
                             <button
                                 onClick={() => {
-                                    setIsRefreshing(true);
-                                    setTimeout(() => setIsRefreshing(false), 1000);
                                     setStatusFilter('');
                                     setTypeFilter('');
                                     setCountryFilter('');
                                     setSearchQuery('');
                                     setActiveTab('All Companies');
                                     setCurrentPage(1);
+                                    loadCompanies();
                                 }}
                                 className="p-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
-                                title="Reset Filters"
+                                title="Reset filters and reload"
                             >
                                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             </button>
@@ -463,30 +479,44 @@ function Companies() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-50">
-                            {currentCompanies.map((company, index) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                            {loading && companies.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-gray-500">
+                                        Loading companies…
+                                    </td>
+                                </tr>
+                            ) : currentCompanies.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-gray-500">
+                                        No companies match your filters.
+                                    </td>
+                                </tr>
+                            ) : (
+                                currentCompanies.map((company) => (
+                                <tr key={company.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-bold text-gray-900">{company.name}</div>
                                         <div className="text-xs text-gray-500 mt-0.5">{company.type}</div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <a
-                                            href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 group cursor-pointer w-fit"
-                                        >
-                                            <span className="text-sm text-gray-700 group-hover:text-[#1e5a8f]">{company.website}</span>
-                                            <svg className="w-3 h-3 text-gray-400 group-hover:text-[#1e5a8f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                            </svg>
-                                        </a>
+                                        {company.websiteHref ? (
+                                            <a
+                                                href={company.websiteHref}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-1.5 group cursor-pointer w-fit"
+                                            >
+                                                <span className="text-sm text-gray-700 group-hover:text-[#1e5a8f]">{company.website}</span>
+                                                <svg className="w-3 h-3 text-gray-400 group-hover:text-[#1e5a8f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                            </a>
+                                        ) : (
+                                            <span className="text-sm text-gray-500">{company.website}</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">{company.countryFlag}</span>
-                                            <span className="text-sm text-gray-700 font-medium">{company.country}</span>
-                                        </div>
+                                        <span className="text-sm text-gray-700 font-medium">{company.country}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${company.tier === 'Pro'
@@ -516,7 +546,8 @@ function Companies() {
                                         </Link>
                                     </td>
                                 </tr>
-                            ))}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -524,7 +555,15 @@ function Companies() {
                 {/* Pagination */}
                 <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
                     <div className="text-sm text-gray-500">
-                        Showing <span className="font-semibold text-gray-900">{indexOfFirstItem + 1}</span> to <span className="font-semibold text-gray-900">{Math.min(indexOfLastItem, filteredCompanies.length)}</span> of <span className="font-semibold text-gray-900">{filteredCompanies.length}</span> entries
+                        Showing{' '}
+                        <span className="font-semibold text-gray-900">
+                            {filteredCompanies.length === 0 ? 0 : indexOfFirstItem + 1}
+                        </span>{' '}
+                        to{' '}
+                        <span className="font-semibold text-gray-900">
+                            {filteredCompanies.length === 0 ? 0 : Math.min(indexOfLastItem, filteredCompanies.length)}
+                        </span>{' '}
+                        of <span className="font-semibold text-gray-900">{filteredCompanies.length}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
                         <button

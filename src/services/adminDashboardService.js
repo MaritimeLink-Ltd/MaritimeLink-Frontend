@@ -72,6 +72,20 @@ class AdminDashboardService {
     async getRevenueAnalytics() {
         return httpClient.get(API_ENDPOINTS.ADMIN.REVENUE);
     }
+
+    /**
+     * GET /api/admin/companies
+     * @param {{ type?: 'RECRUITMENT_AGENT' | 'TRAINING_AGENT', status?: 'CLAIMED' | 'UNCLAIMED' }} [query]
+     * @returns {Promise<{ status?: string, data?: { companies?: object[], stats?: object }, results?: number, total?: number }>}
+     */
+    async getCompanies(query = {}) {
+        const params = new URLSearchParams();
+        if (query.type) params.set('type', query.type);
+        if (query.status) params.set('status', query.status);
+        const qs = params.toString();
+        const path = qs ? `${API_ENDPOINTS.ADMIN.COMPANIES}?${qs}` : API_ENDPOINTS.ADMIN.COMPANIES;
+        return httpClient.get(path);
+    }
 }
 
 export default new AdminDashboardService();
