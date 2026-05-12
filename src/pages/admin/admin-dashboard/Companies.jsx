@@ -41,7 +41,16 @@ function mapApiCompany(c) {
                 ? `https://${domain}`
                 : '';
     const tierRaw = String(c.tier || '').toUpperCase();
-    const tierLabel = tierRaw === 'PRO' ? 'Pro' : tierRaw === 'FREE' ? 'Free' : c.tier || '—';
+    const isAgentOrg =
+        c.type === 'RECRUITMENT_AGENT' || c.type === 'TRAINING_AGENT';
+    // Recruiter / training org billing is not live yet — do not show Pro from stored tier
+    const tierLabel = isAgentOrg
+        ? 'Free'
+        : tierRaw === 'PRO'
+          ? 'Pro'
+          : tierRaw === 'FREE'
+            ? 'Free'
+            : c.tier || '—';
     const verified = Boolean(c.isVerified);
     return {
         id: c.id,
