@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Trash2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import adminDashboardService from '../../../services/adminDashboardService';
 
 function formatRelativeTime(iso) {
@@ -28,13 +28,9 @@ function formatOrgType(type) {
     return type || '—';
 }
 
-function formatMemberRole(role) {
-    if (!role) return '—';
-    const r = String(role).toUpperCase();
-    if (r === 'ADMIN') return 'Admin';
-    if (r === 'RECRUITER') return 'Recruiter';
-    if (r === 'VIEWER') return 'Viewer';
-    return role;
+function isAgentOrganization(type) {
+    const t = String(type || '').toUpperCase();
+    return t === 'RECRUITMENT_AGENT' || t === 'TRAINING_AGENT';
 }
 
 function websiteHref(company) {
@@ -90,8 +86,6 @@ function CompanyProfile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [actionBusy, setActionBusy] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [memberToDelete, setMemberToDelete] = useState(null);
 
     const loadCompany = useCallback(async () => {
         if (!companyId) {
@@ -130,65 +124,23 @@ function CompanyProfile() {
 
     const href = useMemo(() => (company ? websiteHref(company) : ''), [company]);
 
-    const teamRows = useMemo(() => {
-        const members = company?.members;
-        if (!Array.isArray(members)) return [];
-        return members.map((m) => {
-            const r = m.recruiter || {};
-            const first = r.firstName || '';
-            const last = r.lastName || '';
-            const name = `${first} ${last}`.trim() || r.email || 'Unknown';
-            const status = String(m.status || 'ACTIVE').toUpperCase();
-            const active = status === 'ACTIVE';
-            return {
-                rowKey: m.id,
-                recruiterId: m.recruiterId,
-                name,
-                email: r.email || '—',
-                role: formatMemberRole(m.role),
-                statusLabel: active ? 'Active' : status,
-                statusBg: active ? 'bg-green-50' : 'bg-orange-50',
-                statusColor: active ? 'text-green-600' : 'text-orange-600',
-                joined: formatRelativeTime(m.joinedAt || r.createdAt),
-            };
-        });
-    }, [company]);
-
-    const handleDeleteClick = (row) => {
-        setMemberToDelete(row);
-        setIsDeleteModalOpen(true);
-    };
-
-    const confirmDelete = async () => {
-        if (!memberToDelete || !companyId) return;
-        setActionBusy(true);
-        try {
-            await adminDashboardService.removeCompanyMember(companyId, memberToDelete.recruiterId);
-            setIsDeleteModalOpen(false);
-            setMemberToDelete(null);
-            await loadCompany();
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || 'Failed to remove member');
-        } finally {
-            setActionBusy(false);
-        }
-    };
-
-    const patchCompany = async (body) => {
-        if (!companyId) return;
-        setActionBusy(true);
-        setError(null);
-        try {
-            await adminDashboardService.updateCompany(companyId, body);
-            await loadCompany();
-        } catch (e) {
-            console.error(e);
-            setError(e?.message || 'Update failed');
-        } finally {
-            setActionBusy(false);
-        }
-    };
+    const patchCompany = useCallback(
+        async (body) => {
+            if (!companyId) return;
+            setActionBusy(true);
+            setError(null);
+            try {
+                await adminDashboardService.updateCompany(companyId, body);
+                await loadCompany();
+            } catch (e) {
+                console.error(e);
+                setError(e?.message || 'Update failed');
+            } finally {
+                setActionBusy(false);
+            }
+        },
+        [companyId, loadCompany]
+    );
 
     if (loading && !company) {
         return (
@@ -231,7 +183,12 @@ function CompanyProfile() {
 
     if (!company) return null;
 
-    const tierLabel = String(company.tier || 'FREE').toUpperCase() === 'PRO' ? 'Pro' : 'Free';
+    const agentOrg = isAgentOrganization(company.type);
+    const tierLabel = agentOrg
+        ? 'Free'
+        : String(company.tier || 'FREE').toUpperCase() === 'PRO'
+          ? 'Pro'
+          : 'Free';
 
     return (
         <div className="min-h-screen bg-gray-50/50">
@@ -305,14 +262,16 @@ function CompanyProfile() {
                         >
                             {company.isClaimed ? 'Unclaim' : 'Mark claimed'}
                         </button>
-                        <button
-                            type="button"
-                            disabled={actionBusy}
-                            onClick={() => patchCompany({ tier: company.tier === 'PRO' ? 'FREE' : 'PRO' })}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1e5a8f]/10 text-[#1e5a8f] hover:bg-[#1e5a8f]/15 disabled:opacity-50"
-                        >
-                            {company.tier === 'PRO' ? 'Set tier Free' : 'Set tier Pro'}
-                        </button>
+                        {!agentOrg ? (
+                            <button
+                                type="button"
+                                disabled={actionBusy}
+                                onClick={() => patchCompany({ tier: company.tier === 'PRO' ? 'FREE' : 'PRO' })}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1e5a8f]/10 text-[#1e5a8f] hover:bg-[#1e5a8f]/15 disabled:opacity-50"
+                            >
+                                {company.tier === 'PRO' ? 'Set tier Free' : 'Set tier Pro'}
+                            </button>
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -403,93 +362,6 @@ function CompanyProfile() {
                             </div>
                         </div>
                     </div>
-
-                    <div className="bg-white rounded-xl border border-gray-100 p-6">
-                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-5">
-                            Team members
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
-                                {teamRows.length}
-                            </span>
-                        </h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            User
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Role
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Joined
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {teamRows.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                                                No team members linked yet.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        teamRows.map((member) => (
-                                            <tr key={member.rowKey} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center shrink-0">
-                                                            <span className="text-xs font-bold text-gray-600">
-                                                                {member.name
-                                                                    .split(' ')
-                                                                    .filter(Boolean)
-                                                                    .map((n) => n[0])
-                                                                    .join('')
-                                                                    .slice(0, 2) || '?'}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-gray-900">{member.name}</div>
-                                                            <div className="text-xs text-gray-500">{member.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="text-sm text-gray-700">{member.role}</span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span
-                                                        className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ${member.statusBg} ${member.statusColor}`}
-                                                    >
-                                                        {member.statusLabel}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="text-sm text-gray-600">{member.joined}</span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteClick(member)}
-                                                        disabled={actionBusy}
-                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="space-y-6">
@@ -519,45 +391,6 @@ function CompanyProfile() {
                     </div>
                 </div>
             </div>
-
-            {isDeleteModalOpen && memberToDelete && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Trash2 className="h-6 w-6 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove team member?</h3>
-                            <p className="text-sm text-gray-600 mb-6">
-                                Remove <span className="font-semibold text-gray-900">{memberToDelete.name}</span> from this
-                                company? This cannot be undone.
-                            </p>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setMemberToDelete(null);
-                                    }}
-                                    disabled={actionBusy}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={confirmDelete}
-                                    disabled={actionBusy}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 inline-flex items-center justify-center gap-2"
-                                >
-                                    {actionBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

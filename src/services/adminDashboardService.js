@@ -105,14 +105,6 @@ class AdminDashboardService {
         if (!id) throw new Error('Company id is required');
         return httpClient.patch(API_ENDPOINTS.ADMIN.COMPANY_DETAIL(id), body);
     }
-
-    /**
-     * DELETE /api/admin/companies/:companyId/members/:recruiterId
-     */
-    async removeCompanyMember(companyId, recruiterId) {
-        if (!companyId || !recruiterId) throw new Error('Company and member ids are required');
-        return httpClient.delete(API_ENDPOINTS.ADMIN.COMPANY_MEMBER(companyId, recruiterId));
-    }
 }
 
 export default new AdminDashboardService();
