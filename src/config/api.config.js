@@ -283,6 +283,9 @@ export const API_ENDPOINTS = {
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
     /** All organizations (recruitment & training agents) — SUPER_ADMIN */
     COMPANIES: '/api/admin/companies',
+    COMPANY_DETAIL: (id) => `/api/admin/companies/${id}`,
+    COMPANY_MEMBER: (companyId, recruiterId) =>
+      `/api/admin/companies/${companyId}/members/${recruiterId}`,
   },
   /** Conversations — recruiter, training agent, super admin start/create thread with a professional */
   CONVERSATIONS: {

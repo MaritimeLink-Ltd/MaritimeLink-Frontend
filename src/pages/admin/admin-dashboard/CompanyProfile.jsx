@@ -1,208 +1,416 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Edit, MoreVertical, Trash2, Users as UsersIcon } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ExternalLink, Trash2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import adminDashboardService from '../../../services/adminDashboardService';
+
+function formatRelativeTime(iso) {
+    if (!iso) return '—';
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '—';
+        const diffMs = Date.now() - d.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        if (days < 7) return `${days}d ago`;
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+        return '—';
+    }
+}
+
+function formatOrgType(type) {
+    if (type === 'TRAINING_AGENT') return 'Training Provider';
+    if (type === 'RECRUITMENT_AGENT') return 'Recruiting Agency';
+    return type || '—';
+}
+
+function formatMemberRole(role) {
+    if (!role) return '—';
+    const r = String(role).toUpperCase();
+    if (r === 'ADMIN') return 'Admin';
+    if (r === 'RECRUITER') return 'Recruiter';
+    if (r === 'VIEWER') return 'Viewer';
+    return role;
+}
+
+function websiteHref(company) {
+    const site = (company?.website || '').trim();
+    const domain = (company?.domain || '').trim();
+    if (site && /^https?:\/\//i.test(site)) return site;
+    if (site) return `https://${site.replace(/^\/\//, '')}`;
+    if (domain) return `https://${domain}`;
+    return '';
+}
+
+function displayWebsiteLabel(company) {
+    const site = (company?.website || '').trim();
+    const domain = (company?.domain || '').trim();
+    return site || domain || '—';
+}
+
+function formatHeadquarters(c) {
+    const parts = [c?.address, [c?.city, c?.state].filter(Boolean).join(', '), c?.zip, c?.country]
+        .filter((p) => p && String(p).trim())
+        .map((p) => String(p).trim());
+    const unique = [...new Set(parts)];
+    return unique.length ? unique.join(' · ') : '—';
+}
+
+function activityAccent(action) {
+    const a = String(action || '').toUpperCase();
+    if (a.includes('REMOVE') || a.includes('DELETE') || a.includes('FAIL')) return 'bg-red-500';
+    if (a.includes('UPDATE') || a.includes('VERIFY') || a.includes('CLAIM')) return 'bg-green-500';
+    if (a.includes('MEMBER') || a.includes('ADD')) return 'bg-blue-500';
+    return 'bg-gray-400';
+}
+
+function activityDescription(log) {
+    const meta = log?.metadata;
+    if (meta && typeof meta === 'object' && Object.keys(meta).length) {
+        try {
+            const s = JSON.stringify(meta);
+            return s.length > 160 ? `${s.slice(0, 157)}…` : s;
+        } catch {
+            return '—';
+        }
+    }
+    return [log?.actorType, log?.targetType].filter(Boolean).join(' · ') || '—';
+}
 
 function CompanyProfile() {
     const navigate = useNavigate();
+    const { id: companyId } = useParams();
 
-    // Sample team members data (converted to state for interactivity)
-    const [teamMembers, setTeamMembers] = useState([
-        {
-            id: 1,
-            name: 'David Turner',
-            email: 'david.t@oceanhire.com',
-            role: 'Admin',
-            status: 'Active',
-            statusColor: 'text-green-600',
-            statusBg: 'bg-green-50',
-            joined: 'Oct 24, 2023'
-        },
-        {
-            id: 2,
-            name: 'Sarah Miller',
-            email: 'sarah.m@oceanhire.com',
-            role: 'Recruiter',
-            status: 'Active',
-            statusColor: 'text-green-600',
-            statusBg: 'bg-green-50',
-            joined: 'Nov 01, 2023'
-        },
-        {
-            id: 3,
-            name: 'James Wilson',
-            email: 'james.w@oceanhire.com',
-            role: 'Viewer',
-            status: 'Pending',
-            statusColor: 'text-orange-600',
-            statusBg: 'bg-orange-50',
-            joined: 'Yesterday'
-        }
-    ]);
-
-    // Delete Modal State
+    const [company, setCompany] = useState(null);
+    const [recentActivity, setRecentActivity] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [actionBusy, setActionBusy] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState(null);
 
-    const handleDeleteClick = (member) => {
-        setMemberToDelete(member);
+    const loadCompany = useCallback(async () => {
+        if (!companyId) {
+            setError('Missing company id');
+            setLoading(false);
+            return;
+        }
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await adminDashboardService.getCompanyById(companyId);
+            const payload = res?.data ?? res;
+            const c = payload?.company ?? res?.company;
+            const activity = payload?.recentActivity ?? res?.recentActivity ?? [];
+            if (!c) {
+                setError('Company not found');
+                setCompany(null);
+                setRecentActivity([]);
+                return;
+            }
+            setCompany(c);
+            setRecentActivity(Array.isArray(activity) ? activity : []);
+        } catch (e) {
+            console.error('Failed to load company:', e);
+            setError(e?.message || 'Could not load company');
+            setCompany(null);
+            setRecentActivity([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [companyId]);
+
+    useEffect(() => {
+        loadCompany();
+    }, [loadCompany]);
+
+    const href = useMemo(() => (company ? websiteHref(company) : ''), [company]);
+
+    const teamRows = useMemo(() => {
+        const members = company?.members;
+        if (!Array.isArray(members)) return [];
+        return members.map((m) => {
+            const r = m.recruiter || {};
+            const first = r.firstName || '';
+            const last = r.lastName || '';
+            const name = `${first} ${last}`.trim() || r.email || 'Unknown';
+            const status = String(m.status || 'ACTIVE').toUpperCase();
+            const active = status === 'ACTIVE';
+            return {
+                rowKey: m.id,
+                recruiterId: m.recruiterId,
+                name,
+                email: r.email || '—',
+                role: formatMemberRole(m.role),
+                statusLabel: active ? 'Active' : status,
+                statusBg: active ? 'bg-green-50' : 'bg-orange-50',
+                statusColor: active ? 'text-green-600' : 'text-orange-600',
+                joined: formatRelativeTime(m.joinedAt || r.createdAt),
+            };
+        });
+    }, [company]);
+
+    const handleDeleteClick = (row) => {
+        setMemberToDelete(row);
         setIsDeleteModalOpen(true);
     };
 
-    const confirmDelete = () => {
-        if (memberToDelete) {
-            setTeamMembers(teamMembers.filter(member => member.id !== memberToDelete.id));
+    const confirmDelete = async () => {
+        if (!memberToDelete || !companyId) return;
+        setActionBusy(true);
+        try {
+            await adminDashboardService.removeCompanyMember(companyId, memberToDelete.recruiterId);
             setIsDeleteModalOpen(false);
             setMemberToDelete(null);
+            await loadCompany();
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || 'Failed to remove member');
+        } finally {
+            setActionBusy(false);
         }
     };
 
-    // Recent activity data
-    const activities = [
-        {
-            title: 'Company Claimed',
-            description: 'Verified by Admin User',
-            time: '2 hours ago',
-            color: 'bg-green-500'
-        },
-        {
-            title: 'New Member Added',
-            description: 'Sarah Miller joined as Recruiter',
-            time: 'Yesterday',
-            color: 'bg-blue-500'
-        },
-        {
-            title: 'Profile Created',
-            description: 'Auto-created via domain match',
-            time: 'Oct 24, 2023',
-            color: 'bg-gray-400'
+    const patchCompany = async (body) => {
+        if (!companyId) return;
+        setActionBusy(true);
+        setError(null);
+        try {
+            await adminDashboardService.updateCompany(companyId, body);
+            await loadCompany();
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || 'Update failed');
+        } finally {
+            setActionBusy(false);
         }
-    ];
+    };
+
+    if (loading && !company) {
+        return (
+            <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3 text-gray-600">
+                <Loader2 className="h-8 w-8 animate-spin text-[#1e5a8f]" />
+                <p className="text-sm">Loading company…</p>
+            </div>
+        );
+    }
+
+    if (error && !company) {
+        return (
+            <div className="min-h-screen bg-gray-50/50 max-w-4xl">
+                <button
+                    type="button"
+                    onClick={() => navigate('/admin/companies')}
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 font-semibold"
+                >
+                    <ArrowLeft className="h-5 w-5" />
+                    Back to Companies
+                </button>
+                <div className="bg-white rounded-2xl border border-red-100 p-6 flex gap-3 items-start">
+                    <AlertCircle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                        <h2 className="font-semibold text-gray-900 mb-1">Could not load company</h2>
+                        <p className="text-sm text-gray-600 mb-4">{error}</p>
+                        <button
+                            type="button"
+                            onClick={loadCompany}
+                            className="inline-flex items-center gap-2 text-sm font-medium text-[#1e5a8f] hover:underline"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!company) return null;
+
+    const tierLabel = String(company.tier || 'FREE').toUpperCase() === 'PRO' ? 'Pro' : 'Free';
 
     return (
         <div className="min-h-screen bg-gray-50/50">
-            {/* Back Button */}
             <button
-                onClick={() => navigate(-1)}
+                type="button"
+                onClick={() => navigate('/admin/companies')}
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 font-semibold"
             >
                 <ArrowLeft className="h-5 w-5" />
                 Back to Companies
             </button>
 
-            {/* Company Header */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">OceanhHire Agency</h1>
-                        <a
-                            href="https://oceanhire.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-sm text-[#1e5a8f] hover:underline"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                            </svg>
-                            oceanhire.com
-                            <ExternalLink className="h-3 w-3" />
-                        </a>
-                    </div>
+            {error && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+                    <span>{error}</span>
+                </div>
+            )}
 
-                    <div className="flex items-center gap-3">
-                        {/* Actions removed as per request */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">{company.name || '—'}</h1>
+                        {href ? (
+                            <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-[#1e5a8f] hover:underline"
+                            >
+                                {displayWebsiteLabel(company)}
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
+                        ) : (
+                            <span className="text-sm text-gray-500">{displayWebsiteLabel(company)}</span>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            <span className="inline-flex px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
+                                {tierLabel}
+                            </span>
+                            <span
+                                className={`inline-flex px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                                    company.isVerified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                                }`}
+                            >
+                                {company.isVerified ? 'Verified' : 'Unverified'}
+                            </span>
+                            <span
+                                className={`inline-flex px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                                    company.isClaimed ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                }`}
+                            >
+                                {company.isClaimed ? 'Claimed' : 'Unclaimed'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                        <button
+                            type="button"
+                            disabled={actionBusy}
+                            onClick={() => patchCompany({ isVerified: !company.isVerified })}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            {company.isVerified ? 'Unverify' : 'Verify'}
+                        </button>
+                        <button
+                            type="button"
+                            disabled={actionBusy}
+                            onClick={() => patchCompany({ isClaimed: !company.isClaimed })}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            {company.isClaimed ? 'Unclaim' : 'Mark claimed'}
+                        </button>
+                        <button
+                            type="button"
+                            disabled={actionBusy}
+                            onClick={() => patchCompany({ tier: company.tier === 'PRO' ? 'FREE' : 'PRO' })}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1e5a8f]/10 text-[#1e5a8f] hover:bg-[#1e5a8f]/15 disabled:opacity-50"
+                        >
+                            {company.tier === 'PRO' ? 'Set tier Free' : 'Set tier Pro'}
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - 2/3 width */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Company Information */}
                     <div className="bg-white rounded-xl border border-gray-100 p-6">
-                        <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-base font-bold text-gray-900">Company Information</h3>
-                            <span className="text-xs text-gray-500">Auto-fetched from Companies House</span>
-                        </div>
-
+                        <h3 className="text-base font-bold text-gray-900 mb-5">Company information</h3>
                         <div className="space-y-5">
-                            {/* Legal Name and Organization Type */}
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        Legal Name
-                                    </label>
-                                    <div className="text-sm font-semibold text-gray-900">OceanhHire Agency</div>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                        Legal name
+                                    </span>
+                                    <div className="text-sm font-semibold text-gray-900">{company.name || '—'}</div>
                                 </div>
-
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                        Organization Type
-                                    </label>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                        Organization type
+                                    </span>
                                     <span className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
-                                        Recruiter
+                                        {formatOrgType(company.type)}
                                     </span>
                                 </div>
                             </div>
-
-                            {/* Headquarters Address */}
                             <div>
-                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Headquarters Address
-                                </label>
-                                <div className="text-sm font-semibold text-gray-900">
-                                    71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom
-                                </div>
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                    Headquarters
+                                </span>
+                                <div className="text-sm font-semibold text-gray-900">{formatHeadquarters(company)}</div>
                             </div>
-
-                            {/* Profile Created and Last Updated */}
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        Profile Created
-                                    </label>
-                                    <div className="text-sm font-semibold text-gray-900">Oct 24, 2023</div>
+                            {(company.email || company.linkedIn) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {company.email ? (
+                                        <div>
+                                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                                Email
+                                            </span>
+                                            <a href={`mailto:${company.email}`} className="text-sm text-[#1e5a8f] hover:underline break-all">
+                                                {company.email}
+                                            </a>
+                                        </div>
+                                    ) : null}
+                                    {company.linkedIn ? (
+                                        <div>
+                                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                                LinkedIn
+                                            </span>
+                                            <a
+                                                href={
+                                                    company.linkedIn.startsWith('http')
+                                                        ? company.linkedIn
+                                                        : `https://${company.linkedIn}`
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-[#1e5a8f] hover:underline break-all"
+                                            >
+                                                {company.linkedIn}
+                                            </a>
+                                        </div>
+                                    ) : null}
                                 </div>
-
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block flex items-center gap-1.5">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Last Updated
-                                    </label>
-                                    <div className="text-sm font-semibold text-gray-900">15 mins ago</div>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                        Profile created
+                                    </span>
+                                    <div className="text-sm font-semibold text-gray-900">
+                                        {company.createdAt
+                                            ? new Date(company.createdAt).toLocaleDateString(undefined, {
+                                                  month: 'short',
+                                                  day: 'numeric',
+                                                  year: 'numeric',
+                                              })
+                                            : '—'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
+                                        Last updated
+                                    </span>
+                                    <div className="text-sm font-semibold text-gray-900">
+                                        {formatRelativeTime(company.updatedAt)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Team Members */}
                     <div className="bg-white rounded-xl border border-gray-100 p-6">
-                        <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                Team Members
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
-                                    {teamMembers.length}
-                                </span>
-                            </h3>
-                            {/* Removed Add Member button */}
-                        </div>
-
-                        {/* Team Members Table */}
+                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-5">
+                            Team members
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-md">
+                                {teamRows.length}
+                            </span>
+                        </h3>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50 border-b border-gray-100">
@@ -225,101 +433,125 @@ function CompanyProfile() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {teamMembers.map((member) => (
-                                        <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                                        <span className="text-xs font-bold text-gray-600">
-                                                            {member.name.split(' ').map(n => n[0]).join('')}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900">{member.name}</div>
-                                                        <div className="text-xs text-gray-500">{member.email}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-700">{member.role}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ${member.statusBg} ${member.statusColor}`}>
-                                                    {member.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-600">{member.joined}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <button
-                                                    onClick={() => handleDeleteClick(member)}
-                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                    {teamRows.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                                                No team members linked yet.
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        teamRows.map((member) => (
+                                            <tr key={member.rowKey} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center shrink-0">
+                                                            <span className="text-xs font-bold text-gray-600">
+                                                                {member.name
+                                                                    .split(' ')
+                                                                    .filter(Boolean)
+                                                                    .map((n) => n[0])
+                                                                    .join('')
+                                                                    .slice(0, 2) || '?'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-semibold text-gray-900">{member.name}</div>
+                                                            <div className="text-xs text-gray-500">{member.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-700">{member.role}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span
+                                                        className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ${member.statusBg} ${member.statusColor}`}
+                                                    >
+                                                        {member.statusLabel}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-sm text-gray-600">{member.joined}</span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteClick(member)}
+                                                        disabled={actionBusy}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                {/* Right Column - 1/3 width */}
                 <div className="space-y-6">
-                    {/* Potential Duplicate Detected - Removed */}
-
-                    {/* Recent Activity */}
                     <div className="bg-white rounded-xl border border-gray-100 p-5">
-                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Recent Activity</h3>
-
-                        <div className="space-y-4">
-                            {activities.map((activity, index) => (
-                                <div key={index} className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-2 h-2 ${activity.color} rounded-full`}></div>
-                                        {index < activities.length - 1 && (
-                                            <div className="w-0.5 h-full bg-gray-200 mt-1"></div>
-                                        )}
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Recent activity</h3>
+                        {recentActivity.length === 0 ? (
+                            <p className="text-sm text-gray-500">No activity logged yet.</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {recentActivity.map((log, index) => (
+                                    <div key={log.id || index} className="flex gap-3">
+                                        <div className="flex flex-col items-center">
+                                            <div className={`w-2 h-2 ${activityAccent(log.action)} rounded-full`} />
+                                            {index < recentActivity.length - 1 && (
+                                                <div className="w-0.5 flex-1 min-h-[12px] bg-gray-200 mt-1" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 pb-2">
+                                            <div className="text-sm font-semibold text-gray-900 mb-0.5">{log.action || 'Event'}</div>
+                                            <div className="text-xs text-gray-500 mb-1">{activityDescription(log)}</div>
+                                            <div className="text-xs text-gray-400">{formatRelativeTime(log.createdAt)}</div>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 pb-4">
-                                        <div className="text-sm font-semibold text-gray-900 mb-0.5">{activity.title}</div>
-                                        <div className="text-xs text-gray-500 mb-1">{activity.description}</div>
-                                        <div className="text-xs text-gray-400">{activity.time}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Custom Delete Modal */}
-            {isDeleteModalOpen && (
+            {isDeleteModalOpen && memberToDelete && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
                         <div className="text-center">
                             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Trash2 className="h-6 w-6 text-red-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove Team Member?</h3>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Remove team member?</h3>
                             <p className="text-sm text-gray-600 mb-6">
-                                Are you sure you want to remove <span className="font-semibold text-gray-900">{memberToDelete?.name}</span>? This action cannot be undone.
+                                Remove <span className="font-semibold text-gray-900">{memberToDelete.name}</span> from this
+                                company? This cannot be undone.
                             </p>
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => setIsDeleteModalOpen(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                    type="button"
+                                    onClick={() => {
+                                        setIsDeleteModalOpen(false);
+                                        setMemberToDelete(null);
+                                    }}
+                                    disabled={actionBusy}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={confirmDelete}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                                    disabled={actionBusy}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 inline-flex items-center justify-center gap-2"
                                 >
-                                    Delete
+                                    {actionBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                    Remove
                                 </button>
                             </div>
                         </div>

@@ -86,6 +86,33 @@ class AdminDashboardService {
         const path = qs ? `${API_ENDPOINTS.ADMIN.COMPANIES}?${qs}` : API_ENDPOINTS.ADMIN.COMPANIES;
         return httpClient.get(path);
     }
+
+    /**
+     * GET /api/admin/companies/:id
+     * @returns {Promise<{ status?: string, data?: { company?: object, recentActivity?: object[] } }>}
+     */
+    async getCompanyById(id) {
+        if (!id) throw new Error('Company id is required');
+        return httpClient.get(API_ENDPOINTS.ADMIN.COMPANY_DETAIL(id));
+    }
+
+    /**
+     * PATCH /api/admin/companies/:id
+     * @param {string} id
+     * @param {{ isVerified?: boolean, isClaimed?: boolean, tier?: string }} body
+     */
+    async updateCompany(id, body) {
+        if (!id) throw new Error('Company id is required');
+        return httpClient.patch(API_ENDPOINTS.ADMIN.COMPANY_DETAIL(id), body);
+    }
+
+    /**
+     * DELETE /api/admin/companies/:companyId/members/:recruiterId
+     */
+    async removeCompanyMember(companyId, recruiterId) {
+        if (!companyId || !recruiterId) throw new Error('Company and member ids are required');
+        return httpClient.delete(API_ENDPOINTS.ADMIN.COMPANY_MEMBER(companyId, recruiterId));
+    }
 }
 
 export default new AdminDashboardService();
