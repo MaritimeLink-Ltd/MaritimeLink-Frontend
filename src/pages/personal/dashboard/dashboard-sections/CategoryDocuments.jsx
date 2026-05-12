@@ -4,10 +4,16 @@ import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
-// import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
+import { documentMatchesWalletFilter, getDocumentStatusMeta } from '../../../../utils/documentStatus';
 
-const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
+const CategoryDocuments = ({
+    category,
+    onBack,
+    onUploadClick,
+    walletStatusFilter = 'all',
+    walletFilterLabel,
+}) => {
     const [view, setView] = useState('list'); // 'list', 'detail', 'edit'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -39,8 +45,10 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
             const categoryId = category?.id || 'company';
             const formattedDocs = docs
                 .filter((doc) => getDocumentDisplayCategory(doc) === categoryId)
-                .map(doc => ({
+                .filter((doc) => documentMatchesWalletFilter(doc, walletStatusFilter))
+                .map((doc) => ({
                     ...doc,
+                    status: getDocumentStatusMeta(doc),
                     expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
                     type: getDocumentCategoryLabel(getDocumentDisplayCategory(doc)),
                     displayCategory: getDocumentDisplayCategory(doc),
@@ -57,7 +65,7 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
 
     useEffect(() => {
         fetchDocuments();
-    }, [category]);
+    }, [category, walletStatusFilter]);
 
     const handleDocumentClick = (doc) => {
         setSelectedDoc(doc);
@@ -194,7 +202,14 @@ const CategoryDocuments = ({ category, onBack, onUploadClick }) => {
                         </button>
                         <div>
                             <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">{category?.title || 'Category Documents'}</h1>
-                            <p className="text-gray-500 text-xs sm:text-sm">{filteredDocuments.length} documents found</p>
+                            <p className="text-gray-500 text-xs sm:text-sm">
+                                {filteredDocuments.length} documents found
+                                {walletStatusFilter !== 'all' && walletFilterLabel ? (
+                                    <span className="block text-[#003366] font-medium mt-0.5">
+                                        Filtered by: {walletFilterLabel}
+                                    </span>
+                                ) : null}
+                            </p>
                         </div>
                     </div>
                     <button 

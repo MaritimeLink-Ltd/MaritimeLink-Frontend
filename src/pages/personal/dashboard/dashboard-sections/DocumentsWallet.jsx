@@ -23,7 +23,16 @@ import authService from '../../../../services/authService';
 import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.config';
 // import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
+import { documentMatchesWalletFilter, EXPIRING_SOON_DAYS } from '../../../../utils/documentStatus';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+
+const WALLET_STATUS_TABS = [
+    { id: 'all', label: 'All' },
+    { id: 'ready', label: 'Compliance Ready' },
+    { id: 'expiring', label: 'Expiring Soon' },
+    { id: 'expired', label: 'Expired' },
+    { id: 'rejected', label: 'Rejected' },
+];
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -32,6 +41,7 @@ const DocumentsWallet = () => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [uploadCategory, setUploadCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [walletStatusFilter, setWalletStatusFilter] = useState('all');
 
     // Pro membership
     const [membershipTier, setMembershipTier] = useState('FREE');
@@ -111,21 +121,13 @@ const DocumentsWallet = () => {
         },
     ];
 
-    const [dynamicCategories, setDynamicCategories] = useState(() =>
-        categoryDefinitions.map((c) => ({ ...c, count: 0 })),
-    );
-
-    const [uploadContextCategory, setUploadContextCategory] = useState(null);
-
     const fetchDocuments = async () => {
         try {
             setIsLoading(true);
             const response = await documentService.getDocuments();
             let docs = [];
-            let summary = null;
             if (response?.data?.documents) {
                 docs = response.data.documents;
-                summary = response?.data?.summary || null;
             } else if (Array.isArray(response?.data)) {
                 docs = response.data;
             } else if (Array.isArray(response)) {
@@ -133,28 +135,6 @@ const DocumentsWallet = () => {
             }
 
             setDocuments(docs);
-
-            const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
-
-            const walletDocs = docs.filter((d) => d.category && !EXCLUDED_FROM_WALLET.has(d.category));
-
-            const docsByCategoryId = {};
-            walletDocs.forEach((doc) => {
-                const catId = getDocumentDisplayCategory(doc);
-                if (!catId) return;
-                if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
-                docsByCategoryId[catId].push(doc);
-            });
-
-            setDynamicCategories(
-                categoryDefinitions.map((def) => {
-                    const catDocs = docsByCategoryId[def.id] || [];
-                    return {
-                        ...def,
-                        count: catDocs.length,
-                    };
-                }),
-            );
         } catch (error) {
             console.error('Failed to fetch documents', error);
         } finally {
@@ -189,20 +169,54 @@ const DocumentsWallet = () => {
         return documents.filter((d) => d.category && !EXCLUDED.has(d.category));
     }, [documents]);
 
+    const walletFolderRows = useMemo(() => {
+        const EXCLUDED = new Set(['CV_RESUME', 'COVER_LETTER']);
+        const walletDocs = documents.filter((d) => d.category && !EXCLUDED.has(d.category));
+        const docsByCategoryId = {};
+        walletDocs.forEach((doc) => {
+            const catId = getDocumentDisplayCategory(doc);
+            if (!catId) return;
+            if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
+            docsByCategoryId[catId].push(doc);
+        });
+        return categoryDefinitions.map((def) => ({
+            ...def,
+            catDocs: docsByCategoryId[def.id] || [],
+        }));
+    }, [documents]);
+
+    const shareModalCategorySummary = useMemo(
+        () =>
+            walletFolderRows.map(({ catDocs, ...def }) => ({
+                ...def,
+                count: catDocs.length,
+            })),
+        [walletFolderRows],
+    );
+
+    const dynamicCategories = useMemo(
+        () =>
+            walletFolderRows.map(({ catDocs, ...def }) => {
+                const filtered =
+                    walletStatusFilter === 'all'
+                        ? catDocs
+                        : catDocs.filter((d) => documentMatchesWalletFilter(d, walletStatusFilter));
+                return {
+                    ...def,
+                    count: walletStatusFilter === 'all' ? catDocs.length : filtered.length,
+                };
+            }),
+        [walletFolderRows, walletStatusFilter],
+    );
+
     const filteredDynamicCategories = useMemo(() => {
-        const EXCLUDED_FROM_WALLET = new Set(['CV_RESUME', 'COVER_LETTER']);
-
-        const docBelongsToWalletFolder = (doc, walletFolderId) => {
-            if (!doc.category || EXCLUDED_FROM_WALLET.has(doc.category)) return false;
-            return getDocumentDisplayCategory(doc) === walletFolderId;
-        };
-
         return dynamicCategories.filter((category) => {
             const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
             if (!matchesSearch) return false;
+            if (walletStatusFilter !== 'all' && category.count === 0) return false;
             return true;
         });
-    }, [dynamicCategories, searchQuery]);
+    }, [dynamicCategories, searchQuery, walletStatusFilter]);
 
     const handleUploadComplete = (newDoc) => {
         fetchDocuments(); // refresh list
@@ -425,16 +439,6 @@ const DocumentsWallet = () => {
                 category={uploadCategory || selectedCategory || undefined}
             />
         );
-        return (
-            <UploadDocument
-                category={uploadContextCategory}
-                onBack={() => {
-                    setView('list');
-                    setUploadContextCategory(null);
-                }}
-                onCompletion={handleUploadComplete}
-            />
-        );
     }
 
     if (view === 'edit') {
@@ -460,6 +464,8 @@ const DocumentsWallet = () => {
     if (view === 'category') {
         return <CategoryDocuments
             category={selectedCategory}
+            walletStatusFilter={walletStatusFilter}
+            walletFilterLabel={WALLET_STATUS_TABS.find((t) => t.id === walletStatusFilter)?.label}
             onBack={() => { setView('list'); setSelectedCategory(null); fetchDocuments(); }}
             onUploadClick={() => setView('upload')}
         />;
@@ -520,6 +526,28 @@ const DocumentsWallet = () => {
                         <Upload size={16} />
                         Upload Document
                     </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
+                    {WALLET_STATUS_TABS.map(({ id, label }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            title={
+                                id === 'expiring'
+                                    ? `Expiry date is within the next ${EXPIRING_SOON_DAYS} days (from today)`
+                                    : undefined
+                            }
+                            onClick={() => setWalletStatusFilter(id)}
+                            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                                walletStatusFilter === id
+                                    ? 'bg-[#003366] text-white'
+                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -720,7 +748,7 @@ const DocumentsWallet = () => {
                         <div className="border-t border-gray-200 pt-4">
                             <p className="text-xs text-gray-500 mb-3">Summary by folder</p>
                             <div className="grid grid-cols-2 gap-2">
-                                {dynamicCategories.map((cat) => (
+                                {shareModalCategorySummary.map((cat) => (
                                     <div key={cat.id} className="flex items-center gap-2 text-xs text-gray-600">
                                         <cat.icon size={14} className={cat.iconColor} />
                                         <span>
