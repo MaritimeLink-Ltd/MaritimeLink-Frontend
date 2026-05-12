@@ -139,7 +139,6 @@ function Companies() {
     const totalToday = companyStats?.total?.today ?? 0;
     const claimedCount = companyStats?.claimed ?? companies.filter((c) => c.claimed).length;
     const unclaimedCount = companyStats?.unclaimed ?? companies.filter((c) => !c.claimed).length;
-    const mergeRequestsCount = companyStats?.mergeRequests ?? 0;
 
     const stats = [
         {
@@ -169,19 +168,6 @@ function Companies() {
             iconBg: 'bg-orange-50',
             cardBg: 'bg-white'
         },
-        {
-            value: String(mergeRequestsCount),
-            label: 'Merge Requests',
-            sublabel: 'Pending review',
-            icon: () => (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-            ),
-            iconColor: 'text-blue-500',
-            iconBg: 'bg-blue-50',
-            cardBg: 'bg-white'
-        }
     ];
 
     const itemsPerPage = 10;
@@ -272,7 +258,7 @@ function Companies() {
 
             {/* Unified Stats Card */}
             <div className="flex-shrink-0 bg-white rounded-3xl border border-gray-100 overflow-hidden mb-6 shadow-sm">
-                <div className="grid grid-cols-4 divide-x divide-gray-100">
+                <div className="grid grid-cols-3 divide-x divide-gray-100">
                     {/* Total Companies - Special Style */}
                     <div className="p-6 bg-blue-50/50 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-white border border-blue-100 flex items-center justify-center text-blue-600">
