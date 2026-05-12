@@ -779,8 +779,8 @@ const TrainingProviderProfile = () => {
                         <SupportCenterSection
                             basePath="trainer"
                             title="Trainer Support"
-                            description="Use this area for account access, billing, course management, or platform issues. Training providers default to Medium priority."
-                            priorityDefault="MEDIUM"
+                            description="Use this area for account access, billing, course management, or platform issues. Support queue priority is set automatically (Low for training provider accounts)."
+                            priorityDefault="LOW"
                             caseLabel="support case"
                         />
                     )}

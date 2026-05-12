@@ -27,7 +27,6 @@ const DEFAULT_CATEGORIES = [
 
 const priorityMeta = {
     HIGH: { label: 'High', className: 'bg-red-50 text-red-700 border-red-100' },
-    MEDIUM: { label: 'Medium', className: 'bg-orange-50 text-orange-700 border-orange-100' },
     LOW: { label: 'Low', className: 'bg-gray-50 text-gray-700 border-gray-200' },
 };
 
@@ -82,7 +81,7 @@ function SupportCenterSection({
     basePath,
     title = 'Support',
     description = 'Create a support request, track progress, and continue the conversation with admin.',
-    priorityDefault = 'MEDIUM',
+    priorityDefault = 'LOW',
     categoryOptions = DEFAULT_CATEGORIES,
     caseLabel = 'Support case',
 }) {
@@ -100,7 +99,10 @@ function SupportCenterSection({
     const [message, setMessage] = useState({ type: '', text: '' });
 
     const resolvedPriority = useMemo(
-        () => String(priorityDefault || 'MEDIUM').toUpperCase(),
+        () => {
+            const p = String(priorityDefault || 'LOW').toUpperCase();
+            return p === 'HIGH' ? 'HIGH' : 'LOW';
+        },
         [priorityDefault],
     );
 
@@ -208,9 +210,12 @@ function SupportCenterSection({
 
     const selectedNotes = Array.isArray(selectedCase?.notes) ? selectedCase.notes : [];
     const status = String(selectedCase?.status || 'OPEN').toUpperCase();
-    const priorityKey = String(selectedCase?.priority || resolvedPriority).toUpperCase();
+    const priorityKey =
+        String(selectedCase?.priority || resolvedPriority).toUpperCase() === 'HIGH'
+            ? 'HIGH'
+            : 'LOW';
     const statusInfo = statusMeta[status] || statusMeta.OPEN;
-    const priorityInfo = priorityMeta[priorityKey] || priorityMeta.MEDIUM;
+    const priorityInfo = priorityMeta[priorityKey] || priorityMeta.LOW;
 
     return (
         <div className="space-y-6">
@@ -326,9 +331,12 @@ function SupportCenterSection({
                             <div className="space-y-3">
                                 {cases.map((caseItem) => {
                                     const caseStatus = String(caseItem.status || 'OPEN').toUpperCase();
-                                    const casePriority = String(caseItem.priority || 'MEDIUM').toUpperCase();
+                                    const casePriority =
+                                        String(caseItem.priority || 'LOW').toUpperCase() === 'HIGH'
+                                            ? 'HIGH'
+                                            : 'LOW';
                                     const caseStatusInfo = statusMeta[caseStatus] || statusMeta.OPEN;
-                                    const casePriorityInfo = priorityMeta[casePriority] || priorityMeta.MEDIUM;
+                                    const casePriorityInfo = priorityMeta[casePriority] || priorityMeta.LOW;
                                     return (
                                         <div key={caseItem.id} className="rounded-xl border border-gray-100 p-4">
                                             <div className="flex items-start justify-between gap-3">
@@ -405,7 +413,7 @@ function SupportCenterSection({
                                         <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusMeta[status]?.className || statusMeta.OPEN.className}`}>
                                             {statusMeta[status]?.label || status}
                                         </span>
-                                        <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityMeta[priorityKey]?.className || priorityMeta.MEDIUM.className}`}>
+                                        <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityMeta[priorityKey]?.className || priorityMeta.LOW.className}`}>
                                             {priorityMeta[priorityKey]?.label || priorityKey}
                                         </span>
                                     </div>

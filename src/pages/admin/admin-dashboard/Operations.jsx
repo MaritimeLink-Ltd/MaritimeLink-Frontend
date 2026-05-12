@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, RefreshCw, Download, Activity as ActivityIcon, LifeBuoy, Server, ChevronDown, User, Shield, Globe, XCircle, AlertTriangle, MessageSquare, Clock, CheckCircle, Users, AlertOctagon, ChevronLeft, ChevronRight, Layers, Database, Mail, FileText, PauseCircle, PlayCircle, Store, FileCheck } from 'lucide-react';
+import { Search, RefreshCw, Download, Activity as ActivityIcon, LifeBuoy, Server, ChevronDown, User, Globe, XCircle, AlertTriangle, MessageSquare, Clock, CheckCircle, Users, AlertOctagon, ChevronLeft, ChevronRight, Layers, Database, Mail, FileText, PauseCircle, PlayCircle, Store, FileCheck } from 'lucide-react';
 import adminOperationsService from '../../../services/adminOperationsService';
 
 const formatShortDateTime = (value) => {
@@ -88,16 +88,6 @@ const normalizeActivityStats = (stats = {}) => [
         iconBg: 'bg-red-50',
         cardBg: 'bg-white',
     },
-    {
-        value: Number.isFinite(Number(stats.securityAlerts)) ? Number(stats.securityAlerts).toLocaleString('en-US') : '0',
-        label: 'Security Alerts',
-        sublabel: 'Needs review',
-        sublabelColor: 'text-orange-600',
-        icon: Shield,
-        iconColor: 'text-orange-500',
-        iconBg: 'bg-orange-50',
-        cardBg: 'bg-white',
-    },
 ];
 
 const supportStatusClassMap = {
@@ -110,13 +100,13 @@ const supportStatusClassMap = {
 
 const supportPriorityClassMap = {
     HIGH: 'text-red-500',
-    MEDIUM: 'text-orange-500',
     LOW: 'text-gray-500',
 };
 
 const formatSupportCase = (supportCase) => {
     const status = String(supportCase?.status || 'OPEN').toUpperCase();
-    const priority = String(supportCase?.priority || 'MEDIUM').toUpperCase();
+    const rawPriority = String(supportCase?.priority || 'LOW').toUpperCase();
+    const priority = rawPriority === 'HIGH' ? 'HIGH' : 'LOW';
     const userType = String(supportCase?.user?.role || supportCase?.userType || 'User').replace(/_/g, ' ');
     const userId = supportCase?.userId || 'Unknown';
     const assignedTo = supportCase?.assignedTo?.name || supportCase?.assignedTo?.email || 'Unassigned';
@@ -240,7 +230,7 @@ function Operations() {
         // { name: 'Manual Actions', icon: Sliders }
     ];
 
-    const subTabs = ['All Activity', 'User Actions', 'Admin Actions', 'System Actions', 'Security'];
+    const subTabs = ['All Activity', 'User Actions', 'Admin Actions'];
     const systemJobSubTabs = ['All', 'Running', 'Completed', 'Failed', 'Queued', 'Paused'];
     const manualActionsSubTabs = [
         { name: 'Accounts', icon: Users },
@@ -411,15 +401,6 @@ function Operations() {
                     matchesSubTab = ['Recruiter', 'Recruitment Agent', 'Training Agent', 'Professional', 'Seafarer', 'User', 'Guest'].includes(item.actorRole);
                 } else if (activeSubTab === 'Admin Actions') {
                     matchesSubTab = ['Admin', 'Super Admin', 'Moderator', 'Compliance Officer', 'Compliance', 'Manager'].includes(item.actorRole);
-                } else if (activeSubTab === 'System Actions') {
-                    matchesSubTab = ['System'].includes(item.actorRole);
-                } else if (activeSubTab === 'Security') {
-                    matchesSubTab = ['Malicious'].includes(item.actorRole) ||
-                        item.action.includes('Ban') ||
-                        item.action.includes('Failed') ||
-                        item.action.includes('Unauthorized') ||
-                        item.action.includes('DDoS') ||
-                        item.action.includes('Injection');
                 }
 
                 return matchesSearch && matchesFilter && matchesSubTab && matchesTime;
@@ -577,7 +558,7 @@ function Operations() {
 
             {/* Stats Cards - Hidden for Manual Actions */}
             {activeMainTab !== 'Manual Actions' && (
-                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' ? 'md:grid-cols-4' : activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' ? 'md:grid-cols-4' : activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-3'}`}>
                     {stats.map((stat, index) => (
                         <div key={index} className={`${stat.cardBg} rounded-xl border border-gray-100 p-5`}>
                             <div className="flex items-start gap-4">
@@ -899,7 +880,6 @@ function Operations() {
                                     >
                                         <option value="All">All Priority</option>
                                         <option value="HIGH">High</option>
-                                        <option value="MEDIUM">Medium</option>
                                         <option value="LOW">Low</option>
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />

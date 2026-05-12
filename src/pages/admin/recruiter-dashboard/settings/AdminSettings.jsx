@@ -875,8 +875,8 @@ function AdminSettings() {
                             <SupportCenterSection
                                 basePath="recruiter"
                                 title="Recruiter Support"
-                                description="Open support requests for account access, job posting, billing, or platform issues. Recruiter and trainer requests default to Medium priority."
-                                priorityDefault="MEDIUM"
+                            description="Open support requests for account access, job posting, billing, or platform issues. Support queue priority is set automatically (Low for recruiter accounts)."
+                            priorityDefault="LOW"
                                 caseLabel="support case"
                             />
                         )}

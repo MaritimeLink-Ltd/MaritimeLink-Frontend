@@ -14,6 +14,8 @@ import {
     MessageSquare,
     FileText,
     Loader2,
+    StickyNote,
+    Send,
 } from 'lucide-react';
 import conversationService from '../../../services/conversationService';
 import adminOperationsService from '../../../services/adminOperationsService';
@@ -93,9 +95,8 @@ function SupportCaseDetails() {
         void loadCase();
     }, [id]);
 
-    useEffect(() => {
-        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [caseData?.notes?.length]);
+    const [newNoteText, setNewNoteText] = useState('');
+    const [addingNote, setAddingNote] = useState(false);
 
     const openModal = (type) => {
         setActiveModal(type);
@@ -109,8 +110,14 @@ function SupportCaseDetails() {
     const user = caseData?.user || null;
     const userType = String(user?.role || caseData?.userType || caseData?.actorType || '').toUpperCase();
     const notes = Array.isArray(caseData?.notes) ? caseData.notes : [];
-    const publicReplies = notes.filter((note) => !note.isInternal);
-    const internalNotes = notes.filter((note) => note.isInternal);
+    const adminNotes = useMemo(
+        () => notes.filter((note) => note.author),
+        [caseData?.notes],
+    );
+
+    useEffect(() => {
+        conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [adminNotes.length]);
 
     const confirmAction = async () => {
         if (!activeModal || saving) return;
@@ -142,6 +149,29 @@ function SupportCaseDetails() {
         }
     };
 
+    const handleAddAdminNote = async () => {
+        const text = newNoteText.trim();
+        if (!text || addingNote || !id) return;
+
+        setAddingNote(true);
+        setError('');
+        setFeedback('');
+        try {
+            await adminOperationsService.addSupportCaseNote(id, {
+                content: text,
+                isInternal: true,
+            });
+            setNewNoteText('');
+            setFeedback('Note added for the team.');
+            await loadCase();
+        } catch (err) {
+            console.error('Failed to add note:', err);
+            setError(err?.message || 'Failed to add note');
+        } finally {
+            setAddingNote(false);
+        }
+    };
+
     const caseStatusLabel = useMemo(() => {
         const map = {
             OPEN: 'Open',
@@ -153,10 +183,10 @@ function SupportCaseDetails() {
         return map[caseStatus] || caseStatus;
     }, [caseStatus]);
 
-    const priority = String(caseData?.priority || 'MEDIUM').toUpperCase();
+    const raw = String(caseData?.priority || 'LOW').toUpperCase();
+    const priority = raw === 'HIGH' ? 'HIGH' : 'LOW';
     const priorityLabelClass = {
         HIGH: 'text-red-600',
-        MEDIUM: 'text-orange-600',
         LOW: 'text-gray-600',
     }[priority] || 'text-gray-600';
 
@@ -430,54 +460,101 @@ function SupportCaseDetails() {
                     </div>
 
                     <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-0">
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col min-h-0">
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col min-h-0 max-h-[calc(100dvh-220px)]">
+                            <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Case Activity</h4>
-                                    <p className="text-xs text-gray-500">Public replies and internal notes</p>
+                                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <StickyNote className="h-4 w-4 text-[#003971]" />
+                                        Case activity
+                                    </h4>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        Internal admin notes — visible to admins only. Use this to hand off context between team members.
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
                                     <MessageSquare className="h-4 w-4" />
-                                    <span>{notes.length} entries</span>
+                                    <span>{adminNotes.length} note{adminNotes.length === 1 ? '' : 's'}</span>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                                {notes.length > 0 ? (
-                                    notes.map((note) => (
+                            <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
+                                {adminNotes.length > 0 ? (
+                                    adminNotes.map((note) => (
                                         <div
                                             key={note.id}
-                                            className={`rounded-xl border p-4 ${note.isInternal ? 'border-amber-200 bg-amber-50/60' : 'border-blue-100 bg-blue-50/60'}`}
+                                            className="rounded-xl border border-gray-200 bg-gray-50/90 p-4"
                                         >
-                                            <div className="flex items-start justify-between gap-3 mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                                                        {getInitials(note.author?.name || 'Admin')}
+                                            <div className="flex items-start gap-3 mb-2">
+                                                <div className="h-9 w-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
+                                                    {getInitials(note.author?.name || note.author?.email)}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-sm font-semibold text-gray-900">
+                                                        {note.author?.name || 'Admin'}
                                                     </div>
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900">
-                                                            {note.author?.name || 'Admin'}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {note.author?.email || 'System'} · {formatRelativeTime(note.createdAt)}
-                                                        </div>
+                                                    <div className="text-xs text-gray-500 break-all">
+                                                        {note.author?.email || '—'}
+                                                        <span className="text-gray-400"> · </span>
+                                                        {formatRelativeTime(note.createdAt)}
                                                     </div>
                                                 </div>
-                                                <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${note.isInternal ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {note.isInternal ? 'Internal Note' : 'Public Reply'}
-                                                </span>
                                             </div>
-                                            <p className="text-sm text-gray-700 whitespace-pre-line leading-6">
+                                            <p className="text-sm text-gray-700 whitespace-pre-line leading-6 pl-0 sm:pl-12">
                                                 {note.content}
                                             </p>
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="h-full min-h-[200px] flex items-center justify-center text-sm text-gray-500">
-                                        No notes yet.
+                                    <div className="min-h-[120px] flex items-center justify-center text-sm text-gray-500 text-center px-4">
+                                        No admin notes yet. Add the first note below to capture progress for other admins.
                                     </div>
                                 )}
                                 <div ref={conversationEndRef} />
+                            </div>
+
+                            <div className="border-t border-gray-100 p-4 bg-white shrink-0">
+                                <label htmlFor="admin-case-note" className="sr-only">
+                                    Add admin note
+                                </label>
+                                <textarea
+                                    id="admin-case-note"
+                                    rows={3}
+                                    value={newNoteText}
+                                    onChange={(e) => setNewNoteText(e.target.value)}
+                                    placeholder="Add an internal note for your team (not visible to the user)…"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971]/25 focus:border-[#003971] resize-y min-h-[88px]"
+                                    disabled={addingNote || caseStatus === 'CLOSED'}
+                                />
+                                <div className="mt-3 flex items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewNoteText('')}
+                                        disabled={addingNote || !newNoteText.trim()}
+                                        className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleAddAdminNote()}
+                                        disabled={
+                                            addingNote || !newNoteText.trim() || caseStatus === 'CLOSED'
+                                        }
+                                        className="inline-flex items-center gap-2 rounded-lg bg-[#003971] px-4 py-2 text-xs font-semibold text-white hover:bg-[#002855] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {addingNote ? (
+                                            <>
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                Saving…
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="h-3.5 w-3.5" />
+                                                Add note
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -513,7 +590,7 @@ function SupportCaseDetails() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Paperclip className="h-4 w-4 text-gray-400" />
-                                        <span>{publicReplies.length} public replies · {internalNotes.length} internal notes</span>
+                                        <span>{adminNotes.length} admin note{adminNotes.length === 1 ? '' : 's'}</span>
                                     </div>
                                 </div>
                             </div>
