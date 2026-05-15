@@ -13,6 +13,7 @@ const PersonalDashboard = () => {
   const {
     hasFullAccess: isVerifiedByAdmin,
     isKycUnderReview,
+    hasKycSubmitted,
     ui: {
       showVerifyIdentityModal,
       showSelectDocumentModal,
@@ -50,21 +51,38 @@ const PersonalDashboard = () => {
               <AlertTriangle size={40} className="text-amber-600" />
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#003971]">
-              Account Under Review
+              {isKycUnderReview || hasKycSubmitted
+                ? 'Account Under Review'
+                : 'Verify Your Identity'}
             </h1>
-            {isKycUnderReview ? (
-              <p className="text-gray-600">
-                Thanks for submitting your KYC details. Your information is being reviewed by our admin team.
-              </p>
-            ) : (
-              <p className="text-gray-600">
-                Your account is currently being reviewed by our admin team.
-              </p>
-            )}
-            <p className="text-gray-500 text-sm">
-              Once your KYC verification is approved, you will have full access to Jobs, Training, Chats, and Profile.
-              In the meantime, you can update your <strong>Resume</strong> and <strong>Documents</strong>.
+            <p className="text-gray-600">
+              {isKycUnderReview || hasKycSubmitted
+                ? 'Your account is currently being reviewed by our admin team.'
+                : 'Complete identity verification to unlock full access to MaritimeLink.'}
             </p>
+            <p className="text-gray-500 text-sm">
+              {isKycUnderReview || hasKycSubmitted ? (
+                <>
+                  Once your KYC verification is approved, you will have full access to Jobs, Training, Chats,
+                  and Profile. In the meantime, you can update your <strong>Resume</strong> and{' '}
+                  <strong>Documents</strong>.
+                </>
+              ) : (
+                <>
+                  To protect professionals from scams and keep MaritimeLink trusted, we need to verify your
+                  identity before you continue.
+                </>
+              )}
+            </p>
+            {!hasKycSubmitted && !isKycUnderReview ? (
+              <button
+                type="button"
+                onClick={handleStartVerification}
+                className="inline-flex items-center px-6 py-3 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002855] transition-colors"
+              >
+                Start verification
+              </button>
+            ) : null}
           </div>
         </div>
       )}

@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 
+const MIN_SUMMARY_LENGTH = 20;
+const SUMMARY_TOO_SHORT_MESSAGE = 'Write at least 20 characters.';
+
 const ProfessionalSummary = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [formData, setFormData] = useState({
     professionalSummary: initialData.professionalSummary || ''
   });
+  const [fieldError, setFieldError] = useState(null);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -12,6 +16,7 @@ const ProfessionalSummary = ({ onNext, onBack, initialData = {}, isLoading = fal
   }, [initialData]);
 
   const handleChange = (e) => {
+    if (fieldError) setFieldError(null);
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -19,12 +24,19 @@ const ProfessionalSummary = ({ onNext, onBack, initialData = {}, isLoading = fal
   };
 
   const handleNext = () => {
+    const text = (formData.professionalSummary || '').trim();
+    if (text.length < MIN_SUMMARY_LENGTH) {
+      setFieldError(SUMMARY_TOO_SHORT_MESSAGE);
+      return;
+    }
+    setFieldError(null);
     onNext(formData);
   };
 
   return (
     <form className="flex flex-col h-full justify-between">
       <div className="space-y-4">
+        {/* Professional Summary */}
         <div>
           <label htmlFor="professionalSummary" className="block text-gray-700 font-medium mb-1 text-sm">
             Professional Summary
@@ -36,11 +48,17 @@ const ProfessionalSummary = ({ onNext, onBack, initialData = {}, isLoading = fal
             value={formData.professionalSummary}
             onChange={handleChange}
             rows={10}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors resize-none"
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors resize-none ${
+              fieldError ? 'border-red-400 focus:border-red-400' : 'border-gray-300 focus:border-gray-400'
+            }`}
           />
+          {fieldError && (
+            <p className="mt-1.5 text-sm text-red-600">{fieldError}</p>
+          )}
         </div>
       </div>
 
+      {/* Buttons */}
       <div className="flex flex-col pt-4">
         {apiError && (
           <div className="w-full bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-100 mb-4 text-right">

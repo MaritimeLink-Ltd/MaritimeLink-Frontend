@@ -238,6 +238,14 @@ const Dashboard = () => {
         loadDashboard();
     }, [loadDashboard]);
 
+    useEffect(() => {
+        const onAlertReceived = () => {
+            loadDashboard();
+        };
+        window.addEventListener('professionalAlertReceived', onAlertReceived);
+        return () => window.removeEventListener('professionalAlertReceived', onAlertReceived);
+    }, [loadDashboard]);
+
     const markAlertReadRemote = useCallback(async (alert) => {
         if (!alert?.id || alert.isRead !== false) return;
         if (markingReadIdsRef.current.has(alert.id)) return;
