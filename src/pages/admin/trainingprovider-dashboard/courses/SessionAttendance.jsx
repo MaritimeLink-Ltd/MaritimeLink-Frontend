@@ -138,6 +138,7 @@ export default function SessionAttendance() {
   const [rejectReason, setRejectReason] = useState('');
   const [selectedAttendee, setSelectedAttendee] = useState(null);
   const [approvingBookingId, setApprovingBookingId] = useState(null);
+  const [rejectingBookingId, setRejectingBookingId] = useState(null);
 
   const loadAttendees = useCallback(async () => {
     if (adminCourseBookingsMode) {
@@ -227,7 +228,7 @@ export default function SessionAttendance() {
     );
     if (!confirmed) return;
 
-    setApprovingBookingId(bookingId);
+    setRejectingBookingId(bookingId);
     try {
       const res = await httpClient.post(
         API_ENDPOINTS.TRAINER.REJECT_ATTENDEE(sessionId, bookingId),
@@ -252,18 +253,35 @@ export default function SessionAttendance() {
       } else {
         await loadAttendees();
       }
-      const refunded = res?.data?.refundProcessed === true;
-      toast.success(
-        res?.message ||
-          (refunded
-            ? 'Attendee rejected and payment refunded to their card.'
-            : 'Attendee rejected successfully.')
-      );
+      const refund = res?.data?.refund || {};
+      const refunded =
+        res?.refundProcessed === true ||
+        res?.data?.refundProcessed === true ||
+        refund?.processed === true;
+
+      if (refunded) {
+        const amountLabel =
+          refund.amount != null && refund.currency
+            ? `${refund.currency === 'GBP' ? '£' : ''}${Number(refund.amount).toFixed(2)}${refund.currency !== 'GBP' ? ` ${refund.currency}` : ''}`
+            : 'Full amount';
+        toast.success(
+          res?.message ||
+            `Money returned: ${amountLabel} refunded to the professional's card (5–10 business days).`,
+          { duration: 8000, icon: '💳' }
+        );
+      } else {
+        toast.success(
+          res?.message ||
+            refund?.note ||
+            'Attendee rejected. No payment was refunded (booking was not marked as paid).',
+          { duration: 7000 }
+        );
+      }
     } catch (e) {
       console.error('Reject attendee failed', e);
       toast.error(e?.message || 'Could not reject attendee.');
     } finally {
-      setApprovingBookingId(null);
+      setRejectingBookingId(null);
     }
   };
 
@@ -562,11 +580,22 @@ export default function SessionAttendance() {
                             <button
                               type="button"
                               onClick={() => handleRejectAttendee(attendee.bookingId, attendee.paymentOk)}
-                              disabled={approvingBookingId === attendee.bookingId}
+                              disabled={
+                                rejectingBookingId === attendee.bookingId ||
+                                approvingBookingId === attendee.bookingId
+                              }
                               className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 disabled:cursor-wait"
                             >
-                              <XCircle className="h-3.5 w-3.5" />
-                              {attendee.paymentOk ? 'Reject / Refund' : 'Reject'}
+                              {rejectingBookingId === attendee.bookingId ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5" />
+                              )}
+                              {rejectingBookingId === attendee.bookingId
+                                ? 'Refunding…'
+                                : attendee.paymentOk
+                                  ? 'Reject / Refund'
+                                  : 'Reject'}
                             </button>
                           )}
                           <button
