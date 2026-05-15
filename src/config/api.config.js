@@ -302,6 +302,8 @@ export const API_ENDPOINTS = {
     PROFESSIONAL_ALL: '/api/professional/courses',
     PROFESSIONAL_SESSIONS: (courseId) => `/api/professional/courses/${courseId}/sessions`,
     PROFESSIONAL_CHECKOUT: '/api/professional/course-bookings/checkout',
+    PROFESSIONAL_CONFIRM_BOOKING: (bookingId) =>
+      `/api/professional/course-bookings/${bookingId}/confirm`,
     PROFESSIONAL_BOOKING: (bookingId) => `/api/professional/bookings/${bookingId}`,
     PROFESSIONAL_BOOKINGS: '/api/professional/bookings',
     PROFESSIONAL_SAVED_COURSES: '/api/professional/saved-courses',

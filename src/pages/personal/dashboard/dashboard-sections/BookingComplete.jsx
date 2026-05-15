@@ -22,6 +22,17 @@ const BookingComplete = () => {
                 return;
             }
             try {
+                if (redirectStatus === 'succeeded') {
+                    try {
+                        await httpClient.post(
+                            API_ENDPOINTS.COURSES.PROFESSIONAL_CONFIRM_BOOKING(bookingId),
+                            {}
+                        );
+                    } catch (confirmErr) {
+                        console.warn('Booking payment confirm sync:', confirmErr);
+                    }
+                }
+
                 const res = await httpClient.get(API_ENDPOINTS.COURSES.PROFESSIONAL_BOOKING(bookingId));
                 const b = res?.data?.booking ?? res?.data;
                 if (res?.status === 'success' && b) {
@@ -36,7 +47,7 @@ const BookingComplete = () => {
             }
         };
         load();
-    }, [bookingId]);
+    }, [bookingId, redirectStatus]);
 
     const stripeRedirectOk = redirectStatus === 'succeeded';
     const paymentOk =

@@ -121,3 +121,20 @@ export function subscribeConversationMessages(conversationId, onMessage) {
     };
 }
 
+/**
+ * Real-time alerts for professionals (course refunds, job updates, etc.).
+ */
+export function subscribeProfessionalAlerts(onAlert) {
+    if (typeof onAlert !== 'function') return () => {};
+    const s = connectSocket();
+
+    const handler = (payload) => {
+        const alert = payload?.alert ?? payload;
+        if (!alert || typeof alert !== 'object') return;
+        onAlert(alert);
+    };
+
+    s.on('professional_alert', handler);
+    return () => s.off('professional_alert', handler);
+}
+

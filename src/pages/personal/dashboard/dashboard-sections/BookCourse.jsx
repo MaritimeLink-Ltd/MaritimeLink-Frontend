@@ -83,6 +83,11 @@ function CoursePaymentForm({ clientSecret, bookingId, payLabel, onAbandon }) {
             setLocalError(error.message || 'Payment failed.');
             return;
         }
+        try {
+            await httpClient.post(API_ENDPOINTS.COURSES.PROFESSIONAL_CONFIRM_BOOKING(bookingId), {});
+        } catch (confirmErr) {
+            console.warn('Booking payment confirm sync:', confirmErr);
+        }
         navigate(`/personal/training/booking-complete?bookingId=${encodeURIComponent(bookingId)}`);
     };
 

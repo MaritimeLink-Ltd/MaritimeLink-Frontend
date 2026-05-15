@@ -15,7 +15,9 @@ import {
     LogOut,
     AlertTriangle
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
+import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
@@ -74,6 +76,26 @@ function PersonalDashboardLayout() {
             window.removeEventListener('storage', updateUserData);
             window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         };
+    }, []);
+
+    React.useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return undefined;
+
+        return subscribeProfessionalAlerts((alert) => {
+            const title = alert.title || 'Notification';
+            const message = alert.message || '';
+            const text = message ? `${title}: ${message}` : title;
+
+            toast(text, {
+                duration: 8000,
+                icon: title.toLowerCase().includes('refund') ? '💳' : '🔔',
+            });
+
+            window.dispatchEvent(
+                new CustomEvent('professionalAlertReceived', { detail: alert })
+            );
+        });
     }, []);
 
     const isActive = (path) => location.pathname === path;
@@ -137,6 +159,7 @@ function PersonalDashboardLayout() {
 
     return (
         <div className="h-screen bg-white flex overflow-hidden">
+            <Toaster position="top-right" />
             {/* Mobile Sidebar Overlay */}
             {!isFullScreenPage && sidebarOpen && (
                 <div

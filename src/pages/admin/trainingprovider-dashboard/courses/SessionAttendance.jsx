@@ -36,6 +36,7 @@ function bookingStatusLabel(raw) {
 function paymentLabel(raw) {
   const s = String(raw || '').toUpperCase();
   if (s === 'SUCCEEDED' || s === 'PAID') return 'Paid';
+  if (s === 'REFUNDED') return 'Refunded';
   if (s === 'PENDING') return 'Pending';
   if (s === 'FAILED') return 'Failed';
   return raw ? String(raw) : '—';
@@ -251,7 +252,13 @@ export default function SessionAttendance() {
       } else {
         await loadAttendees();
       }
-      toast.success(res?.message || 'Attendee rejected successfully.');
+      const refunded = res?.data?.refundProcessed === true;
+      toast.success(
+        res?.message ||
+          (refunded
+            ? 'Attendee rejected and payment refunded to their card.'
+            : 'Attendee rejected successfully.')
+      );
     } catch (e) {
       console.error('Reject attendee failed', e);
       toast.error(e?.message || 'Could not reject attendee.');
