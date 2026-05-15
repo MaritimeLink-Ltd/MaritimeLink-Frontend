@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, Loader2, MessageSquare } from 'lucide-react';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
 import toast, { Toaster } from 'react-hot-toast';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import {
+    formatMembershipPrice,
+    getPlanHighlights,
+    isMembershipPlanCurrent,
+} from '../../../../utils/membershipPlans';
 
 function resolveProfessionalId() {
     const direct = localStorage.getItem('professionalId');
@@ -20,6 +25,7 @@ function resolveProfessionalId() {
 
 const Profile = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [showPremiumPlans, setShowPremiumPlans] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
@@ -46,6 +52,8 @@ const Profile = () => {
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [membershipTier, setMembershipTier] = useState('FREE');
     const [isUpdatingMembership, setIsUpdatingMembership] = useState(false);
+    const [membershipPlans, setMembershipPlans] = useState([]);
+    const [plansLoading, setPlansLoading] = useState(false);
 
     // Get user data from localStorage
     const [userName, setUserName] = useState('User');
@@ -157,20 +165,107 @@ const Profile = () => {
         }
     };
 
-    const handleMembershipSelect = async (tier) => {
+    const loadMembershipPlans = React.useCallback(async () => {
+        try {
+            setPlansLoading(true);
+            const response = await authService.getMembership();
+            const plans = response?.data?.membership?.plans;
+            setMembershipPlans(Array.isArray(plans) ? plans : []);
+            const tier = response?.data?.membership?.tier;
+            if (tier) setMembershipTier(tier);
+        } catch (error) {
+            toast.error(error.message || 'Failed to load plans', { position: 'top-right' });
+            setMembershipPlans([]);
+        } finally {
+            setPlansLoading(false);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (showPremiumPlans) {
+            loadMembershipPlans();
+        }
+    }, [showPremiumPlans, loadMembershipPlans]);
+
+    const handleMembershipSelect = async (plan) => {
         try {
             setIsUpdatingMembership(true);
-            const response = await authService.updateMembership(tier);
-            const nextTier = response?.data?.membership?.tier || tier;
-            setMembershipTier(nextTier);
-            toast.success('Membership updated successfully', { position: 'top-right' });
-            setShowPremiumPlans(false);
+
+            if (plan.planCode === 'FREE' || plan.id === 'FREE' || !plan.stripePriceId) {
+                const response = await authService.updateMembership('FREE');
+                const nextTier = response?.data?.membership?.tier || 'FREE';
+                setMembershipTier(nextTier);
+                toast.success('Plan updated to Free', { position: 'top-right' });
+                setShowPremiumPlans(false);
+                return;
+            }
+
+            if (membershipTier === 'PRO') {
+                toast.success('You already have an active premium plan', { position: 'top-right' });
+                return;
+            }
+
+            const response = await authService.createMembershipCheckout({
+                stripePriceId: plan.stripePriceId,
+                planCode: plan.planCode,
+            });
+            const checkoutUrl = response?.data?.checkoutUrl;
+            if (!checkoutUrl) {
+                throw new Error('Checkout URL was not returned. Please try again.');
+            }
+            window.location.href = checkoutUrl;
         } catch (error) {
-            toast.error(error.message || 'Failed to update membership', { position: 'top-right' });
+            toast.error(error.message || 'Failed to start checkout', { position: 'top-right' });
         } finally {
             setIsUpdatingMembership(false);
         }
     };
+
+    React.useEffect(() => {
+        const membershipStatus = searchParams.get('membership');
+        const sessionId = searchParams.get('session_id');
+
+        if (membershipStatus === 'canceled') {
+            toast.error('Checkout was canceled', { position: 'top-right' });
+            setSearchParams({}, { replace: true });
+            return;
+        }
+
+        if (membershipStatus !== 'success' || !sessionId) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const confirmPayment = async () => {
+            try {
+                setIsUpdatingMembership(true);
+                const response = await authService.confirmMembershipCheckout(sessionId);
+                if (cancelled) return;
+                const nextTier = response?.data?.membership?.tier || 'PRO';
+                setMembershipTier(nextTier);
+                toast.success('Payment successful! Your premium plan is now active.', {
+                    position: 'top-right',
+                });
+                setShowPremiumPlans(false);
+            } catch (error) {
+                if (!cancelled) {
+                    toast.error(error.message || 'Could not confirm payment', { position: 'top-right' });
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsUpdatingMembership(false);
+                    setSearchParams({}, { replace: true });
+                }
+            }
+        };
+
+        confirmPayment();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [searchParams, setSearchParams]);
 
     // Handle profile image upload — calls the real API
     const handleImageUpload = async (event) => {
@@ -450,118 +545,94 @@ const Profile = () => {
                                 </button>
                             </div>
                             <div className="p-6">
-                                <div className="grid md:grid-cols-3 gap-6">
-                                    {/* Basic Plan */}
-                                    <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-all">
-                                        <div className="text-center mb-6">
-                                            <h3 className="text-xl font-semibold text-gray-800 mb-2">Basic</h3>
-                                            <div className="mb-4">
-                                                <span className="text-4xl font-bold text-gray-800">£9.99</span>
-                                                <span className="text-gray-500">/month</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-3 mb-6">
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Apply to jobs</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Basic profile visibility</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Email support</span>
-                                            </li>
-                                        </ul>
-                                        <button
-                                            onClick={() => handleMembershipSelect('FREE')}
-                                            disabled={isUpdatingMembership}
-                                            className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        >
-                                            {membershipTier === 'FREE' ? 'Current Plan' : 'Select Plan'}
-                                        </button>
+                                {plansLoading ? (
+                                    <div className="flex items-center justify-center py-16 text-gray-500">
+                                        <Loader2 className="h-8 w-8 animate-spin text-[#003971] mr-3" />
+                                        Loading plans from Stripe…
                                     </div>
+                                ) : membershipPlans.length === 0 ? (
+                                    <p className="text-center text-gray-500 py-12">
+                                        No membership plans found. Add recurring products in your Stripe dashboard.
+                                    </p>
+                                ) : (
+                                    <div
+                                        className={`grid gap-6 ${
+                                            membershipPlans.length >= 3
+                                                ? 'md:grid-cols-3'
+                                                : membershipPlans.length === 2
+                                                  ? 'md:grid-cols-2'
+                                                  : 'md:grid-cols-1 max-w-md mx-auto'
+                                        }`}
+                                    >
+                                        {membershipPlans.map((plan) => {
+                                            const isCurrent = isMembershipPlanCurrent(plan, membershipTier);
+                                            const isPopular = plan.popular;
+                                            const highlights = getPlanHighlights(plan);
+                                            const isPaid = Boolean(plan.stripePriceId);
 
-                                    {/* Professional Plan */}
-                                    <div className="border-2 border-blue-500 rounded-xl p-6 relative bg-blue-50">
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                            <span className="bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">POPULAR</span>
-                                        </div>
-                                        <div className="text-center mb-6">
-                                            <h3 className="text-xl font-semibold text-gray-800 mb-2">Professional</h3>
-                                            <div className="mb-4">
-                                                <span className="text-4xl font-bold text-gray-800">£19.99</span>
-                                                <span className="text-gray-500">/month</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-3 mb-6">
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Everything in Basic</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Priority profile visibility</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Featured in searches</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Priority support</span>
-                                            </li>
-                                        </ul>
-                                        <button
-                                            onClick={() => handleMembershipSelect('PRO')}
-                                            disabled={isUpdatingMembership}
-                                            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        >
-                                            {membershipTier === 'PRO' ? 'Current Plan' : 'Select Plan'}
-                                        </button>
+                                            return (
+                                                <div
+                                                    key={plan.id}
+                                                    className={`border-2 rounded-xl p-6 transition-all relative ${
+                                                        isPopular
+                                                            ? 'border-blue-500 bg-blue-50'
+                                                            : 'border-gray-200 hover:border-blue-500'
+                                                    }`}
+                                                >
+                                                    {isPopular && (
+                                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                                            <span className="bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                                                                POPULAR
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <div className="text-center mb-6">
+                                                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                                                            {plan.name}
+                                                        </h3>
+                                                        <div className="mb-4">
+                                                            <span className="text-4xl font-bold text-gray-800">
+                                                                {formatMembershipPrice(plan)}
+                                                            </span>
+                                                            {plan.price > 0 && (
+                                                                <span className="text-gray-500">
+                                                                    /{plan.interval || 'month'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ul className="space-y-3 mb-6">
+                                                        {highlights.map((item) => (
+                                                            <li key={item} className="flex items-start gap-2">
+                                                                <Check
+                                                                    size={20}
+                                                                    className="text-green-500 flex-shrink-0 mt-0.5"
+                                                                />
+                                                                <span className="text-sm text-gray-600">{item}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMembershipSelect(plan)}
+                                                        disabled={isUpdatingMembership || isCurrent}
+                                                        className={`w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                                                            isPopular
+                                                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                                : 'bg-gray-800 text-white hover:bg-gray-700'
+                                                        }`}
+                                                    >
+                                                        {isCurrent
+                                                            ? 'Current Plan'
+                                                            : isUpdatingMembership && isPaid
+                                                              ? 'Redirecting…'
+                                                              : 'Select Plan'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-
-                                    {/* Premium Plan */}
-                                    <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-all">
-                                        <div className="text-center mb-6">
-                                            <h3 className="text-xl font-semibold text-gray-800 mb-2">Premium</h3>
-                                            <div className="mb-4">
-                                                <span className="text-4xl font-bold text-gray-800">£29.99</span>
-                                                <span className="text-gray-500">/month</span>
-                                            </div>
-                                        </div>
-                                        <ul className="space-y-3 mb-6">
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Everything in Professional</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Top profile ranking</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Exclusive job opportunities</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">Dedicated account manager</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                                <span className="text-sm text-gray-600">24/7 priority support</span>
-                                            </li>
-                                        </ul>
-                                        <button
-                                            onClick={() => handleMembershipSelect('PRO')}
-                                            disabled={isUpdatingMembership}
-                                            className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        >
-                                            {membershipTier === 'PRO' ? 'Current Plan' : 'Select Plan'}
-                                        </button>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>

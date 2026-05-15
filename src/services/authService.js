@@ -578,6 +578,29 @@ class AuthService {
         }
     }
 
+    async createMembershipCheckout({ stripePriceId, planCode } = {}) {
+        try {
+            return await httpClient.post(API_ENDPOINTS.PROFESSIONAL.MEMBERSHIP_CHECKOUT, {
+                stripePriceId,
+                planCode,
+            });
+        } catch (error) {
+            console.error('Membership checkout error:', error);
+            throw error;
+        }
+    }
+
+    async confirmMembershipCheckout(sessionId) {
+        try {
+            return await httpClient.post(
+                `${API_ENDPOINTS.PROFESSIONAL.MEMBERSHIP_CONFIRM}?session_id=${encodeURIComponent(sessionId)}`,
+            );
+        } catch (error) {
+            console.error('Membership confirm error:', error);
+            throw error;
+        }
+    }
+
     async deleteAccount() {
         try {
             const response = await httpClient.delete(API_ENDPOINTS.PROFESSIONAL.DELETE_ACCOUNT);

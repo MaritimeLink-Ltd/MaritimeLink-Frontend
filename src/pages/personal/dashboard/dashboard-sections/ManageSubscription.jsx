@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Crown, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
+import {
+    formatMembershipPrice,
+    getPlanHighlights,
+    isMembershipPlanCurrent,
+} from '../../../../utils/membershipPlans';
 
 const PLAN_DETAILS = {
     FREE: {
@@ -28,11 +33,6 @@ const PLAN_DETAILS = {
     },
 };
 
-const formatPrice = (plan) => {
-    const price = Number(plan?.price || 0);
-    if (price <= 0) return 'Free';
-    return `${plan?.currency || ''}${plan?.currency ? ' ' : ''}${price.toFixed(2)}`;
-};
 
 const ManageSubscription = () => {
     const navigate = useNavigate();
@@ -76,28 +76,51 @@ const ManageSubscription = () => {
     const activeTier = membership?.tier || 'FREE';
     const activePlan = useMemo(() => {
         if (plans.length === 0) return null;
-        return plans.find((plan) => plan.id === activeTier) || plans[0];
+        if (activeTier === 'FREE') {
+            return plans.find((p) => p.planCode === 'FREE' || p.id === 'FREE') || plans[0];
+        }
+        return plans.find((p) => p.popular && p.stripePriceId) || plans.find((p) => p.stripePriceId) || plans[0];
     }, [plans, activeTier]);
 
-    const handleUpdatePlan = async (tier) => {
-        if (!tier || tier === activeTier) {
+    const handleUpdatePlan = async (plan) => {
+        if (!plan) {
+            navigate('/personal/profile');
+            return;
+        }
+
+        const isCurrent = isMembershipPlanCurrent(plan, activeTier);
+        if (isCurrent) {
             navigate('/personal/profile');
             return;
         }
 
         try {
             setIsUpdating(true);
-            const response = await authService.updateMembership(tier);
-            const nextMembership = response?.data?.membership || response?.membership || null;
-            setMembership((prev) => ({
-                ...(prev || {}),
-                ...(nextMembership || { tier }),
-                tier,
-            }));
-            toast.success('Subscription updated successfully', { position: 'top-right' });
-            navigate('/personal/profile');
+
+            if (plan.planCode === 'FREE' || plan.id === 'FREE' || !plan.stripePriceId) {
+                const response = await authService.updateMembership('FREE');
+                const nextMembership = response?.data?.membership || response?.membership || null;
+                setMembership((prev) => ({
+                    ...(prev || {}),
+                    ...(nextMembership || {}),
+                    tier: 'FREE',
+                }));
+                toast.success('Plan updated to Free', { position: 'top-right' });
+                navigate('/personal/profile');
+                return;
+            }
+
+            const response = await authService.createMembershipCheckout({
+                stripePriceId: plan.stripePriceId,
+                planCode: plan.planCode,
+            });
+            const checkoutUrl = response?.data?.checkoutUrl;
+            if (!checkoutUrl) {
+                throw new Error('Checkout URL was not returned. Please try again.');
+            }
+            window.location.href = checkoutUrl;
         } catch (error) {
-            toast.error(error.message || 'Failed to update membership', { position: 'top-right' });
+            toast.error(error.message || 'Failed to start checkout', { position: 'top-right' });
         } finally {
             setIsUpdating(false);
         }
@@ -107,7 +130,10 @@ const ManageSubscription = () => {
         navigate('/personal/profile');
     };
 
-    const benefits = PLAN_DETAILS[activeTier]?.highlights || PLAN_DETAILS.FREE.highlights;
+    const benefits =
+        getPlanHighlights(activePlan) ||
+        PLAN_DETAILS[activeTier]?.highlights ||
+        PLAN_DETAILS.FREE.highlights;
 
     return (
         <div className="w-full min-h-screen overflow-y-auto flex flex-col items-center py-20 px-4 sm:px-8 bg-gray-50">
@@ -145,7 +171,7 @@ const ManageSubscription = () => {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-2xl font-bold">
-                                        {activePlan ? formatPrice(activePlan) : 'Free'}
+                                        {activePlan ? formatMembershipPrice(activePlan) : 'Free'}
                                     </div>
                                     <div className="text-sm opacity-90">
                                         / {activePlan?.interval || 'month'}
@@ -177,8 +203,9 @@ const ManageSubscription = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {plans.map((plan) => {
-                                const isCurrent = plan.id === activeTier;
-                                const details = PLAN_DETAILS[plan.id] || PLAN_DETAILS.FREE;
+                                const isCurrent = isMembershipPlanCurrent(plan, activeTier);
+                                const details = PLAN_DETAILS[plan.planCode] || PLAN_DETAILS.FREE;
+                                const highlights = getPlanHighlights(plan);
 
                                 return (
                                     <div
@@ -198,12 +225,12 @@ const ManageSubscription = () => {
                                         </div>
 
                                         <div className="mb-4">
-                                            <div className="text-3xl font-bold text-gray-900">{formatPrice(plan)}</div>
+                                            <div className="text-3xl font-bold text-gray-900">{formatMembershipPrice(plan)}</div>
                                             <div className="text-sm text-gray-500">per {plan.interval || 'month'}</div>
                                         </div>
 
                                         <ul className="space-y-2 mb-5">
-                                            {details.highlights.map((item) => (
+                                            {highlights.map((item) => (
                                                 <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
                                                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                                                     <span>{item}</span>
@@ -212,7 +239,7 @@ const ManageSubscription = () => {
                                         </ul>
 
                                         <button
-                                            onClick={() => handleUpdatePlan(plan.id)}
+                                            onClick={() => handleUpdatePlan(plan)}
                                             disabled={isUpdating}
                                             className={`w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${isCurrent
                                                     ? 'bg-gray-900 text-white cursor-default'

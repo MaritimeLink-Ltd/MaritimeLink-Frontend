@@ -64,6 +64,8 @@ export const API_ENDPOINTS = {
     AVAILABILITY: '/api/professional/availability',
     FEEDBACK: '/api/professional/feedback',
     MEMBERSHIP: '/api/professional/membership',
+    MEMBERSHIP_CHECKOUT: '/api/professional/membership/checkout',
+    MEMBERSHIP_CONFIRM: '/api/professional/membership/confirm',
     PROFILE_PHOTO: '/api/professional/profile-photo',
     DELETE_ACCOUNT: '/api/professional/account',
     UPLOAD_ID: '/api/professional/upload-id',
