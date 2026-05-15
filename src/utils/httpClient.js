@@ -6,6 +6,7 @@
 import { API_CONFIG } from '../config/api.config';
 import { expireSessionAndRedirect, isAuthTokenExpired } from './sessionManager';
 import { getClientIp } from './clientIp';
+import { formatApiErrorPayload } from './apiError';
 
 class HttpClient {
     constructor(baseURL = API_CONFIG.BASE_URL) {
@@ -68,7 +69,7 @@ class HttpClient {
         }
 
         if (!response.ok) {
-            const error = new Error(data.message || 'An error occurred');
+            const error = new Error(formatApiErrorPayload(data));
             error.status = response.status;
             error.data = data;
             throw error;

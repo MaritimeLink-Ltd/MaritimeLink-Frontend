@@ -5,14 +5,12 @@ import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import documentService from '../../../../services/documentService';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
-import { documentMatchesWalletFilter, getDocumentStatusMeta } from '../../../../utils/documentStatus';
+import { readExpiryDate } from '../../../../utils/documentStatus';
 
 const CategoryDocuments = ({
     category,
     onBack,
     onUploadClick,
-    walletStatusFilter = 'all',
-    walletFilterLabel,
 }) => {
     const [view, setView] = useState('list'); // 'list', 'detail', 'edit'
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -45,11 +43,11 @@ const CategoryDocuments = ({
             const categoryId = category?.id || 'company';
             const formattedDocs = docs
                 .filter((doc) => getDocumentDisplayCategory(doc) === categoryId)
-                .filter((doc) => documentMatchesWalletFilter(doc, walletStatusFilter))
                 .map((doc) => ({
                     ...doc,
-                    status: getDocumentStatusMeta(doc),
-                    expires: doc.expiryDate ? new Date(doc.expiryDate).toLocaleDateString() : 'N/A',
+                    expires: readExpiryDate(doc)
+                        ? new Date(readExpiryDate(doc)).toLocaleDateString()
+                        : 'N/A',
                     type: getDocumentCategoryLabel(getDocumentDisplayCategory(doc)),
                     displayCategory: getDocumentDisplayCategory(doc),
                 }));
@@ -65,7 +63,7 @@ const CategoryDocuments = ({
 
     useEffect(() => {
         fetchDocuments();
-    }, [category, walletStatusFilter]);
+    }, [category]);
 
     const handleDocumentClick = (doc) => {
         setSelectedDoc(doc);
@@ -204,11 +202,6 @@ const CategoryDocuments = ({
                             <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">{category?.title || 'Category Documents'}</h1>
                             <p className="text-gray-500 text-xs sm:text-sm">
                                 {filteredDocuments.length} documents found
-                                {walletStatusFilter !== 'all' && walletFilterLabel ? (
-                                    <span className="block text-[#003366] font-medium mt-0.5">
-                                        Filtered by: {walletFilterLabel}
-                                    </span>
-                                ) : null}
                             </p>
                         </div>
                     </div>
@@ -259,11 +252,8 @@ const CategoryDocuments = ({
 
                             {/* Document Info */}
                             <div className="flex-1 flex flex-col">
-                                <div className="flex items-start justify-between mb-2">
+                                <div className="mb-2">
                                     <h3 className="text-base font-bold text-gray-800">{doc.name || doc.title}</h3>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${doc.status?.color || 'bg-blue-500'}`}>
-                                        {doc.status?.label || 'PENDING'}
-                                    </span>
                                 </div>
 
                                 <div className="space-y-1 mb-3">

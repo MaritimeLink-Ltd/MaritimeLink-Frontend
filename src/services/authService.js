@@ -6,6 +6,7 @@
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
+import { syncKycSubmittedFlag } from '../utils/kycStatus';
 
 const emitAuthTokenChanged = () => {
     if (typeof window !== 'undefined') {
@@ -348,6 +349,8 @@ class AuthService {
                     } else {
                         localStorage.setItem(`${prefix}AdminVerified`, 'false');
                     }
+
+                    syncKycSubmittedFlag(profile);
                 }
             }
 
@@ -668,6 +671,7 @@ class AuthService {
                 };
 
                 localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
+                syncKycSubmittedFlag(normalizedUser);
 
                 if (profilePhoto) {
                     // Keep legacy consumers in sync while API photo remains the source of truth.

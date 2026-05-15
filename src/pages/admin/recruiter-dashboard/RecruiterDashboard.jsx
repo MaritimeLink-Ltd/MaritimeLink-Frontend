@@ -182,6 +182,7 @@ function RecruiterDashboard({ onNavigate }) {
 
     const {
         kycStatus,
+        hasKycSubmitted,
         isKycUnderReview,
         hasFullAccess,
         ui: {
@@ -458,7 +459,7 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    const isPreKyc = !kycStatus || kycStatus === 'pending' || kycStatus === 'rejected' || kycStatus === 'skipped';
+    const isPreKyc = !hasKycSubmitted && (!kycStatus || kycStatus === 'pending' || kycStatus === 'rejected' || kycStatus === 'skipped');
 
     const renderKycGate = () => {
         if (isKycUnderReview) {

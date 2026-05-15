@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
-import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
@@ -312,7 +311,6 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                 title: finalDoc?.name || formData.certificateName,
                 type: activeTab,
                 image: finalDoc?.fileUrl || localPreviewUrl,
-                status: getDocumentStatusMeta(finalDoc || {}),
             };
 
             // Reset all state so user can upload another document

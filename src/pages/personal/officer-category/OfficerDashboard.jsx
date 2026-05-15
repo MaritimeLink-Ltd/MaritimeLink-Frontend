@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import resumeService from '../../../services/resumeService';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -100,7 +101,7 @@ const OfficerDashboard = () => {
       try {
         await resumeService.updatePersonalInfo(sectionData);
       } catch (error) {
-        setApiError(error?.message || 'Failed to save personal info. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save personal info. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -113,7 +114,7 @@ const OfficerDashboard = () => {
       try {
         await resumeService.updateSummary(sectionData);
       } catch (error) {
-        setApiError(error?.message || 'Failed to save professional summary. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save professional summary. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -130,7 +131,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save skills. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save skills. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -152,7 +153,7 @@ const OfficerDashboard = () => {
         try {
           await Promise.all(promises);
         } catch (error) {
-          setApiError(error?.message || 'Failed to save licenses and endorsements. Please try again.');
+          setApiError(getApiErrorMessage(error, 'Failed to save licenses and endorsements. Please try again.'));
           setIsLoading(false);
           return; // Do not advance on error
         }
@@ -170,7 +171,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save sea service entries. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save sea service entries. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -187,7 +188,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save academic qualifications. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save academic qualifications. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -204,7 +205,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save STCW certificates. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save STCW certificates. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -226,7 +227,7 @@ const OfficerDashboard = () => {
         try {
           await Promise.all(promises);
         } catch (error) {
-          setApiError(error?.message || 'Failed to save medical/travel documents. Please try again.');
+          setApiError(getApiErrorMessage(error, 'Failed to save medical/travel documents. Please try again.'));
           setIsLoading(false);
           return; // Do not advance on error
         }
@@ -277,7 +278,7 @@ const OfficerDashboard = () => {
       try {
         await resumeService.updateBiometrics(sectionData.biometricData);
       } catch (error) {
-        setApiError(error?.message || 'Failed to save biometrics. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save biometrics. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -292,7 +293,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save next of kin. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save next of kin. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -307,7 +308,7 @@ const OfficerDashboard = () => {
           )
         );
       } catch (error) {
-        setApiError(error?.message || 'Failed to save referees. Please try again.');
+        setApiError(getApiErrorMessage(error, 'Failed to save referees. Please try again.'));
         setIsLoading(false);
         return; // Do not advance on error
       }
@@ -344,7 +345,7 @@ const OfficerDashboard = () => {
         navigate('/personal/documents');
       }, 1500);
     } catch (error) {
-      alert(error?.message || 'Failed to save resume. Please try again.');
+      alert(getApiErrorMessage(error, 'Failed to save resume. Please try again.'));
     } finally {
       setIsLoading(false);
     }

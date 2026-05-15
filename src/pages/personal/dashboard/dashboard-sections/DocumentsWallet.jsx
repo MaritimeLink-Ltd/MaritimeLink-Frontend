@@ -21,18 +21,8 @@ import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
 import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.config';
-// import { getDocumentStatusMeta } from '../../../../utils/documentStatus';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
-import { documentMatchesWalletFilter, EXPIRING_SOON_DAYS } from '../../../../utils/documentStatus';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
-
-const WALLET_STATUS_TABS = [
-    { id: 'all', label: 'All' },
-    { id: 'ready', label: 'Compliance Ready' },
-    { id: 'expiring', label: 'Expiring Soon' },
-    { id: 'expired', label: 'Expired' },
-    { id: 'rejected', label: 'Rejected' },
-];
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
@@ -41,7 +31,6 @@ const DocumentsWallet = () => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [uploadCategory, setUploadCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [walletStatusFilter, setWalletStatusFilter] = useState('all');
 
     // Pro membership
     const [membershipTier, setMembershipTier] = useState('FREE');
@@ -196,27 +185,18 @@ const DocumentsWallet = () => {
 
     const dynamicCategories = useMemo(
         () =>
-            walletFolderRows.map(({ catDocs, ...def }) => {
-                const filtered =
-                    walletStatusFilter === 'all'
-                        ? catDocs
-                        : catDocs.filter((d) => documentMatchesWalletFilter(d, walletStatusFilter));
-                return {
-                    ...def,
-                    count: walletStatusFilter === 'all' ? catDocs.length : filtered.length,
-                };
-            }),
-        [walletFolderRows, walletStatusFilter],
+            walletFolderRows.map(({ catDocs, ...def }) => ({
+                ...def,
+                count: catDocs.length,
+            })),
+        [walletFolderRows],
     );
 
     const filteredDynamicCategories = useMemo(() => {
-        return dynamicCategories.filter((category) => {
-            const matchesSearch = category.title.toLowerCase().includes(searchQuery.toLowerCase());
-            if (!matchesSearch) return false;
-            if (walletStatusFilter !== 'all' && category.count === 0) return false;
-            return true;
-        });
-    }, [dynamicCategories, searchQuery, walletStatusFilter]);
+        return dynamicCategories.filter((category) =>
+            category.title.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
+    }, [dynamicCategories, searchQuery]);
 
     const handleUploadComplete = (newDoc) => {
         fetchDocuments(); // refresh list
@@ -464,8 +444,6 @@ const DocumentsWallet = () => {
     if (view === 'category') {
         return <CategoryDocuments
             category={selectedCategory}
-            walletStatusFilter={walletStatusFilter}
-            walletFilterLabel={WALLET_STATUS_TABS.find((t) => t.id === walletStatusFilter)?.label}
             onBack={() => { setView('list'); setSelectedCategory(null); fetchDocuments(); }}
             onUploadClick={() => setView('upload')}
         />;
@@ -528,27 +506,6 @@ const DocumentsWallet = () => {
                     </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
-                    {WALLET_STATUS_TABS.map(({ id, label }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            title={
-                                id === 'expiring'
-                                    ? `Expiry date is within the next ${EXPIRING_SOON_DAYS} days (from today)`
-                                    : undefined
-                            }
-                            onClick={() => setWalletStatusFilter(id)}
-                            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                                walletStatusFilter === id
-                                    ? 'bg-[#003366] text-white'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                            }`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
             </div>
 
             {/* Categories Grid - Single column on mobile, 2 on tablet+ */}

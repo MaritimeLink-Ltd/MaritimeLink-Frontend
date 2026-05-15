@@ -1,26 +1,117 @@
 const normalize = (value) => String(value || '').trim().toUpperCase();
 
+/** Values that refer to admin/OCR verification — not UI expiry labels like "valid" */
+const VERIFICATION_STATUS_VALUES = new Set([
+    'PENDING',
+    'APPROVED',
+    'VERIFIED',
+    'REJECTED',
+    'MISMATCH',
+    'SUBMITTED',
+    'COMPLETED',
+    'PROCESSING',
+    'FAILED',
+    'DECLINED',
+    'DENIED',
+    'UNDER_REVIEW',
+    'IN_REVIEW',
+]);
+
 const toDate = (value) => {
-    if (!value) return null;
+    if (value == null || value === '') return null;
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        const dateOnly = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (dateOnly) {
+            const date = new Date(
+                Number(dateOnly[1]),
+                Number(dateOnly[2]) - 1,
+                Number(dateOnly[3]),
+            );
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+    }
+
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
 };
 
-/** Support camelCase / snake_case and occasional enum wrappers from APIs */
-const readVerificationStatus = (doc = {}) =>
-    doc.verificationStatus ?? doc.verification_status ?? '';
+/** Support camelCase / snake_case and alternate API field names */
+export const readVerificationStatus = (doc = {}) => {
+    const direct =
+        doc.verificationStatus ??
+        doc.verification_status ??
+        doc.adminVerificationStatus ??
+        doc.admin_verification_status ??
+        doc.reviewStatus ??
+        doc.review_status ??
+        '';
 
-const readOcrStatus = (doc = {}) => doc.ocrStatus ?? doc.ocr_status ?? '';
+    if (direct) return direct;
 
-const readExpiryDate = (doc = {}) => doc.expiryDate ?? doc.expiry_date ?? null;
+    const status = doc.status ?? doc.documentStatus ?? doc.document_status;
+    if (status && VERIFICATION_STATUS_VALUES.has(normalize(status))) {
+        return status;
+    }
+
+    return '';
+};
+
+export const readOcrStatus = (doc = {}) =>
+    doc.ocrStatus ?? doc.ocr_status ?? doc.ocr?.status ?? '';
+
+export const readExpiryDate = (doc = {}) =>
+    doc.expiryDate ??
+    doc.expiry_date ??
+    doc.validTill ??
+    doc.valid_till ??
+    doc.expires ??
+    doc.expiresAt ??
+    doc.expires_at ??
+    doc.expirationDate ??
+    doc.expiration_date ??
+    doc.expireDate ??
+    doc.expire_date ??
+    null;
 
 /** Days from today (inclusive) within which a document counts as "Expiring Soon" for wallet filters and badges */
 export const EXPIRING_SOON_DAYS = 7;
 
+const getExpiryMeta = (expiryDate) => {
+    if (!expiryDate) return null;
+
+    const daysUntilExpiry = Math.ceil(
+        (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysUntilExpiry < 0) {
+        return {
+            key: 'expired',
+            label: 'Expired',
+            color: 'bg-pink-500',
+        };
+    }
+
+    if (daysUntilExpiry <= EXPIRING_SOON_DAYS) {
+        return {
+            key: 'expiring',
+            label: 'Expiring Soon',
+            color: 'bg-orange-500',
+        };
+    }
+
+    return null;
+};
+
 export const getDocumentStatusMeta = (doc = {}) => {
-    const verificationStatus = normalize(readVerificationStatus(doc));
+    let verificationStatus = normalize(readVerificationStatus(doc));
     const ocrStatus = normalize(readOcrStatus(doc));
     const expiryDate = toDate(readExpiryDate(doc));
+
+    if (verificationStatus === 'DECLINED' || verificationStatus === 'DENIED') {
+        verificationStatus = 'REJECTED';
+    }
 
     if (verificationStatus === 'MISMATCH') {
         return {
@@ -39,26 +130,23 @@ export const getDocumentStatusMeta = (doc = {}) => {
     }
 
     // Expiry before "verified" so Expired / Expiring Soon filters work for approved docs
-    if (expiryDate) {
-        const daysUntilExpiry = Math.ceil(
-            (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-        );
+    const expiryMeta = getExpiryMeta(expiryDate);
+    if (expiryMeta) return expiryMeta;
 
-        if (daysUntilExpiry < 0) {
-            return {
-                key: 'expired',
-                label: 'Expired',
-                color: 'bg-pink-500',
-            };
-        }
+    if (doc.isExpired === true || doc.expired === true) {
+        return {
+            key: 'expired',
+            label: 'Expired',
+            color: 'bg-pink-500',
+        };
+    }
 
-        if (daysUntilExpiry <= EXPIRING_SOON_DAYS) {
-            return {
-                key: 'expiring',
-                label: 'Expiring Soon',
-                color: 'bg-orange-500',
-            };
-        }
+    if (doc.isExpiringSoon === true || doc.expiringSoon === true) {
+        return {
+            key: 'expiring',
+            label: 'Expiring Soon',
+            color: 'bg-orange-500',
+        };
     }
 
     if (
@@ -93,7 +181,7 @@ export const getDocumentStatusMeta = (doc = {}) => {
         };
     }
 
-    if (ocrStatus === 'COMPLETED') {
+    if (ocrStatus === 'COMPLETED' || verificationStatus === 'SUBMITTED' || verificationStatus === 'PENDING') {
         return {
             key: 'pending',
             label: 'Pending Approval',

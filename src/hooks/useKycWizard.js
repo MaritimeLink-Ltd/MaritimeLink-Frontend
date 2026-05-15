@@ -1,6 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import kycService from '../services/kycService';
 import resolveKycEntityId from '../utils/resolveKycEntityId';
+import {
+  readUserProfile,
+  hasSubmittedKyc,
+  isAdminVerifiedProfile,
+  getEffectiveKycStatus,
+  persistKycSubmittedToProfile,
+  shouldPromptVerifyIdentity,
+} from '../utils/kycStatus';
 
 const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
 
@@ -16,31 +24,34 @@ function getStoredCompanyVerificationDecision() {
 }
 
 export function useKycWizard({ userType, storagePrefix }) {
-  const userProfile = useMemo(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('userProfile')) || {};
-    } catch {
-      return {};
-    }
-  }, []);
+  const userProfile = useMemo(() => readUserProfile(), []);
 
-  const isAdminVerified = useMemo(() => {
-    const profileStatus = userProfile.status?.toUpperCase();
-    return profileStatus === 'APPROVED' || profileStatus === 'VERIFIED' || profileStatus === 'ACTIVE';
-  }, [userProfile]);
+  const isAdminVerified = useMemo(() => isAdminVerifiedProfile(userProfile), [userProfile]);
 
   const backendKycStatus = userProfile.kycStatus || userProfile.kyc_status;
+  const initialKycStatus = getEffectiveKycStatus(userProfile, backendKycStatus || 'pending');
 
   const [sessionSkipped, setSessionSkipped] = useState(false);
-  const [kycStatus, setKycStatus] = useState(backendKycStatus || 'pending');
+  const [kycStatus, setKycStatus] = useState(initialKycStatus);
 
-  const isKycUnderReview = kycStatus === 'completed' && !isAdminVerified;
+  const hasKycSubmitted = useMemo(
+    () => hasSubmittedKyc(userProfile) || kycStatus === 'completed',
+    [userProfile, kycStatus]
+  );
+
+  const isKycUnderReview = hasKycSubmitted && !isAdminVerified;
   const hasFullAccess = isAdminVerified;
 
-  const shouldShowKycWizard = !isAdminVerified && !sessionSkipped;
+  const shouldShowKycWizard = !isAdminVerified && !hasKycSubmitted && !sessionSkipped;
 
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!isAdminVerified);
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(() =>
+    shouldPromptVerifyIdentity({
+      isAdminVerified,
+      sessionSkipped: false,
+      profile: userProfile,
+      localKycStatus: initialKycStatus,
+    })
+  );
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -49,6 +60,19 @@ export function useKycWizard({ userType, storagePrefix }) {
   const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
   const [kycData, setKycData] = useState(null);
+
+  useEffect(() => {
+    if (
+      !shouldPromptVerifyIdentity({
+        isAdminVerified,
+        sessionSkipped,
+        profile: userProfile,
+        localKycStatus: kycStatus,
+      })
+    ) {
+      setShowVerifyIdentityModal(false);
+    }
+  }, [isAdminVerified, sessionSkipped, userProfile, kycStatus]);
 
   const resolveEntityId = () => resolveKycEntityId(userType);
 
@@ -156,6 +180,9 @@ export function useKycWizard({ userType, storagePrefix }) {
       return;
     }
 
+    persistKycSubmittedToProfile();
+    setKycStatus('completed');
+
     setTimeout(() => {
       setShowProcessingModal(false);
       setShowVerificationSubmittedModal(true);
@@ -163,8 +190,10 @@ export function useKycWizard({ userType, storagePrefix }) {
   };
 
   const handleVerificationComplete = () => {
+    persistKycSubmittedToProfile();
     setKycStatus('completed');
     setShowVerificationSubmittedModal(false);
+    setShowVerifyIdentityModal(false);
   };
 
   const handleSkipVerification = () => {
@@ -174,6 +203,7 @@ export function useKycWizard({ userType, storagePrefix }) {
 
   return {
     kycStatus,
+    hasKycSubmitted,
     shouldShowKycWizard,
     isKycUnderReview,
     hasFullAccess,
