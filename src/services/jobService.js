@@ -524,7 +524,14 @@ class JobService {
             const path = options.asAdmin
                 ? API_ENDPOINTS.ADMIN.UPDATE_APPLICANT_STATUS(applicationId)
                 : API_ENDPOINTS.RECRUITER.UPDATE_APPLICANT_STATUS(applicationId);
-            const response = await httpClient.patch(path, { status });
+            const payload = { status };
+            const reason = String(
+                options.rejectionReason ?? options.reason ?? options.rejectReason ?? '',
+            ).trim();
+            if (reason) {
+                payload.rejectionReason = reason;
+            }
+            const response = await httpClient.patch(path, payload);
             return response;
         } catch (error) {
             console.error('Update applicant status error:', error);

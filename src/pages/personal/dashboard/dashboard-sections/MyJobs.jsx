@@ -44,6 +44,8 @@ const MyJobs = () => {
                                 company: jobObj.recruiter?.organizationName || 'MaritimeLink Admin',
                                 salary: jobObj.salary || 'N/A',
                                 location: jobObj.location || 'Global',
+                                applicationStatus: app.status || null,
+                                applicationRejectionReason: app.rejectionReason || '',
                             };
                         });
                         setLocalAppliedJobs(mappedJobs);
@@ -110,17 +112,30 @@ const MyJobs = () => {
                             <Loader2 size={32} className="animate-spin text-[#003971]" />
                         </div>
                     ) : displayJobs.length > 0 ? (
-                        displayJobs.map((job, index) => (
+                        displayJobs.map((job, index) => {
+                            const isRejected =
+                                activeTab === 'applied' &&
+                                String(job.applicationStatus || '').toUpperCase() === 'REJECTED';
+                            const rejectionReason = String(job.applicationRejectionReason || '').trim();
+
+                            return (
                             <div
                                 key={job.id || index}
                                 className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
                                 onClick={() => navigate(`/personal/jobs/${job.id}`)}
                             >
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <h3 className="text-base font-semibold text-gray-800 mb-1">
-                                            {job.title}
-                                        </h3>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <h3 className="text-base font-semibold text-gray-800">
+                                                {job.title}
+                                            </h3>
+                                            {isRejected ? (
+                                                <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                                    Not selected
+                                                </span>
+                                            ) : null}
+                                        </div>
                                         <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                                             <Building2 size={14} />
                                             <span>{job.company}</span>
@@ -128,14 +143,20 @@ const MyJobs = () => {
                                         <div className="text-sm font-medium text-gray-800">
                                             {job.salary}
                                         </div>
+                                        {isRejected && rejectionReason ? (
+                                            <p className="mt-2 text-sm text-red-800 line-clamp-2">
+                                                {rejectionReason}
+                                            </p>
+                                        ) : null}
                                     </div>
-                                    <div className="flex items-center gap-1 text-[#003971] text-sm">
+                                    <div className="flex shrink-0 items-center gap-1 text-[#003971] text-sm">
                                         <MapPin size={14} />
                                         <span>{job.location}</span>
                                     </div>
                                 </div>
                             </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="text-center py-12">
                             <p className="text-gray-400 text-base">

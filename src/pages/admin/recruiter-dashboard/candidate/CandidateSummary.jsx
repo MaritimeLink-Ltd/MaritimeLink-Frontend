@@ -274,6 +274,7 @@ function CandidateSummary({
     const [applicationStage, setApplicationStage] = useState(getInitialStage());
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
+    const [applicationRejectionReason, setApplicationRejectionReason] = useState('');
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [statusUpdatedBy, setStatusUpdatedBy] = useState(null);
     const [statusActionError, setStatusActionError] = useState('');
@@ -902,7 +903,35 @@ function CandidateSummary({
         rejected: 'REJECTED',
     };
 
-    const updateApplicantStatus = async (nextStage) => {
+    useEffect(() => {
+        if (!showApplicationStatus || !statusPatchApplicationId) return undefined;
+
+        let cancelled = false;
+        const loadApplicationMeta = async () => {
+            try {
+                const response = await jobService.getApplicantDetails(statusPatchApplicationId, {
+                    asAdmin: isAdmin,
+                });
+                const application =
+                    response?.data?.application ||
+                    response?.data?.data?.application ||
+                    response?.application;
+                if (cancelled || !application) return;
+                if (application.rejectionReason) {
+                    setApplicationRejectionReason(String(application.rejectionReason));
+                }
+            } catch {
+                // Non-blocking: rejection reason is optional for display
+            }
+        };
+
+        void loadApplicationMeta();
+        return () => {
+            cancelled = true;
+        };
+    }, [showApplicationStatus, statusPatchApplicationId, isAdmin]);
+
+    const updateApplicantStatus = async (nextStage, options = {}) => {
         const status = stageToApiStatus[nextStage];
 
         if (!status) {
@@ -917,13 +946,28 @@ function CandidateSummary({
             return false;
         }
 
+        const rejectionReason = String(options.rejectionReason || '').trim();
+        if (nextStage === 'rejected' && !rejectionReason) {
+            setStatusActionError('Please provide a rejection reason.');
+            return false;
+        }
+
         setIsUpdatingStatus(true);
         setStatusActionError('');
         try {
             const response = await jobService.updateApplicantStatus(statusPatchApplicationId, status, {
                 asAdmin: isAdmin,
+                rejectionReason: rejectionReason || undefined,
             });
             const responseData = response?.data?.data || response?.data || response;
+            const updatedApplication =
+                responseData?.application || response?.data?.application;
+
+            if (nextStage === 'rejected' && rejectionReason) {
+                setApplicationRejectionReason(rejectionReason);
+            } else if (updatedApplication?.rejectionReason) {
+                setApplicationRejectionReason(String(updatedApplication.rejectionReason));
+            }
 
             const roleFromResponse = extractUpdatedByRole(responseData);
             setStatusUpdatedBy(roleFromResponse || (isAdmin ? 'Admin' : 'Recruiter'));
@@ -1308,6 +1352,17 @@ function CandidateSummary({
                             </div>
                         </div>
 
+                        {applicationStage === 'rejected' && applicationRejectionReason ? (
+                            <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                                    Rejection reason shared with candidate
+                                </p>
+                                <p className="mt-1 text-sm text-red-900 whitespace-pre-wrap">
+                                    {applicationRejectionReason}
+                                </p>
+                            </div>
+                        ) : null}
+
                         {statusActionError ? (
                             <p className="mb-4 text-sm font-medium text-red-600" role="alert">
                                 {statusActionError}
@@ -1396,7 +1451,9 @@ function CandidateSummary({
                                 <button
                                     onClick={() => {
                                         if (!rejectReason.trim()) return;
-                                        updateApplicantStatus('rejected').then((updated) => {
+                                        updateApplicantStatus('rejected', {
+                                            rejectionReason: rejectReason.trim(),
+                                        }).then((updated) => {
                                             if (!updated) return;
                                             setShowRejectModal(false);
                                             setRejectReason('');

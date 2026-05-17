@@ -18,14 +18,36 @@ const API_JOB_TYPE_LABEL = {
 const formatJobCategory = (category) => API_CATEGORY_LABEL[String(category || '').trim()] || String(category || '');
 const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim()] || String(jobType || '');
 
+const mapJobFromApi = (apiJob, envelope = {}) => ({
+    id: apiJob.id,
+    title: apiJob.title,
+    company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+    location: apiJob.location || 'Global',
+    salary: apiJob.salary,
+    category: formatJobCategory(apiJob.category),
+    jobType: formatJobType(apiJob.contractType),
+    datePosted: new Date(apiJob.createdAt),
+    jobDescription: apiJob.description,
+    aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
+    whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
+    responsibilities: apiJob.description
+        ? apiJob.description.split('\n').filter((line) => line.trim() !== '')
+        : [],
+    applicationStatus: envelope.applicationStatus || null,
+    applicationRejectionReason: envelope.applicationRejectionReason || '',
+    hasApplied: Boolean(envelope.hasApplied),
+    isSaved: Boolean(envelope.isSaved),
+});
+
 const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
     const { jobId } = useParams();
     const navigate = useNavigate();
 
     const [fetchedJob, setFetchedJob] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-
     const [applied, setApplied] = useState(false);
+    const [applicationStatus, setApplicationStatus] = useState(null);
+    const [applicationRejectionReason, setApplicationRejectionReason] = useState('');
     const [saved, setSaved] = useState(false);
     const [showAppliedModal, setShowAppliedModal] = useState(false);
 
@@ -36,24 +58,15 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                 try {
                     const response = await jobService.getProfessionalJobById(jobId);
                     if (response?.status === 'success' && response.data?.job) {
-                        const apiJob = response.data.job;
-                        setFetchedJob({
-                            id: apiJob.id,
-                            title: apiJob.title,
-                            company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
-                            location: apiJob.location || 'Global',
-                            salary: apiJob.salary,
-                            category: formatJobCategory(apiJob.category),
-                            jobType: formatJobType(apiJob.contractType),
-                            datePosted: new Date(apiJob.createdAt),
-                            jobDescription: apiJob.description,
-                            aboutCompany: `Information about ${apiJob.recruiter?.organizationName || 'MaritimeLink Admin'}.`,
-                            whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
-                            responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
-                        });
+                        const mapped = mapJobFromApi(response.data.job, response.data);
+                        setFetchedJob(mapped);
+                        setApplied(mapped.hasApplied);
+                        setApplicationStatus(mapped.applicationStatus);
+                        setApplicationRejectionReason(mapped.applicationRejectionReason || '');
+                        setSaved(mapped.isSaved);
                     }
                 } catch (error) {
-                    console.error("Failed to fetch standalone job info:", error);
+                    console.error('Failed to fetch standalone job info:', error);
                 } finally {
                     setIsLoading(false);
                 }
@@ -62,9 +75,23 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
         }
     }, [propJob, jobId]);
 
+    useEffect(() => {
+        if (propJob) {
+            setApplied(Boolean(propJob.hasApplied));
+            setApplicationStatus(propJob.applicationStatus || null);
+            setApplicationRejectionReason(propJob.applicationRejectionReason || '');
+            setSaved(Boolean(propJob.isSaved));
+        }
+    }, [propJob]);
+
     const job = propJob || fetchedJob;
+    const isRejected =
+        String(applicationStatus || job?.applicationStatus || '').toUpperCase() === 'REJECTED';
+    const rejectionReason =
+        applicationRejectionReason || job?.applicationRejectionReason || '';
 
     const handleApply = () => {
+        if (!job) return;
         if (onApplyClick) {
             setApplied(true);
             setShowAppliedModal(true);
@@ -90,10 +117,10 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50">
-            {/* Header */}
             <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
                     <button
+                        type="button"
                         onClick={onBack || (() => navigate(-1))}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     >
@@ -103,39 +130,66 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                 </div>
             </div>
 
-            {/* Job Content */}
             <div className="flex-1 overflow-y-auto">
                 <div className="px-4 sm:px-8 py-4 sm:py-6">
-                    {/* Job Header */}
+                    {isRejected ? (
+                        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-4">
+                            <p className="text-sm font-semibold text-red-800">
+                                Your application was not selected this time
+                            </p>
+                            {rejectionReason ? (
+                                <>
+                                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-red-700">
+                                        Feedback from the recruiter
+                                    </p>
+                                    <p className="mt-1 text-sm text-red-900 whitespace-pre-wrap">
+                                        {rejectionReason}
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="mt-2 text-sm text-red-800">
+                                    The recruiter did not include additional feedback.
+                                </p>
+                            )}
+                        </div>
+                    ) : null}
+
                     <div className="mb-6">
                         <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3">
                             <div className="flex-1">
                                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{job.title}</h2>
                             </div>
                             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                                {applied ? (
+                                {applied || isRejected ? (
                                     <button
+                                        type="button"
                                         disabled
-                                        className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-600 rounded-full text-sm font-medium cursor-default"
+                                        className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium cursor-default border-2 ${
+                                            isRejected
+                                                ? 'bg-red-50 border-red-200 text-red-700'
+                                                : 'bg-white border-gray-300 text-gray-600'
+                                        }`}
                                     >
                                         <Check size={18} />
-                                        Applied
+                                        {isRejected ? 'Not selected' : 'Applied'}
                                     </button>
                                 ) : (
                                     <button
+                                        type="button"
                                         onClick={handleApply}
                                         className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                     >
                                         Apply Now
                                     </button>
                                 )}
-                                <button 
+                                <button
+                                    type="button"
                                     onClick={async () => {
                                         try {
                                             await jobService.saveJob(job.id);
                                             setSaved(!saved);
                                         } catch (e) {
-                                            console.error("Failed to save job");
+                                            console.error('Failed to save job', e);
                                         }
                                     }}
                                     className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${
@@ -150,7 +204,6 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                             </div>
                         </div>
 
-                        {/* Company Info */}
                         <div className="space-y-2 mb-5">
                             <div className="flex items-center gap-2 text-gray-600">
                                 <Building2 size={18} className="text-gray-400" />
@@ -158,7 +211,7 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
                                 <MapPin size={18} className="text-gray-400" />
-                                <span className="text-base">{job.location}, United Kingdom</span>
+                                <span className="text-base">{job.location}</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
                                 <Banknote size={18} className="text-gray-400" />
@@ -166,7 +219,6 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                             </div>
                         </div>
 
-                        {/* Category and Job Type */}
                         <div className="flex items-center gap-6 mb-6">
                             <div>
                                 <p className="text-xs text-gray-500 mb-1">Category</p>
@@ -179,26 +231,22 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                         </div>
                     </div>
 
-                    {/* Job Description */}
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">Job Description</h3>
                         <p className="text-gray-600 leading-relaxed">{job.jobDescription}</p>
                     </div>
 
-                    {/* About the Company */}
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">About the Company</h3>
                         <p className="text-gray-600 leading-relaxed">{job.aboutCompany}</p>
                     </div>
 
-                    {/* What We Look For */}
                     <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">What We Look For</h3>
                         <p className="text-gray-600 leading-relaxed">{job.whatWeLookFor}</p>
                     </div>
 
-                    {/* Responsibilities */}
-                    {job.responsibilities && job.responsibilities.length > 0 && (
+                    {job.responsibilities?.length > 0 ? (
                         <div className="mb-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-3">Responsibilities</h3>
                             <ul className="list-disc list-inside space-y-2 text-gray-600">
@@ -207,12 +255,11 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                                 ))}
                             </ul>
                         </div>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
-            {/* Applied Successfully Modal */}
-            {showAppliedModal && (
+            {showAppliedModal ? (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -222,7 +269,7 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                         <p className="text-gray-600">Your application has been submitted.</p>
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 };
