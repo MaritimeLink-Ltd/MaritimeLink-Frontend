@@ -16,16 +16,10 @@ import {
 import { countryCodes } from '../../../utils/countryCodes';
 import trainerSettingsService from '../../../services/trainerSettingsService';
 import SupportCenterSection from '../../../components/support/SupportCenterSection';
-
-const defaultNotifications = {
-    securityAlerts: true,
-    newApplications: true,
-    candidateMessages: true,
-    jobPostings: true,
-    marketing: false,
-    desktopSounds: true,
-    urgentAlerts: true,
-};
+import {
+    DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES,
+    syncRecruiterNotificationPreferences,
+} from '../../../utils/recruiterNotificationPreferences';
 
 const defaultBilling = {
     currentPlan: 'Free',
@@ -81,7 +75,9 @@ const TrainingProviderProfile = () => {
         postcode: '',
         country: '',
     });
-    const [notifications, setNotifications] = useState(defaultNotifications);
+    const [notifications, setNotifications] = useState({
+        ...DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES,
+    });
     const [billing, setBilling] = useState(defaultBilling);
     const [passwords, setPasswords] = useState({
         current: '',
@@ -188,10 +184,31 @@ const TrainingProviderProfile = () => {
                     postcode: company.postcode || '',
                     country: company.country || '',
                 });
-                setNotifications({
-                    ...defaultNotifications,
-                    ...notificationsData,
-                });
+                const loadedNotifications = {
+                    securityAlerts:
+                        notificationsData.securityAlerts ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.securityAlerts,
+                    newApplications:
+                        notificationsData.newApplications ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.newApplications,
+                    candidateMessages:
+                        notificationsData.candidateMessages ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.candidateMessages,
+                    jobPostings:
+                        notificationsData.jobPostings ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.jobPostings,
+                    marketing:
+                        notificationsData.marketing ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.marketing,
+                    desktopSounds:
+                        notificationsData.desktopSounds ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.desktopSounds,
+                    urgentAlerts:
+                        notificationsData.urgentAlerts ??
+                        DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.urgentAlerts,
+                };
+                setNotifications(loadedNotifications);
+                syncRecruiterNotificationPreferences(loadedNotifications);
                 setBilling({
                     ...defaultBilling,
                     ...billingData,
@@ -292,10 +309,12 @@ const TrainingProviderProfile = () => {
             const response = await trainerSettingsService.updateNotifications(
                 notifications,
             );
-            setNotifications({
-                ...defaultNotifications,
-                ...(response?.data?.notifications || notifications),
-            });
+            const saved =
+                response?.data?.notifications ||
+                response?.notifications ||
+                notifications;
+            const normalized = syncRecruiterNotificationPreferences(saved);
+            setNotifications(normalized);
             setFeedback({
                 type: 'success',
                 message:

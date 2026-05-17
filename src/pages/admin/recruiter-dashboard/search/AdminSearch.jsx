@@ -32,7 +32,6 @@ const experienceLevels = ['0-2 years', '3-5 years', '6-10 years', '10+ years'];
 const vesselTypes = ['Tanker', 'Container', 'Bulk Carrier', 'Offshore', 'Cruise Ship'];
 
 const sortOptions = [
-    'Best Matches',
     'Experience (High to Low)',
     'Experience (Low to High)',
     'Alphabetical',
@@ -62,17 +61,6 @@ const isPremiumCandidate = (candidate) => {
     const tier = String(candidate?.tier || '').toUpperCase();
     return tier === 'PRO' || tier === 'PREMIUM' || Boolean(candidate?.isPremium);
 };
-const stablePremiumBoost = (items = []) => {
-    const enriched = items.map((item, index) => ({ item, index }));
-    enriched.sort((a, b) => {
-        const ap = isPremiumCandidate(a.item) ? 1 : 0;
-        const bp = isPremiumCandidate(b.item) ? 1 : 0;
-        if (ap !== bp) return bp - ap;
-        return a.index - b.index;
-    });
-    return enriched.map((entry) => entry.item);
-};
-
 function AdminSearch({ onViewCandidate }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -80,7 +68,7 @@ function AdminSearch({ onViewCandidate }) {
     const debounceRef = useRef(null);
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('Best Matches');
+    const [sortBy, setSortBy] = useState('Experience (High to Low)');
     const [viewMode, setViewMode] = useState('list');
     const [currentPage, setCurrentPage] = useState(1);
     const [filters, setFilters] = useState({
@@ -127,7 +115,7 @@ function AdminSearch({ onViewCandidate }) {
                 const pagination = payload?.pagination || {};
 
                 const resolvedItems = Array.isArray(items) ? items : [];
-                setCandidates(nextSortBy === 'Best Matches' ? stablePremiumBoost(resolvedItems) : resolvedItems);
+                setCandidates(resolvedItems);
                 setTotalCandidates(
                     Number.isFinite(Number(pagination.total))
                         ? Number(pagination.total)

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
+import CompanyLogo from '../../../components/common/CompanyLogo';
 
 /** Unwrap `{ data: T }` or return root (GET lookup). */
 function unwrapApiBody(res) {
@@ -10,15 +11,6 @@ function unwrapApiBody(res) {
     return res;
 }
 
-function faviconUrl(value) {
-    const domain = (value || '')
-        .trim()
-        .replace(/^https?:\/\//i, '')
-        .replace(/^www\./i, '')
-        .split('/')[0];
-    return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
-}
-
 /** Map lookup API payload to UI fields (backend shape may vary). */
 function mapLookupToDisplay(lookupPayload) {
     const root = lookupPayload && typeof lookupPayload === 'object' ? lookupPayload : {};
@@ -26,7 +18,7 @@ function mapLookupToDisplay(lookupPayload) {
     const website = d.company_website || d.website || d.url || '';
     return {
         name: d.organizationName || d.name || d.companyName || '',
-        logo: d.logo || d.logoUrl || d.companyLogo || faviconUrl(website),
+        logo: d.logo || d.logoUrl || d.companyLogo || '',
         website,
         address: [d.address_street, d.address_location].filter(Boolean).join(', '),
         city: d.address_city || '',
@@ -177,10 +169,10 @@ function RecruiterCompanyDetails() {
     };
 
     return (
-        <div className="h-screen flex overflow-hidden">
+        <div className="min-h-screen flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden">
             {/* Left Side - Form */}
-            <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white" style={{ overflowY: 'auto', maxHeight: '100vh' }}>
-                <div className="max-w-md w-full mx-auto lg:mx-0">
+            <div className="w-full lg:w-2/5 flex flex-col min-h-0 lg:h-screen lg:overflow-y-auto px-6 sm:px-12 lg:px-16 xl:px-24 py-6 sm:py-10 bg-white">
+                <div className="max-w-md w-full mx-auto lg:mx-0 pb-10">
                     {/* Logo */}
                     <div className="mb-3 -ml-2">
                         <img
@@ -197,12 +189,14 @@ function RecruiterCompanyDetails() {
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Company Details</h1>
 
                     {/* Company Preview (Logo) */}
-                    {previewData?.logo && (
+                    {(previewData?.logo || previewData?.name) && (
                         <div className="mb-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
-                            <img
-                                src={previewData.logo}
-                                alt="Company favicon"
-                                className="h-12 w-12 rounded-xl border border-gray-200 bg-white object-contain p-2"
+                            <CompanyLogo
+                                logo={previewData.logo}
+                                website={previewData.website || formData.website}
+                                companyName={previewData.name || formData.companyName}
+                                className="h-10 w-10 rounded-xl border border-gray-200 bg-white object-contain p-1"
+                                initialClassName="h-12 w-12 shrink-0 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-lg font-bold text-[#003971]"
                             />
                             <div className="min-w-0">
                                 <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Public match</p>

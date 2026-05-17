@@ -18,6 +18,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
 import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
@@ -323,11 +324,8 @@ function PersonalDashboardLayout() {
             </div>
 
             {/* Logout Confirmation Modal */}
-            {showLogoutModal && (
-                <>
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowLogoutModal(false)} />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <ModalOverlay isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)}>
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
                             <div className="text-center mb-6">
                                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <AlertTriangle size={32} className="text-orange-600" />
@@ -349,10 +347,8 @@ function PersonalDashboardLayout() {
                                     Cancel
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </>
-            )}
+                </div>
+            </ModalOverlay>
         </div>
     );
 }

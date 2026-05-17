@@ -13,6 +13,11 @@ import {
     LogOut
 } from 'lucide-react';
 import authService from '../../../../services/authService';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
+import {
+    initialsFromName,
+    resolveProfilePhotoUrl,
+} from '../../../../utils/profilePhoto';
 
 function AdminLayout() {
     const location = useLocation();
@@ -23,7 +28,7 @@ function AdminLayout() {
     const [userData, setUserData] = useState({
         name: 'User Profile',
         email: '',
-        photo: '/images/login-image.webp'
+        photo: null,
     });
 
     useEffect(() => {
@@ -42,7 +47,7 @@ function AdminLayout() {
                     setUserData({
                         name: name,
                         email: profile.email || userEmail || '',
-                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
+                        photo: resolveProfilePhotoUrl({ profile, savedPhoto }),
                     });
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
@@ -60,9 +65,8 @@ function AdminLayout() {
         window.addEventListener('storage', updateUserData);
         
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, photo: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            setUserData((prev) => ({ ...prev, photo: url || null }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         
@@ -214,11 +218,23 @@ function AdminLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors"
                                 >
-                                    <img
-                                        className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                        src={userData.photo}
-                                        alt="User avatar"
-                                    />
+                                    {userData.photo ? (
+                                        <img
+                                            className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
+                                            src={userData.photo}
+                                            alt=""
+                                            onError={() =>
+                                                setUserData((prev) => ({ ...prev, photo: null }))
+                                            }
+                                        />
+                                    ) : (
+                                        <div
+                                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-[#003971]/10 text-[#003971] flex items-center justify-center text-xs font-bold"
+                                            title={userData.name || userData.email}
+                                        >
+                                            {initialsFromName(userData.name || userData.email || 'U')}
+                                        </div>
+                                    )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
                                         <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2">{userData.name}</span>
                                         {userData.email && (
@@ -277,9 +293,8 @@ function AdminLayout() {
             </div>
 
             {/* Logout Confirmation Modal */}
-            {showLogoutModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+            <ModalOverlay isOpen={showLogoutModal} onClose={handleLogoutCancel}>
+                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
                         <div className="text-center">
                             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                                 <LogOut className="h-6 w-6 text-red-600" />
@@ -303,9 +318,8 @@ function AdminLayout() {
                                 Logout
                             </button>
                         </div>
-                    </div>
                 </div>
-            )}
+            </ModalOverlay>
         </div>
     );
 }

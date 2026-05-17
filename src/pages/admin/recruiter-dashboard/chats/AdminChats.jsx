@@ -4,9 +4,6 @@ import {
     Search,
     Building2,
     Send,
-    FileText,
-    X,
-    AlertTriangle,
     Loader2
 } from 'lucide-react';
 
@@ -37,8 +34,6 @@ function AdminChats({ candidateId: propCandidateId }) {
     const [selectedChat, setSelectedChat] = useState(null);
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [showReportModal, setShowReportModal] = useState(false);
-    const [selectedReason, setSelectedReason] = useState('');
     const messagesEndRef = useRef(null);
     const skipScrollToEndRef = useRef(false);
     const [messagesList, setMessagesList] = useState([]);
@@ -373,22 +368,6 @@ function AdminChats({ candidateId: propCandidateId }) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const reportReasons = [
-        { id: 'spam', label: 'Spam or unwanted messages' },
-        { id: 'inappropriate', label: 'Inappropriate content' },
-        { id: 'harassment', label: 'Harassment or bullying' },
-        { id: 'scam', label: 'Scam or fraud' },
-        { id: 'fake', label: 'Fake profile' },
-        { id: 'other', label: 'Other' }
-    ];
-
-    const handleReport = () => {
-        if (selectedReason) {
-            setShowReportModal(false);
-            setSelectedReason('');
-        }
-    };
-
     useEffect(() => {
         if (skipScrollToEndRef.current) {
             skipScrollToEndRef.current = false;
@@ -546,7 +525,7 @@ function AdminChats({ candidateId: propCandidateId }) {
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full">
                         {currentChat ? (
                             <>
-                                <div className="border-b border-gray-100 p-5 flex items-center justify-between flex-shrink-0">
+                                <div className="border-b border-gray-100 p-5 flex items-center flex-shrink-0">
                                     <div className="flex items-center gap-3">
                                         <div className="relative">
                                             <div className="w-12 h-12 bg-[#003971] rounded-xl flex items-center justify-center">
@@ -565,17 +544,6 @@ function AdminChats({ candidateId: propCandidateId }) {
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowReportModal(true)}
-                                            className="text-red-600 font-bold hover:text-red-700 transition-colors flex items-center gap-1 text-sm"
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            Report
-                                        </button>
                                     </div>
                                 </div>
 
@@ -689,79 +657,6 @@ function AdminChats({ candidateId: propCandidateId }) {
                     </div>
                 </div>
             </div>
-
-            {showReportModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
-                                <h2 className="text-xl font-bold text-gray-900">Report User</h2>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowReportModal(false);
-                                    setSelectedReason('');
-                                }}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <p className="text-sm text-gray-600 mb-4">
-                            Please select a reason for reporting {currentChat?.name}
-                        </p>
-
-                        <div className="space-y-2 mb-6">
-                            {reportReasons.map((reason) => (
-                                <label
-                                    key={reason.id}
-                                    className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${selectedReason === reason.id
-                                        ? 'border-red-600 bg-red-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="reportReason"
-                                        value={reason.id}
-                                        checked={selectedReason === reason.id}
-                                        onChange={(e) => setSelectedReason(e.target.value)}
-                                        className="w-4 h-4 text-red-600 focus:ring-red-500"
-                                    />
-                                    <span className="text-sm text-gray-900">{reason.label}</span>
-                                </label>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowReportModal(false);
-                                    setSelectedReason('');
-                                }}
-                                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleReport}
-                                disabled={!selectedReason}
-                                className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${selectedReason
-                                    ? 'bg-red-600 text-white hover:bg-red-700'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    }`}
-                            >
-                                Submit Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

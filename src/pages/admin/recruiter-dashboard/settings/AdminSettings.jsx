@@ -8,6 +8,7 @@ import {
     Mail,
     Phone,
     Save,
+    Check,
     Globe,
     Linkedin,
     MapPin
@@ -16,10 +17,19 @@ import { countryCodes } from '../../../../utils/countryCodes';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
+import {
+    DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES,
+    syncRecruiterNotificationPreferences,
+} from '../../../../utils/recruiterNotificationPreferences';
+import {
+    isPlaceholderProfilePhoto,
+    persistProfilePhotoCache,
+    resolveProfilePhotoUrl,
+} from '../../../../utils/profilePhoto';
 
 function AdminSettings() {
     const [activeSection, setActiveSection] = useState('my-profile');
-    const [profileImage, setProfileImage] = useState('/images/login-image.webp');
+    const [profileImage, setProfileImage] = useState(null);
     const [profileData, setProfileData] = useState({
         firstName: '',
         lastName: '',
@@ -56,13 +66,7 @@ function AdminSettings() {
         country: ''
     });
     const [notifications, setNotifications] = useState({
-        securityAlerts: true,
-        newApplications: true,
-        candidateMessages: true,
-        jobPostings: true,
-        marketing: false,
-        desktopSounds: true,
-        urgentAlerts: true
+        ...DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES,
     });
 
     const syncStoredRecruiterProfile = (profilePatch = {}) => {
@@ -73,18 +77,11 @@ function AdminSettings() {
                 firstName: profilePatch.firstName ?? stored.firstName,
                 lastName: profilePatch.lastName ?? stored.lastName,
                 email: profilePatch.email ?? stored.email,
-                profilePhoto: profilePatch.profilePhotoUrl ?? stored.profilePhoto,
-                photo: profilePatch.profilePhotoUrl ?? stored.photo,
             };
             localStorage.setItem('userProfile', JSON.stringify(nextProfile));
             if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
             if (profilePatch.profilePhotoUrl !== undefined) {
-                if (profilePatch.profilePhotoUrl) {
-                    localStorage.setItem('profileImage', profilePatch.profilePhotoUrl);
-                } else {
-                    localStorage.removeItem('profileImage');
-                }
-                window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { url: profilePatch.profilePhotoUrl || '/images/login-image.webp' } }));
+                persistProfilePhotoCache(profilePatch.profilePhotoUrl);
             }
         } catch (error) {
             console.error('Failed to sync recruiter profile cache:', error);
@@ -115,7 +112,17 @@ function AdminSettings() {
                     phoneNumber: profile.phoneNumber || '',
                     role: profile.role || '',
                 });
-                setProfileImage(profile.profilePhotoUrl || '/images/login-image.webp');
+                const resolvedPhoto = resolveProfilePhotoUrl({
+                    profile,
+                    savedPhoto: localStorage.getItem('profileImage'),
+                });
+                setProfileImage(resolvedPhoto);
+                syncStoredRecruiterProfile({
+                    firstName: profile.firstName,
+                    lastName: profile.lastName,
+                    email: profile.email,
+                    profilePhotoUrl: profile.profilePhotoUrl || null,
+                });
                 setCompanyData({
                     name: company.name || '',
                     website: company.website || '',
@@ -126,15 +133,17 @@ function AdminSettings() {
                     postcode: company.postcode || '',
                     country: company.country || '',
                 });
-                setNotifications({
-                    securityAlerts: notificationsData.securityAlerts ?? true,
-                    newApplications: notificationsData.newApplications ?? true,
-                    candidateMessages: notificationsData.candidateMessages ?? true,
-                    jobPostings: notificationsData.jobPostings ?? true,
-                    marketing: notificationsData.marketing ?? false,
-                    desktopSounds: notificationsData.desktopSounds ?? true,
-                    urgentAlerts: notificationsData.urgentAlerts ?? true,
-                });
+                const loadedNotifications = {
+                    securityAlerts: notificationsData.securityAlerts ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.securityAlerts,
+                    newApplications: notificationsData.newApplications ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.newApplications,
+                    candidateMessages: notificationsData.candidateMessages ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.candidateMessages,
+                    jobPostings: notificationsData.jobPostings ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.jobPostings,
+                    marketing: notificationsData.marketing ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.marketing,
+                    desktopSounds: notificationsData.desktopSounds ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.desktopSounds,
+                    urgentAlerts: notificationsData.urgentAlerts ?? DEFAULT_RECRUITER_NOTIFICATION_PREFERENCES.urgentAlerts,
+                };
+                setNotifications(loadedNotifications);
+                syncRecruiterNotificationPreferences(loadedNotifications);
             } catch (error) {
                 if (!cancelled) {
                     setFeedbackType('error');
@@ -266,7 +275,9 @@ function AdminSettings() {
     // Toggle component
     const Toggle = ({ checked, onChange }) => (
         <button
+            type="button"
             onClick={() => onChange(!checked)}
+            aria-pressed={checked}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${checked ? 'bg-[#003971]' : 'bg-gray-200'
                 }`}
         >
@@ -299,9 +310,12 @@ function AdminSettings() {
             setFeedbackMessage('');
             recruiterSettingsService.uploadProfilePhoto(file)
                 .then((response) => {
-                    const nextUrl = response?.data?.profilePhotoUrl || response?.data?.url || '/images/login-image.webp';
-                    setProfileImage(nextUrl);
-                    syncStoredRecruiterProfile({ profilePhotoUrl: nextUrl });
+                    const nextUrl =
+                        response?.data?.profilePhotoUrl ||
+                        response?.data?.url ||
+                        null;
+                    const resolved = persistProfilePhotoCache(nextUrl);
+                    setProfileImage(resolved);
                     setFeedbackType('success');
                     setFeedbackMessage(response?.message || 'Profile photo updated successfully.');
                 })
@@ -321,8 +335,8 @@ function AdminSettings() {
         setFeedbackMessage('');
         try {
             const response = await recruiterSettingsService.removeProfilePhoto();
-            setProfileImage('/images/login-image.webp');
-            syncStoredRecruiterProfile({ profilePhotoUrl: null });
+            persistProfilePhotoCache(null);
+            setProfileImage(null);
             setFeedbackType('success');
             setFeedbackMessage(response?.message || 'Profile photo removed successfully.');
         } catch (error) {
@@ -338,7 +352,12 @@ function AdminSettings() {
         setFeedbackMessage('');
         try {
             const response = await recruiterSettingsService.updateNotifications(notifications);
-            setNotifications(response?.data?.notifications || notifications);
+            const saved =
+                response?.data?.notifications ||
+                response?.notifications ||
+                notifications;
+            const normalized = syncRecruiterNotificationPreferences(saved);
+            setNotifications(normalized);
             setFeedbackType('success');
             setFeedbackMessage(response?.message || 'Notification preferences updated successfully.');
         } catch (error) {
@@ -455,11 +474,17 @@ function AdminSettings() {
                                 <div className="mb-4 pb-4 border-b border-gray-100">
                                     <div className="flex items-start gap-6">
                                         <div className="relative">
-                                            <img
-                                                src={profileImage}
-                                                alt="Profile"
-                                                className="w-24 h-24 rounded-full object-cover"
-                                            />
+                                            {profileImage && !isPlaceholderProfilePhoto(profileImage) ? (
+                                                <img
+                                                    src={profileImage}
+                                                    alt="Profile"
+                                                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-50"
+                                                />
+                                            ) : (
+                                                <div className="w-24 h-24 rounded-full border-4 border-gray-50 bg-gray-100 flex items-center justify-center">
+                                                    <User className="h-10 w-10 text-gray-400" />
+                                                </div>
+                                            )}
                                             <input
                                                 type="file"
                                                 id="profile-photo-upload"
@@ -580,6 +605,7 @@ function AdminSettings() {
                                         <p className="text-sm text-gray-500 mt-0.5">Manage your recruitment agency information.</p>
                                     </div>
                                     <button
+                                        type="button"
                                         onClick={handleCompanyUpdate}
                                         disabled={isCompanySaved || savingCompany || profileLoading}
                                         className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${isCompanySaved

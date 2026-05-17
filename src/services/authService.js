@@ -294,7 +294,20 @@ class AuthService {
                 // Store user profile info for frontend use
                 const profile = response.data?.recruiter || response.data?.user || response.data;
                 if (profile) {
-                    localStorage.setItem('userProfile', JSON.stringify(profile));
+                    const profilePhotoUrl =
+                        profile.profilePhotoUrl || profile.profilePhoto || profile.photo || null;
+                    const normalizedProfile = {
+                        ...profile,
+                        profilePhotoUrl: profilePhotoUrl || null,
+                        profilePhoto: profilePhotoUrl || null,
+                        photo: profilePhotoUrl || null,
+                    };
+                    localStorage.setItem('userProfile', JSON.stringify(normalizedProfile));
+                    if (profilePhotoUrl) {
+                        localStorage.setItem('profileImage', profilePhotoUrl);
+                    } else {
+                        localStorage.removeItem('profileImage');
+                    }
                     localStorage.setItem('userRole', profile.role);
                     const email = profile.email || credentials?.email;
                     if (email) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
+import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
 
@@ -49,11 +50,6 @@ function normalizeDomain(value) {
             .split('/')[0]
             .split('?')[0];
     }
-}
-
-function faviconUrl(value) {
-    const domain = normalizeDomain(value);
-    return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
 }
 
 function normalizeLinkedInSlug(value) {
@@ -153,11 +149,9 @@ function RecruiterCompanyVerification() {
     const apiCompany = lookupPreview?.raw || lookupPreview?.apiResponse?.company || {};
     const enteredWebsite = formData?.website || '';
     const fetchedWebsite = lookupPreview?.website || apiCompany.company_website || '';
-    const displayLogo =
-        lookupPreview?.logo ||
-        apiCompany.logo ||
-        companyData.logo ||
-        faviconUrl(fetchedWebsite || enteredWebsite);
+    const logoSource =
+        lookupPreview?.logo || apiCompany.logo || companyData.logo || '';
+    const logoWebsite = fetchedWebsite || enteredWebsite || formData?.website || '';
     const enteredLinkedIn = formData?.linkedIn || '';
     const fetchedLinkedIn = lookupPreview?.linkedin || apiCompany.linkedin || '';
     const detailRows = [
@@ -307,9 +301,9 @@ function RecruiterCompanyVerification() {
     };
 
     return (
-        <div className="h-screen flex overflow-hidden">
-            <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-white overflow-y-auto">
-                <div className="max-w-md w-full mx-auto lg:mx-0">
+        <div className="min-h-screen flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden">
+            <div className="w-full lg:w-2/5 flex flex-col min-h-0 lg:h-screen lg:overflow-y-auto px-6 sm:px-12 lg:px-16 xl:px-24 py-6 sm:py-10 bg-white">
+                <div className="max-w-md w-full mx-auto lg:mx-0 pb-10">
                     <div className="mb-4 sm:mb-6 -ml-2">
                         <img
                             src="/images/logo.png"
@@ -357,20 +351,14 @@ function RecruiterCompanyVerification() {
                         <div className="mt-5 space-y-3">
                             <div className="rounded-xl bg-white border border-gray-100 px-4 py-4">
                                 <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold text-center">
-                                    {displayLogo ? 'Fetched logo' : 'No logo returned'}
+                                    Company logo
                                 </p>
                                 <div className="mt-3 h-[96px] overflow-hidden rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center px-4 py-3">
-                                    {displayLogo ? (
-                                        <img
-                                            src={displayLogo}
-                                            alt={`${companyData.name || 'Company'} logo`}
-                                            className="block w-auto h-auto max-w-full max-h-[56px] object-contain"
-                                        />
-                                    ) : (
-                                        <div className="w-16 h-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-2xl font-bold text-[#003971]">
-                                            {(companyData.name || 'C').charAt(0)}
-                                        </div>
-                                    )}
+                                    <CompanyLogo
+                                        logo={logoSource}
+                                        website={logoWebsite}
+                                        companyName={companyData.name}
+                                    />
                                 </div>
                             </div>
 
