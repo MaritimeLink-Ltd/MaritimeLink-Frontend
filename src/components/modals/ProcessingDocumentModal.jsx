@@ -1,11 +1,15 @@
 import { X, FileText } from 'lucide-react';
+import ModalOverlay from '../common/ModalOverlay';
 
 function ProcessingDocumentModal({ isOpen, onClose }) {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full relative">
+        <ModalOverlay
+            isOpen={isOpen}
+            onClose={onClose}
+            closeOnBackdrop={Boolean(onClose)}
+            className="max-w-lg"
+        >
+            <div className="bg-white rounded-2xl p-8 w-full relative shadow-xl">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -45,7 +49,7 @@ function ProcessingDocumentModal({ isOpen, onClose }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 

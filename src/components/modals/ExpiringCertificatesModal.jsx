@@ -1,4 +1,5 @@
 import { X, AlertCircle } from 'lucide-react';
+import ModalOverlay from '../common/ModalOverlay';
 
 function ExpiringCertificatesModal({ isOpen, onClose }) {
     if (!isOpen) return null;
@@ -49,7 +50,7 @@ function ExpiringCertificatesModal({ isOpen, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <ModalOverlay isOpen={isOpen} onClose={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-2xl w-full relative my-4 max-h-[90vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
@@ -121,7 +122,7 @@ function ExpiringCertificatesModal({ isOpen, onClose }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 

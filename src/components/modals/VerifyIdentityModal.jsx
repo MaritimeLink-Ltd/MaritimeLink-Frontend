@@ -1,11 +1,10 @@
 import { X, ShieldCheck } from 'lucide-react';
+import ModalOverlay from '../common/ModalOverlay';
 
 function VerifyIdentityModal({ isOpen, onClose, onStartVerification }) {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full relative my-4 max-h-[95vh] overflow-y-auto">
+        <ModalOverlay isOpen={isOpen} onClose={onClose} className="max-w-lg">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 w-full relative my-4 max-h-[95vh] overflow-y-auto shadow-xl">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -47,7 +46,7 @@ function VerifyIdentityModal({ isOpen, onClose, onStartVerification }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 

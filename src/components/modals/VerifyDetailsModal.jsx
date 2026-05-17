@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import ModalOverlay from '../common/ModalOverlay';
 
 const DOCUMENT_TYPE_LABELS = {
     passport: 'Passport',
@@ -99,8 +100,12 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
         'w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50';
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full relative max-h-[90vh] overflow-y-auto">
+        <ModalOverlay
+            isOpen={isOpen}
+            onClose={onClose}
+            className="max-w-3xl sm:max-w-4xl"
+        >
+            <div className="bg-white rounded-2xl p-6 sm:p-8 w-full relative max-h-[90vh] overflow-y-auto shadow-xl">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -234,7 +239,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                     </button>
                 </form>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 

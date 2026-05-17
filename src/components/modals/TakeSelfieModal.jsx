@@ -1,5 +1,6 @@
 import { X, Camera } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import ModalOverlay from '../common/ModalOverlay';
 
 function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const videoRef = useRef(null);
@@ -86,8 +87,8 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full relative my-4 max-h-[95vh] overflow-y-auto">
+        <ModalOverlay isOpen={isOpen} onClose={handleClose} className="max-w-lg">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 w-full relative my-4 max-h-[95vh] overflow-y-auto shadow-xl">
                 {/* Close Button */}
                 <button
                     onClick={handleClose}
@@ -147,7 +148,7 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                     {photoTaken ? 'Processing...' : 'Capture Photo'}
                 </button>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 

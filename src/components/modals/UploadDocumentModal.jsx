@@ -2,6 +2,7 @@ import { X, Upload, Info } from 'lucide-react';
 import { useState } from 'react';
 import kycService from '../../services/kycService';
 import resolveKycEntityId from '../../utils/resolveKycEntityId';
+import ModalOverlay from '../common/ModalOverlay';
 
 function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, userType }) {
     const [frontSide, setFrontSide] = useState(null);
@@ -80,26 +81,13 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
         }
     };
 
-    const handleBackdropMouseDown = (e) => {
-        if (e.target === e.currentTarget) onClose?.();
-    };
-
     return (
-        <div
-            role="presentation"
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onMouseDown={handleBackdropMouseDown}
+        <ModalOverlay
+            isOpen={isOpen}
+            onClose={onClose}
+            className="max-w-3xl sm:max-w-4xl"
         >
-            {/*
-             * KEY CHANGE: Added max-h-[90vh] + flex flex-col so the modal
-             * never exceeds 90% of the viewport height.
-             * The inner scroll container (overflow-y-auto + flex-1) handles
-             * overflow independently of the sticky header/footer areas.
-             */}
-            <div
-                className="bg-white rounded-2xl max-w-md w-full relative flex flex-col max-h-[90vh]"
-                onMouseDown={(e) => e.stopPropagation()}
-            >
+            <div className="bg-white rounded-2xl w-full relative flex flex-col max-h-[90vh] shadow-xl">
 
                 {/* ── STICKY HEADER (never scrolls away) ── */}
                 <div className="p-6 pb-0 flex-shrink-0">
@@ -114,7 +102,7 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
                     </button>
 
                     {/* Breadcrumb */}
-                    <div className="flex items-center gap-2 text-sm mb-6">
+                    <div className="flex items-center gap-2 text-sm mb-6 pr-8">
                         <span className="text-gray-900 font-medium">Identity Verification</span>
                         <span className="text-gray-400">/</span>
                         <span className="text-[#003971] font-medium">Upload ID</span>
@@ -209,7 +197,7 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
                     </div>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }
 
