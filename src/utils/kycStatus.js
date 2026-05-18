@@ -2,7 +2,18 @@
  * KYC submission detection for dashboard identity-verification prompts.
  */
 
-const PRE_KYC_STATUSES = new Set(['pending', 'rejected', 'skipped', 'not_started', '']);
+const PRE_KYC_STATUSES = new Set(['rejected', 'skipped', 'not_started', '']);
+
+/** Statuses that mean the user finished the submission flow (may still await admin review). */
+const POST_SUBMIT_KYC_STATUSES = new Set([
+  'pending',
+  'submitted',
+  'completed',
+  'approved',
+  'verified',
+  'active',
+  'under_review',
+]);
 
 export function readUserProfile() {
   if (typeof window === 'undefined') return {};
@@ -29,6 +40,18 @@ export function normalizeKycStatus(status) {
   return String(status).trim().toLowerCase().replace(/\s+/g, '_');
 }
 
+function hasPersistedKycRecord(kyc) {
+  if (!kyc || typeof kyc !== 'object') return false;
+  if (hasKycDocuments(kyc)) return true;
+
+  const status = normalizeKycStatus(kyc.status);
+  if (status && POST_SUBMIT_KYC_STATUSES.has(status)) {
+    return Boolean(kyc.documentNumber || kyc.selfieUrl || kyc.id);
+  }
+
+  return false;
+}
+
 /**
  * True when the user has already completed the KYC submission flow (awaiting or past admin review).
  * @param {Object} [profile]
@@ -43,6 +66,10 @@ export function hasSubmittedKyc(profile = readUserProfile()) {
     return true;
   }
 
+  if (hasPersistedKycRecord(profile.kyc)) {
+    return true;
+  }
+
   if (hasKycDocuments(profile.kyc)) {
     return true;
   }
@@ -51,6 +78,10 @@ export function hasSubmittedKyc(profile = readUserProfile()) {
   const nestedStatus = normalizeKycStatus(profile.kyc?.status);
 
   if (status === 'completed' || status === 'submitted') {
+    return true;
+  }
+
+  if (nestedStatus && POST_SUBMIT_KYC_STATUSES.has(nestedStatus)) {
     return true;
   }
 
@@ -88,12 +119,43 @@ export function getEffectiveKycStatus(profile = readUserProfile(), localStatus) 
   return localStatus || 'pending';
 }
 
-export function syncKycSubmittedFlag(profile = readUserProfile()) {
+export function notifyKycProfileUpdated() {
   if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('kycProfileUpdated'));
+}
+
+/**
+ * Merge login/API profile with stored KYC so re-login does not wipe submission state.
+ * @param {Object} incoming
+ * @returns {Object}
+ */
+export function mergeAuthUserProfile(incoming = {}) {
+  const existing = readUserProfile();
+  const merged = {
+    ...existing,
+    ...incoming,
+    kyc: incoming?.kyc ?? existing?.kyc,
+    kycStatus: incoming?.kyc?.status ?? incoming?.kycStatus ?? existing?.kycStatus,
+    kyc_status: incoming?.kyc?.status ?? incoming?.kyc_status ?? existing?.kyc_status,
+  };
+
+  if (incoming?.kycSubmitted === true || hasSubmittedKyc(merged)) {
+    merged.kycSubmitted = true;
+    merged.hasSubmittedKyc = true;
+  }
+
+  return merged;
+}
+
+export function syncKycSubmittedFlag(profile = readUserProfile(), { clearIfMissing = false } = {}) {
+  if (typeof window === 'undefined') return;
+
   if (hasSubmittedKyc(profile)) {
     localStorage.setItem('kycSubmitted', 'true');
-  } else {
+    notifyKycProfileUpdated();
+  } else if (clearIfMissing) {
     localStorage.removeItem('kycSubmitted');
+    notifyKycProfileUpdated();
   }
 }
 
@@ -108,10 +170,17 @@ export function persistKycSubmittedToProfile() {
       'userProfile',
       JSON.stringify({
         ...profile,
+        kycSubmitted: true,
+        hasSubmittedKyc: true,
         kycStatus: 'completed',
         kyc_status: 'completed',
+        kyc: {
+          ...(profile.kyc && typeof profile.kyc === 'object' ? profile.kyc : {}),
+          status: profile.kyc?.status || 'PENDING',
+        },
       })
     );
+    notifyKycProfileUpdated();
   } catch {
     // ignore storage errors
   }

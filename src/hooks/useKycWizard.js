@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import kycService from '../services/kycService';
 import resolveKycEntityId from '../utils/resolveKycEntityId';
 import {
@@ -24,7 +24,26 @@ function getStoredCompanyVerificationDecision() {
 }
 
 export function useKycWizard({ userType, storagePrefix }) {
-  const userProfile = useMemo(() => readUserProfile(), []);
+  const [userProfile, setUserProfile] = useState(() => readUserProfile());
+  const [profileHydrated, setProfileHydrated] = useState(false);
+
+  const refreshUserProfile = useCallback(() => {
+    setUserProfile(readUserProfile());
+    setProfileHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    refreshUserProfile();
+
+    const onStorage = () => refreshUserProfile();
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('kycProfileUpdated', onStorage);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('kycProfileUpdated', onStorage);
+    };
+  }, [refreshUserProfile]);
 
   const isAdminVerified = useMemo(() => isAdminVerifiedProfile(userProfile), [userProfile]);
 
@@ -33,6 +52,10 @@ export function useKycWizard({ userType, storagePrefix }) {
 
   const [sessionSkipped, setSessionSkipped] = useState(false);
   const [kycStatus, setKycStatus] = useState(initialKycStatus);
+
+  useEffect(() => {
+    setKycStatus(getEffectiveKycStatus(userProfile, backendKycStatus || undefined));
+  }, [userProfile, backendKycStatus]);
 
   const hasKycSubmitted = useMemo(
     () => hasSubmittedKyc(userProfile) || kycStatus === 'completed',
@@ -44,14 +67,21 @@ export function useKycWizard({ userType, storagePrefix }) {
 
   const shouldShowKycWizard = !isAdminVerified && !hasKycSubmitted && !sessionSkipped;
 
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(() =>
-    shouldPromptVerifyIdentity({
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(false);
+
+  useEffect(() => {
+    if (!profileHydrated) return;
+
+    const shouldShow = shouldPromptVerifyIdentity({
       isAdminVerified,
-      sessionSkipped: false,
+      sessionSkipped,
       profile: userProfile,
-      localKycStatus: initialKycStatus,
-    })
-  );
+      localKycStatus: kycStatus,
+    });
+
+    setShowVerifyIdentityModal(shouldShow);
+  }, [profileHydrated, isAdminVerified, sessionSkipped, userProfile, kycStatus]);
+
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -60,19 +90,6 @@ export function useKycWizard({ userType, storagePrefix }) {
   const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
   const [kycData, setKycData] = useState(null);
-
-  useEffect(() => {
-    if (
-      !shouldPromptVerifyIdentity({
-        isAdminVerified,
-        sessionSkipped,
-        profile: userProfile,
-        localKycStatus: kycStatus,
-      })
-    ) {
-      setShowVerifyIdentityModal(false);
-    }
-  }, [isAdminVerified, sessionSkipped, userProfile, kycStatus]);
 
   const resolveEntityId = () => resolveKycEntityId(userType);
 
@@ -182,6 +199,7 @@ export function useKycWizard({ userType, storagePrefix }) {
 
     persistKycSubmittedToProfile();
     setKycStatus('completed');
+    refreshUserProfile();
 
     setTimeout(() => {
       setShowProcessingModal(false);
@@ -192,6 +210,7 @@ export function useKycWizard({ userType, storagePrefix }) {
   const handleVerificationComplete = () => {
     persistKycSubmittedToProfile();
     setKycStatus('completed');
+    refreshUserProfile();
     setShowVerificationSubmittedModal(false);
     setShowVerifyIdentityModal(false);
   };

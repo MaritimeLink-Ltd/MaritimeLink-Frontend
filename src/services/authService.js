@@ -6,7 +6,7 @@
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
-import { syncKycSubmittedFlag } from '../utils/kycStatus';
+import { mergeAuthUserProfile, syncKycSubmittedFlag } from '../utils/kycStatus';
 
 const emitAuthTokenChanged = () => {
     if (typeof window !== 'undefined') {
@@ -296,12 +296,12 @@ class AuthService {
                 if (profile) {
                     const profilePhotoUrl =
                         profile.profilePhotoUrl || profile.profilePhoto || profile.photo || null;
-                    const normalizedProfile = {
+                    const normalizedProfile = mergeAuthUserProfile({
                         ...profile,
                         profilePhotoUrl: profilePhotoUrl || null,
                         profilePhoto: profilePhotoUrl || null,
                         photo: profilePhotoUrl || null,
-                    };
+                    });
                     localStorage.setItem('userProfile', JSON.stringify(normalizedProfile));
                     if (profilePhotoUrl) {
                         localStorage.setItem('profileImage', profilePhotoUrl);
@@ -699,12 +699,12 @@ class AuthService {
             if (response?.data?.user) {
                 const user = response.data.user;
                 const profilePhoto = user.profilePhotoUrl || user.profilePhoto || user.photo || null;
-                const normalizedUser = {
+                const normalizedUser = mergeAuthUserProfile({
                     ...user,
                     fullName: user.fullName || user.fullname || '',
                     profilePhoto,
                     photo: user.photo || profilePhoto,
-                };
+                });
 
                 localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
                 syncKycSubmittedFlag(normalizedUser);
