@@ -7,6 +7,8 @@ import { FaStar } from 'react-icons/fa';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { shareOrDownloadFile } from '../../../../utils/shareFile';
+import toast from 'react-hot-toast';
 
 const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
     const navigate = useNavigate();
@@ -407,45 +409,37 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
     };
 
     const handleShareResume = async () => {
-        // Show loading state
         document.body.style.cursor = 'wait';
 
         try {
-            const fileName = `${userData.name.replace(/\s+/g, '_')}_CV.pdf`;
+            const safeName = (userData.name || 'Resume').replace(/\s+/g, '_');
+            const fileName = `${safeName}_CV.pdf`;
             const blob = await buildResumePdfBlob();
-            const file = new File([blob], fileName, { type: 'application/pdf' });
 
-            // Check if Web Share API is supported
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: `${userData.name}'s Resume`,
-                    text: `Check out my professional resume`,
-                    files: [file]
-                });
-            } else {
-                // Fallback: Create a shareable link or copy to clipboard
-                const url = URL.createObjectURL(blob);
+            const result = await shareOrDownloadFile({
+                blob,
+                fileName,
+                title: `${userData.name || 'My'} Resume`,
+                text: 'My professional resume from MaritimeLink',
+            });
 
-                // Try to copy link to clipboard
-                if (navigator.clipboard) {
-                    await navigator.clipboard.writeText(url);
-                    alert('Resume link copied to clipboard! You can paste and share it.');
-                } else {
-                    // Last fallback: Open in new tab
-                    window.open(url, '_blank');
-                    alert('Resume opened in new tab. You can download and share it from there.');
-                }
-
-                // Clean up after some time
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            if (result === 'shared') {
+                toast.success('Resume shared successfully.', { position: 'top-right' });
+            } else if (result === 'downloaded') {
+                toast.success(
+                    'Resume PDF downloaded. Attach it from your Downloads folder to share.',
+                    { position: 'top-right', duration: 5000 },
+                );
             }
         } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log('Share cancelled');
-            } else {
-                console.error('Share failed', err);
-                alert('Failed to share resume. Please try downloading and sharing manually.');
+            if (err?.name === 'AbortError') {
+                return;
             }
+            console.error('Share failed', err);
+            toast.error(
+                err?.message || 'Could not share resume. Try Download PDF instead.',
+                { position: 'top-right' },
+            );
         } finally {
             document.body.style.cursor = 'default';
         }
