@@ -50,8 +50,8 @@ function ExpiringCertificatesModal({ isOpen, onClose }) {
     };
 
     return (
-        <ModalOverlay isOpen={isOpen} onClose={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full relative my-4 max-h-[90vh] overflow-y-auto">
+        <ModalOverlay isOpen={isOpen} onClose={onClose} className="max-w-2xl">
+            <div className="bg-white rounded-2xl p-6 w-full relative my-4 max-h-[90vh] overflow-y-auto">
                 {/* Close Button */}
                 <button
                     onClick={onClose}

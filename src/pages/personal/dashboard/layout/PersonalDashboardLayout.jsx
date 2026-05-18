@@ -324,8 +324,12 @@ function PersonalDashboardLayout() {
             </div>
 
             {/* Logout Confirmation Modal */}
-            <ModalOverlay isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)}>
-                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <ModalOverlay
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                className="max-w-md"
+            >
+                <div className="bg-white rounded-2xl shadow-2xl w-full p-6">
                             <div className="text-center mb-6">
                                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <AlertTriangle size={32} className="text-orange-600" />

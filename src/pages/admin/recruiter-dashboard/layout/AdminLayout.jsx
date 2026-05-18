@@ -293,8 +293,12 @@ function AdminLayout() {
             </div>
 
             {/* Logout Confirmation Modal */}
-            <ModalOverlay isOpen={showLogoutModal} onClose={handleLogoutCancel}>
-                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+            <ModalOverlay
+                isOpen={showLogoutModal}
+                onClose={handleLogoutCancel}
+                className="max-w-md"
+            >
+                <div className="bg-white rounded-2xl shadow-xl w-full mx-4 p-6">
                         <div className="text-center">
                             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                                 <LogOut className="h-6 w-6 text-red-600" />

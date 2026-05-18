@@ -40,8 +40,14 @@ body {
 }
 
 #modal-portal {
-  position: relative;
+  position: fixed;
+  inset: 0;
   z-index: 10000;
+  pointer-events: none;
+}
+
+#modal-portal > * {
+  pointer-events: auto;
 }
 
 @layer utilities {

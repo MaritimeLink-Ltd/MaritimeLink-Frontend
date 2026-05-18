@@ -73,7 +73,7 @@ export default function ModalOverlay({
                 onMouseDown={handleBackdropMouseDown}
             >
                 <div
-                    className={`w-full mx-auto ${className}`.trim()}
+                    className={`relative mx-auto w-full ${className || 'max-w-lg'}`.trim()}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
                     {children}
