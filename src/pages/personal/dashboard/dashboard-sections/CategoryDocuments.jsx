@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2, AlertTriangle, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
@@ -19,10 +19,13 @@ const CategoryDocuments = ({
     const [replaceDocId, setReplaceDocId] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteTargetDoc, setDeleteTargetDoc] = useState(null);
+    const replaceInputRef = useRef(null);
+    const replaceTargetRef = useRef(null);
 
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isReplacing, setIsReplacing] = useState(false);
 
     const fetchDocuments = async () => {
         try {
@@ -105,26 +108,50 @@ const CategoryDocuments = ({
         setSelectedDoc(null);
     };
 
-    // Handle Replace Document
     const handleReplaceDocument = (doc) => {
-        console.log('Replacing document:', doc);
+        if (!doc?.id || isReplacing) return;
+        replaceTargetRef.current = doc;
         setReplaceDocId(doc.id);
-        // Trigger file input
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.pdf,.jpg,.jpeg,.png';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                setSuccessMessage(`"${doc.title}" replaced with "${file.name}"`);
-                setShowSuccessModal(true);
-                setTimeout(() => {
-                    setShowSuccessModal(false);
-                    setReplaceDocId(null);
-                }, 2000);
-            }
-        };
-        input.click();
+        replaceInputRef.current?.click();
+    };
+
+    const handleReplaceFileSelected = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+
+        const doc = replaceTargetRef.current;
+        if (!file || !doc?.id) {
+            setReplaceDocId(null);
+            replaceTargetRef.current = null;
+            return;
+        }
+
+        const allowedTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/webp',
+        ];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('Please upload a PDF or image file (JPG, PNG).');
+            setReplaceDocId(null);
+            replaceTargetRef.current = null;
+            return;
+        }
+
+        try {
+            setIsReplacing(true);
+            await documentService.replaceDocumentFile(doc.id, file);
+            toast.success(`"${doc.name || doc.title}" file updated successfully.`);
+            await fetchDocuments();
+        } catch (error) {
+            toast.error(error.message || 'Failed to replace document file.');
+        } finally {
+            setIsReplacing(false);
+            setReplaceDocId(null);
+            replaceTargetRef.current = null;
+        }
     };
 
     // Handle Download Document
@@ -182,7 +209,14 @@ const CategoryDocuments = ({
     return (
         <div className="w-full max-w-7xl mx-auto h-full overflow-hidden relative">
             <Toaster />
-            {isDeleting && (
+            <input
+                ref={replaceInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                className="hidden"
+                onChange={handleReplaceFileSelected}
+            />
+            {(isDeleting || isReplacing) && (
                 <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center backdrop-blur-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-[#003366]" />
                 </div>
@@ -289,9 +323,14 @@ const CategoryDocuments = ({
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleReplaceDocument(doc); }}
-                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors"
+                                        disabled={isReplacing}
+                                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#003366] transition-colors disabled:opacity-50"
                                     >
-                                        <RotateCcw size={14} />
+                                        {replaceDocId === doc.id && isReplacing ? (
+                                            <Loader2 size={14} className="animate-spin" />
+                                        ) : (
+                                            <RotateCcw size={14} />
+                                        )}
                                         Replace
                                     </button>
                                     <button

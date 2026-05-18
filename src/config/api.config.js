@@ -98,6 +98,7 @@ export const API_ENDPOINTS = {
     SHARED_FILE: (token, documentId) =>
       `/api/professional/documents/shared/${encodeURIComponent(token)}/file/${documentId}`,
     UPDATE: (id) => `/api/professional/documents/${id}`,
+    REPLACE_FILE: (id) => `/api/professional/documents/${id}/file`,
     DELETE: (id) => `/api/professional/documents/${id}`,
   },
   // Resume Endpoints

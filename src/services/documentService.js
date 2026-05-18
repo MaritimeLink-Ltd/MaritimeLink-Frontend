@@ -83,6 +83,27 @@ class DocumentService {
     }
 
     /**
+     * Replace the file for an existing document (keeps metadata).
+     * PATCH /api/professional/documents/{id}/file
+     * @param {string} id
+     * @param {File} file
+     */
+    async replaceDocumentFile(id, file) {
+        try {
+            if (!id) throw new Error('Document ID is required to replace file.');
+            if (!file) throw new Error('A file is required to replace the document.');
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            return await httpClient.patch(API_ENDPOINTS.DOCUMENTS.REPLACE_FILE(id), formData);
+        } catch (error) {
+            console.error('Replace document file error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Delete a document
      * DELETE /api/professional/documents/{id}
      * @param {string} id - Document ID
