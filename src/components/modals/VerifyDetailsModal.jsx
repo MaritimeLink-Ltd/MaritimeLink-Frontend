@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ModalOverlay from '../common/ModalOverlay';
 
@@ -14,7 +14,15 @@ function labelForDocumentTypeSlug(slug) {
     return DOCUMENT_TYPE_LABELS[slug] || slug;
 }
 
-function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData, documentType }) {
+function VerifyDetailsModal({
+    isOpen,
+    onClose,
+    onSubmit,
+    onConfirm,
+    initialData,
+    documentType,
+    isSubmitting = false,
+}) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -71,18 +79,31 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
         return newErrors;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (isSubmitting) return;
 
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
-            return; // Block the request — don't fire API with empty fields
+            return;
         }
 
         setErrors({});
-        if (onConfirm) onConfirm(formData);
-        else if (onSubmit) onSubmit(formData);
+        const handler = onConfirm || onSubmit;
+        if (!handler) return;
+
+        try {
+            await Promise.resolve(handler(formData));
+        } catch (err) {
+            console.error('Verify details submit failed:', err);
+        }
+    };
+
+    const handleClose = () => {
+        if (isSubmitting) return;
+        onClose?.();
     };
 
     // Clears a field's error as soon as the user starts typing
@@ -91,7 +112,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
     };
 
     const fieldClass = (field) =>
-        `w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none transition-colors bg-white ${errors[field]
+        `w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none transition-colors bg-white disabled:opacity-60 disabled:cursor-not-allowed ${errors[field]
             ? 'border-red-400 focus:border-red-500'
             : 'border-gray-200 focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70'
         }`;
@@ -102,14 +123,27 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
     return (
         <ModalOverlay
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
+            closeOnBackdrop={!isSubmitting}
             className="max-w-3xl sm:max-w-4xl"
         >
             <div className="bg-white rounded-2xl p-6 sm:p-8 w-full relative max-h-[90vh] overflow-y-auto shadow-xl">
+                {isSubmitting && (
+                    <div
+                        className="absolute top-0 left-0 right-0 h-1.5 bg-gray-100 overflow-hidden rounded-t-2xl z-20"
+                        role="progressbar"
+                        aria-valuetext="Submitting verification"
+                    >
+                        <div className="h-full w-1/3 bg-[#003971] rounded-full animate-[kyc-progress_1.2s_ease-in-out_infinite]" />
+                    </div>
+                )}
+
                 {/* Close Button */}
                 <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    type="button"
+                    onClick={handleClose}
+                    disabled={isSubmitting}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <X className="h-5 w-5" />
                 </button>
@@ -138,6 +172,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                                 value={formData.firstName}
                                 onChange={(e) => { setFormData({ ...formData, firstName: e.target.value }); clearError('firstName'); }}
                                 className={fieldClass('firstName')}
+                                disabled={isSubmitting}
                             />
                             {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>}
                         </div>
@@ -150,6 +185,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                                 value={formData.lastName}
                                 onChange={(e) => { setFormData({ ...formData, lastName: e.target.value }); clearError('lastName'); }}
                                 className={fieldClass('lastName')}
+                                disabled={isSubmitting}
                             />
                             {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>}
                         </div>
@@ -167,6 +203,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                                 onChange={(e) => { setFormData({ ...formData, dateOfBirth: e.target.value }); clearError('dateOfBirth'); }}
                                 max={new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]}
                                 className={fieldClass('dateOfBirth')}
+                                disabled={isSubmitting}
                             />
                             {errors.dateOfBirth && <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>}
                         </div>
@@ -196,6 +233,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                                 }}
                                 placeholder="As shown on your ID"
                                 className={fieldClass('documentNumber')}
+                                disabled={isSubmitting}
                             />
                             {errors.documentNumber && (
                                 <p className="text-xs text-red-500 mt-1">{errors.documentNumber}</p>
@@ -211,6 +249,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                                 onChange={(e) => { setFormData({ ...formData, expiryDate: e.target.value }); clearError('expiryDate'); }}
                                 min={new Date().toISOString().split('T')[0]}
                                 className={fieldClass('expiryDate')}
+                                disabled={isSubmitting}
                             />
                             {errors.expiryDate && <p className="text-xs text-red-500 mt-1">{errors.expiryDate}</p>}
                         </div>
@@ -226,6 +265,7 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                             value={formData.issuingCountry}
                             onChange={(e) => { setFormData({ ...formData, issuingCountry: e.target.value }); clearError('issuingCountry'); }}
                             className={fieldClass('issuingCountry')}
+                            disabled={isSubmitting}
                         />
                         {errors.issuingCountry && <p className="text-xs text-red-500 mt-1">{errors.issuingCountry}</p>}
                     </div>
@@ -233,9 +273,17 @@ function VerifyDetailsModal({ isOpen, onClose, onSubmit, onConfirm, initialData,
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full bg-[#003971] text-white py-3 rounded-xl font-bold hover:bg-[#002855] transition-colors mt-6"
+                        disabled={isSubmitting}
+                        className="w-full bg-[#003971] text-white py-3 rounded-xl font-bold hover:bg-[#002855] transition-colors mt-6 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        Submit Verification
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                                Submitting verification…
+                            </>
+                        ) : (
+                            'Submit Verification'
+                        )}
                     </button>
                 </form>
             </div>

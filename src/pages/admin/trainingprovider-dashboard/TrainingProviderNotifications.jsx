@@ -7,6 +7,7 @@ function TrainingProviderNotifications() {
             accent="#1e5a8f"
             breadcrumbAccent="text-[#1e5a8f]"
             loadNotifications={() => trainerDashboardService.getNotifications()}
+            applyPreferenceFilter
         />
     );
 }

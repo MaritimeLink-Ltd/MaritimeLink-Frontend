@@ -3,6 +3,7 @@ import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2
 import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
 import documentService from '../../../../services/documentService';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { readExpiryDate } from '../../../../utils/documentStatus';
@@ -360,11 +361,12 @@ const CategoryDocuments = ({
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && deleteTargetDoc && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <ModalOverlay
+                    isOpen={showDeleteModal}
+                    onClose={() => { setShowDeleteModal(false); setDeleteTargetDoc(null); }}
+                    className="max-w-sm"
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl w-full overflow-hidden">
                         <div className="flex justify-end p-3 pb-0">
                             <button
                                 onClick={() => { setShowDeleteModal(false); setDeleteTargetDoc(null); }}
@@ -405,13 +407,13 @@ const CategoryDocuments = ({
                             </div>
                         </div>
                     </div>
-                </div>
+                </ModalOverlay>
             )}
 
             {/* Success Modal */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+                <ModalOverlay isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} className="max-w-sm">
+                    <div className="bg-white rounded-2xl p-8 w-full shadow-2xl">
                         <div className="text-center">
                             <div className="mb-4">
                                 <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full">
@@ -423,7 +425,7 @@ const CategoryDocuments = ({
                             </p>
                         </div>
                     </div>
-                </div>
+                </ModalOverlay>
             )}
         </div>
     );

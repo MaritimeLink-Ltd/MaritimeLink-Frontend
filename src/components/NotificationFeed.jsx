@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    filterRecruiterInAppNotifications,
+    playRecruiterDesktopSound,
+    readRecruiterNotificationPreferences,
+} from '../utils/recruiterNotificationPreferences';
 import {
     Zap,
     X,
@@ -34,22 +39,56 @@ const titleBySeverity = {
     error: 'Error Notification',
 };
 
-function NotificationFeed({ accent = '#1e5a8f', breadcrumbAccent = 'text-[#1e5a8f]', description = 'System alerts and platform updates', loadNotifications }) {
+function NotificationFeed({
+    accent = '#1e5a8f',
+    breadcrumbAccent = 'text-[#1e5a8f]',
+    description = 'System alerts and platform updates',
+    loadNotifications,
+    applyPreferenceFilter = false,
+}) {
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const knownIdsRef = useRef(new Set());
+
+    const applyFilters = useCallback(
+        (list) => {
+            if (!applyPreferenceFilter) return list;
+            return filterRecruiterInAppNotifications(
+                list,
+                readRecruiterNotificationPreferences(),
+            );
+        },
+        [applyPreferenceFilter],
+    );
+
+    const fetchNotifications = useCallback(async () => {
+        const response = await loadNotifications();
+        const list = response?.data?.notifications || [];
+        const filtered = applyFilters(list);
+
+        if (applyPreferenceFilter) {
+            const prefs = readRecruiterNotificationPreferences();
+            const newUrgent = filtered.filter((item) => !knownIdsRef.current.has(item.id));
+            if (newUrgent.length > 0 && prefs.desktopSounds) {
+                playRecruiterDesktopSound();
+            }
+            knownIdsRef.current = new Set(filtered.map((item) => item.id));
+        }
+
+        return filtered;
+    }, [loadNotifications, applyFilters, applyPreferenceFilter]);
 
     useEffect(() => {
         let cancelled = false;
 
-        const fetchNotifications = async () => {
+        const load = async () => {
             try {
                 setLoading(true);
                 setError('');
-                const response = await loadNotifications();
-                const list = response?.data?.notifications || [];
-                if (!cancelled) setNotifications(list);
+                const filtered = await fetchNotifications();
+                if (!cancelled) setNotifications(filtered);
             } catch (err) {
                 if (!cancelled) setError(err?.message || 'Could not load notifications.');
             } finally {
@@ -57,12 +96,18 @@ function NotificationFeed({ accent = '#1e5a8f', breadcrumbAccent = 'text-[#1e5a8
             }
         };
 
-        fetchNotifications();
+        load();
+
+        const onPrefsUpdated = () => {
+            load();
+        };
+        window.addEventListener('recruiterNotificationPreferencesUpdated', onPrefsUpdated);
 
         return () => {
             cancelled = true;
+            window.removeEventListener('recruiterNotificationPreferencesUpdated', onPrefsUpdated);
         };
-    }, [loadNotifications]);
+    }, [fetchNotifications]);
 
     const closeNotification = (id) => {
         setNotifications((prev) => prev.filter((item) => item.id !== id));

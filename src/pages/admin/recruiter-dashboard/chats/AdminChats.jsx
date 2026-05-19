@@ -14,6 +14,10 @@ import conversationService, {
     CONVERSATION_MESSAGE_PAGE_SIZE,
 } from '../../../../services/conversationService';
 import { subscribeConversationMessages } from '../../../../services/socketClient';
+import {
+    playRecruiterDesktopSound,
+    shouldNotifyCandidateMessages,
+} from '../../../../utils/recruiterNotificationPreferences';
 
 /** UUID v1–v8 or common 24-char hex ids (e.g. Mongo ObjectId) */
 const ACCEPTABLE_CHAT_PEER_ID_RE =
@@ -241,6 +245,10 @@ function AdminChats({ candidateId: propCandidateId }) {
             const ui = mapApiMessageToChatMessage(rawMsg);
             if (!ui) return;
 
+            const senderType = String(rawMsg.senderType || '').toUpperCase();
+            const isIncomingCandidate = senderType === 'PROFESSIONAL';
+            const messageAlertsEnabled = shouldNotifyCandidateMessages();
+
             setMessagesList((prev) => {
                 const byId = new Map();
                 [...prev, ui].forEach((m) => byId.set(m.id, m));
@@ -248,6 +256,15 @@ function AdminChats({ candidateId: propCandidateId }) {
                     (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
                 );
             });
+
+            if (isIncomingCandidate && !messageAlertsEnabled) {
+                void conversationService.markConversationRead(selectedChat);
+                return;
+            }
+
+            if (isIncomingCandidate) {
+                playRecruiterDesktopSound();
+            }
 
             setChats((prev) =>
                 prev.map((c) => {
@@ -268,9 +285,7 @@ function AdminChats({ candidateId: propCandidateId }) {
                 })
             );
 
-            // If we received a professional message while focused, mark read.
-            const senderType = String(rawMsg.senderType || '').toUpperCase();
-            if (senderType === 'PROFESSIONAL') {
+            if (isIncomingCandidate) {
                 void conversationService.markConversationRead(selectedChat);
             }
         });

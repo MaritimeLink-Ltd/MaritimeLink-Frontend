@@ -110,13 +110,20 @@ class HttpClient {
             }
         }
 
+        const requestTimeout =
+            typeof options.timeout === 'number' && options.timeout > 0
+                ? options.timeout
+                : this.timeout;
+
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
+
+        const { timeout: _timeout, skipAuth: _skipAuth, _retry: _lookupRetry, ...fetchOptions } =
+            options;
 
         try {
             const response = await fetch(url, {
-                ...options,
-                skipAuth: undefined,
+                ...fetchOptions,
                 headers,
                 cache: 'no-store',
                 signal: controller.signal,

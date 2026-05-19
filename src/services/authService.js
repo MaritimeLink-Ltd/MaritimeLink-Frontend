@@ -186,7 +186,7 @@ class AuthService {
      * @param {{ url?: string, organizationName?: string }} params — provide one of url or organizationName
      * @returns {Promise<Object>} API JSON (may be nested under `data`)
      */
-    async lookupCompanyDetails(params = {}) {
+    async lookupCompanyDetails(params = {}, options = {}) {
         const q = new URLSearchParams();
         if (params.url) q.set('url', params.url.trim());
         if (params.organizationName) q.set('organizationName', params.organizationName.trim());
@@ -200,12 +200,29 @@ class AuthService {
         if (!qs) {
             throw new Error('lookupCompanyDetails requires url or organizationName');
         }
+
+        const LOOKUP_TIMEOUT_MS = 90000;
+        const requestOptions = {
+            skipAuth: true,
+            timeout: LOOKUP_TIMEOUT_MS,
+            ...options,
+        };
+
         try {
             return await httpClient.get(
                 `${API_ENDPOINTS.RECRUITER.COMPANY_DETAILS_LOOKUP}?${qs}`,
-                { skipAuth: true }
+                requestOptions,
             );
         } catch (error) {
+            const isTimeout =
+                error?.name === 'AbortError' ||
+                /timeout/i.test(String(error?.message || ''));
+            if (isTimeout && !requestOptions._retry) {
+                return this.lookupCompanyDetails(params, {
+                    ...requestOptions,
+                    _retry: true,
+                });
+            }
             console.error('Company details lookup error:', error);
             throw error;
         }

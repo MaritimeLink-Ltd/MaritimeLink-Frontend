@@ -5,6 +5,7 @@ import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import jobService from '../../../../services/jobService';
 import recruiterCandidateService from '../../../../services/recruiterCandidateService';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
 import {
     AlertCircle,
     Briefcase,
@@ -1407,8 +1408,16 @@ function CandidateSummary({
                 )}
 
                 {showRejectModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
-                        <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+                    <ModalOverlay
+                        isOpen={showRejectModal}
+                        onClose={() => {
+                            setShowRejectModal(false);
+                            setRejectReason('');
+                        }}
+                        className="max-w-md"
+                        zIndex={10070}
+                    >
+                        <div className="bg-white rounded-2xl p-6 w-full relative">
                             <button
                                 onClick={() => {
                                     setShowRejectModal(false);
@@ -1467,12 +1476,20 @@ function CandidateSummary({
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </ModalOverlay>
                 )}
 
                 {showBookingRejectModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
-                        <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+                    <ModalOverlay
+                        isOpen={showBookingRejectModal}
+                        onClose={() => {
+                            setShowBookingRejectModal(false);
+                            setBookingRejectReason('');
+                        }}
+                        className="max-w-md"
+                        zIndex={10070}
+                    >
+                        <div className="bg-white rounded-2xl p-6 w-full relative">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1528,11 +1545,16 @@ function CandidateSummary({
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </ModalOverlay>
                 )}
 
                 {showDocumentWallet && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <ModalOverlay
+                        isOpen={showDocumentWallet}
+                        onClose={() => setShowDocumentWallet(false)}
+                        className="max-w-4xl"
+                        zIndex={10050}
+                    >
                         <div className="bg-white rounded-2xl p-0 max-w-4xl w-full max-h-[85vh] flex flex-col relative">
                             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
                                 <div>
@@ -1666,11 +1688,16 @@ function CandidateSummary({
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </ModalOverlay>
                 )}
 
                 {selectedDocument && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+                    <ModalOverlay
+                        isOpen={Boolean(selectedDocument)}
+                        onClose={() => setSelectedDocument(null)}
+                        className="max-w-4xl"
+                        zIndex={10060}
+                    >
                         <div className="bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl">
                             <div className="flex items-center justify-between p-6 border-b border-gray-200">
                                 <div className="flex items-center gap-4 min-w-0">
@@ -1750,7 +1777,7 @@ function CandidateSummary({
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </ModalOverlay>
                 )}
             </div>
         </div>

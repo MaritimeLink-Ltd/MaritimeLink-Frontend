@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import kycService from '../services/kycService';
 import resolveKycEntityId from '../utils/resolveKycEntityId';
 import {
@@ -90,6 +90,10 @@ export function useKycWizard({ userType, storagePrefix }) {
   const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
   const [kycData, setKycData] = useState(null);
+  const [isSubmittingDetails, setIsSubmittingDetails] = useState(false);
+  const [isSubmittingSelfie, setIsSubmittingSelfie] = useState(false);
+  const detailsSubmitInFlightRef = useRef(false);
+  const selfieSubmitInFlightRef = useRef(false);
 
   const resolveEntityId = () => resolveKycEntityId(userType);
 
@@ -111,12 +115,17 @@ export function useKycWizard({ userType, storagePrefix }) {
   };
 
   const handleDetailsVerified = async (verifiedData) => {
+    if (detailsSubmitInFlightRef.current) return;
+
     const entityId = resolveEntityId();
 
     if (!entityId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
       return;
     }
+
+    detailsSubmitInFlightRef.current = true;
+    setIsSubmittingDetails(true);
 
     try {
       const basePayload = {
@@ -167,17 +176,29 @@ export function useKycWizard({ userType, storagePrefix }) {
       setShowTakeSelfieModal(true);
     } catch (err) {
       console.error('KYC Submit failed', err);
-      alert('Failed to confirm details. Please try again.');
+      const message =
+        err?.message ||
+        err?.data?.message ||
+        'Failed to confirm details. Please try again.';
+      alert(message);
+    } finally {
+      detailsSubmitInFlightRef.current = false;
+      setIsSubmittingDetails(false);
     }
   };
 
   const handleSelfieTaken = async (selfieFile) => {
+    if (selfieSubmitInFlightRef.current) return;
+
     const entityId = resolveEntityId();
 
     if (!entityId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
       return;
     }
+
+    selfieSubmitInFlightRef.current = true;
+    setIsSubmittingSelfie(true);
 
     setShowTakeSelfieModal(false);
     setShowProcessingModal(true);
@@ -192,9 +213,17 @@ export function useKycWizard({ userType, storagePrefix }) {
       }
     } catch (err) {
       console.error('KYC Selfie upload failed', err);
-      alert('Failed to upload selfie. Please try again.');
+      const message =
+        err?.message ||
+        err?.data?.message ||
+        'Failed to upload selfie. Please try again.';
+      alert(message);
       setShowProcessingModal(false);
+      setShowTakeSelfieModal(true);
       return;
+    } finally {
+      selfieSubmitInFlightRef.current = false;
+      setIsSubmittingSelfie(false);
     }
 
     persistKycSubmittedToProfile();
@@ -236,6 +265,8 @@ export function useKycWizard({ userType, storagePrefix }) {
       showVerificationSubmittedModal,
       selectedDocumentType,
       kycData,
+      isSubmittingDetails,
+      isSubmittingSelfie,
     },
     actions: {
       handleStartVerification,

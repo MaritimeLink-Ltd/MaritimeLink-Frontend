@@ -13,7 +13,14 @@ import {
     LogOut
 } from 'lucide-react';
 import authService from '../../../../services/authService';
+import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
+import { connectSocket } from '../../../../services/socketClient';
+import {
+    playRecruiterDesktopSound,
+    shouldNotifyCandidateMessages,
+    syncRecruiterNotificationPreferences,
+} from '../../../../utils/recruiterNotificationPreferences';
 import {
     initialsFromName,
     resolveProfilePhotoUrl,
@@ -30,6 +37,49 @@ function AdminLayout() {
         email: '',
         photo: null,
     });
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const response = await recruiterSettingsService.getSettings();
+                const notifications = response?.data?.notifications;
+                if (!cancelled && notifications) {
+                    syncRecruiterNotificationPreferences(notifications);
+                }
+            } catch {
+                /* non-blocking */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const socket = connectSocket();
+        const eventNames = [
+            'conversation:message',
+            'conversation:message:new',
+            'message:new',
+            'newMessage',
+        ];
+
+        const handleIncoming = (payload) => {
+            const msg = payload?.message || payload;
+            if (!msg?.conversationId) return;
+            const senderType = String(msg.senderType || '').toUpperCase();
+            if (senderType !== 'PROFESSIONAL') return;
+            if (!shouldNotifyCandidateMessages()) return;
+            playRecruiterDesktopSound();
+        };
+
+        eventNames.forEach((name) => socket.on(name, handleIncoming));
+
+        return () => {
+            eventNames.forEach((name) => socket.off(name, handleIncoming));
+        };
+    }, []);
 
     useEffect(() => {
         const updateUserData = () => {

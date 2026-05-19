@@ -13,6 +13,7 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     const streamRef = useRef(null);
 
     const [photoTaken, setPhotoTaken] = useState(false);
+    const captureInFlightRef = useRef(false);
 
     const startCamera = async () => {
         try {
@@ -53,8 +54,14 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
     }, [isOpen]);
 
     const capturePhoto = () => {
+        if (captureInFlightRef.current || photoTaken) return;
+        captureInFlightRef.current = true;
         setPhotoTaken(true);
-        if (!videoRef.current) return;
+        if (!videoRef.current) {
+            captureInFlightRef.current = false;
+            setPhotoTaken(false);
+            return;
+        }
 
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
@@ -75,6 +82,9 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                 } else if (onPhotoTaken) {
                     onPhotoTaken(file);
                 }
+            } else {
+                captureInFlightRef.current = false;
+                setPhotoTaken(false);
             }
         }, 'image/jpeg');
     };
@@ -112,9 +122,9 @@ function TakeSelfieModal({ isOpen, onClose, onPhotoTaken, onSelfieTaken }) {
                     We'll compare this with your document photo
                 </p>
 
-                {/* Camera Preview */}
+                {/* Camera Preview — mx-auto: aspect-ratio + maxHeight shrink width below 100% */}
                 <div
-                    className="relative mb-4 sm:mb-6 bg-gray-900 rounded-2xl overflow-hidden"
+                    className="relative mx-auto mb-4 sm:mb-6 w-full max-w-[280px] sm:max-w-[320px] bg-gray-900 rounded-2xl overflow-hidden"
                     style={{ aspectRatio: '3/4', maxHeight: '60vh' }}
                 >
                     <video

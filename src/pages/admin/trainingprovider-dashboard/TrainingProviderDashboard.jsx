@@ -266,6 +266,7 @@ function TrainingProviderDashboard() {
             showVerificationSubmittedModal,
             selectedDocumentType,
             kycData,
+            isSubmittingDetails,
         },
         actions: {
             handleStartVerification,
@@ -876,6 +877,7 @@ function TrainingProviderDashboard() {
                 onConfirm={handleDetailsVerified}
                 initialData={kycData}
                 documentType={selectedDocumentType}
+                isSubmitting={isSubmittingDetails}
             />
             <TakeSelfieModal
                 isOpen={showTakeSelfieModal}

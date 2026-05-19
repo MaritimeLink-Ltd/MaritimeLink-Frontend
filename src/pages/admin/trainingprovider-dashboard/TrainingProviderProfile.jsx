@@ -749,8 +749,7 @@ const TrainingProviderProfile = () => {
                             <div className="space-y-4">
                                 {[
                                     ['securityAlerts', 'Security Alerts', 'Important security updates and suspicious activity.'],
-                                    ['newApplications', 'New Applications', 'Booking and attendee request activity.'],
-                                    ['candidateMessages', 'Messages', 'Chat and direct message notifications.'],
+                                    ['candidateMessages', 'Messages', 'In-app alerts and sounds for chat. Messages remain in Chats when off.'],
                                     ['jobPostings', 'Course Updates', 'Course publishing and schedule changes.'],
                                     ['marketing', 'Marketing', 'Product updates and optional announcements.'],
                                     ['desktopSounds', 'Desktop Sounds', 'Play sound cues for live alerts.'],

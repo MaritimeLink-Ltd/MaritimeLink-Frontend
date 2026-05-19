@@ -195,6 +195,7 @@ function RecruiterDashboard({ onNavigate }) {
             showVerificationSubmittedModal,
             selectedDocumentType,
             kycData,
+            isSubmittingDetails,
         },
         actions: {
             handleStartVerification,
@@ -888,6 +889,7 @@ function RecruiterDashboard({ onNavigate }) {
                 onConfirm={handleDetailsVerified}
                 initialData={kycData}
                 documentType={selectedDocumentType}
+                isSubmitting={isSubmittingDetails}
             />
             <TakeSelfieModal
                 isOpen={showTakeSelfieModal}

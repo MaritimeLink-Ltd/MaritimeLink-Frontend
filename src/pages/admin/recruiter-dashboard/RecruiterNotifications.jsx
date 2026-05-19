@@ -7,6 +7,7 @@ function RecruiterNotifications() {
             accent="#003971"
             breadcrumbAccent="text-[#003971]"
             loadNotifications={() => recruiterDashboardService.getNotifications()}
+            applyPreferenceFilter
         />
     );
 }

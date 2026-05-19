@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
 import CompanyLogo from '../../../components/common/CompanyLogo';
@@ -167,37 +167,65 @@ function RecruiterCompanyVerification() {
     ].filter(([, value]) => fieldValue(value));
     const sourceLinks = Array.isArray(lookupPreview?.sources) ? lookupPreview.sources.slice(0, 3) : [];
 
-    useEffect(() => {
-        const lookupCompany = async () => {
-            if (lookupPreview || !formData?.companyName) return;
+    const lookupParams = useMemo(() => {
+        if (!formData?.companyName) return null;
+        return {
+            organizationName: formData.companyName,
+            url: formData.website,
+            address: formData.address,
+            companyCity: formData.city,
+            companyState: formData.stateProvince,
+            companyZip: formData.postcode,
+            companyCountry: formData.country,
+            companyLinkedIn: formData.linkedIn,
+        };
+    }, [
+        formData?.companyName,
+        formData?.website,
+        formData?.address,
+        formData?.city,
+        formData?.stateProvince,
+        formData?.postcode,
+        formData?.country,
+        formData?.linkedIn,
+    ]);
 
-            setLookupLoading(true);
-            setLookupError('');
+    const lookupRequestId = useRef(0);
 
-            try {
-                const response = await authService.lookupCompanyDetails({
-                    organizationName: formData.companyName,
-                    url: formData.website,
-                    address: formData.address,
-                    companyCity: formData.city,
-                    companyState: formData.stateProvince,
-                    companyZip: formData.postcode,
-                    companyCountry: formData.country,
-                    companyLinkedIn: formData.linkedIn,
-                });
-                const payload = getLookupPayload(response);
-                const mapped = mapLookupToDisplay(payload);
-                setLookupPreview(mapped);
-            } catch (err) {
-                console.error('Company verification lookup failed:', err);
-                setLookupError('We could not fetch public company details right now. You can continue with your entered details.');
-            } finally {
+    const runPublicLookup = useCallback(async () => {
+        if (!lookupParams) return;
+
+        const requestId = ++lookupRequestId.current;
+        setLookupLoading(true);
+        setLookupError('');
+
+        try {
+            const response = await authService.lookupCompanyDetails(lookupParams);
+            if (requestId !== lookupRequestId.current) return;
+
+            const payload = getLookupPayload(response);
+            const mapped = mapLookupToDisplay(payload);
+            setLookupPreview(mapped);
+        } catch (err) {
+            if (requestId !== lookupRequestId.current) return;
+            console.error('Company verification lookup failed:', err);
+            const isTimeout = /timeout/i.test(String(err?.message || ''));
+            setLookupError(
+                isTimeout
+                    ? 'The company lookup took too long. This can happen when public sources are slow — try again, or continue with your entered details.'
+                    : 'We could not fetch public company details right now. You can continue with your entered details.',
+            );
+        } finally {
+            if (requestId === lookupRequestId.current) {
                 setLookupLoading(false);
             }
-        };
+        }
+    }, [lookupParams]);
 
-        lookupCompany();
-    }, [formData, lookupPreview]);
+    useEffect(() => {
+        if (lookupPreview || !lookupParams) return;
+        runPublicLookup();
+    }, [lookupPreview, lookupParams, runPublicLookup]);
 
     const saveDecision = ({ organizationVerified, useManualDetails }) => {
         const decision = {
@@ -329,6 +357,14 @@ function RecruiterCompanyVerification() {
                     {lookupError && (
                         <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                             <p className="text-sm text-amber-800">{lookupError}</p>
+                            <button
+                                type="button"
+                                onClick={runPublicLookup}
+                                disabled={lookupLoading}
+                                className="mt-3 text-sm font-semibold text-amber-900 underline disabled:opacity-50"
+                            >
+                                {lookupLoading ? 'Retrying…' : 'Try again'}
+                            </button>
                         </div>
                     )}
 

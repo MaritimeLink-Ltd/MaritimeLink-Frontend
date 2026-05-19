@@ -24,6 +24,7 @@ const PersonalDashboard = () => {
       showVerificationSubmittedModal,
       selectedDocumentType,
       kycData,
+      isSubmittingDetails,
     },
     actions: {
       handleStartVerification,
@@ -108,6 +109,7 @@ const PersonalDashboard = () => {
         isOpen={showVerifyDetailsModal}
         onClose={() => setShowVerifyDetailsModal(false)}
         onConfirm={handleDetailsVerified}
+        isSubmitting={isSubmittingDetails}
         initialData={kycData}
         documentType={selectedDocumentType}
       />

@@ -815,22 +815,11 @@ function AdminSettings() {
                                         </div>
                                         <div className="h-px bg-gray-50" />
 
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-900">New Applications</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">When candidates apply to your job postings</p>
-                                            </div>
-                                            <Toggle
-                                                checked={notifications.newApplications}
-                                                onChange={(v) => setNotifications({ ...notifications, newApplications: v })}
-                                            />
-                                        </div>
-                                        <div className="h-px bg-gray-50" />
 
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h3 className="text-sm font-bold text-gray-900">Candidate Messages</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">New messages from candidates or seafarers</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">In-app alerts and sounds for new chat messages. Chats remain available when off.</p>
                                             </div>
                                             <Toggle
                                                 checked={notifications.candidateMessages}

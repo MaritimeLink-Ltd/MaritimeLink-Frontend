@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { lockBodyScroll, unlockBodyScroll } from '../../utils/bodyScrollLock';
 
 const DEFAULT_Z_INDEX = 10000;
 
@@ -16,7 +17,7 @@ function getPortalRoot() {
 
 /**
  * Full-viewport modal backdrop rendered via portal on document.body.
- * Fixes clipped or partial overlays when modals live inside scrollable dashboard layouts.
+ * Portaling avoids white gaps when parent layouts use overflow:hidden.
  */
 export default function ModalOverlay({
     isOpen,
@@ -30,14 +31,10 @@ export default function ModalOverlay({
     useEffect(() => {
         if (!isOpen) return undefined;
 
-        const previousBodyOverflow = document.body.style.overflow;
-        const previousHtmlOverflow = document.documentElement.style.overflow;
-        document.body.style.overflow = 'hidden';
-        document.documentElement.style.overflow = 'hidden';
+        lockBodyScroll();
 
         return () => {
-            document.body.style.overflow = previousBodyOverflow;
-            document.documentElement.style.overflow = previousHtmlOverflow;
+            unlockBodyScroll();
         };
     }, [isOpen]);
 
@@ -54,22 +51,21 @@ export default function ModalOverlay({
 
     return createPortal(
         <div
-            className={`fixed inset-0 ${overlayClassName}`}
+            className={`fixed top-0 left-0 w-full h-full ${overlayClassName}`.trim()}
             style={{
                 zIndex,
-                width: '100vw',
-                height: '100dvh',
-                minHeight: '100vh',
+                margin: 0,
+                padding: 0,
             }}
             role="presentation"
         >
             <div
-                className="absolute inset-0 bg-black/60"
+                className="absolute top-0 left-0 w-full h-full bg-black/60"
                 aria-hidden="true"
                 onMouseDown={handleBackdropMouseDown}
             />
             <div
-                className="relative z-[1] flex min-h-full w-full items-center justify-center overflow-y-auto p-4"
+                className="absolute top-0 left-0 z-[1] flex h-full w-full items-center justify-center overflow-y-auto overscroll-contain p-4"
                 onMouseDown={handleBackdropMouseDown}
             >
                 <div
