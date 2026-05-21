@@ -105,6 +105,8 @@ export default function CourseDetail() {
   const [activeTab, setActiveTab] = useState('details');
   const [status, setStatus] = useState('Published');
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [statusError, setStatusError] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -336,19 +338,72 @@ export default function CourseDetail() {
   };
 
   const handleStatusActionClick = () => {
+    setStatusError('');
     setStatusDialogOpen(true);
   };
 
-  const handleConfirmStatusChange = () => {
-    const nextStatus = currentStatusConfig?.nextStatus;
-    if (nextStatus) {
-      setStatus(nextStatus);
+  const mapApiStatusToUi = (apiStatus) => {
+    if (apiStatus === 'ACTIVE') return 'Published';
+    if (apiStatus === 'DRAFT') return 'Draft';
+    return 'Archived';
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!resolvedCourseId || !currentStatusConfig) return;
+
+    setIsStatusUpdating(true);
+    setStatusError('');
+
+    try {
+      if (status === 'Published') {
+        const response = await httpClient.patch(
+          API_ENDPOINTS.COURSES.UNPUBLISH(resolvedCourseId),
+        );
+        if (response.status === 'success') {
+          const apiStatus = response.data?.course?.status || 'DRAFT';
+          setStatus(mapApiStatusToUi(apiStatus));
+          setCourseEntity((prev) =>
+            prev ? { ...prev, status: apiStatus } : prev,
+          );
+        }
+      } else if (status === 'Draft') {
+        const response = await httpClient.patch(
+          API_ENDPOINTS.COURSES.PUBLISH(resolvedCourseId),
+        );
+        if (response.status === 'success') {
+          const apiStatus = response.data?.course?.status || 'ACTIVE';
+          setStatus(mapApiStatusToUi(apiStatus));
+          setCourseEntity((prev) =>
+            prev ? { ...prev, status: apiStatus } : prev,
+          );
+        }
+      } else if (status === 'Archived') {
+        const response = await httpClient.patch(
+          API_ENDPOINTS.COURSES.UPDATE(resolvedCourseId),
+          { status: 'DRAFT' },
+        );
+        if (response.status === 'success') {
+          const apiStatus = response.data?.course?.status || 'DRAFT';
+          setStatus(mapApiStatusToUi(apiStatus));
+          setCourseEntity((prev) =>
+            prev ? { ...prev, status: apiStatus } : prev,
+          );
+        }
+      }
+      setStatusDialogOpen(false);
+    } catch (err) {
+      console.error('Failed to update course status:', err);
+      setStatusError(
+        err?.data?.message || err?.message || 'Could not update course status.',
+      );
+    } finally {
+      setIsStatusUpdating(false);
     }
-    setStatusDialogOpen(false);
   };
 
   const handleCancelStatusChange = () => {
     setStatusDialogOpen(false);
+    setStatusError('');
   };
 
   const handleDeleteCourse = async () => {
@@ -757,23 +812,33 @@ export default function CourseDetail() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               {currentStatusConfig.modalTitle}
             </h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-gray-500 mb-4">
               {currentStatusConfig.modalDescription}
             </p>
+            {statusError ? (
+              <p className="text-sm text-red-600 mb-4">{statusError}</p>
+            ) : null}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={handleCancelStatusChange}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                disabled={isStatusUpdating}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmStatusChange}
-                className="px-4 py-2.5 rounded-xl bg-[#003971] text-sm font-semibold text-white hover:bg-[#002455]"
+                disabled={isStatusUpdating}
+                className="px-4 py-2.5 rounded-xl bg-[#003971] text-sm font-semibold text-white hover:bg-[#002455] inline-flex items-center disabled:opacity-75"
               >
-                {currentStatusConfig.actionLabel}
+                {isStatusUpdating && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                )}
+                {isStatusUpdating
+                  ? 'Updating...'
+                  : currentStatusConfig.actionLabel}
               </button>
             </div>
           </div>

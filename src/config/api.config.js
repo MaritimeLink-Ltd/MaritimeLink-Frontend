@@ -313,6 +313,7 @@ export const API_ENDPOINTS = {
     PROFESSIONAL_TOGGLE_SAVE: (courseId) => `/api/professional/courses/${courseId}/toggle-save`,
     DRAFTS: '/api/courses/drafts',
     PUBLISH: (courseId) => `/api/courses/${courseId}/publish`,
+    UNPUBLISH: (courseId) => `/api/courses/${courseId}/unpublish`,
     CREATE_SESSION: (courseId) => `/api/courses/${courseId}/sessions`,
     GET_SESSIONS: (courseId) => `/api/courses/${courseId}/sessions`,
     GET_SESSION_BY_ID: (sessionId) => `/api/courses/sessions/${sessionId}`,
