@@ -14,6 +14,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
 
 function normalizeBookingStatus(raw) {
   const s = String(raw || '').toUpperCase();
@@ -219,20 +220,28 @@ export default function SessionAttendance() {
     }
   };
 
-  const handleRejectAttendee = async (bookingId, isPaid) => {
-    if (adminCourseBookingsMode || !sessionId || !bookingId) return;
-    const confirmed = window.confirm(
-      isPaid
-        ? 'Reject this paid booking and refund the professional?'
-        : 'Reject this booking?'
-    );
-    if (!confirmed) return;
+  const openRejectModal = (attendee) => {
+    setSelectedAttendee(attendee);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const closeRejectModal = () => {
+    setShowRejectModal(false);
+    setRejectReason('');
+    setSelectedAttendee(null);
+  };
+
+  const handleConfirmRejectAttendee = async () => {
+    const bookingId = selectedAttendee?.bookingId;
+    const isPaid = Boolean(selectedAttendee?.paymentOk);
+    if (adminCourseBookingsMode || !sessionId || !bookingId || !rejectReason.trim()) return;
 
     setRejectingBookingId(bookingId);
     try {
       const res = await httpClient.post(
         API_ENDPOINTS.TRAINER.REJECT_ATTENDEE(sessionId, bookingId),
-        { reason: isPaid ? 'Trainer rejected paid course booking' : 'Trainer rejected course booking' }
+        { reason: rejectReason.trim() }
       );
       const booking = res?.data?.booking;
       if (booking?.id) {
@@ -277,6 +286,7 @@ export default function SessionAttendance() {
           { duration: 7000 }
         );
       }
+      closeRejectModal();
     } catch (e) {
       console.error('Reject attendee failed', e);
       toast.error(e?.message || 'Could not reject attendee.');
@@ -284,6 +294,8 @@ export default function SessionAttendance() {
       setRejectingBookingId(null);
     }
   };
+
+  const rejectModalIsPaid = Boolean(selectedAttendee?.paymentOk);
 
   const pendingCount = useMemo(
     () => attendees.filter((a) => a.canonical === 'pending').length,
@@ -579,7 +591,7 @@ export default function SessionAttendance() {
                           {canRejectBooking && (
                             <button
                               type="button"
-                              onClick={() => handleRejectAttendee(attendee.bookingId, attendee.paymentOk)}
+                              onClick={() => openRejectModal(attendee)}
                               disabled={
                                 rejectingBookingId === attendee.bookingId ||
                                 approvingBookingId === attendee.bookingId
@@ -687,68 +699,76 @@ export default function SessionAttendance() {
         </div>
       </div>
 
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full relative">
+      <ModalOverlay
+        isOpen={showRejectModal}
+        onClose={closeRejectModal}
+        className="max-w-md"
+        zIndex={10070}
+      >
+        <div className="bg-white rounded-2xl p-6 w-full relative">
+          <button
+            type="button"
+            onClick={closeRejectModal}
+            disabled={Boolean(rejectingBookingId)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">
+            {rejectModalIsPaid ? 'Reject and refund this booking?' : 'Reject this booking?'}
+          </h3>
+          <p className="text-gray-600 text-sm mb-2">
+            {rejectModalIsPaid
+              ? 'The professional will be removed from this session and their payment will be refunded to their card (typically 5–10 business days).'
+              : 'The professional will be marked as rejected for this session.'}
+          </p>
+          {selectedAttendee ? (
+            <p className="text-sm font-semibold text-gray-900 mb-6">{selectedAttendee.name}</p>
+          ) : (
+            <div className="mb-6" />
+          )}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Please provide a reason"
+              rows={3}
+              disabled={Boolean(rejectingBookingId)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none disabled:opacity-60"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => {
-                setShowRejectModal(false);
-                setRejectReason('');
-                setSelectedAttendee(null);
-              }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              onClick={closeRejectModal}
+              disabled={Boolean(rejectingBookingId)}
+              className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
-              <X className="h-5 w-5" />
+              Cancel
             </button>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Reject Attendee?</h3>
-            <p className="text-gray-600 mb-6">
-              This will mark the attendee as rejected for this session.
-              {selectedAttendee ? (
-                <span className="block mt-2 font-medium text-gray-900">{selectedAttendee.name}</span>
-              ) : null}
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Reason for rejection <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Please provide a reason"
-                rows={3}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent resize-none"
-              />
-            </div>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectReason('');
-                  setSelectedAttendee(null);
-                }}
-                className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!rejectReason.trim()) return;
-                  setShowRejectModal(false);
-                  setRejectReason('');
-                  setSelectedAttendee(null);
-                }}
-                disabled={!rejectReason.trim()}
-                className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Reject
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => void handleConfirmRejectAttendee()}
+              disabled={!rejectReason.trim() || Boolean(rejectingBookingId)}
+              className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {rejectingBookingId ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {rejectModalIsPaid ? 'Refunding…' : 'Rejecting…'}
+                </>
+              ) : rejectModalIsPaid ? (
+                'Reject / Refund'
+              ) : (
+                'Reject booking'
+              )}
+            </button>
           </div>
         </div>
-      )}
+      </ModalOverlay>
     </div>
   );
 }
