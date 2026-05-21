@@ -805,16 +805,15 @@ function AdminSettings() {
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Security Alerts</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Get notified about suspicious login attempts</p>
+                                                <h3 className="text-sm font-bold text-gray-900">New Applications</h3>
+                                                <p className="text-xs text-gray-500 mt-0.5">Alerts when candidates apply to your job postings</p>
                                             </div>
                                             <Toggle
-                                                checked={notifications.securityAlerts}
-                                                onChange={(v) => setNotifications({ ...notifications, securityAlerts: v })}
+                                                checked={notifications.newApplications}
+                                                onChange={(v) => setNotifications({ ...notifications, newApplications: v })}
                                             />
                                         </div>
                                         <div className="h-px bg-gray-50" />
-
 
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -831,7 +830,7 @@ function AdminSettings() {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h3 className="text-sm font-bold text-gray-900">Job Posting Updates</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Changes to your job status or approvals</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Draft jobs, expiring listings, and jobs needing attention</p>
                                             </div>
                                             <Toggle
                                                 checked={notifications.jobPostings}
@@ -842,43 +841,12 @@ function AdminSettings() {
 
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Marketing & Newsletter</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Product updates and industry news</p>
-                                            </div>
-                                            <Toggle
-                                                checked={notifications.marketing}
-                                                onChange={(v) => setNotifications({ ...notifications, marketing: v })}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* System Notifications */}
-                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                    <h2 className="text-lg font-bold text-gray-900 mb-1">System Notifications</h2>
-                                    <p className="text-sm text-gray-500 mb-6">Manage in-app alerts and banners.</p>
-
-                                    <div className="space-y-6">
-                                        <div className="flex items-center justify-between">
-                                            <div>
                                                 <h3 className="text-sm font-bold text-gray-900">Desktop Sounds</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Play a sound for critical alerts</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Play a sound for new in-app alerts</p>
                                             </div>
                                             <Toggle
                                                 checked={notifications.desktopSounds}
                                                 onChange={(v) => setNotifications({ ...notifications, desktopSounds: v })}
-                                            />
-                                        </div>
-                                        <div className="h-px bg-gray-50" />
-
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Urgent Alerts</h3>
-                                                <p className="text-xs text-gray-500 mt-0.5">Highlight time-sensitive notifications</p>
-                                            </div>
-                                            <Toggle
-                                                checked={notifications.urgentAlerts}
-                                                onChange={(v) => setNotifications({ ...notifications, urgentAlerts: v })}
                                             />
                                         </div>
                                     </div>

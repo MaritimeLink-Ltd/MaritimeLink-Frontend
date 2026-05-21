@@ -748,12 +748,10 @@ const TrainingProviderProfile = () => {
 
                             <div className="space-y-4">
                                 {[
-                                    ['securityAlerts', 'Security Alerts', 'Important security updates and suspicious activity.'],
+                                    ['newApplications', 'New Bookings', 'Alerts when professionals book or pay for your courses.'],
                                     ['candidateMessages', 'Messages', 'In-app alerts and sounds for chat. Messages remain in Chats when off.'],
-                                    ['jobPostings', 'Course Updates', 'Course publishing and schedule changes.'],
-                                    ['marketing', 'Marketing', 'Product updates and optional announcements.'],
+                                    ['jobPostings', 'Course Updates', 'Course publishing, capacity, and scheduling changes.'],
                                     ['desktopSounds', 'Desktop Sounds', 'Play sound cues for live alerts.'],
-                                    ['urgentAlerts', 'Urgent Alerts', 'High-priority operational issues.'],
                                 ].map(([key, label, description]) => (
                                     <div
                                         key={key}

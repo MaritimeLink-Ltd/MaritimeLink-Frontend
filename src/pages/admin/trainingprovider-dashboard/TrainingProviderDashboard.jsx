@@ -85,7 +85,7 @@ function getTrainerStatsQuery(timeFilter) {
     if (timeFilter === 'Today') return { timeframe: 'today' };
     if (timeFilter === '7 Days') return { timeframe: '7d' };
     if (timeFilter === '30 Days') return { timeframe: '30d' };
-    if (timeFilter === 'All') return {};
+    if (timeFilter === 'All') return { timeframe: 'all' };
     return { timeframe: '7d' };
 }
 

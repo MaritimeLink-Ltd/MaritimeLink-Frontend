@@ -36,11 +36,29 @@ export function syncRecruiterNotificationPreferences(preferences) {
     return next;
 }
 
+function isCourseBookingNotification(notification) {
+    const id = String(notification?.id || '');
+    const title = String(notification?.title || '');
+    return (
+        id === 'pending-bookings' ||
+        id === 'awaiting-approval-bookings' ||
+        id.startsWith('booking-') ||
+        title === 'Recent Course Booking' ||
+        title === 'New Booking Requests' ||
+        title === 'Bookings Awaiting Approval' ||
+        title === 'Incomplete Bookings'
+    );
+}
+
 /** Mirrors backend isRecruiterInAppNotificationEnabled for client-side filtering. */
 export function isRecruiterInAppNotificationEnabled(notification, preferences) {
     const prefs = preferences || readRecruiterNotificationPreferences();
     const id = String(notification?.id || '');
     const severity = String(notification?.severity || notification?.type || '').toLowerCase();
+
+    if (isCourseBookingNotification(notification)) {
+        return true;
+    }
 
     if (id === 'new-applications' || id === 'pending-bookings') {
         if (!prefs.newApplications) return false;
@@ -52,12 +70,6 @@ export function isRecruiterInAppNotificationEnabled(notification, preferences) {
         id.startsWith('capacity-')
     ) {
         if (!prefs.jobPostings) return false;
-    } else if (id === 'recruiter-announcement' || id === 'trainer-announcement') {
-        if (!prefs.marketing) return false;
-    } else if (notification?.title === 'Recent Course Booking') {
-        if (!prefs.newApplications) return false;
-    } else if (id.includes('security') || notification?.type === 'security') {
-        if (!prefs.securityAlerts) return false;
     } else if (
         id.includes('message') ||
         id.includes('chat') ||
@@ -65,9 +77,7 @@ export function isRecruiterInAppNotificationEnabled(notification, preferences) {
         notification?.type === 'chat'
     ) {
         if (!prefs.candidateMessages) return false;
-    }
-
-    if (!prefs.urgentAlerts && (severity === 'warning' || severity === 'error')) {
+    } else if (id === 'recruiter-announcement' || id === 'trainer-announcement') {
         return false;
     }
 
