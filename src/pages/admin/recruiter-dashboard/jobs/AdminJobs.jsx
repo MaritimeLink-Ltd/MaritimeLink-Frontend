@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import jobService from '../../../../services/jobService';
+import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
 import {
     Plus,
     Search,
@@ -526,12 +527,14 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
                                                 <span className="text-gray-700 text-sm">{job.posted}</span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`text-sm font-bold ${job.status === 'Active' ? 'text-green-600' :
-                                                    job.status === 'Draft' ? 'text-orange-600' :
-                                                        'text-orange-600'
-                                                    }`}>
-                                                    {job.status}
-                                                </span>
+                                                {(() => {
+                                                    const display = resolveAdminJobDisplay(job);
+                                                    return (
+                                                        <span className={`text-sm font-bold ${display.className}`}>
+                                                            {display.label}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {job.status !== 'Draft' ? (

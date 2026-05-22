@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
+import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
 
 /** Real profile photo URLs only — no placeholders; blocks known dummy hosts. */
 function resolveProfessionalAvatarUrl(prof) {
@@ -160,9 +161,14 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         return 'Active';
     };
     
-    // Derived values
-    const isPublished = jobStatus === 'Active';
-    const isClosed = jobStatus === 'Closed';
+    const jobDisplay = resolveAdminJobDisplay({
+        status: job?.status ?? jobStatus,
+        isFlagged: job?.isFlagged,
+    });
+
+    // Derived values (lifecycle — flagged jobs are not treated as published in actions)
+    const isPublished = jobDisplay.isPublished && !jobDisplay.isFlagged;
+    const isClosed = jobDisplay.isClosed;
     const allowedInitialAtsTabs = new Set([
         'matches',
         'all',
@@ -230,7 +236,8 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                      if (diffDays === 0) postedString = 'Today';
                      else if (diffDays === 1) postedString = '1 day ago';
                      
-                     const formattedStatus = mapApiJobStatusToUi(fetchedJob.status);
+                     const display = resolveAdminJobDisplay(fetchedJob);
+                     const formattedStatus = display.isFlagged ? 'Flagged' : mapApiJobStatusToUi(fetchedJob.status);
 
                      setJob({
                          ...fetchedJob,
@@ -239,9 +246,9 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                          domain: fetchedJob.companyId || 'company.com',
                          location: fetchedJob.location || 'Global',
                          posted: postedString,
-                         status: formattedStatus
+                         status: formattedStatus,
                      });
-                     
+
                      setJobStatus(formattedStatus);
                  }
              } catch (error) {
@@ -558,16 +565,19 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                     if (!cat) return '';
                     return cat.split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
                 };
+                const display = resolveAdminJobDisplay(updated);
+                const nextUiStatus = display.isFlagged ? 'Flagged' : mapApiJobStatusToUi(updated.status);
                 setJob((prev) => {
                     if (!prev) return prev;
                     return {
                         ...prev,
                         ...updated,
+                        isFlagged: updated.isFlagged,
                         vessel: formatCategory(updated.category) || prev.vessel || 'General',
-                        status: mapApiJobStatusToUi(updated.status),
+                        status: nextUiStatus,
                     };
                 });
-                setJobStatus(mapApiJobStatusToUi(updated.status));
+                setJobStatus(nextUiStatus);
             }
         } catch (error) {
             console.error('Failed to flag job:', error);
@@ -631,17 +641,12 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-bold text-gray-900">{job?.title || 'Loading...'}</h1>
                             {/* Published/Unpublished Badge */}
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${isClosed
-                                ? 'bg-red-100 text-red-700'
-                                : isPublished
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}>
-                                {isClosed ? 'Closed' : isPublished ? 'Published' : 'Unpublished'}
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${jobDisplay.badgeClassName}`}>
+                                {jobDisplay.label}
                             </span>
-                            {isAdminPath && job?.isFlagged ? (
-                                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
-                                    Flagged
+                            {jobDisplay.isFlagged && jobDisplay.lifecycleLabel !== 'Flagged' ? (
+                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    Lifecycle: {jobDisplay.lifecycleLabel}
                                 </span>
                             ) : null}
                         </div>
@@ -684,15 +689,23 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const editPath = location.pathname.includes('/admin/marketplace')
+                                        const isAdminMarketplaceJob =
+                                            isMarketplaceInternalAdminJob || isAdminCreatedJob(job);
+                                        const editPath = isAdminPath && isAdminMarketplaceJob
                                             ? '/admin/marketplace/create-job'
-                                            : '/recruiter/upload-job';
+                                            : location.pathname.includes('/admin/marketplace')
+                                                ? '/admin/marketplace/create-job'
+                                                : '/recruiter/upload-job';
                                         navigate(editPath, {
                                             state: {
                                                 jobData: job,
                                                 isEdit: true,
-                                                dashboardType: 'recruiter',
-                                                returnPath: '/recruiter/jobs',
+                                                dashboardType: isAdminPath && isAdminMarketplaceJob ? 'admin' : 'recruiter',
+                                                returnPath: isAdminPath && isAdminMarketplaceJob
+                                                    ? (location.pathname.includes('/admin/jobs')
+                                                        ? '/admin/jobs'
+                                                        : '/admin/marketplace')
+                                                    : '/recruiter/jobs',
                                             },
                                         });
                                     }}
