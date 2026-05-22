@@ -294,7 +294,7 @@ export const API_ENDPOINTS = {
   CONVERSATIONS: {
     LIST: '/api/conversations',
     CREATE: '/api/conversations',
-    SUPPORT_BOOTSTRAP: '/api/conversations/support/bootstrap',
+    SUPPORT: '/api/conversations/support',
     MESSAGES: (conversationId) => `/api/conversations/${conversationId}/messages`,
     MARK_READ: (conversationId) => `/api/conversations/${conversationId}/read`,
   },

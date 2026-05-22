@@ -1,43 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { ChevronLeft, Briefcase, RefreshCw } from 'lucide-react';
-import jobService from '../../../services/jobService';
-import { resolveAdminJobDisplay } from '../../../utils/adminJobDisplay';
+import { ChevronLeft, GraduationCap, RefreshCw } from 'lucide-react';
+import httpClient from '../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../config/api.config';
 
-function OversightRecruiterJobs() {
+const formatCourseStatus = (status) => {
+    const upper = String(status || '').toUpperCase();
+    if (upper === 'ACTIVE') return { label: 'Active', className: 'text-green-600' };
+    if (upper === 'DRAFT') return { label: 'Draft', className: 'text-orange-600' };
+    if (upper === 'PAUSED') return { label: 'Paused', className: 'text-orange-600' };
+    if (upper === 'ARCHIVED') return { label: 'Archived', className: 'text-gray-600' };
+    return { label: upper.replace(/_/g, ' '), className: 'text-gray-600' };
+};
+
+function OversightProviderCourses() {
     const { recruiterId: providerId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const creatorType = String(location.state?.creatorType || 'RECRUITER').toUpperCase();
-    const providerName = location.state?.providerName || 'Recruiter';
+    const providerName = location.state?.providerName || 'Training provider';
     const company = location.state?.company || '';
 
-    const [jobs, setJobs] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
-    const [totalJobs, setTotalJobs] = useState(0);
+    const [totalCourses, setTotalCourses] = useState(0);
 
-    const loadProviderJobs = async (page = 1) => {
+    const loadProviderCourses = async (page = 1) => {
         try {
             setIsLoading(true);
             setError(null);
-            const filters =
-                creatorType === 'ADMIN'
-                    ? { adminId: providerId }
-                    : { recruiterId: providerId };
-            const res = await jobService.getAllAdminJobs(page, itemsPerPage, filters);
-            const rows = res?.data?.jobs || [];
-            setJobs(rows);
-            setTotalJobs(
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(itemsPerPage),
+            });
+            if (creatorType === 'ADMIN') {
+                params.set('adminId', providerId);
+            } else {
+                params.set('recruiterId', providerId);
+            }
+
+            const res = await httpClient.get(`${API_ENDPOINTS.ADMIN.ADMIN_COURSES}?${params.toString()}`);
+            const rows = res?.data?.courses || [];
+            setCourses(rows);
+            setTotalCourses(
                 Number(res?.data?.pagination?.total ?? res?.pagination?.total ?? rows.length ?? 0),
             );
         } catch (err) {
-            console.error('Failed to load provider jobs:', err);
-            setError('Failed to load jobs. Please try again later.');
-            setJobs([]);
-            setTotalJobs(0);
+            console.error('Failed to load provider courses:', err);
+            setError('Failed to load courses. Please try again later.');
+            setCourses([]);
+            setTotalCourses(0);
         } finally {
             setIsLoading(false);
         }
@@ -45,19 +60,11 @@ function OversightRecruiterJobs() {
 
     useEffect(() => {
         if (providerId) {
-            void loadProviderJobs(currentPage);
+            void loadProviderCourses(currentPage);
         }
     }, [providerId, currentPage, creatorType]);
 
-    useEffect(() => {
-        const refresh = () => {
-            if (providerId) void loadProviderJobs(currentPage);
-        };
-        window.addEventListener('pageshow', refresh);
-        return () => window.removeEventListener('pageshow', refresh);
-    }, [providerId, currentPage, creatorType]);
-
-    const totalPages = Math.max(1, Math.ceil(totalJobs / itemsPerPage));
+    const totalPages = Math.max(1, Math.ceil(totalCourses / itemsPerPage));
 
     return (
         <div className="p-8 max-w-[1600px] mx-auto w-full">
@@ -73,18 +80,17 @@ function OversightRecruiterJobs() {
                 <div className="flex justify-between items-end">
                     <div>
                         <h1 className="text-2xl font-bold text-[#1e5a8f] mb-2 flex items-center">
-                            <Briefcase className="w-6 h-6 mr-3" />
+                            <GraduationCap className="w-6 h-6 mr-3" />
                             {providerName}
                         </h1>
                         <p className="text-gray-500 text-sm">
                             {company ? `${company} · ` : ''}
-                            All jobs posted by this {creatorType === 'ADMIN' ? 'admin' : 'recruiter'}
-                            {totalJobs > 0 ? ` (${totalJobs} total)` : ''}
+                            All courses posted by this {creatorType === 'ADMIN' ? 'admin' : 'training provider'}
                         </p>
                     </div>
                     <button
                         type="button"
-                        onClick={() => void loadProviderJobs(currentPage)}
+                        onClick={() => void loadProviderCourses(currentPage)}
                         className={`flex items-center px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isLoading}
                     >
@@ -105,11 +111,11 @@ function OversightRecruiterJobs() {
                     <table className="w-full">
                         <thead className="bg-[#f8fafc] border-b border-gray-100">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Job Title</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Course</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Flagged</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bookings</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Posted</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                             </tr>
@@ -117,35 +123,25 @@ function OversightRecruiterJobs() {
                         <tbody className="bg-white divide-y divide-gray-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading jobs...</td>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading courses...</td>
                                 </tr>
-                            ) : jobs.length === 0 ? (
+                            ) : courses.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No jobs found for this provider.</td>
+                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No courses found for this provider.</td>
                                 </tr>
                             ) : (
-                                jobs.map((job) => {
-                                    const statusInfo = resolveAdminJobDisplay(job);
-                                    const jobType =
-                                        job.category === 'CATERING_AND_MEDICAL'
-                                            ? 'Catering & Medical'
-                                            : job.category === 'OFFICER'
-                                              ? 'Officer'
-                                              : 'Ratings & Crew';
-                                    const postedDate = job.createdAt
-                                        ? new Date(job.createdAt).toLocaleDateString()
+                                courses.map((course) => {
+                                    const statusInfo = formatCourseStatus(course.status);
+                                    const postedDate = course.createdAt
+                                        ? new Date(course.createdAt).toLocaleDateString()
                                         : 'N/A';
-
                                     return (
-                                        <tr key={job.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={course.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-4">
-                                                <div className="text-sm font-semibold text-gray-900">{job.title}</div>
+                                                <div className="text-sm font-semibold text-gray-900">{course.title}</div>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-[#1e5a8f]">{jobType}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="text-sm text-gray-900">{job.location}</span>
+                                                <span className="text-sm text-gray-900">{course.location || '—'}</span>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <span className={`text-sm font-semibold ${statusInfo.className}`}>
@@ -153,8 +149,13 @@ function OversightRecruiterJobs() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className={`text-sm ${job.isFlagged ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
-                                                    {job.isFlagged ? 'Yes' : 'No'}
+                                                <span className={`text-sm ${course.isFlagged ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
+                                                    {course.isFlagged ? 'Yes' : 'No'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="text-sm text-gray-900">
+                                                    {course._count?.bookings ?? 0}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4">
@@ -162,7 +163,7 @@ function OversightRecruiterJobs() {
                                             </td>
                                             <td className="px-4 py-4">
                                                 <Link
-                                                    to={`/admin/marketplace/oversight/jobs/${job.id}`}
+                                                    to={`/admin/marketplace/oversight/courses/${course.id}`}
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >
                                                     View Details
@@ -176,10 +177,10 @@ function OversightRecruiterJobs() {
                     </table>
                 </div>
 
-                {!isLoading && jobs.length > 0 && (
+                {!isLoading && courses.length > 0 && (
                     <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
                         <div className="text-sm text-gray-500">
-                            Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalJobs)} of {totalJobs}
+                            Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalCourses)} of {totalCourses}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -209,4 +210,4 @@ function OversightRecruiterJobs() {
     );
 }
 
-export default OversightRecruiterJobs;
+export default OversightProviderCourses;

@@ -95,6 +95,7 @@ function RecruiterSearchRedirect() {
 import ManualActionReview from './pages/admin/admin-dashboard/ManualActionReview';
 import AdminProfile from './pages/admin/admin-dashboard/AdminProfile';
 import OversightRecruiterJobs from './pages/admin/admin-dashboard/OversightRecruiterJobs';
+import OversightProviderCourses from './pages/admin/admin-dashboard/OversightProviderCourses';
 import AdminDashboardChats from './pages/admin/admin-dashboard/Chats';
 
 // Personal Dashboard Layout and Pages
@@ -295,6 +296,7 @@ function App() {
             <Route path="/admin/marketplace/oversight/courses/:courseId/sessions/edit" element={<ScheduleSession />} />
             <Route path="/admin/sessions/attendance" element={<SessionAttendance />} />
             <Route path="/admin/marketplace/oversight/recruiter/:recruiterId/jobs" element={<OversightRecruiterJobs />} />
+            <Route path="/admin/marketplace/oversight/recruiter/:recruiterId/courses" element={<OversightProviderCourses />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/operations/activity/:id" element={<ActivityDetails />} />
             <Route path="/admin/operations/case/:id" element={<SupportCaseDetails />} />
