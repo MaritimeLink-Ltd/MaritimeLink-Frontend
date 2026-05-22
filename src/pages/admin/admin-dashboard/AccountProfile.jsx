@@ -3,6 +3,10 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye, ExternalLink } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
+import {
+    formatAdminNameFromEmail,
+    mapAdminNoteFromApi,
+} from '../../../utils/adminDisplayName';
 
 function countActiveJobs(jobs) {
     if (!Array.isArray(jobs) || jobs.length === 0) return 0;
@@ -473,29 +477,33 @@ function extractCreatedNoteFromPostResponse(response) {
 }
 
 function mapApiNoteToUi(apiNote, fallbackContent) {
-    const c = apiNote?.content ?? apiNote?.text ?? apiNote?.note ?? fallbackContent;
-    const createdAt = apiNote?.createdAt ? new Date(apiNote.createdAt).toLocaleString() : 'Just now';
-    const author = apiNote?.author ?? apiNote?.admin?.email ?? apiNote?.createdBy ?? 'You (Admin)';
-    const initials = (() => {
-        const email = apiNote?.admin?.email;
-        if (email && typeof email === 'string') {
-            return email
-                .split('@')[0]
-                .split(/[.\s_-]/)
-                .filter(Boolean)
-                .map((p) => p[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2);
-        }
-        return String(author).substring(0, 2).toUpperCase() || 'AD';
-    })();
+    const mapped = mapAdminNoteFromApi({
+        ...apiNote,
+        content: apiNote?.content ?? apiNote?.text ?? apiNote?.note ?? fallbackContent,
+    });
     return {
-        id: apiNote?.id ?? Date.now(),
-        author,
-        initials,
-        time: createdAt,
-        content: (c || '').trim(),
+        ...mapped,
+        author: mapped.authorName,
+        time: mapped.time || 'Just now',
+    };
+}
+
+function buildLocalAdminNote(content) {
+    const email =
+        (typeof window !== 'undefined' && localStorage.getItem('userEmail')) || '';
+    const mapped = mapAdminNoteFromApi(
+        {
+            id: Date.now(),
+            content,
+            admin: email ? { email } : null,
+            createdAt: new Date().toISOString(),
+        },
+        Date.now(),
+    );
+    return {
+        ...mapped,
+        author: mapped.authorName,
+        time: mapped.time || 'Just now',
     };
 }
 
@@ -685,13 +693,7 @@ function AccountProfile() {
 
                         const adminNotes = extractAdminNotes(source);
                         if (adminNotes.length > 0) {
-                            setNotes(adminNotes.map((note) => ({
-                                id: note.id || Date.now(),
-                                author: note.author || note.admin?.email || 'Admin',
-                                initials: (note.author || note.admin?.email || 'A').substring(0, 2).toUpperCase(),
-                                time: note.createdAt ? new Date(note.createdAt).toLocaleString() : 'N/A',
-                                content: note.content || note.text || note.note || '',
-                            })));
+                            setNotes(adminNotes.map((note, index) => mapApiNoteToUi(note, note.content || note.text || note.note || '')));
                         } else {
                             setNotes([]);
                         }
@@ -808,13 +810,7 @@ function AccountProfile() {
                 const apiNote = extractCreatedNoteFromPostResponse(response);
                 const newNoteObj = apiNote
                     ? mapApiNoteToUi(apiNote, text)
-                    : {
-                        id: Date.now(),
-                        author: 'You (Admin)',
-                        initials: 'AD',
-                        time: 'Just now',
-                        content: text,
-                    };
+                    : buildLocalAdminNote(text);
                 setNotes([newNoteObj, ...notes]);
                 setNewNote('');
                 setNoteNotificationTone('success');
@@ -832,13 +828,7 @@ function AccountProfile() {
             }
             return;
         }
-        const newNoteObj = {
-            id: notes.length + 1,
-            author: 'You (Admin)',
-            initials: 'AD',
-            time: 'Just now',
-            content: text,
-        };
+        const newNoteObj = buildLocalAdminNote(text);
         setNotes([newNoteObj, ...notes]);
         setNewNote('');
         setNoteNotificationTone('success');
@@ -2270,9 +2260,12 @@ function AccountProfile() {
                                                 <span className="text-xs font-bold text-gray-600">{note.initials}</span>
                                             </div>
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-sm font-bold text-gray-900">{note.author}</span>
-                                                    <span className="text-xs text-gray-400">{note.time}</span>
+                                                <div className="mb-2">
+                                                    <div className="text-sm font-bold text-gray-900">{note.authorName || note.author}</div>
+                                                    <div className="text-xs text-gray-500 break-all">
+                                                        {note.authorEmail ? `${note.authorEmail} · ` : ''}
+                                                        {note.time}
+                                                    </div>
                                                 </div>
                                                 {editingNoteId === note.id ? (
                                                     <div>
@@ -2400,9 +2393,14 @@ function AccountProfile() {
                                         <span className="text-xs font-bold text-gray-600">{notes[0].initials}</span>
                                     </div>
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-sm font-semibold text-gray-900">{notes[0].author}</span>
-                                            <span className="text-xs text-gray-400">{notes[0].time}</span>
+                                        <div className="mb-1">
+                                            <div className="text-sm font-semibold text-gray-900">
+                                                {notes[0].authorName || notes[0].author}
+                                            </div>
+                                            <div className="text-xs text-gray-500 break-all">
+                                                {notes[0].authorEmail ? `${notes[0].authorEmail} · ` : ''}
+                                                {notes[0].time}
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-600 leading-relaxed">
                                             "{notes[0].content}"

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileText, X, Download } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
+import { mapAdminNoteFromApi } from '../../../utils/adminDisplayName';
 
 function ComplianceProfile() {
     const navigate = useNavigate();
@@ -14,9 +15,7 @@ function ComplianceProfile() {
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [showApprovePopup, setShowApprovePopup] = useState(false);
     const [showRejectPopup, setShowRejectPopup] = useState(false);
-    const [showResubmitPopup, setShowResubmitPopup] = useState(false); // New state for Resubmit
     const [rejectReason, setRejectReason] = useState('');
-    const [resubmitReason, setResubmitReason] = useState(''); // New state
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -74,13 +73,7 @@ function ComplianceProfile() {
                 }
 
                 setKycData(kyc);
-                setNotes((kyc.notes || []).map((n, index) => ({
-                    id: n.id || index,
-                    content: n.content || n.note || '',
-                    author: n.author || 'Admin',
-                    initials: (n.author || 'Admin').split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2),
-                    time: n.createdAt ? new Date(n.createdAt).toLocaleString() : '',
-                })));
+                setNotes((kyc.notes || []).map((n, index) => mapAdminNoteFromApi(n, index)));
             } catch (error) {
                 console.error('Failed to load KYC detail:', error);
                 setLoadError(error.message || 'Failed to load KYC detail');
@@ -199,24 +192,11 @@ function ComplianceProfile() {
             const response = await httpClient.post(endpoint, payload);
             const apiNote = response?.data?.note || response?.note || null;
 
-            const createdAt = apiNote?.createdAt ? new Date(apiNote.createdAt).toLocaleString() : 'Just now';
-            const authorEmail = apiNote?.admin?.email || 'Admin';
-            const initials = authorEmail
-                .split('@')[0]
-                .split(/[.\s_-]/)
-                .filter(Boolean)
-                .map((p) => p[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2);
-
-            const noteToAdd = {
-                id: apiNote?.id || Date.now(),
-                content: apiNote?.content || content,
-                author: authorEmail,
-                initials,
-                time: createdAt,
-            };
+            const noteToAdd = mapAdminNoteFromApi(
+                { ...apiNote, content: apiNote?.content || content, createdAt: apiNote?.createdAt || new Date().toISOString() },
+                Date.now(),
+            );
+            if (!noteToAdd.time) noteToAdd.time = 'Just now';
 
             setNotes((prev) => [noteToAdd, ...prev]);
             setNewNote('');
@@ -293,16 +273,6 @@ function ComplianceProfile() {
             alert(error.message || 'Failed to reject KYC');
         }
     };
-
-    const handleResubmit = () => {
-        // Logic to request resubmission
-        if (resubmitReason.trim()) {
-            alert(`Resubmission requested: ${resubmitReason}`);
-            setShowResubmitPopup(false);
-            navigate(-1);
-        }
-    };
-
 
     // Document Viewer Modal
     const DocViewerModal = ({ isOpen, onClose, document }) => {
@@ -407,31 +377,6 @@ function ComplianceProfile() {
                 </div>
             )}
 
-            {/* Resubmit Modal */}
-            {showResubmitPopup && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                                <RefreshCcw className="h-6 w-6 text-orange-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900">Request Resubmission</h3>
-                        </div>
-                        <textarea
-                            value={resubmitReason}
-                            onChange={(e) => setResubmitReason(e.target.value)}
-                            placeholder="What needs to be corrected?"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm mb-6 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none resize-none"
-                            rows="4"
-                        />
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowResubmitPopup(false)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200">Cancel</button>
-                            <button onClick={handleResubmit} disabled={!resubmitReason.trim()} className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50">Request</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Back Button */}
             <button
                 onClick={() => navigate(-1)}
@@ -484,12 +429,6 @@ function ComplianceProfile() {
                     {/* Action Buttons (hidden when already approved) */}
                     {!isApprovedStatus && (
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setShowResubmitPopup(true)}
-                                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                            >
-                                Request Resubmission
-                            </button>
                             <button
                                 onClick={() => setShowRejectPopup(true)}
                                 className="px-4 py-2 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
@@ -857,11 +796,16 @@ function ComplianceProfile() {
                                                 <span className="text-xs font-bold text-blue-600">{note.initials}</span>
                                             </div>
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-sm font-semibold text-gray-900">{note.author}</span>
-                                                    <span className="text-xs text-gray-400">{note.time}</span>
+                                                <div className="mb-1">
+                                                    <div className="text-sm font-semibold text-gray-900">
+                                                        {note.authorName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 break-all">
+                                                        {note.authorEmail ? `${note.authorEmail} · ` : ''}
+                                                        {note.time}
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-gray-600">{note.content}</p>
+                                                <p className="text-sm text-gray-600 whitespace-pre-line">{note.content}</p>
                                             </div>
                                         </div>
                                     </div>
