@@ -52,10 +52,22 @@ const getCurrentUserType = () => {
     return String(localStorage.getItem('userType') || localStorage.getItem('adminUserType') || '').toLowerCase();
 };
 
-const getAdminDisplayName = (admin) => {
-    if (!admin) return '';
-    return admin.role ? 'Support Admin' : admin.email || 'Support Admin';
+/** e.g. umair@meta.com → "Umair (Admin)" */
+export const formatAdminChatDisplayName = (admin) => {
+    if (!admin) return 'Support (Admin)';
+    const email = String(admin.email || '').trim();
+    if (!email) return 'Support (Admin)';
+    const local = email.split('@')[0] || '';
+    const pretty = local
+        .replace(/[._+-]+/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    return pretty ? `${pretty} (Admin)` : 'Support (Admin)';
 };
+
+const getAdminDisplayName = (admin) => formatAdminChatDisplayName(admin);
 
 /**
  * Map API conversation to list row + profile routing fields.
@@ -104,7 +116,7 @@ export function mapConversationToChatItem(conv) {
     const recruiterName = conv.recruiter
         ? conv.recruiter.organizationName || conv.recruiter.email || 'Recruiter'
         : '';
-    const adminName = getAdminDisplayName(conv.admin) || 'Support Admin';
+    const adminName = getAdminDisplayName(conv.admin) || 'Support (Admin)';
     let name = professionalName;
 
     if (currentUserId) {
@@ -246,12 +258,18 @@ class ConversationService {
     }
 
     /**
-     * POST /api/conversations/support/bootstrap
-     * Opens or creates the shared support conversation with admin.
+     * GET /api/conversations/support?caseId=
+     * Returns an existing support chat only after an admin has messaged (never creates).
+     * @param {{ caseId?: string }} [query]
      * @returns {Promise<object|null>}
      */
-    async openSupportConversation() {
-        const body = await httpClient.post(API_ENDPOINTS.CONVERSATIONS.SUPPORT_BOOTSTRAP, {});
+    async getSupportConversation(query = {}) {
+        const params = new URLSearchParams();
+        if (query.caseId) params.set('caseId', String(query.caseId));
+        const path = params.toString()
+            ? `${API_ENDPOINTS.CONVERSATIONS.SUPPORT}?${params}`
+            : API_ENDPOINTS.CONVERSATIONS.SUPPORT;
+        const body = await httpClient.get(path);
         const conv = body?.data?.conversation;
         return conv || null;
     }

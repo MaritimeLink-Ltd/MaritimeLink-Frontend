@@ -32,8 +32,6 @@ const priorityMeta = {
 
 const statusMeta = {
     OPEN: { label: 'Open', className: 'bg-blue-50 text-blue-700 border-blue-100' },
-    IN_PROGRESS: { label: 'In Progress', className: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
-    WAITING: { label: 'Waiting', className: 'bg-orange-50 text-orange-700 border-orange-100' },
     RESOLVED: { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-100' },
     CLOSED: { label: 'Closed', className: 'bg-gray-100 text-gray-700 border-gray-200' },
 };
@@ -124,13 +122,29 @@ function SupportCenterSection({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [basePath, priorityDefault]);
 
-    const openCase = async (caseItem) => {
+    const refreshSelectedCase = async (caseItem) => {
+        if (!caseItem) return;
+        const caseKey = caseItem.caseId || caseItem.id;
+        if (!caseKey) return;
+        try {
+            const response = await userSupportService.getCaseById(basePath, caseKey);
+            const detail = response?.data?.case;
+            if (detail) setSelectedCase(detail);
+        } catch {
+            // keep existing case details on refresh failure
+        }
+    };
+
+    const openSupportChat = async (caseItem) => {
         if (!caseItem) return;
 
         setSelectedCaseLoading(true);
         setMessage({ type: '', text: '' });
         try {
-            const conversation = await conversationService.openSupportConversation();
+            const caseKey = caseItem.caseId || caseItem.id;
+            const conversation = await conversationService.getSupportConversation(
+                caseKey ? { caseId: caseKey } : {},
+            );
             if (conversation?.id) {
                 const chatRoute = getSupportChatRoute(basePath);
                 navigate(`${chatRoute}?conversationId=${encodeURIComponent(conversation.id)}&supportChat=1`, {
@@ -142,8 +156,8 @@ function SupportCenterSection({
                 return;
             }
             setMessage({
-                type: 'error',
-                text: 'Unable to open support chat right now.',
+                type: 'info',
+                text: 'Live chat is not available yet. A support administrator will open a chat when they respond to your case. You can still send updates on the case below.',
             });
         } catch (error) {
             setMessage({
@@ -176,11 +190,10 @@ function SupportCenterSection({
             setSubject('');
             setDescriptionText('');
             await loadCases();
-            const createdCase = response?.data?.case;
-            if (createdCase) {
-                await openCase(createdCase);
-            }
-            setMessage({ type: 'success', text: 'Support request submitted successfully.' });
+            setMessage({
+                type: 'success',
+                text: 'Support request submitted. An administrator will contact you when they review your case.',
+            });
         } catch (error) {
             setMessage({ type: 'error', text: error.message || 'Failed to create support request.' });
         } finally {
@@ -198,7 +211,7 @@ function SupportCenterSection({
                 content: messageText,
             });
             setReplyText('');
-            await openCase(selectedCase);
+            await refreshSelectedCase(selectedCase);
             await loadCases();
             setMessage({ type: 'success', text: 'Message sent to support.' });
         } catch (error) {
@@ -235,7 +248,9 @@ function SupportCenterSection({
                         className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
                             message.type === 'error'
                                 ? 'border-red-200 bg-red-50 text-red-700'
-                                : 'border-green-200 bg-green-50 text-green-700'
+                                : message.type === 'info'
+                                  ? 'border-blue-200 bg-blue-50 text-blue-800'
+                                  : 'border-green-200 bg-green-50 text-green-700'
                         }`}
                     >
                         {message.text}
@@ -325,7 +340,7 @@ function SupportCenterSection({
                             </div>
                         ) : cases.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-                                No support cases yet. Submit one on the left and the chat will appear here.
+                                No support cases yet. Submit a request on the left and track it here.
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -356,7 +371,7 @@ function SupportCenterSection({
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => openCase(caseItem)}
+                                                    onClick={() => openSupportChat(caseItem)}
                                                     disabled={selectedCaseLoading}
                                                     className="inline-flex items-center gap-2 rounded-lg bg-[#003971] px-3 py-2 text-xs font-semibold text-white hover:bg-[#002855]"
                                                 >

@@ -175,8 +175,6 @@ function SupportCaseDetails() {
     const caseStatusLabel = useMemo(() => {
         const map = {
             OPEN: 'Open',
-            IN_PROGRESS: 'In Progress',
-            WAITING: 'Waiting',
             RESOLVED: 'Resolved',
             CLOSED: 'Closed',
         };
@@ -192,8 +190,6 @@ function SupportCaseDetails() {
 
     const statusBadgeClass = {
         OPEN: 'bg-blue-50 text-blue-700 border-blue-100',
-        IN_PROGRESS: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-        WAITING: 'bg-orange-50 text-orange-700 border-orange-100',
         RESOLVED: 'bg-green-50 text-green-700 border-green-100',
         CLOSED: 'bg-gray-100 text-gray-700 border-gray-200',
     }[caseStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
@@ -239,19 +235,31 @@ function SupportCaseDetails() {
     };
 
     const supportUserId = user?.id || caseData?.userId;
+    const actorType = String(caseData?.userType || user?.userType || '').toUpperCase();
+    const isProfessionalUser =
+        actorType === 'PROFESSIONAL' ||
+        userType === 'PROFESSIONAL' ||
+        String(user?.role || '').toLowerCase() === 'professional';
+    const isTrainerUser =
+        !isProfessionalUser &&
+        (userType === 'TRAINING_AGENT' ||
+            actorType === 'TRAINING_AGENT' ||
+            String(user?.role || '').toLowerCase().includes('training'));
+
+    // Professionals: candidate summary (resume, wallet, experience). Others: account admin profile.
     const profileLink = supportUserId
-        ? {
-            pathname: `/admin/accounts/${supportUserId}`,
-            state: {
-                accountType:
-                    userType === 'PROFESSIONAL'
-                        ? 'professional'
-                        : userType === 'TRAINING_AGENT'
-                            ? 'trainer'
-                            : 'recruiter',
-                userType: userType || 'RECRUITER',
-            },
-        }
+        ? isProfessionalUser
+            ? {
+                pathname: `/admin/candidate/${supportUserId}`,
+                state: { isProfessionalView: true },
+            }
+            : {
+                pathname: `/admin/accounts/${supportUserId}`,
+                state: {
+                    accountType: isTrainerUser ? 'trainer' : 'recruiter',
+                    userType: userType || 'RECRUITER',
+                },
+            }
         : null;
 
     if (loading) {

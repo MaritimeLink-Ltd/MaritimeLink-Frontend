@@ -92,8 +92,6 @@ const normalizeActivityStats = (stats = {}) => [
 
 const supportStatusClassMap = {
     OPEN: 'text-blue-600',
-    IN_PROGRESS: 'text-yellow-600',
-    WAITING: 'text-orange-600',
     RESOLVED: 'text-green-600',
     CLOSED: 'text-gray-500',
 };
@@ -145,15 +143,6 @@ const buildSupportStats = (cases = []) => {
             cardBg: 'bg-white',
         },
         {
-            value: String(countByStatus('IN_PROGRESS')),
-            label: 'In Progress',
-            sublabel: 'Assigned to admins',
-            icon: RefreshCw,
-            iconColor: 'text-yellow-500',
-            iconBg: 'bg-yellow-50',
-            cardBg: 'bg-white',
-        },
-        {
             value: String(countByStatus('RESOLVED')),
             label: 'Resolved',
             sublabel: 'Closed successfully',
@@ -178,7 +167,6 @@ const buildSupportSubTabs = (cases = []) => {
     const counts = {
         All: Array.isArray(cases) ? cases.length : 0,
         Open: 0,
-        'In Progress': 0,
         Resolved: 0,
         Closed: 0,
     };
@@ -186,7 +174,6 @@ const buildSupportSubTabs = (cases = []) => {
     for (const item of Array.isArray(cases) ? cases : []) {
         const status = String(item?.status || '').toUpperCase();
         if (status === 'OPEN') counts.Open += 1;
-        if (status === 'IN_PROGRESS') counts['In Progress'] += 1;
         if (status === 'RESOLVED') counts.Resolved += 1;
         if (status === 'CLOSED') counts.Closed += 1;
     }
@@ -194,7 +181,6 @@ const buildSupportSubTabs = (cases = []) => {
     return [
         { name: 'All', count: counts.All || null },
         { name: 'Open', count: counts.Open || null },
-        { name: 'In Progress', count: counts['In Progress'] || null },
         { name: 'Resolved', count: counts.Resolved || null },
         { name: 'Closed', count: counts.Closed || null },
     ];
@@ -558,7 +544,7 @@ function Operations() {
 
             {/* Stats Cards - Hidden for Manual Actions */}
             {activeMainTab !== 'Manual Actions' && (
-                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' ? 'md:grid-cols-4' : activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-3'}`}>
+                <div className={`flex-shrink-0 grid grid-cols-1 gap-4 mb-6 ${activeMainTab === 'Support Cases' ? 'md:grid-cols-3' : activeMainTab === 'System Jobs' ? 'md:grid-cols-5' : 'md:grid-cols-3'}`}>
                     {stats.map((stat, index) => (
                         <div key={index} className={`${stat.cardBg} rounded-xl border border-gray-100 p-5`}>
                             <div className="flex items-start gap-4">
