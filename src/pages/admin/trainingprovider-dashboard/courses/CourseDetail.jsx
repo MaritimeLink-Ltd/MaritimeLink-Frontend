@@ -365,6 +365,17 @@ export default function CourseDetail() {
           setCourseEntity((prev) =>
             prev ? { ...prev, status: apiStatus } : prev,
           );
+          if (isAdminMarketplaceCourse && location.pathname.includes('/internal/')) {
+            setStatusDialogOpen(false);
+            navigate('/admin/marketplace', {
+              state: {
+                mainTab: 'MaritimeLink Listings',
+                subTab: 'Training Courses',
+                statusFilter: 'Draft',
+              },
+            });
+            return;
+          }
         }
       } else if (status === 'Draft') {
         const response = await httpClient.patch(

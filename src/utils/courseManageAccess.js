@@ -95,11 +95,15 @@ export function canCurrentUserManageCourse({ pathname, course }) {
 
     if (isInternal) {
         if (!isPlatformAdminSession()) return false;
-        const { adminId, adminEmailNorm } = extractCourseOwnership(course);
+        const { adminId } = extractCourseOwnership(course);
+        // MaritimeLink admin listings: any platform admin may manage (matches job marketplace rules).
+        if (adminId) return true;
+        const { adminEmailNorm } = extractCourseOwnership(course);
         const jwtAdmin = currentAdminIdFromSession();
-        if (adminId && jwtAdmin && idsEqual(adminId, jwtAdmin)) return true;
-        const email = (localStorage.getItem('userEmail') || '').trim().toLowerCase();
-        if (adminEmailNorm && email && adminEmailNorm === email) return true;
+        if (jwtAdmin && adminEmailNorm) {
+            const email = (localStorage.getItem('userEmail') || '').trim().toLowerCase();
+            if (adminEmailNorm && email && adminEmailNorm === email) return true;
+        }
         return false;
     }
 

@@ -109,7 +109,10 @@ export default function CreateCourse() {
             contractType: 'Full-time',
             description: form.description,
             price: Number(form.price) || 0,
-            courseType: 'INTERNAL'
+            courseType: 'INTERNAL',
+            duration: form.defaultDuration,
+            issuingAuthority: form.issuingAuthority,
+            trainingType: form.courseType,
         };
 
         return await httpClient.post(API_ENDPOINTS.COURSES.DRAFTS, payload);
@@ -151,7 +154,7 @@ export default function CreateCourse() {
             setShowSuccessModal(true);
             setTimeout(() => {
                 setShowSuccessModal(false);
-                navigate(isAdmin ? '/admin-dashboard' : '/trainingprovider-dashboard');
+                navigate(isAdmin ? '/admin/marketplace' : '/trainingprovider-dashboard');
             }, 1500);
         } catch (error) {
             console.error('Error saving draft:', error);
