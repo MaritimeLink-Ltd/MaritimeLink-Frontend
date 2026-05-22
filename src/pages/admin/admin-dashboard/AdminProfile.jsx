@@ -15,6 +15,17 @@ import adminDashboardService from '../../../services/adminDashboardService';
 
 const defaultAdminAvatar = '/images/login-image.webp';
 
+const editableInputClass =
+    'w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]';
+
+const toDatetimeLocalValue = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const AdminProfile = () => {
     const [activeTab, setActiveTab] = useState('general');
     const [loading, setLoading] = useState(true);
@@ -34,7 +45,6 @@ const AdminProfile = () => {
         firstName: '',
         lastName: '',
         email: '',
-        role: '',
         adminId: '',
         companyName: 'MaritimeLink Global',
         department: 'Platform Operations',
@@ -73,9 +83,11 @@ const AdminProfile = () => {
                 ...stored,
                 firstName: profilePatch.firstName ?? stored.firstName,
                 lastName: profilePatch.lastName ?? stored.lastName,
-                fullName: profilePatch.displayName ?? stored.fullName,
+                fullName:
+                    profilePatch.displayName ??
+                    profilePatch.fullName ??
+                    stored.fullName,
                 email: profilePatch.email ?? stored.email,
-                role: profilePatch.role ?? stored.role,
                 profilePhoto: profilePatch.profilePhotoUrl ?? stored.profilePhoto,
                 photo: profilePatch.profilePhotoUrl ?? stored.photo,
             };
@@ -117,7 +129,6 @@ const AdminProfile = () => {
                     lastName: nextProfile.lastName || '',
                     fullName: nextProfile.displayName || 'Admin User',
                     email: nextProfile.email || '',
-                    role: nextProfile.role || '',
                 };
                 localStorage.setItem('userProfile', JSON.stringify(nextStoredProfile));
                 if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
@@ -155,11 +166,20 @@ const AdminProfile = () => {
         };
     }, []);
 
-    const handleEmailSave = async () => {
+    const handleProfileSave = async () => {
         setSavingProfile(true);
         setFeedback({ type: '', message: '' });
         try {
-            const response = await adminSettingsService.updateProfile({ email: profile.email });
+            const response = await adminSettingsService.updateProfile({
+                email: profile.email,
+                displayName: profile.displayName?.trim(),
+                companyName: profile.companyName?.trim(),
+                department: profile.department?.trim(),
+                region: profile.region?.trim(),
+                createdAt: profile.createdAt
+                    ? new Date(profile.createdAt).toISOString()
+                    : undefined,
+            });
             const nextProfile = response?.data?.profile || profile;
             setProfile((prev) => ({ ...prev, ...nextProfile }));
             syncStoredAdminProfile(nextProfile);
@@ -324,22 +344,18 @@ const AdminProfile = () => {
                                     </div>
 
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 md:col-span-2">
                                             <label className="text-xs font-semibold text-gray-500">Display Name</label>
                                             <input
                                                 type="text"
                                                 value={profile.displayName}
-                                                readOnly
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-gray-500">Admin Role</label>
-                                            <input
-                                                type="text"
-                                                value={profile.role}
-                                                readOnly
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                                onChange={(e) =>
+                                                    setProfile((prev) => ({
+                                                        ...prev,
+                                                        displayName: e.target.value,
+                                                    }))
+                                                }
+                                                className={editableInputClass}
                                             />
                                         </div>
 
@@ -360,7 +376,8 @@ const AdminProfile = () => {
 
                                 <div className="flex justify-end mt-8 border-t border-gray-100 pt-6">
                                     <button
-                                        onClick={handleEmailSave}
+                                        type="button"
+                                        onClick={handleProfileSave}
                                         disabled={savingProfile || loading}
                                         className="flex items-center gap-2 px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
                                     >
@@ -379,10 +396,15 @@ const AdminProfile = () => {
                                             <input
                                                 type="text"
                                                 value={profile.companyName}
-                                                readOnly
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                                onChange={(e) =>
+                                                    setProfile((prev) => ({
+                                                        ...prev,
+                                                        companyName: e.target.value,
+                                                    }))
+                                                }
+                                                className={`${editableInputClass} pr-10`}
                                             />
-                                            <Building className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <Building className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
@@ -399,8 +421,13 @@ const AdminProfile = () => {
                                         <input
                                             type="text"
                                             value={profile.department}
-                                            readOnly
-                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                            onChange={(e) =>
+                                                setProfile((prev) => ({
+                                                    ...prev,
+                                                    department: e.target.value,
+                                                }))
+                                            }
+                                            className={editableInputClass}
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -409,24 +436,47 @@ const AdminProfile = () => {
                                             <input
                                                 type="text"
                                                 value={profile.region}
-                                                readOnly
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                                onChange={(e) =>
+                                                    setProfile((prev) => ({
+                                                        ...prev,
+                                                        region: e.target.value,
+                                                    }))
+                                                }
+                                                className={`${editableInputClass} pr-10`}
                                             />
-                                            <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1.5 md:col-span-2">
                                         <label className="text-xs font-semibold text-gray-500">Created At</label>
-                                        <div className="relative">
+                                        <div className="relative max-w-md">
                                             <input
-                                                type="text"
-                                                value={profile.createdAt ? new Date(profile.createdAt).toLocaleString() : ''}
-                                                readOnly
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                                type="datetime-local"
+                                                value={toDatetimeLocalValue(profile.createdAt)}
+                                                onChange={(e) =>
+                                                    setProfile((prev) => ({
+                                                        ...prev,
+                                                        createdAt: e.target.value
+                                                            ? new Date(e.target.value).toISOString()
+                                                            : '',
+                                                    }))
+                                                }
+                                                className={`${editableInputClass} pr-10`}
                                             />
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="flex justify-end mt-8 border-t border-gray-100 pt-6">
+                                    <button
+                                        onClick={handleProfileSave}
+                                        disabled={savingProfile || loading}
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-[#0f385c] hover:bg-[#0a2742] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-60"
+                                    >
+                                        <Save className="h-4 w-4" />
+                                        {savingProfile ? 'Saving...' : 'Save Changes'}
+                                    </button>
                                 </div>
                             </div>
                         </>
