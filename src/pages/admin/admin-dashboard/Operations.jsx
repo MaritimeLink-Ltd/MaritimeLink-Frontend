@@ -109,11 +109,21 @@ const formatSupportCase = (supportCase) => {
     const userId = supportCase?.userId || 'Unknown';
     const assignedTo = supportCase?.assignedTo?.name || supportCase?.assignedTo?.email || 'Unassigned';
 
+    const userTypeFilter = (() => {
+        const role = String(supportCase?.user?.role || '').toUpperCase();
+        const ut = String(supportCase?.userType || supportCase?.user?.userType || '').toUpperCase();
+        if (ut === 'PROFESSIONAL' || role === 'PROFESSIONAL') return 'Professional';
+        if (role.includes('TRAINING') || ut.includes('TRAINING')) return 'Training Agent';
+        if (ut === 'RECRUITER' || role.includes('RECRUIT')) return 'Recruiter';
+        return 'Other';
+    })();
+
     return {
         id: supportCase?.caseId || supportCase?.id,
         caseId: supportCase?.caseId || supportCase?.id,
         user: supportCase?.user?.name || supportCase?.userLabel || `${userType} ${String(userId).slice(0, 8)}`,
         userRole: userType,
+        userTypeFilter,
         issueType: supportCase?.subject || 'Support case',
         issueCategory: supportCase?.category || 'General',
         priority,
@@ -205,6 +215,7 @@ function Operations() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('All'); // For generic status filtering
     const [filterPriority, setFilterPriority] = useState('All'); // For Support Cases
+    const [filterUserType, setFilterUserType] = useState('All'); // Professional / Recruiter / Training Agent
     const [filterRisk, setFilterRisk] = useState('All'); // For Manual Actions
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -242,6 +253,7 @@ function Operations() {
         setSearchQuery('');
         setFilterStatus('All');
         setFilterPriority('All');
+        setFilterUserType('All');
         setFilterRisk('All');
         setCurrentPage(1);
 
@@ -398,13 +410,15 @@ function Operations() {
                     item.id.toLowerCase().includes(searchQuery.toLowerCase());
                 const normalizedPriorityFilter = String(filterPriority || 'All').toUpperCase();
                 const matchesPriority = normalizedPriorityFilter === 'ALL' || item.priority === normalizedPriorityFilter;
+                const matchesUserType =
+                    filterUserType === 'All' || item.userTypeFilter === filterUserType;
                 // Filter by subtab (Status)
                 const normalizedSupportStatus = activeSupportSubTab === 'All'
                     ? 'ALL'
                     : activeSupportSubTab.toUpperCase().replace(/\s+/g, '_');
                 const matchesStatus = normalizedSupportStatus === 'ALL' || item.status === normalizedSupportStatus;
 
-                return matchesSearch && matchesPriority && matchesStatus;
+                return matchesSearch && matchesPriority && matchesUserType && matchesStatus;
             });
         } else if (activeMainTab === 'System Jobs') {
             data = systemJobsData.filter(item => {
@@ -454,6 +468,7 @@ function Operations() {
             setSearchQuery('');
             setFilterStatus('All');
             setFilterPriority('All');
+            setFilterUserType('All');
             setCurrentPage(1);
             setActiveSupportSubTab('Open');
             return;
@@ -858,6 +873,19 @@ function Operations() {
 
                             {/* Filters */}
                             <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <select
+                                        value={filterUserType}
+                                        onChange={(e) => setFilterUserType(e.target.value)}
+                                        className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20"
+                                    >
+                                        <option value="All">All User Types</option>
+                                        <option value="Professional">Professional</option>
+                                        <option value="Recruiter">Recruiter</option>
+                                        <option value="Training Agent">Training Agent</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                </div>
                                 <div className="relative">
                                     <select
                                         value={filterPriority}
