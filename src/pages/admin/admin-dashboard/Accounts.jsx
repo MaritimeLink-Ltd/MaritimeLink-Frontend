@@ -406,9 +406,11 @@ function Accounts() {
         setIsLoadingRecruiters(true);
         setRecruitersError('');
         try {
+            const recruiterParams = new URLSearchParams({ limit: '1000' });
+            const statsParams = new URLSearchParams({ role: 'RECRUITMENT_AGENT' });
             const [response, statsResponse] = await Promise.allSettled([
-                httpClient.get(API_ENDPOINTS.ADMIN.RECRUITERS),
-                httpClient.get(API_ENDPOINTS.ADMIN.RECRUITERS_STATS),
+                httpClient.get(`${API_ENDPOINTS.ADMIN.RECRUITERS}?${recruiterParams.toString()}`),
+                httpClient.get(`${API_ENDPOINTS.ADMIN.RECRUITERS_STATS}?${statsParams.toString()}`),
             ]);
 
             // Parse recruiters list (dedicated endpoint; exclude training agents if response is mixed)
@@ -501,7 +503,10 @@ function Accounts() {
         setIsLoadingTrainers(true);
         setTrainersError('');
         try {
-            const response = await httpClient.get(API_ENDPOINTS.ADMIN.TRAINERS);
+            const trainerParams = new URLSearchParams({ limit: '1000' });
+            const response = await httpClient.get(
+                `${API_ENDPOINTS.ADMIN.TRAINERS}?${trainerParams.toString()}`
+            );
 
             let trainersList = extractAdminUserList(response, 'trainers');
             trainersList = trainersList.filter(
