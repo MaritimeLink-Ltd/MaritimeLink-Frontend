@@ -12,8 +12,11 @@ import {
 } from 'lucide-react';
 import adminSettingsService from '../../../services/adminSettingsService';
 import adminDashboardService from '../../../services/adminDashboardService';
-
-const defaultAdminAvatar = '/images/login-image.webp';
+import {
+    isPlaceholderProfilePhoto,
+    persistProfilePhotoCache,
+    resolveProfilePhotoUrl,
+} from '../../../utils/profilePhoto';
 
 const editableInputClass =
     'w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]';
@@ -33,13 +36,7 @@ const AdminProfile = () => {
     const [savingPassword, setSavingPassword] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
     const [feedback, setFeedback] = useState({ type: '', message: '' });
-    const [profileImage, setProfileImage] = useState(() => {
-        try {
-            return localStorage.getItem('profileImage') || defaultAdminAvatar;
-        } catch {
-            return defaultAdminAvatar;
-        }
-    });
+    const [profileImage, setProfileImage] = useState(null);
     const [profile, setProfile] = useState({
         displayName: 'Admin User',
         firstName: '',
@@ -88,23 +85,15 @@ const AdminProfile = () => {
                     profilePatch.fullName ??
                     stored.fullName,
                 email: profilePatch.email ?? stored.email,
-                profilePhoto: profilePatch.profilePhotoUrl ?? stored.profilePhoto,
-                photo: profilePatch.profilePhotoUrl ?? stored.photo,
             };
+            if (profilePatch.profilePhotoUrl !== undefined) {
+                const resolved = persistProfilePhotoCache(profilePatch.profilePhotoUrl);
+                nextProfile.profilePhotoUrl = resolved;
+                nextProfile.profilePhoto = resolved;
+                nextProfile.photo = resolved;
+            }
             localStorage.setItem('userProfile', JSON.stringify(nextProfile));
             if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
-            if (profilePatch.profilePhotoUrl !== undefined) {
-                if (profilePatch.profilePhotoUrl) {
-                    localStorage.setItem('profileImage', profilePatch.profilePhotoUrl);
-                } else {
-                    localStorage.removeItem('profileImage');
-                }
-                window.dispatchEvent(
-                    new CustomEvent('profileImageUpdated', {
-                        detail: { url: profilePatch.profilePhotoUrl || defaultAdminAvatar },
-                    }),
-                );
-            }
         } catch (error) {
             console.error('Failed to sync admin profile cache:', error);
         }
@@ -132,8 +121,22 @@ const AdminProfile = () => {
                 };
                 localStorage.setItem('userProfile', JSON.stringify(nextStoredProfile));
                 if (nextProfile.email) localStorage.setItem('userEmail', nextProfile.email);
-                const cachedImage = localStorage.getItem('profileImage');
-                setProfileImage(cachedImage || defaultAdminAvatar);
+                const savedPhoto = localStorage.getItem('profileImage');
+                const resolvedPhoto = resolveProfilePhotoUrl({
+                    profile: JSON.parse(localStorage.getItem('userProfile') || '{}'),
+                    savedPhoto,
+                });
+                if (savedPhoto && !resolvedPhoto) {
+                    if (isPlaceholderProfilePhoto(savedPhoto)) {
+                        localStorage.removeItem('profileImage');
+                    } else if (
+                        localStorage.getItem('adminUserType') === 'admin' &&
+                        !savedPhoto.startsWith('data:')
+                    ) {
+                        localStorage.removeItem('profileImage');
+                    }
+                }
+                setProfileImage(resolvedPhoto);
             } catch (error) {
                 if (!cancelled) {
                     setFeedback({ type: 'error', message: error.message || 'Failed to load admin settings.' });
@@ -243,7 +246,8 @@ const AdminProfile = () => {
 
         const reader = new FileReader();
         reader.onloadend = () => {
-            const nextUrl = typeof reader.result === 'string' ? reader.result : defaultAdminAvatar;
+            const nextUrl = typeof reader.result === 'string' ? reader.result : null;
+            if (!nextUrl) return;
             setProfileImage(nextUrl);
             syncStoredAdminProfile({ profilePhotoUrl: nextUrl });
             setFeedback({
@@ -256,7 +260,7 @@ const AdminProfile = () => {
     };
 
     const handleRemoveImage = () => {
-        setProfileImage(defaultAdminAvatar);
+        setProfileImage(null);
         syncStoredAdminProfile({ profilePhotoUrl: null });
         setFeedback({
             type: 'success',
@@ -310,7 +314,7 @@ const AdminProfile = () => {
                                 <div className="flex flex-col md:flex-row gap-8">
                                     <div className="flex-shrink-0">
                                         <div className="relative">
-                                            {profileImage && profileImage !== defaultAdminAvatar ? (
+                                            {profileImage ? (
                                                 <img
                                                     src={profileImage}
                                                     alt=""
@@ -335,12 +339,15 @@ const AdminProfile = () => {
                                                 <Camera className="h-4 w-4" />
                                             </label>
                                         </div>
-                                        <button
-                                            onClick={handleRemoveImage}
-                                            className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
-                                        >
-                                            Remove
-                                        </button>
+                                        {profileImage ? (
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveImage}
+                                                className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                                            >
+                                                Remove
+                                            </button>
+                                        ) : null}
                                     </div>
 
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
