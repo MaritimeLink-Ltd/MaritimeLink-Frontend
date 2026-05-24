@@ -775,6 +775,7 @@ class AuthService {
                 const token = response.token || response.data.token;
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('adminUserType', 'admin');
+                localStorage.removeItem('profileImage');
                 emitAuthTokenChanged();
             }
 

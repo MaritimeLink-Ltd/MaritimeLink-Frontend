@@ -6,6 +6,11 @@ import {
     isPlatformAdminSession,
 } from '../../../../utils/sessionManager';
 import {
+    initialsFromName,
+    isPlaceholderProfilePhoto,
+    resolveProfilePhotoUrl,
+} from '../../../../utils/profilePhoto';
+import {
     LayoutDashboard,
     Users,
     Building,
@@ -28,9 +33,9 @@ function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [userData, setUserData] = useState({
-        name: 'User Profile',
+        name: 'Admin User',
         email: '',
-        photo: '/images/login-image.webp'
+        photo: null,
     });
 
     useEffect(() => {
@@ -38,38 +43,52 @@ function AdminLayout() {
             const savedProfile = localStorage.getItem('userProfile');
             const savedPhoto = localStorage.getItem('profileImage');
             const userEmail = localStorage.getItem('userEmail');
-            
+
+            if (savedPhoto && isPlaceholderProfilePhoto(savedPhoto)) {
+                localStorage.removeItem('profileImage');
+            } else if (
+                savedPhoto &&
+                localStorage.getItem('adminUserType') === 'admin' &&
+                !savedPhoto.startsWith('data:')
+            ) {
+                // Admin uploads are stored as data URLs; drop stale recruiter/pro URLs.
+                localStorage.removeItem('profileImage');
+            }
+
+            let profile = {};
             if (savedProfile) {
                 try {
-                    const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName) 
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
-                        : profile.fullName || 'Admin User';
-                    
-                    setUserData({
-                        name: name,
-                        email: profile.email || userEmail || '',
-                        photo: savedPhoto || profile.profilePhoto || profile.photo || '/images/login-image.webp'
-                    });
+                    profile = JSON.parse(savedProfile);
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
                 }
-            } else if (savedPhoto || userEmail) {
-                setUserData(prev => ({ 
-                    ...prev, 
-                    photo: savedPhoto || prev.photo,
-                    email: userEmail || prev.email
-                }));
             }
+
+            const name = (profile.firstName || profile.lastName)
+                ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+                : profile.fullName || profile.displayName || 'Admin User';
+
+            const photo = resolveProfilePhotoUrl({
+                profile,
+                savedPhoto: localStorage.getItem('profileImage'),
+            });
+
+            setUserData({
+                name,
+                email: profile.email || userEmail || '',
+                photo,
+            });
         };
 
         updateUserData();
         window.addEventListener('storage', updateUserData);
         
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, photo: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            setUserData((prev) => ({
+                ...prev,
+                photo: url && !isPlaceholderProfilePhoto(url) ? url : null,
+            }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         
@@ -240,11 +259,17 @@ function AdminLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50"
                                 >
-                                    <img
-                                        src={userData.photo}
-                                        alt="User avatar"
-                                        className="w-8 h-8 rounded-full object-cover"
-                                    />
+                                    {userData.photo ? (
+                                        <img
+                                            src={userData.photo}
+                                            alt="User avatar"
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-[#0f385c] text-white flex items-center justify-center text-xs font-bold">
+                                            {initialsFromName(userData.name)}
+                                        </div>
+                                    )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
                                         <span className="text-sm font-semibold text-gray-900 leading-none mb-1 mr-2">{userData.name}</span>
                                         {userData.email && (
