@@ -4,7 +4,9 @@ import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Imag
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import {
+    formatAdminChatDisplayName,
     formatAdminNameFromEmail,
+    getAdminInitials,
     mapAdminNoteFromApi,
 } from '../../../utils/adminDisplayName';
 
@@ -460,12 +462,25 @@ function formatHttpErrorMessage(err) {
     return err?.message || 'Request failed';
 }
 
+function getCurrentAdminAuthor() {
+    const email =
+        (typeof window !== 'undefined' && localStorage.getItem('userEmail')) || '';
+    const authorName = formatAdminChatDisplayName({ email });
+    return {
+        email,
+        authorName,
+        initials: getAdminInitials(email || authorName),
+    };
+}
+
 function extractCreatedNoteFromPostResponse(response) {
     if (!response || typeof response !== 'object') return null;
     const inner = response.data && typeof response.data === 'object' ? response.data : null;
+    const nested = inner?.data && typeof inner.data === 'object' ? inner.data : null;
     return (
         response.note ||
         inner?.note ||
+        nested?.note ||
         response.adminNote ||
         inner?.adminNote ||
         (Array.isArray(response.adminNotes) ? response.adminNotes[0] : null) ||
@@ -507,32 +522,14 @@ function buildLocalAdminNote(content) {
     };
 }
 
-/** POST admin note — tries common paths/bodies (backends vary). */
+/** POST admin note on recruiter/trainer/professional account detail. */
 async function postAccountAdminNote(client, { accountId, accountKind, content }) {
     const base = accountKind === 'professional'
         ? API_ENDPOINTS.ADMIN.PROFESSIONAL_DETAIL(accountId)
         : accountKind === 'trainer'
             ? API_ENDPOINTS.ADMIN.TRAINER_DETAIL(accountId)
             : API_ENDPOINTS.ADMIN.RECRUITER_DETAIL(accountId);
-    const trimmed = content.trim();
-    const attempts = [
-        { url: `${base}/notes`, body: { content: trimmed } },
-        { url: `${base}/notes`, body: { text: trimmed } },
-        { url: `${base}/notes`, body: { note: trimmed } },
-        { url: `${base}/admin-notes`, body: { content: trimmed } },
-        { url: `${base}/admin-note`, body: { content: trimmed } },
-    ];
-    let lastErr;
-    for (const { url, body } of attempts) {
-        try {
-            return await client.post(url, body);
-        } catch (e) {
-            lastErr = e;
-            if (e.status === 404) continue;
-            throw e;
-        }
-    }
-    throw lastErr;
+    return client.post(`${base}/notes`, { content: content.trim() });
 }
 
 /** PATCH admin note — tries common paths/bodies. */
@@ -595,7 +592,6 @@ function AccountProfile() {
     const [recruiterFetchError, setRecruiterFetchError] = useState('');
     const [apiDocuments, setApiDocuments] = useState([]);
     const [timelineEvents, setTimelineEvents] = useState([]);
-    const [activityLogs, setActivityLogs] = useState([]);
 
     // Determine data based on ID prefix
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -653,11 +649,6 @@ function AccountProfile() {
                 return [];
             };
 
-            const extractActivityLog = (source) => {
-                if (source?.activityLog && Array.isArray(source.activityLog)) return source.activityLog;
-                return [];
-            };
-
             (async () => {
                 let lastErr = null;
                 for (const attempt of detailAttempts) {
@@ -708,17 +699,6 @@ function AccountProfile() {
                             description: event.description || event.message || '',
                             timestamp: event.timestamp || event.createdAt || '',
                             color: event.color || (index % 3 === 0 ? 'blue' : index % 3 === 1 ? 'green' : 'gray'),
-                        })));
-
-                        const activityLog = extractActivityLog(source);
-                        setActivityLogs(activityLog.map((activity) => ({
-                            id: activity.id || Date.now(),
-                            title: activity.title || activity.activityType || '',
-                            description: activity.description || activity.message || '',
-                            timestamp: activity.timestamp || activity.createdAt || '',
-                            user: activity.user || activity.userId || 'System',
-                            icon: activity.icon || 'default',
-                            color: activity.color || 'blue',
                         })));
                         return;
                     } catch (err) {
@@ -777,11 +757,12 @@ function AccountProfile() {
     const s1 = profileData.stage1Checks || { email: false, phone: false, company: false };
     const s2 = profileData.stage2Checks || { idDocuments: false, addressVerified: false };
     const riskAnalysis = buildRiskAnalysisDisplay(profileData);
+    const currentAdminAuthor = getCurrentAdminAuthor();
 
     // Use API documents if available, otherwise empty array (no mock data)
     const documents = Array.isArray(apiDocuments) ? apiDocuments : [];
 
-    const allTabs = ['Overview', 'Submitted Details', `Documents (${documents.length})`, 'KYC', 'Activity Log', 'Admin Notes'];
+    const allTabs = ['Overview', 'Submitted Details', `Documents (${documents.length})`, 'KYC', 'Admin Notes'];
     const tabs = isRecruiter || isTrainer
         ? allTabs.filter((tab) => !tab.startsWith('Documents'))
         : isProfessional
@@ -2174,68 +2155,6 @@ function AccountProfile() {
                         );
                     })()}
 
-                    {activeTab === 'Activity Log' && (
-                        <>
-                            {/* Activity Log */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-6">
-                                <h3 className="text-base font-bold text-gray-900 mb-6">Activity Log</h3>
-
-                                <div className="space-y-6">
-                                    {activityLogs.length > 0 ? (
-                                        activityLogs.map((activity) => (
-                                            <div key={activity.id} className="flex items-start gap-4">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                                    activity.color === 'green' ? 'bg-green-50' :
-                                                    activity.color === 'blue' ? 'bg-blue-50' :
-                                                    activity.color === 'yellow' ? 'bg-yellow-50' :
-                                                    'bg-gray-100'
-                                                }`}>
-                                                    {activity.color === 'green' && <CheckCircle className="h-5 w-5 text-green-600" />}
-                                                    {activity.color === 'blue' && (
-                                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                        </svg>
-                                                    )}
-                                                    {activity.color === 'yellow' && (
-                                                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                    )}
-                                                    {!['green', 'blue', 'yellow'].includes(activity.color) && (
-                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                        </svg>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-start justify-between mb-1">
-                                                        <h4 className="text-sm font-bold text-gray-900">{activity.title}</h4>
-                                                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                            {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A'}
-                                                        </div>
-                                                    </div>
-                                                    {activity.description && (
-                                                        <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
-                                                    )}
-                                                    <span className="inline-block px-2 py-1 bg-gray-50 text-xs text-gray-600 rounded">
-                                                        User: {activity.user}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-sm text-gray-500 text-center py-6">
-                                            No activity logs available
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    )}
-
                     {activeTab === 'Admin Notes' && (
                         <>
                             {/* Admin Notes */}
@@ -2313,9 +2232,15 @@ function AccountProfile() {
                                 {/* Add New Note */}
                                 <div className="flex gap-4 pt-6 border-t border-gray-200">
                                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span className="text-xs font-bold text-blue-600">YOU</span>
+                                        <span className="text-xs font-bold text-blue-600">{currentAdminAuthor.initials}</span>
                                     </div>
                                     <div className="flex-1">
+                                        <div className="mb-2">
+                                            <div className="text-sm font-semibold text-gray-900">{currentAdminAuthor.authorName}</div>
+                                            {currentAdminAuthor.email ? (
+                                                <div className="text-xs text-gray-500 break-all">{currentAdminAuthor.email}</div>
+                                            ) : null}
+                                        </div>
                                         <textarea
                                             ref={noteTextareaRef}
                                             value={newNote}
@@ -2409,21 +2334,6 @@ function AccountProfile() {
                                 </div>
                             </div>
                         )}
-
-                        <button
-                            onClick={() => {
-                                setActiveTab('Admin Notes');
-                                setTimeout(() => {
-                                    if (noteTextareaRef.current) {
-                                        noteTextareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        noteTextareaRef.current.focus();
-                                    }
-                                }, 100);
-                            }}
-                            className="text-sm font-semibold text-gray-500 hover:text-gray-700"
-                        >
-                            + Add Note
-                        </button>
                     </div>
 
                     {/* Application Timeline */}
