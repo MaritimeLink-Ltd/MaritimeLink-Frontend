@@ -57,6 +57,12 @@ function mapApiCompany(c) {
         name: c.name || '—',
         type: typeLabel,
         rawType: c.type,
+        source: c.source || 'company',
+        detailPath:
+            c.source === 'recruiter'
+                ? `/admin/accounts/${c.id}`
+                : `/admin/companies/${c.id}`,
+        accountKind: c.type === 'TRAINING_AGENT' ? 'trainer' : 'recruiter',
         website: displaySite,
         websiteHref: href,
         country: c.country || '—',
@@ -71,6 +77,7 @@ function mapApiCompany(c) {
 }
 
 function Companies() {
+    const ITEMS_PER_PAGE = 10;
     const [activeTab, setActiveTab] = useState('All Companies');
     const [searchQuery, setSearchQuery] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -86,6 +93,7 @@ function Companies() {
     const [typeFilter, setTypeFilter] = useState('');
     const [countryFilter, setCountryFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalEntries, setTotalEntries] = useState(0);
     const [openDropdown, setOpenDropdown] = useState(''); // 'status', 'type', 'country' or ''
 
     const loadCompanies = useCallback(async () => {
@@ -97,6 +105,10 @@ function Companies() {
             else if (activeTab === 'Training Providers') query.type = 'TRAINING_AGENT';
             if (typeFilter === 'Claimed') query.status = 'CLAIMED';
             else if (typeFilter === 'Unclaimed') query.status = 'UNCLAIMED';
+            if (countryFilter) query.country = countryFilter;
+            if (searchQuery.trim()) query.search = searchQuery.trim();
+            query.page = currentPage;
+            query.limit = ITEMS_PER_PAGE;
 
             const res = await adminDashboardService.getCompanies(query);
             const payload = res?.data?.data ?? res?.data ?? res;
@@ -106,39 +118,36 @@ function Companies() {
                 res?.companies ??
                 [];
             const stats = payload?.stats ?? res?.data?.stats ?? res?.stats ?? null;
+            const total =
+                res?.pagination?.total ??
+                res?.total ??
+                payload?.pagination?.total ??
+                list.length;
             setCompanies(Array.isArray(list) ? list.map(mapApiCompany) : []);
             setCompanyStats(stats && typeof stats === 'object' ? stats : null);
+            setTotalEntries(Number(total) || 0);
         } catch (e) {
             console.error('Failed to load companies:', e);
             setLoadError(e?.message || 'Could not load companies');
             setCompanies([]);
             setCompanyStats(null);
+            setTotalEntries(0);
         } finally {
             setIsRefreshing(false);
             setLoading(false);
         }
-    }, [activeTab, typeFilter]);
+    }, [activeTab, typeFilter, countryFilter, searchQuery, currentPage]);
 
     useEffect(() => {
         loadCompanies();
     }, [loadCompanies]);
 
-    /** Tab + Claimed/Unclaimed are applied via API query params; search/profile/country stay client-side */
+    /** Profile Complete/Incomplete filter stays client-side on the current page */
     const filteredCompanies = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
-        return companies.filter((company) => {
-            const matchesSearch =
-                !q ||
-                company.name.toLowerCase().includes(q) ||
-                company.website.toLowerCase().includes(q) ||
-                company.country.toLowerCase().includes(q);
-
-            const matchesStatus = statusFilter ? company.profile === statusFilter : true;
-            const matchesCountry = countryFilter ? company.country === countryFilter : true;
-
-            return matchesSearch && matchesStatus && matchesCountry;
-        });
-    }, [companies, searchQuery, statusFilter, countryFilter]);
+        return companies.filter((company) =>
+            statusFilter ? company.profile === statusFilter : true,
+        );
+    }, [companies, statusFilter]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -179,27 +188,20 @@ function Companies() {
         },
     ];
 
-    const itemsPerPage = 10;
+    const itemsPerPage = ITEMS_PER_PAGE;
 
-    // Get unique values for filters
     const uniqueTypes = ['Claimed', 'Unclaimed'];
-    const uniqueCountries = [...new Set(companies.map((c) => c.country).filter(Boolean))].sort();
-    const uniqueStatuses = ['Complete', 'Incomplete']; // Based on profile field
+    const uniqueCountries = [...new Set(companies.map((c) => c.country).filter((c) => c && c !== '—'))].sort();
+    const uniqueStatuses = ['Complete', 'Incomplete'];
 
-    // Close dropdowns when clicking outside (simple implementation by detecting clicks on backdrop if needed, or just toggle)
     const toggleDropdown = (name) => {
-        if (openDropdown === name) {
-            setOpenDropdown('');
-        } else {
-            setOpenDropdown(name);
-        }
+        setOpenDropdown((prev) => (prev === name ? '' : name));
     };
 
-    // Pagination logic
+    const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPerPage));
     const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentCompanies = filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
+    const indexOfFirstItem = totalEntries === 0 ? 0 : indexOfLastItem - itemsPerPage + 1;
+    const currentCompanies = filteredCompanies;
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -534,7 +536,17 @@ function Companies() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <Link
-                                            to={`/admin/companies/${company.id}`}
+                                            to={company.detailPath}
+                                            state={
+                                                company.source === 'recruiter'
+                                                    ? {
+                                                          dashboardType:
+                                                              company.accountKind === 'trainer'
+                                                                  ? 'training-provider'
+                                                                  : 'recruiter',
+                                                      }
+                                                    : undefined
+                                            }
                                             className="text-sm font-bold text-[#1e5a8f] hover:underline"
                                         >
                                             View Details
@@ -552,13 +564,15 @@ function Companies() {
                     <div className="text-sm text-gray-500">
                         Showing{' '}
                         <span className="font-semibold text-gray-900">
-                            {filteredCompanies.length === 0 ? 0 : indexOfFirstItem + 1}
+                            {currentCompanies.length === 0 ? 0 : indexOfFirstItem}
                         </span>{' '}
                         to{' '}
                         <span className="font-semibold text-gray-900">
-                            {filteredCompanies.length === 0 ? 0 : Math.min(indexOfLastItem, filteredCompanies.length)}
+                            {currentCompanies.length === 0
+                                ? 0
+                                : indexOfFirstItem + currentCompanies.length - 1}
                         </span>{' '}
-                        of <span className="font-semibold text-gray-900">{filteredCompanies.length}</span> entries
+                        of <span className="font-semibold text-gray-900">{totalEntries}</span> entries
                     </div>
                     <div className="flex items-center gap-2">
                         <button

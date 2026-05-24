@@ -82,6 +82,10 @@ class AdminDashboardService {
         const params = new URLSearchParams();
         if (query.type) params.set('type', query.type);
         if (query.status) params.set('status', query.status);
+        if (query.country) params.set('country', query.country);
+        if (query.search) params.set('search', query.search);
+        if (query.page) params.set('page', String(query.page));
+        if (query.limit) params.set('limit', String(query.limit));
         const qs = params.toString();
         const path = qs ? `${API_ENDPOINTS.ADMIN.COMPANIES}?${qs}` : API_ENDPOINTS.ADMIN.COMPANIES;
         return httpClient.get(path);
