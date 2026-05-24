@@ -64,15 +64,40 @@ function activityAccent(action) {
     return 'bg-gray-400';
 }
 
+const COMPANY_MEMBER_ACTIONS = new Set([
+    'COMPANY_MEMBER_REMOVED',
+    'COMPANY_MEMBER_ADDED',
+]);
+
+function formatActivityAction(action) {
+    const labels = {
+        COMPANY_UPDATED: 'Company profile updated',
+    };
+    if (labels[action]) return labels[action];
+    const raw = String(action || 'Event');
+    return raw
+        .split('_')
+        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
 function activityDescription(log) {
+    const action = String(log?.action || '');
     const meta = log?.metadata;
-    if (meta && typeof meta === 'object' && Object.keys(meta).length) {
-        try {
-            const s = JSON.stringify(meta);
-            return s.length > 160 ? `${s.slice(0, 157)}…` : s;
-        } catch {
-            return '—';
+
+    if (action === 'COMPANY_UPDATED' && meta && typeof meta === 'object') {
+        const parts = [];
+        if (typeof meta.isClaimed === 'boolean') {
+            parts.push(meta.isClaimed ? 'Marked as claimed' : 'Marked as unclaimed');
         }
+        if (meta.tier) {
+            parts.push(`Tier set to ${String(meta.tier).toUpperCase()}`);
+        }
+        if (parts.length) return parts.join(' · ');
+    }
+
+    if (meta && typeof meta === 'object' && Object.keys(meta).length) {
+        return '—';
     }
     return [log?.actorType, log?.targetType].filter(Boolean).join(' · ') || '—';
 }
@@ -107,7 +132,11 @@ function CompanyProfile() {
                 return;
             }
             setCompany(c);
-            setRecentActivity(Array.isArray(activity) ? activity : []);
+            setRecentActivity(
+                Array.isArray(activity)
+                    ? activity.filter((log) => !COMPANY_MEMBER_ACTIONS.has(log?.action))
+                    : []
+            );
         } catch (e) {
             console.error('Failed to load company:', e);
             setError(e?.message || 'Could not load company');
@@ -233,6 +262,11 @@ function CompanyProfile() {
                                 className={`inline-flex px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                                     company.isVerified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
                                 }`}
+                                title={
+                                    company.isVerified
+                                        ? 'Organization data verified via Gemini'
+                                        : 'Organization data not verified via Gemini'
+                                }
                             >
                                 {company.isVerified ? 'Verified' : 'Unverified'}
                             </span>
@@ -246,14 +280,6 @@ function CompanyProfile() {
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2 shrink-0">
-                        <button
-                            type="button"
-                            disabled={actionBusy}
-                            onClick={() => patchCompany({ isVerified: !company.isVerified })}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-                        >
-                            {company.isVerified ? 'Unverify' : 'Verify'}
-                        </button>
                         <button
                             type="button"
                             disabled={actionBusy}
@@ -380,7 +406,9 @@ function CompanyProfile() {
                                             )}
                                         </div>
                                         <div className="flex-1 pb-2">
-                                            <div className="text-sm font-semibold text-gray-900 mb-0.5">{log.action || 'Event'}</div>
+                                            <div className="text-sm font-semibold text-gray-900 mb-0.5">
+                                                {formatActivityAction(log.action)}
+                                            </div>
                                             <div className="text-xs text-gray-500 mb-1">{activityDescription(log)}</div>
                                             <div className="text-xs text-gray-400">{formatRelativeTime(log.createdAt)}</div>
                                         </div>
