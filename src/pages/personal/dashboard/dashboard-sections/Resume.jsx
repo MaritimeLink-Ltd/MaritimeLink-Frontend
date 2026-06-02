@@ -2,12 +2,14 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiShare2 } from 'react-icons/fi';
+import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
+import ResumeExportMenu from '../../../../components/resume/ResumeExportMenu';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import { shareOrDownloadFile } from '../../../../utils/shareFile';
+import { formatDisplayDate, formatDateRange } from '../../../../utils/formatDate';
 import toast from 'react-hot-toast';
 
 const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
@@ -102,14 +104,6 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     if (Array.isArray(arr1) && arr1.length > 0) return arr1;
                     if (Array.isArray(arr2) && arr2.length > 0) return arr2;
                     return [];
-                };
-
-                const formatDateRange = (start, end) => {
-                    if (!start && !end) return '';
-                    const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
-                    const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
-                    const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
-                    return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
                 };
 
                 // Extract User Type
@@ -481,44 +475,11 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                             <FiEdit size={18} />
                         </button>
 
-                        {/* Share Resume Button - Desktop */}
                         {(!isReviewMode || isPremiumTier(membershipTier)) && (
-                            <button
-                                onClick={handleShareResume}
-                                className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px]"
-                            >
-                                <FiShare2 size={16} />
-                                <span className="font-medium text-sm">Share Resume</span>
-                            </button>
-                        )}
-                        {/* Share Resume Button - Mobile */}
-                        {(!isReviewMode || isPremiumTier(membershipTier)) && (
-                            <button
-                                onClick={handleShareResume}
-                                className="sm:hidden p-2.5 bg-white text-[#1E3A5F] border-2 border-[#1E3A5F] rounded-lg hover:bg-gray-50 transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                                <FiShare2 size={18} />
-                            </button>
-                        )}
-
-                        {/* Download PDF Button - Desktop */}
-                        {(!isReviewMode || isPremiumTier(membershipTier)) && (
-                            <button
-                                onClick={handleDownloadPDF}
-                                className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
-                            >
-                                <FiDownload size={16} />
-                                <span className="font-medium text-sm">Download PDF</span>
-                            </button>
-                        )}
-                        {/* Download PDF Button - Mobile */}
-                        {(!isReviewMode || isPremiumTier(membershipTier)) && (
-                            <button
-                                onClick={handleDownloadPDF}
-                                className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                                <FiDownload size={18} />
-                            </button>
+                            <ResumeExportMenu
+                                onShare={handleShareResume}
+                                onDownload={handleDownloadPDF}
+                            />
                         )}
                     </div>
                 </div>
@@ -623,8 +584,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.license}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.licenseNumber}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{license.issuingCountry}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{license.dateOfIssue}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{license.validTill}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.dateOfIssue)}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.validTill)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -659,8 +620,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                             <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                 <td className="px-5 py-4 text-sm text-gray-700">{endorsement.endorsement}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{endorsement.issuingCountry}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{endorsement.dateOfIssue}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{endorsement.validTill}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.dateOfIssue)}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.validTill)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -769,8 +730,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.stcwQualification}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -803,8 +764,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateName}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -837,8 +798,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.documentName}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.documentNumber}</td>
                                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.issuingCountry}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{doc.dateOfIssue}</td>
-                                                <td className="px-5 py-4 text-sm text-gray-700">{doc.validTill}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.dateOfIssue)}</td>
+                                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.validTill)}</td>
                                             </tr>
                                         ))}
                                     </tbody>

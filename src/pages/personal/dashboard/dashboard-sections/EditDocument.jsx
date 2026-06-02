@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Calendar, FileText, Scan, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const EditDocument = ({ onBack, onCompletion, document }) => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -224,13 +225,12 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                     {/* Issuing Country */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">Issuing Country</label>
-                        <input
-                            type="text"
+                        <CountrySelect
                             name="issuingCountry"
-                            placeholder="Enter country name"
+                            placeholder="Select issuing country"
                             value={formData.issuingCountry}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
+                            className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600 bg-white"
                         />
                     </div>
 

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
-import { countryCodes } from '../../../utils/countryCodes';
+import { COUNTRIES } from '../../../utils/countries';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -193,9 +193,9 @@ function CreateCourse() {
                                     onChange={(e) => setFormData({ ...formData, issuingAuthority: e.target.value })}
                                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f] bg-white"
                                 >
-                                    {countryCodes.map((item) => (
-                                        <option key={item.country} value={item.country}>
-                                            {item.country}
+                                    {COUNTRIES.map((item) => (
+                                        <option key={item.code} value={item.name}>
+                                            {item.emoji ? `${item.emoji} ` : ''}{item.name}
                                         </option>
                                     ))}
                                 </select>

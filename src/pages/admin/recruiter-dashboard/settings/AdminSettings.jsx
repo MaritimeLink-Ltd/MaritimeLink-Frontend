@@ -14,6 +14,7 @@ import {
     MapPin
 } from 'lucide-react';
 import { countryCodes } from '../../../../utils/countryCodes';
+import CountrySelect from '../../../../components/common/CountrySelect';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
@@ -708,11 +709,12 @@ function AdminSettings() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                                            <input
-                                                type="text"
+                                            <CountrySelect
+                                                name="country"
                                                 value={companyData.country}
                                                 onChange={(e) => handleCompanyChange('country', e.target.value)}
-                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971]"
+                                                placeholder="Select country"
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/20 focus:border-[#003971] bg-white"
                                             />
                                         </div>
                                     </div>

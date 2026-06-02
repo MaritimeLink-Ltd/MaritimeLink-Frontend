@@ -1,16 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
+import recruiterSettingsService from '../../../services/recruiterSettingsService';
+import trainerSettingsService from '../../../services/trainerSettingsService';
+import { persistProfilePhotoCache } from '../../../utils/profilePhoto';
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
 const MAX_SIZE_MB = 5;
 
-// After upload, go to the page that matches selected profession
 const PROFESSION_ROUTES = {
   officer: '/officer-category',
   ratings: '/ratings-category',
   catering: '/catering-medical-category',
 };
+
+const AGENT_DASHBOARD_ROUTES = {
+  recruiter: '/recruiter-dashboard',
+  'training-provider': '/trainingprovider-dashboard',
+};
+
+function resolveUserType(location) {
+  if (location.state?.userType) return location.state.userType;
+
+  const professionType = sessionStorage.getItem('professionType');
+  if (professionType && PROFESSION_ROUTES[professionType]) {
+    return 'professional';
+  }
+
+  const adminUserType = localStorage.getItem('adminUserType');
+  if (adminUserType === 'training-provider') return 'training-provider';
+  if (adminUserType === 'recruiter') return 'recruiter';
+
+  return 'professional';
+}
 
 function UploadProfilePhoto() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -19,14 +41,31 @@ function UploadProfilePhoto() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // If no profession selected, send back to select profession
+  const userType = useMemo(() => resolveUserType(location), [location.state?.userType]);
+
+  const nextRoute = useMemo(() => {
+    if (userType === 'recruiter') return AGENT_DASHBOARD_ROUTES.recruiter;
+    if (userType === 'training-provider') return AGENT_DASHBOARD_ROUTES['training-provider'];
+
+    const professionType = sessionStorage.getItem('professionType') || 'officer';
+    return PROFESSION_ROUTES[professionType] || PROFESSION_ROUTES.officer;
+  }, [userType]);
+
   useEffect(() => {
-    const professionType = sessionStorage.getItem('professionType');
-    if (!professionType || !PROFESSION_ROUTES[professionType]) {
-      navigate('/select-profession', { replace: true });
+    if (userType === 'professional') {
+      const professionType = sessionStorage.getItem('professionType');
+      if (!professionType || !PROFESSION_ROUTES[professionType]) {
+        navigate('/select-profession', { replace: true });
+      }
+      return;
     }
-  }, [navigate]);
+
+    if (!localStorage.getItem('authToken')) {
+      navigate('/agent/signup', { replace: true });
+    }
+  }, [navigate, userType]);
 
   const validateFile = (file) => {
     if (!VALID_IMAGE_TYPES.includes(file.type)) {
@@ -80,6 +119,29 @@ function UploadProfilePhoto() {
     }
   };
 
+  const goToNextStep = () => {
+    navigate(nextRoute, { replace: true });
+  };
+
+  const handleSkip = () => {
+    setError('');
+    goToNextStep();
+  };
+
+  const uploadAgentPhoto = async (file) => {
+    const service =
+      userType === 'training-provider' ? trainerSettingsService : recruiterSettingsService;
+    const response = await service.uploadProfilePhoto(file);
+    const photoUrl =
+      response?.data?.profilePhotoUrl ||
+      response?.data?.photoUrl ||
+      response?.data?.url ||
+      null;
+    if (photoUrl) {
+      persistProfilePhotoCache(photoUrl);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -88,27 +150,27 @@ function UploadProfilePhoto() {
       return;
     }
 
-    const professionalId = localStorage.getItem('professionalId');
-    if (!professionalId) {
-      setError('Session expired. Please start registration again.');
-      navigate('/signup', { replace: true });
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
-      const response = await authService.uploadProfilePhoto(professionalId, selectedFile);
-      
-      // Save the uploaded photo URL to localStorage for the dashboard layout to show it immediately
-      if (response?.data?.url) {
-        localStorage.setItem('profileImage', response.data.url);
+      if (userType === 'professional') {
+        const professionalId = localStorage.getItem('professionalId');
+        if (!professionalId) {
+          setError('Session expired. Please start registration again.');
+          navigate('/signup', { replace: true });
+          return;
+        }
+
+        const response = await authService.uploadProfilePhoto(professionalId, selectedFile);
+        if (response?.data?.url) {
+          localStorage.setItem('profileImage', response.data.url);
+        }
+      } else {
+        await uploadAgentPhoto(selectedFile);
       }
 
-      const professionType = sessionStorage.getItem('professionType') || 'officer';
-      const nextRoute = PROFESSION_ROUTES[professionType] || PROFESSION_ROUTES.officer;
-      navigate(nextRoute, { replace: true });
+      goToNextStep();
     } catch (err) {
       console.error('Profile photo upload error:', err);
       setError(err.data?.message || err.message || 'Failed to upload photo. Please try again.');
@@ -117,12 +179,17 @@ function UploadProfilePhoto() {
     }
   };
 
+  const loginPath =
+    userType === 'training-provider'
+      ? '/training-provider/login'
+      : userType === 'recruiter'
+        ? '/recruiter/login'
+        : '/signin';
+
   return (
     <div className="h-screen flex overflow-hidden">
-      {/* Left Side - Form */}
       <div className="w-full lg:w-2/5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-5 bg-white overflow-y-auto">
         <div className="max-w-md w-full mx-auto lg:mx-0">
-          {/* Logo */}
           <div className="mb-2 sm:mb-3 -ml-2">
             <img
               src="/images/logo.png"
@@ -131,16 +198,14 @@ function UploadProfilePhoto() {
             />
           </div>
 
-          {/* Welcome Text */}
           <p className="text-sm text-[#003971] mb-1">Welcome to MaritimeLink</p>
 
-          {/* Heading */}
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Profile Photo</h1>
 
-          {/* Subtitle */}
-          <p className="text-sm text-gray-700 mb-4">Upload a clear professional photo of your face.</p>
+          <p className="text-sm text-gray-700 mb-4">
+            Upload a clear professional photo of your face. You can skip and add one later from your profile settings.
+          </p>
 
-          {/* Error Message */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600 flex items-center gap-2">
@@ -152,9 +217,7 @@ function UploadProfilePhoto() {
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Upload Area */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -203,7 +266,6 @@ function UploadProfilePhoto() {
               )}
             </div>
 
-            {/* Next Button */}
             <button
               type="submit"
               disabled={loading}
@@ -221,12 +283,20 @@ function UploadProfilePhoto() {
                 'Continue'
               )}
             </button>
+
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={loading}
+              className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-50 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+            >
+              Skip for now
+            </button>
           </form>
 
-          {/* Login Link */}
           <p className="mt-6 text-sm text-gray-700">
             Already have an account?{' '}
-            <Link to="/signin" className="text-[#003971] font-medium hover:underline">
+            <Link to={loginPath} className="text-[#003971] font-medium hover:underline">
               Login
             </Link>
           </p>

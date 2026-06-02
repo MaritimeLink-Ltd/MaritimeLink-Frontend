@@ -1,3 +1,5 @@
+import { formatDisplayDate } from '../../utils/formatDate';
+
 {/* Academic Qualification Section - For Officers */ }
 {
     userData.userType === 'officer' && userData.academicQualifications && (
@@ -57,8 +59,8 @@
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.stcwQualification}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -93,8 +95,8 @@
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateName}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -129,8 +131,8 @@
                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.documentName}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.documentNumber}</td>
                                 <td className="px-5 py-4 text-sm text-gray-700">{doc.issuingCountry}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{doc.dateOfIssue}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700">{doc.validTill}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.dateOfIssue)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.validTill)}</td>
                             </tr>
                         ))}
                     </tbody>

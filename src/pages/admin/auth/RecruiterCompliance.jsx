@@ -81,12 +81,8 @@ function RecruiterCompliance() {
                 howDidYouHear: formData.hearAboutUs === 'Other' ? formData.otherHearAboutUs : formData.hearAboutUs
             });
 
-            // Navigate straight to dashboard so the KYC popup can be shown
-            if (userType === 'training-provider') {
-                navigate('/trainingprovider-dashboard');
-            } else {
-                navigate('/recruiter-dashboard');
-            }
+            // Optional profile photo before dashboard (KYC popup can follow there)
+            navigate('/upload-profile-photo', { state: { userType } });
         } catch (err) {
             console.error('Compliance submission error:', err);
             setError(err.data?.message || err.message || 'Failed to submit compliance. Please try again.');

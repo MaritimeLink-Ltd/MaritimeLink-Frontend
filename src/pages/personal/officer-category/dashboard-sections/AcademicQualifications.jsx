@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
@@ -238,14 +239,12 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                     onChange={handleAcademicChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
-                  <input
-                    type="text"
+                  <CountrySelect
                     id="institutionCountry"
                     name="institutionCountry"
-                    placeholder="Institution Country"
+                    placeholder="Select institution country"
                     value={currentAcademic.institutionCountry}
                     onChange={handleAcademicChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -368,14 +367,12 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                 <label htmlFor="stcwIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="stcwIssuingCountry"
                   name="issuingCountry"
-                  placeholder="Enter country name"
+                  placeholder="Select issuing country"
                   value={currentStcw.issuingCountry}
                   onChange={handleStcwChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 

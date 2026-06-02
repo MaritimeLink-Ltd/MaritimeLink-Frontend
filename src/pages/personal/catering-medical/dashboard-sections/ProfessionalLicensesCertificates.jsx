@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -240,14 +241,12 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
                 <label htmlFor="issuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="issuingCountry"
                   name="issuingCountry"
-                  placeholder="Enter issuing authority name"
+                  placeholder="Select issuing country"
                   value={currentLicense.issuingCountry}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -358,14 +357,12 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
                 <label htmlFor="certificateCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="certificateCountry"
                   name="issuingCountry"
-                  placeholder="Enter issuing authority name"
+                  placeholder="Select issuing country"
                   value={currentCertificate.issuingCountry}
                   onChange={handleCertificateChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 

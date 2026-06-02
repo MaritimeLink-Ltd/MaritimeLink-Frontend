@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
+import CountrySelect from '../../../components/common/CountrySelect';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 /** Unwrap `{ data: T }` or return root (GET lookup). */
@@ -313,11 +314,10 @@ function RecruiterCompanyDetails() {
 
                         {/* Country */}
                         <div>
-                            <input
+                            <CountrySelect
                                 name="country"
-                                type="text"
-                                placeholder="Country"
-                                className="block w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm"
+                                placeholder="Select country"
+                                className="block w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971] text-sm bg-white"
                                 value={formData.country}
                                 onChange={handleChange}
                             />

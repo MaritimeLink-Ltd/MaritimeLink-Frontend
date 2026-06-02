@@ -3,6 +3,7 @@ import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
     const fileInputRef = useRef(null);
@@ -414,13 +415,12 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                 <label className="block text-sm font-medium text-gray-700">
                                     Issuing Country <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="text"
+                                <CountrySelect
                                     name="issuingCountry"
                                     value={formData.issuingCountry}
                                     onChange={handleInputChange}
-                                    placeholder="Enter issuing country"
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
+                                    placeholder="Select issuing country"
+                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600 bg-white"
                                 />
                             </div>
 

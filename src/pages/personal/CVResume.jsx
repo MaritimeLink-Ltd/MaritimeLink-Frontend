@@ -2,9 +2,13 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiShare2, FiDownload, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
+import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
+import ResumeExportMenu from '../../components/resume/ResumeExportMenu';
+import { shareOrDownloadFile } from '../../utils/shareFile';
+import toast, { Toaster } from 'react-hot-toast';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../services/resumeService';
+import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const CVResume = ({ isReadOnly = false, resumeData = null }) => {
@@ -59,14 +63,6 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                 const refList = data.referees || [];
 
                 const getArray = (arr) => Array.isArray(arr) ? arr : [];
-
-                const formatDateRange = (start, end) => {
-                    if (!start && !end) return '';
-                    const formatOpts = { day: 'numeric', month: 'short', year: 'numeric' };
-                    const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : '';
-                    const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'Till Date';
-                    return `${s} ${s && e ? 'To' : ''} ${e}`.trim();
-                };
 
                 return {
                     ...prevData,
@@ -212,54 +208,52 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         navigate(dashboardMap[userData.userType] || '/officer-dashboard');
     };
 
-    const handleShareResume = () => {
-        console.log('Share Resume clicked');
+    const buildResumePdfBlob = async () => {
+        const element = cvRef.current;
+        if (!element) {
+            throw new Error('Resume content is not ready.');
+        }
+
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#F5F7FA',
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = pdfWidth / imgWidth;
+        const pdfImgHeight = imgHeight * ratio;
+
+        let heightLeft = pdfImgHeight;
+        let position = 0;
+        let page = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            page++;
+            position = -pdfHeight * page;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
+            heightLeft -= pdfHeight;
+        }
+
+        return pdf.output('blob');
     };
 
     const handleDownloadPDF = async () => {
-        const element = cvRef.current;
-        if (!element) return;
-
-        // Show loading state
         document.body.style.cursor = 'wait';
 
         try {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#F5F7FA'
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = pdfWidth / imgWidth;
-            const pdfImgHeight = imgHeight * ratio;
-
-            let heightLeft = pdfImgHeight;
-            let position = 0;
-            let page = 0;
-
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                page++;
-                position = -pdfHeight * page;
-
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImgHeight);
-                heightLeft -= pdfHeight;
-
-            }
-            const fileName = `${userData.name.replace(/\s+/g, '_')}_CV.pdf`;
-
-            // Manual download to ensure filename
-            const blob = pdf.output('blob');
+            const blob = await buildResumePdfBlob();
+            const fileName = `${(userData.name || 'Resume').replace(/\s+/g, '_')}_CV.pdf`;
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
@@ -270,7 +264,44 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
             URL.revokeObjectURL(url);
         } catch (err) {
             console.error('PDF failed', err);
-            alert('Failed to download PDF. Please try again.');
+            alert(err?.message || 'Failed to download PDF. Please try again.');
+        } finally {
+            document.body.style.cursor = 'default';
+        }
+    };
+
+    const handleShareResume = async () => {
+        document.body.style.cursor = 'wait';
+
+        try {
+            const safeName = (userData.name || 'Resume').replace(/\s+/g, '_');
+            const fileName = `${safeName}_CV.pdf`;
+            const blob = await buildResumePdfBlob();
+
+            const result = await shareOrDownloadFile({
+                blob,
+                fileName,
+                title: `${userData.name || 'My'} Resume`,
+                text: 'My professional resume from MaritimeLink',
+            });
+
+            if (result === 'shared') {
+                toast.success('Resume shared successfully.', { position: 'top-right' });
+            } else if (result === 'downloaded') {
+                toast.success(
+                    'Resume PDF downloaded. Attach it from your Downloads folder to share.',
+                    { position: 'top-right', duration: 5000 },
+                );
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') {
+                return;
+            }
+            console.error('Share failed', err);
+            toast.error(
+                err?.message || 'Could not share resume. Try Download PDF instead.',
+                { position: 'top-right' },
+            );
         } finally {
             document.body.style.cursor = 'default';
         }
@@ -303,6 +334,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
 
     return (
         <div className="h-full flex flex-col overflow-hidden bg-[#F5F7FA]">
+            <Toaster position="top-right" />
             {/* Dev Toolbar */}
             {/* Removed Preview Mode toggle - category is now automatic based on session */}
 
@@ -341,19 +373,10 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                     >
                                         <FiEdit size={18} />
                                     </button>
-                                    <button
-                                        onClick={handleDownloadPDF}
-                                        className="hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px]"
-                                    >
-                                        <FiDownload size={16} />
-                                        <span className="font-medium text-sm">Download PDF</span>
-                                    </button>
-                                    <button
-                                        onClick={handleDownloadPDF}
-                                        className="sm:hidden p-2.5 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#152b47] transition-colors shadow-sm min-h-[44px] min-w-[44px] flex items-center justify-center"
-                                    >
-                                        <FiDownload size={18} />
-                                    </button>
+                                    <ResumeExportMenu
+                                        onShare={handleShareResume}
+                                        onDownload={handleDownloadPDF}
+                                    />
                                 </div>
                             </div>
                         </nav>
@@ -471,8 +494,8 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.license}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.licenseNumber}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.issuingCountry}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{license.dateOfIssue}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{license.validTill}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.dateOfIssue)}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.validTill)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -507,8 +530,8 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{endorsement.endorsement}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{endorsement.issuingCountry}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{endorsement.dateOfIssue}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{endorsement.validTill}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.dateOfIssue)}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.validTill)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -617,8 +640,8 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.stcwQualification}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -651,8 +674,8 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateName}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.dateOfIssue}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.validTill}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -685,8 +708,8 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                     <td className="px-5 py-4 text-sm text-gray-700">{doc.documentName}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{doc.documentNumber}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{doc.issuingCountry}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{doc.dateOfIssue}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{doc.validTill}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.dateOfIssue)}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.validTill)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

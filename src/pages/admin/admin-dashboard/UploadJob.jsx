@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2, Trash2 } from 'lucide-react';
 import jobService from '../../../services/jobService';
+import { COUNTRY_NAMES } from '../../../utils/countries';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
@@ -102,7 +103,7 @@ function UploadJob({ onBack: onBackProp }) {
 
     const categories = ['Officer', 'Ratings & Crew', 'Catering & Medical'];
     const contractTypes = ['Temporary', 'Contract', 'Permanent'];
-    const regions = ['Global', 'UK', 'India', 'Singapore', 'Middle East', 'Europe', 'Southeast Asia', 'Africa'];
+    const regions = ['Global', ...COUNTRY_NAMES];
 
     const handleNext = () => {
         setStep(2);

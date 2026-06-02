@@ -146,7 +146,6 @@ class ResumeService {
                         documentNumber: m.certificateNumber || m.documentNumber,
                         issuingCountry: m.issuingCountry,
                         city: m.city || null,
-                        institutionCountry: m.institutionCountry || null,
                         issueDate: m.dateOfIssue || m.issueDate || null,
                         expiryDate: m.validTill || m.expiryDate || null,
                         type: "MEDICAL"
@@ -409,7 +408,6 @@ class ResumeService {
                 documentNumber: data.certificateNumber || data.documentNumber,
                 issuingCountry: data.issuingCountry || '',
                 city: data.city || '',
-                institutionCountry: data.institutionCountry || '',
                 issueDate: data.dateOfIssue || '',
                 expiryDate: data.validTill || '',
                 type: data.type // 'MEDICAL' or 'TRAVEL'
@@ -621,7 +619,6 @@ class ResumeService {
                 medicalDocuments: medDocs.map(m => ({
                     certificateName: m.name || m.certificate_name, certificateNumber: m.documentNumber || m.document_number,
                     issuingCountry: m.issuingCountry || m.issuing_country, city: m.city || '',
-                    institutionCountry: m.institutionCountry || m.institution_country || '',
                     dateOfIssue: m.issueDate || m.issue_date, validTill: m.expiryDate || m.expiry_date,
                     id: Date.now() + Math.random()
                 })),

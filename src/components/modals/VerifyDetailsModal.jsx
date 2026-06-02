@@ -1,6 +1,7 @@
 import { X, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ModalOverlay from '../common/ModalOverlay';
+import CountrySelect from '../common/CountrySelect';
 
 const DOCUMENT_TYPE_LABELS = {
     passport: 'Passport',
@@ -260,12 +261,15 @@ function VerifyDetailsModal({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Issuing Country <span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="text"
+                        <CountrySelect
+                            name="issuingCountry"
                             value={formData.issuingCountry}
                             onChange={(e) => { setFormData({ ...formData, issuingCountry: e.target.value }); clearError('issuingCountry'); }}
                             className={fieldClass('issuingCountry')}
                             disabled={isSubmitting}
+                            placeholder="Select issuing country"
+                            includeEmpty={false}
+                            required
                         />
                         {errors.issuingCountry && <p className="text-xs text-red-500 mt-1">{errors.issuingCountry}</p>}
                     </div>

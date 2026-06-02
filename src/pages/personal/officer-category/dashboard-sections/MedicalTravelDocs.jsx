@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
@@ -16,7 +17,6 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     certificateNumber: '',
     issuingCountry: '',
     city: '',
-    institutionCountry: '',
     dateOfIssue: '',
     validTill: ''
   });
@@ -90,7 +90,6 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
       certificateNumber: '',
       issuingCountry: '',
       city: '',
-      institutionCountry: '',
       dateOfIssue: '',
       validTill: ''
     });
@@ -200,7 +199,6 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                     <p className="text-xs text-gray-600">
                       {doc.issuingCountry}
                       {doc.city ? `, ${doc.city}` : ''}
-                      {doc.institutionCountry ? ` (${doc.institutionCountry})` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
                       {doc.dateOfIssue && doc.validTill ?
@@ -244,35 +242,29 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                 />
               </div>
 
-              <div>
-                <label htmlFor="medicalIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
-                  Issuing Country
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                  <input
-                    type="text"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="medicalIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
+                    Issuing Country
+                  </label>
+                  <CountrySelect
                     id="medicalIssuingCountry"
                     name="issuingCountry"
-                    placeholder="Enter country name"
+                    placeholder="Select issuing country"
                     value={currentMedical.issuingCountry}
                     onChange={handleMedicalChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
+                </div>
+                <div>
+                  <label htmlFor="medicalInstitutionCity" className="block text-gray-700 font-medium mb-1 text-sm">
+                    City
+                  </label>
                   <input
                     type="text"
                     id="medicalInstitutionCity"
                     name="city"
-                    placeholder="City"
+                    placeholder="Enter city"
                     value={currentMedical.city}
-                    onChange={handleMedicalChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
-                  />
-                  <input
-                    type="text"
-                    id="medicalInstitutionCountry"
-                    name="institutionCountry"
-                    placeholder="Institution Country"
-                    value={currentMedical.institutionCountry}
                     onChange={handleMedicalChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                   />
@@ -387,14 +379,12 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                 <label htmlFor="travelIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="travelIssuingCountry"
                   name="issuingCountry"
-                  placeholder="Enter country name"
+                  placeholder="Select issuing country"
                   value={currentTravel.issuingCountry}
                   onChange={handleTravelChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 

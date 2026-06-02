@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
-import { countryCodes } from '../../../../utils/countryCodes';
+import { COUNTRIES } from '../../../../utils/countries';
 import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 
 const courseTitleOptions = [
@@ -313,9 +313,9 @@ export default function EditCourse() {
                                     onChange={handleChange}
                                     className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
                                 >
-                                    {countryCodes.map((item) => (
-                                        <option key={item.country} value={item.country}>
-                                            {item.country}
+                                    {COUNTRIES.map((item) => (
+                                        <option key={item.code} value={item.name}>
+                                            {item.emoji ? `${item.emoji} ` : ''}{item.name}
                                         </option>
                                     ))}
                                 </select>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
@@ -207,14 +208,12 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
             <label htmlFor="flag" className="block text-gray-700 font-medium mb-1 text-sm">
               Flag
             </label>
-            <input
-              type="text"
+            <CountrySelect
               id="flag"
               name="flag"
-              placeholder="Enter country name"
+              placeholder="Select flag country"
               value={currentSeaService.flag}
               onChange={handleSeaServiceChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
             />
           </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const PersonalInfo = ({ onNext, initialData = {}, isLoading = false, apiError = null }) => {
   const [formData, setFormData] = useState({
@@ -174,13 +175,11 @@ const PersonalInfo = ({ onNext, initialData = {}, isLoading = false, apiError = 
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
               />
-              <input
-                type="text"
+              <CountrySelect
                 name="country"
-                placeholder="Country"
+                placeholder="Select country"
                 value={formData.country}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
               />
             </div>
           </div>

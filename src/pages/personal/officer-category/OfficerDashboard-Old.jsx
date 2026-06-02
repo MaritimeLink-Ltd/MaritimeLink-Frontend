@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { countryCodes } from '../../../utils/countryCodes';
+import CountrySelect from '../../../components/common/CountrySelect';
 
 const OfficerDashboard = () => {
   const navigate = useNavigate();
@@ -873,14 +874,13 @@ const OfficerDashboard = () => {
                         <label htmlFor="issuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                           Issuing Country
                         </label>
-                        <input
-                          type="text"
+                        <CountrySelect
                           id="issuingCountry"
                           name="issuingCountry"
-                          placeholder="Enter issuing authority name"
+                          placeholder="Select issuing country"
                           value={currentLicense.issuingCountry}
                           onChange={handleLicenseChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                         />
                       </div>
 
@@ -991,14 +991,13 @@ const OfficerDashboard = () => {
                         <label htmlFor="endorsementCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                           Issuing Country
                         </label>
-                        <input
-                          type="text"
+                        <CountrySelect
                           id="endorsementCountry"
                           name="issuingCountry"
-                          placeholder="Enter issuing authority name"
+                          placeholder="Select issuing country"
                           value={currentEndorsement.issuingCountry}
                           onChange={handleEndorsementChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                         />
                       </div>
 
@@ -1171,14 +1170,13 @@ const OfficerDashboard = () => {
                     <label htmlFor="flag" className="block text-gray-700 font-medium mb-1 text-sm">
                       Flag
                     </label>
-                    <input
-                      type="text"
+                    <CountrySelect
                       id="flag"
                       name="flag"
-                      placeholder="Enter country name"
+                      placeholder="Select flag country"
                       value={currentSeaService.flag}
                       onChange={handleSeaServiceChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                     />
                   </div>
 
@@ -1523,14 +1521,13 @@ const OfficerDashboard = () => {
                         <label htmlFor="stcwIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                           Issuing Country
                         </label>
-                        <input
-                          type="text"
+                        <CountrySelect
                           id="stcwIssuingCountry"
                           name="issuingCountry"
-                          placeholder="Enter country name"
+                          placeholder="Select issuing country"
                           value={currentStcw.issuingCountry}
                           onChange={handleStcwChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                         />
                       </div>
 
@@ -1696,14 +1693,13 @@ const OfficerDashboard = () => {
                         <label htmlFor="medicalIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                           Issuing Country
                         </label>
-                        <input
-                          type="text"
+                        <CountrySelect
                           id="medicalIssuingCountry"
                           name="issuingCountry"
-                          placeholder="Enter country name"
+                          placeholder="Select issuing country"
                           value={currentMedical.issuingCountry}
                           onChange={handleMedicalChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                         />
                       </div>
 
@@ -1814,14 +1810,13 @@ const OfficerDashboard = () => {
                         <label htmlFor="travelIssuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                           Issuing Country
                         </label>
-                        <input
-                          type="text"
+                        <CountrySelect
                           id="travelIssuingCountry"
                           name="issuingCountry"
-                          placeholder="Enter country name"
+                          placeholder="Select issuing country"
                           value={currentTravel.issuingCountry}
                           onChange={handleTravelChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm bg-white"
                         />
                       </div>
 

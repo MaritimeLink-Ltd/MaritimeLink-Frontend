@@ -3,6 +3,7 @@ import { ChevronLeft, Trash2, Loader2, FileText, AlertTriangle, X } from 'lucide
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { API_CONFIG } from '../../../../config/api.config';
+import { formatDisplayDate } from '../../../../utils/formatDate';
 
 const isInternalUrl = (url) => {
     try {
@@ -156,9 +157,8 @@ const DocumentDetail = ({ document, onBack, onDeleteSuccess }) => {
 
     // ── Date Formatter ────────────────────────────────────────────────────────
     const formatDate = (value) => {
-        if (!value) return 'N/A';
-        const parsed = new Date(value);
-        return isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString();
+        const formatted = formatDisplayDate(value);
+        return formatted || 'N/A';
     };
 
     // ─────────────────────────────────────────────────────────────────────────

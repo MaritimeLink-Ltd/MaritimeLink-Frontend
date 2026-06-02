@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CountrySelect from '../../../../components/common/CountrySelect';
 
 const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -224,14 +225,12 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                 <label htmlFor="issuingCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="issuingCountry"
                   name="issuingCountry"
-                  placeholder="Enter issuing authority name"
+                  placeholder="Select issuing country"
                   value={currentLicense.issuingCountry}
                   onChange={handleLicenseChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
@@ -308,13 +307,13 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
             <div className="space-y-4">
               <div>
                 <label htmlFor="endorsementName" className="block text-gray-700 font-medium mb-1 text-sm">
-                  License Name
+                  Endorsement Name
                 </label>
                 <input
                   type="text"
                   id="endorsementName"
                   name="licenseName"
-                  placeholder="Enter your license name"
+                  placeholder="Enter your endorsement name"
                   value={currentEndorsement.licenseName}
                   onChange={handleEndorsementChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
@@ -323,13 +322,13 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
 
               <div>
                 <label htmlFor="endorsementNumber" className="block text-gray-700 font-medium mb-1 text-sm">
-                  License Number
+                  Endorsement Number
                 </label>
                 <input
                   type="text"
                   id="endorsementNumber"
                   name="licenseNumber"
-                  placeholder="Enter license number"
+                  placeholder="Enter endorsement number"
                   value={currentEndorsement.licenseNumber}
                   onChange={handleEndorsementChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
@@ -340,14 +339,12 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                 <label htmlFor="endorsementCountry" className="block text-gray-700 font-medium mb-1 text-sm">
                   Issuing Country
                 </label>
-                <input
-                  type="text"
+                <CountrySelect
                   id="endorsementCountry"
                   name="issuingCountry"
-                  placeholder="Enter issuing authority name"
+                  placeholder="Select issuing country"
                   value={currentEndorsement.issuingCountry}
                   onChange={handleEndorsementChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
                 />
               </div>
 
