@@ -254,6 +254,7 @@ function ComplianceProfile() {
 
             const response = await httpClient.patch(endpoint, {
                 status: 'REJECTED',
+                rejectionReason: rejectReason.trim(),
             });
 
             const updated = response?.data?.kyc || response?.data?.updated || response;
