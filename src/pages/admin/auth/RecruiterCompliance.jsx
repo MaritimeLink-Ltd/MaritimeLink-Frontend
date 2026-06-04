@@ -81,8 +81,9 @@ function RecruiterCompliance() {
                 howDidYouHear: formData.hearAboutUs === 'Other' ? formData.otherHearAboutUs : formData.hearAboutUs
             });
 
-            // Optional profile photo before dashboard (KYC popup can follow there)
-            navigate('/upload-profile-photo', { state: { userType } });
+            navigate('/accept-terms', {
+                state: { returnTo: '/upload-profile-photo', userType },
+            });
         } catch (err) {
             console.error('Compliance submission error:', err);
             setError(err.data?.message || err.message || 'Failed to submit compliance. Please try again.');

@@ -7,6 +7,9 @@ import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
 import { mergeAuthUserProfile, syncKycSubmittedFlag } from '../utils/kycStatus';
+import { markTermsAcceptedLocally } from '../utils/termsAcceptance';
+import recruiterSettingsService from './recruiterSettingsService';
+import trainerSettingsService from './trainerSettingsService';
 
 const emitAuthTokenChanged = () => {
     if (typeof window !== 'undefined') {
@@ -569,6 +572,32 @@ class AuthService {
         } catch (error) {
             console.error('Get professional account error:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Record Terms & Conditions acceptance for the active user (post-signup gate).
+     * Persists locally; syncs to API when authenticated.
+     */
+    async acceptTerms(userType = 'professional') {
+        markTermsAcceptedLocally();
+
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            return { status: 'success', data: { agreedToTerms: true } };
+        }
+
+        try {
+            if (userType === 'professional') {
+                return await httpClient.patch(API_ENDPOINTS.PROFESSIONAL.ME, { agreedToTerms: true });
+            }
+            if (userType === 'training-provider') {
+                return await trainerSettingsService.updateProfile({ agreedToTerms: true });
+            }
+            return await recruiterSettingsService.updateProfile({ agreedToTerms: true });
+        } catch (error) {
+            console.warn('Terms acceptance API sync failed; stored locally.', error);
+            return { status: 'success', data: { agreedToTerms: true } };
         }
     }
 

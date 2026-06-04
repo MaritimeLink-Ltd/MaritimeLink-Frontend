@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
+import {
+    hasAcceptedTermsLocally,
+    profileIndicatesTermsAccepted,
+    syncTermsAcceptedFromProfile,
+} from '../../../utils/termsAcceptance';
 
 function SignIn() {
   const navigate = useNavigate();
@@ -56,8 +61,13 @@ function SignIn() {
         }
       }
 
-      // Navigate to personal dashboard
-      navigate('/personal/dashboard');
+      if (syncTermsAcceptedFromProfile(user) || hasAcceptedTermsLocally() || profileIndicatesTermsAccepted(user)) {
+        navigate('/personal/dashboard');
+      } else {
+        navigate('/accept-terms', {
+          state: { returnTo: '/personal/dashboard', userType: 'professional' },
+        });
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

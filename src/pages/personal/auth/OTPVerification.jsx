@@ -82,8 +82,9 @@ function OTPVerification() {
 
       console.log('OTP verified successfully:', response);
 
-      // Navigate to select profession page (Changed flow)
-      navigate('/select-profession');
+      navigate('/accept-terms', {
+        state: { returnTo: '/select-profession', userType: 'professional' },
+      });
     } catch (err) {
       console.error('OTP verification error:', err);
       setError(err.data?.message || err.message || 'Invalid or expired OTP. Please try again.');

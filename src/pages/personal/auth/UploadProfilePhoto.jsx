@@ -4,6 +4,7 @@ import authService from '../../../services/authService';
 import recruiterSettingsService from '../../../services/recruiterSettingsService';
 import trainerSettingsService from '../../../services/trainerSettingsService';
 import { persistProfilePhotoCache } from '../../../utils/profilePhoto';
+import useTermsAcceptance from '../../../hooks/useTermsAcceptance';
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
 const MAX_SIZE_MB = 5;
@@ -44,6 +45,7 @@ function UploadProfilePhoto() {
   const location = useLocation();
 
   const userType = useMemo(() => resolveUserType(location), [location.state?.userType]);
+  useTermsAcceptance();
 
   const nextRoute = useMemo(() => {
     if (userType === 'recruiter') return AGENT_DASHBOARD_ROUTES.recruiter;

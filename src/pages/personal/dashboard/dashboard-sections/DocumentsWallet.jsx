@@ -13,7 +13,8 @@ import {
     Copy,
     Star
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import DocumentWalletSignupPromptModal from '../../../../components/modals/DocumentWalletSignupPromptModal';
 import UploadDocument from './UploadDocument';
 import EditDocument from './EditDocument';
 import DocumentDetail from './DocumentDetail';
@@ -24,8 +25,11 @@ import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.c
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 
+const WALLET_EXCLUDED_CATEGORIES = new Set(['CV_RESUME', 'COVER_LETTER']);
+
 const DocumentsWallet = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [view, setView] = useState('list'); // 'list', 'upload', 'edit', 'detail', 'category'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -39,6 +43,7 @@ const DocumentsWallet = () => {
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [showPremiumModal, setShowPremiumModal] = useState(false);
+    const [showSignupPrompt, setShowSignupPrompt] = useState(false);
     const [exportProgress, setExportProgress] = useState({ done: 0, total: 0, label: '' });
     const [exportError, setExportError] = useState('');
     const [generatedLink, setGeneratedLink] = useState('');
@@ -154,13 +159,21 @@ const DocumentsWallet = () => {
     }, []);
 
     const walletDocumentsForShare = useMemo(() => {
-        const EXCLUDED = new Set(['CV_RESUME', 'COVER_LETTER']);
-        return documents.filter((d) => d.category && !EXCLUDED.has(d.category));
+        return documents.filter((d) => d.category && !WALLET_EXCLUDED_CATEGORIES.has(d.category));
     }, [documents]);
 
+    useEffect(() => {
+        if (isLoading || !location.state?.showDocumentWalletPrompt) return;
+
+        navigate(location.pathname, { replace: true, state: {} });
+
+        if (walletDocumentsForShare.length === 0) {
+            setShowSignupPrompt(true);
+        }
+    }, [isLoading, location.state, location.pathname, navigate, walletDocumentsForShare.length]);
+
     const walletFolderRows = useMemo(() => {
-        const EXCLUDED = new Set(['CV_RESUME', 'COVER_LETTER']);
-        const walletDocs = documents.filter((d) => d.category && !EXCLUDED.has(d.category));
+        const walletDocs = documents.filter((d) => d.category && !WALLET_EXCLUDED_CATEGORIES.has(d.category));
         const docsByCategoryId = {};
         walletDocs.forEach((doc) => {
             const catId = getDocumentDisplayCategory(doc);
@@ -729,6 +742,15 @@ const DocumentsWallet = () => {
                     </div>
                 </div>
             )}
+
+            <DocumentWalletSignupPromptModal
+                isOpen={showSignupPrompt}
+                onClose={() => setShowSignupPrompt(false)}
+                onUpload={() => {
+                    setShowSignupPrompt(false);
+                    setView('upload');
+                }}
+            />
 
             {/* Premium Feature Modal */}
             {showPremiumModal && (

@@ -11,9 +11,11 @@ import AcademicQualifications from './dashboard-sections/AcademicQualifications'
 import MedicalTravelDocs from './dashboard-sections/MedicalTravelDocs';
 import BiometricsNextOfKin from './dashboard-sections/BiometricsNextOfKin';
 import Resume from '../dashboard/dashboard-sections/Resume';
+import useTermsAcceptance from '../../../hooks/useTermsAcceptance';
 
 const OfficerDashboard = () => {
   const navigate = useNavigate();
+  useTermsAcceptance();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
   const [completedSections, setCompletedSections] = useState([]);
@@ -340,9 +342,12 @@ const OfficerDashboard = () => {
       
       setShowSaveModal(true);
       // Auto close modal after 1.5 seconds and redirect
+      const completingSignup = activeSection > sections.length;
       setTimeout(() => {
         setShowSaveModal(false);
-        navigate('/personal/documents');
+        navigate('/personal/documents', {
+          state: completingSignup ? { showDocumentWalletPrompt: true } : undefined,
+        });
       }, 1500);
     } catch (error) {
       alert(getApiErrorMessage(error, 'Failed to save resume. Please try again.'));

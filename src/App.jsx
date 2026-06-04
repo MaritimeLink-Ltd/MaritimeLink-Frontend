@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import SignIn from './pages/personal/auth/SignIn';
 import SignUp from './pages/personal/auth/SignUp';
 import OTPVerification from './pages/personal/auth/OTPVerification';
+import AcceptTerms from './pages/auth/AcceptTerms';
 import SelectProfession from './pages/personal/auth/SelectProfession';
 import UploadProfilePhoto from './pages/personal/auth/UploadProfilePhoto';
 // ...existing code...
@@ -183,6 +184,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/otp-verification" element={<OTPVerification />} />
+          <Route path="/accept-terms" element={<AcceptTerms />} />
           <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />
           <Route path="/id-upload" element={<Navigate to="/upload-profile-photo" replace />} />
           <Route path="/select-profession" element={<SelectProfession />} />

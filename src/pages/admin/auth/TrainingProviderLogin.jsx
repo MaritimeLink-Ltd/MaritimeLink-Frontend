@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
+import {
+    hasAcceptedTermsLocally,
+    profileIndicatesTermsAccepted,
+    syncTermsAcceptedFromProfile,
+} from '../../../utils/termsAcceptance';
 
 function TrainingProviderLogin() {
     const navigate = useNavigate();
@@ -52,12 +57,23 @@ function TrainingProviderLogin() {
                 status === 'active' ||
                 status === 'approved';
 
+            const termsOk =
+                syncTermsAcceptedFromProfile(profile) ||
+                hasAcceptedTermsLocally() ||
+                profileIndicatesTermsAccepted(profile);
+
+            const dashboardPath = '/trainingprovider-dashboard';
+
             if (approved) {
                 localStorage.setItem('trainingProviderAdminVerified', 'true');
-                navigate('/trainingprovider-dashboard');
+            }
+
+            if (termsOk) {
+                navigate(dashboardPath);
             } else {
-                // Pending admin approval: still land on dashboard so onboarding can continue
-                navigate('/trainingprovider-dashboard');
+                navigate('/accept-terms', {
+                    state: { returnTo: dashboardPath, userType: 'training-provider' },
+                });
             }
         } catch (err) {
             console.error('Login error:', err);

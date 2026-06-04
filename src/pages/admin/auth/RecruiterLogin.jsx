@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
+import {
+    hasAcceptedTermsLocally,
+    profileIndicatesTermsAccepted,
+    syncTermsAcceptedFromProfile,
+} from '../../../utils/termsAcceptance';
 
 function RecruiterLogin() {
     const navigate = useNavigate();
@@ -52,10 +57,20 @@ function RecruiterLogin() {
             localStorage.setItem('userType', 'recruiter');
             localStorage.setItem('adminUserType', 'recruiter');
 
+            const termsOk =
+                syncTermsAcceptedFromProfile(profile) ||
+                hasAcceptedTermsLocally() ||
+                profileIndicatesTermsAccepted(profile);
+
             if (approved) {
                 localStorage.setItem('recruiterAdminVerified', 'true');
-                // Recruiter is approved — go to dashboard
-                navigate('/recruiter-dashboard');
+                if (termsOk) {
+                    navigate('/recruiter-dashboard');
+                } else {
+                    navigate('/accept-terms', {
+                        state: { returnTo: '/recruiter-dashboard', userType: 'recruiter' },
+                    });
+                }
             } else {
                 // Recruiter is pending review — go to under review page
                 localStorage.setItem('adminUserType', 'recruiter');

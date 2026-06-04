@@ -20,6 +20,7 @@ import {
     shouldNotifyCandidateMessages,
     syncRecruiterNotificationPreferences,
 } from '../../../../utils/recruiterNotificationPreferences';
+import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 
 function initialsFromName(name) {
     const parts = String(name || '')
@@ -323,7 +324,9 @@ function TrainingProviderLayout() {
                             </div>
                         </div>
                     ) : (
-                        <Outlet />
+                        <TermsAcceptanceGuard>
+                            <Outlet />
+                        </TermsAcceptanceGuard>
                     )}
                 </main>
             </div>

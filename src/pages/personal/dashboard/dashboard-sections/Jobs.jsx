@@ -36,11 +36,38 @@ const DATE_POSTED_TO_API = {
     'Last 30 days': '30d',
 };
 
-const normalizeSearch = (value) => String(value || '').trim().toLowerCase();
+const trimSearchValue = (value) => String(value || '').trim();
 
 const formatJobCategory = (category) => API_CATEGORY_LABEL[String(category || '').trim()] || String(category || '');
 
 const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim()] || String(jobType || '');
+
+const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
+    const kw = trimSearchValue(keywords).toLowerCase();
+    const loc = trimSearchValue(location).toLowerCase();
+    const officer = trimSearchValue(officerType).toLowerCase();
+
+    return jobs.filter((job) => {
+        if (kw) {
+            const haystack = [job.title, job.company, job.jobDescription]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            if (!haystack.includes(kw)) return false;
+        }
+        if (loc && !String(job.location || '').toLowerCase().includes(loc)) {
+            return false;
+        }
+        if (officer) {
+            const haystack = [job.title, job.category, job.jobDescription]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            if (!haystack.includes(officer)) return false;
+        }
+        return true;
+    });
+};
 
 const Jobs = () => {
     const navigate = useNavigate();
@@ -60,7 +87,11 @@ const Jobs = () => {
     });
     const [tempFilters, setTempFilters] = useState({ ...filters });
     const [isFilterActive, setIsFilterActive] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchKeywords, setSearchKeywords] = useState('');
+    const [searchOfficerType, setSearchOfficerType] = useState('');
+    const [searchLocation, setSearchLocation] = useState('');
+    const [debouncedKeywords, setDebouncedKeywords] = useState('');
+    const [debouncedLocation, setDebouncedLocation] = useState('');
 
     const categoryRoles = {
         'Deck Officer': ['Master', 'Chief Officer', 'Second Officer', 'Third Officer', 'Deck Cadet'],
@@ -76,13 +107,49 @@ const Jobs = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-    const buildJobsQuery = useCallback(() => ({
-        search: normalizeSearch(searchQuery) || undefined,
-        category: filters.category ? CATEGORY_TO_API[filters.category] || filters.category : undefined,
-        jobType: filters.jobType ? JOB_TYPE_TO_API[filters.jobType] || filters.jobType : undefined,
-        datePosted: filters.datePosted ? DATE_POSTED_TO_API[filters.datePosted] || filters.datePosted : undefined,
-        role: filters.role || undefined,
-    }), [searchQuery, filters.category, filters.role, filters.datePosted, filters.jobType]);
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedKeywords(trimSearchValue(searchKeywords)), 400);
+        return () => clearTimeout(timer);
+    }, [searchKeywords]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedLocation(trimSearchValue(searchLocation)), 400);
+        return () => clearTimeout(timer);
+    }, [searchLocation]);
+
+    const buildJobsQuery = useCallback(() => {
+        const effectiveCategory = searchOfficerType || filters.category;
+        const categoryApi = effectiveCategory
+            ? CATEGORY_TO_API[effectiveCategory] || effectiveCategory
+            : undefined;
+        const role =
+            filters.role && (!searchOfficerType || searchOfficerType === filters.category)
+                ? filters.role
+                : undefined;
+
+        return {
+            search: debouncedKeywords || undefined,
+            location: debouncedLocation || undefined,
+            officerType: searchOfficerType || undefined,
+            category: categoryApi,
+            jobType: filters.jobType ? JOB_TYPE_TO_API[filters.jobType] || filters.jobType : undefined,
+            datePosted: filters.datePosted ? DATE_POSTED_TO_API[filters.datePosted] || filters.datePosted : undefined,
+            role,
+        };
+    }, [
+        debouncedKeywords,
+        debouncedLocation,
+        searchOfficerType,
+        filters.category,
+        filters.role,
+        filters.datePosted,
+        filters.jobType,
+    ]);
+
+    const isSearchActive =
+        Boolean(trimSearchValue(searchKeywords)) ||
+        Boolean(trimSearchValue(searchLocation)) ||
+        Boolean(searchOfficerType);
 
     const handleJobClick = async (job) => {
         setSelectedJob(job);
@@ -146,9 +213,15 @@ const Jobs = () => {
                             whatWeLookFor: 'We are looking for dedicated professionals to join our team.',
                             responsibilities: apiJob.description ? apiJob.description.split('\n').filter(line => line.trim() !== '') : []
                         }));
-                    setAllJobs(mappedJobs);
+
+                    const visibleJobs = applyClientJobSearch(mappedJobs, {
+                        keywords: debouncedKeywords,
+                        location: debouncedLocation,
+                        officerType: searchOfficerType,
+                    });
+                    setAllJobs(visibleJobs);
                     setSelectedJob((current) => {
-                        if (current && mappedJobs.some((job) => job.id === current.id)) {
+                        if (current && visibleJobs.some((job) => job.id === current.id)) {
                             return current;
                         }
                         return null;
@@ -176,20 +249,61 @@ const Jobs = () => {
                         <p className="text-gray-500 mt-1 text-base sm:text-lg">Jobs based on your resume</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1 max-w-2xl justify-end">
-                        {/* Search Bar */}
-                        <div className="relative w-full sm:max-w-xs">
-                            <input
-                                type="text"
-                                placeholder="Search by title or company..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
-                            />
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <div className="flex flex-col gap-3 w-full lg:flex-1 lg:max-w-4xl lg:justify-end">
+                        {/* Search: keywords, officer type, location */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                            <div className="relative flex-1 min-w-0">
+                                <input
+                                    type="text"
+                                    placeholder="Keywords (title, company...)"
+                                    value={searchKeywords}
+                                    onChange={(e) => setSearchKeywords(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                                />
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            </div>
+
+                            <select
+                                value={searchOfficerType}
+                                onChange={(e) => setSearchOfficerType(e.target.value)}
+                                className="w-full sm:w-48 py-2.5 px-4 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm text-gray-700 bg-white"
+                                aria-label="Officer type"
+                            >
+                                <option value="">All officer types</option>
+                                {Object.keys(categoryRoles).map((type) => (
+                                    <option key={type} value={type}>
+                                        {type}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div className="relative w-full sm:w-44 min-w-0">
+                                <input
+                                    type="text"
+                                    placeholder="Location"
+                                    value={searchLocation}
+                                    onChange={(e) => setSearchLocation(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#003971] focus:border-transparent text-sm"
+                                />
+                                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                            </div>
+
+                            {isSearchActive && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchKeywords('');
+                                        setSearchOfficerType('');
+                                        setSearchLocation('');
+                                    }}
+                                    className="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                                >
+                                    Clear search
+                                </button>
+                            )}
                         </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end">
                             <button
                                 onClick={() => navigate('/personal/my-jobs')}
                                 className="flex items-center justify-center gap-2 bg-[#003971] text-white px-4 sm:px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#002b54] transition-colors min-h-[44px] flex-1 sm:flex-initial"
@@ -233,7 +347,7 @@ const Jobs = () => {
                         <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
                             <Briefcase size={48} className="text-gray-300 mb-4" strokeWidth={1.5} />
                             <p className="text-lg font-medium text-gray-700">No jobs found</p>
-                            <p className="text-sm mt-1">Adjust your filters or try a different search</p>
+                            <p className="text-sm mt-1">Try different keywords, officer type, location, or filters</p>
                         </div>
                     ) : (
                         jobs.map((job) => (

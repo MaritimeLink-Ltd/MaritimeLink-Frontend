@@ -19,6 +19,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
 import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
+import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
@@ -317,7 +318,9 @@ function PersonalDashboardLayout() {
                                 </div>
                             </div>
                         ) : (
-                            <Outlet />
+                            <TermsAcceptanceGuard>
+                                <Outlet />
+                            </TermsAcceptanceGuard>
                         )}
                     </div>
                 </main>

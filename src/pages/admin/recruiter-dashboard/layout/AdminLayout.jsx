@@ -15,6 +15,7 @@ import {
 import authService from '../../../../services/authService';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
+import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 import { connectSocket } from '../../../../services/socketClient';
 import {
     playRecruiterDesktopSound,
@@ -337,7 +338,9 @@ function AdminLayout() {
                             </div>
                         </div>
                     ) : (
-                        <Outlet />
+                        <TermsAcceptanceGuard>
+                            <Outlet />
+                        </TermsAcceptanceGuard>
                     )}
                 </main>
             </div>
