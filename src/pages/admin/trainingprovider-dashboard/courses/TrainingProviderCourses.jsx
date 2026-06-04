@@ -9,6 +9,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
+import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
 const statusStyles = {
@@ -54,7 +55,7 @@ function TrainingProviderCourses() {
         const totalSessions = coursesList.reduce((acc, course) => acc + course.sessions, 0);
         const totalBookings = coursesList.reduce((acc, course) => acc + course.bookings, 0);
         const totalRevenue = coursesList.reduce((acc, course) => acc + (course.revenueValue || 0), 0);
-        const currencySymbol = coursesList.find((course) => course.currencySymbol)?.currencySymbol || '$';
+        const currencySymbol = coursesList.find((course) => course.currencySymbol)?.currencySymbol || '£';
 
         return [
             {
@@ -117,13 +118,18 @@ function TrainingProviderCourses() {
                         const numericPrice = Number(course.price || 0);
                         const bookings = sessionMetrics.bookings || course.enrolledCount || 0;
                         const revenueValue = sessionMetrics.revenue || numericPrice * bookings;
-                        const currencySymbol =
-                            course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : '';
+                        const currencySymbol = getCourseCurrencySymbol(course.currency);
+                        const rawInstructor = course.instructor || course.instructorName || '';
+                        const instructor =
+                            String(rawInstructor).trim() &&
+                            String(rawInstructor).trim().toUpperCase() !== 'TBD'
+                                ? String(rawInstructor).trim()
+                                : '';
 
                         return {
                             id: course.id,
                             name: course.title,
-                            instructor: 'TBD',
+                            instructor,
                             certificateType: course.category || course.courseType,
                             sessions: sessionsCount,
                             totalSeats: totalSeats,
@@ -359,9 +365,11 @@ function TrainingProviderCourses() {
                                                     <p className="font-semibold text-gray-900">
                                                         {course.name}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {course.instructor}
-                                                    </p>
+                                                    {course.instructor ? (
+                                                        <p className="text-xs text-gray-500">
+                                                            {course.instructor}
+                                                        </p>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </td>

@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import { COUNTRIES } from '../../../utils/countries';
+import { DEFAULT_COURSE_CURRENCY } from '../../../utils/courseCurrency';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -60,7 +61,7 @@ function CreateCourse() {
                 contractType: 'Full-time', // Defaulting as form doesn't capture
                 description: formData.description,
                 price: Number(formData.price) || 0,
-                currency: 'USD',
+                currency: DEFAULT_COURSE_CURRENCY,
                 courseType: 'INTERNAL' // Backend expects INTERNAL or EXTERNAL
             };
 
@@ -204,7 +205,7 @@ function CreateCourse() {
                             {/* Price */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                                    Price (USD)
+                                    Price (GBP)
                                 </label>
                                 <input
                                     type="number"

@@ -24,6 +24,34 @@ export function resolveProfilePhotoUrl({ profile = {}, savedPhoto = '' } = {}) {
     return null;
 }
 
+/**
+ * Display name for recruiter / training-provider header and welcome text.
+ */
+export function resolveRecruiterDisplayName(profile = {}, fallback = 'Recruiter') {
+    const firstName = String(profile.firstName || '').trim();
+    const lastName = String(profile.lastName || '').trim();
+    const combined = [firstName, lastName].filter(Boolean).join(' ').trim();
+    if (combined) return combined;
+
+    const fullName = String(
+        profile.fullName || profile.fullname || profile.name || '',
+    ).trim();
+    if (fullName) return fullName;
+
+    const email = String(profile.email || '').trim();
+    if (email) {
+        const localPart = email.split('@')[0] || '';
+        return localPart
+            .replace(/[._-]+/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    return fallback;
+}
+
 export function initialsFromName(name) {
     const parts = String(name || '')
         .trim()

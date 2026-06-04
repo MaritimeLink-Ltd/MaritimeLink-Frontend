@@ -6,6 +6,7 @@ import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import documentService from '../../../../services/documentService';
 import { stripePromise } from '../../../../lib/stripeClient';
+import { DEFAULT_COURSE_CURRENCY, formatCoursePrice } from '../../../../utils/courseCurrency';
 
 const COURSE_BOOKING_EXCLUDED_DOC_CATEGORIES = new Set([
     'APPLICATION_SUBMISSION',
@@ -433,7 +434,7 @@ const BookCourse = () => {
                 {/* Price */}
                 <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between mb-6">
                     <p className="text-sm text-gray-500">Total ({selectedSessionCount || 0} session{selectedSessionCount === 1 ? '' : 's'})</p>
-                    <p className="font-semibold text-gray-800">{course.currency} {totalAmount}</p>
+                    <p className="font-semibold text-gray-800">{formatCoursePrice(totalAmount, course.currency)}</p>
                 </div>
 
 
@@ -567,7 +568,7 @@ const BookCourse = () => {
                             <CoursePaymentForm
                                 clientSecret={checkoutSession.clientSecret}
                                 bookingId={checkoutSession.bookingId}
-                                payLabel={`Pay ${checkoutSession.currency} ${checkoutSession.amount}`}
+                                payLabel={`Pay ${formatCoursePrice(checkoutSession.amount, checkoutSession.currency || DEFAULT_COURSE_CURRENCY)}`}
                                 onAbandon={() => {
                                     setCheckoutSession(null);
                                     setCheckoutError(null);

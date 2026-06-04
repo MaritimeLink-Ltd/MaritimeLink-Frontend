@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -11,6 +11,11 @@ import {
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import trainerDashboardService from "../../../../services/trainerDashboardService";
+import SearchableFilterSelect from "../../../../components/common/SearchableFilterSelect";
+import {
+  buildCountryLocationFilterOptions,
+  filterRenewalRowsByLocation,
+} from "../../../../utils/trainerDemandLocationOptions";
 
 const periodTabs = ["30 Days", "60 Days", "90 Days"];
 
@@ -27,6 +32,7 @@ function ExpiringCertificatesOverview() {
   const [periodTab, setPeriodTab] = useState("30 Days");
   const [year, setYear] = useState("all");
   const [course, setCourse] = useState("all");
+  const [location, setLocation] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dashboardData, setDashboardData] = useState({
     summary: SUMMARY_FALLBACK,
@@ -55,6 +61,8 @@ function ExpiringCertificatesOverview() {
           period: periodQuery,
           year,
           course,
+          region: location !== "all" ? location : undefined,
+          city: location !== "all" ? location : undefined,
           search: searchTerm,
         });
 
@@ -87,9 +95,14 @@ function ExpiringCertificatesOverview() {
     return () => {
       alive = false;
     };
-  }, [course, periodQuery, searchTerm, year]);
+  }, [course, location, periodQuery, searchTerm, year]);
 
-  const filteredRows = dashboardData.renewalDemand;
+  const locationOptions = useMemo(() => buildCountryLocationFilterOptions(), []);
+
+  const filteredRows = useMemo(
+    () => filterRenewalRowsByLocation(dashboardData.renewalDemand, location),
+    [dashboardData.renewalDemand, location],
+  );
   const handleExportCSV = () => {
     const headers = ["Course", "Expiring", "Trend Change", "Primary Locations"];
     const csvRows = filteredRows.map((row) => [
@@ -177,6 +190,14 @@ function ExpiringCertificatesOverview() {
               { value: "gwo", label: "GWO Sea Survival" },
               { value: "medical", label: "Medical Care Onboard" },
             ]}
+          />
+          <SearchableFilterSelect
+            label="Location"
+            value={location}
+            onChange={setLocation}
+            options={locationOptions}
+            placeholder="Search country..."
+            minWidth="min-w-[200px]"
           />
         </div>
       </div>
@@ -343,6 +364,7 @@ function ExpiringCertificatesOverview() {
                             state: {
                               certificate: row.bucket || row.course,
                               period: "all",
+                              city: location !== "all" ? location : undefined,
                             },
                           })
                         }
@@ -366,7 +388,7 @@ function ExpiringCertificatesOverview() {
 
         {!loading && filteredRows.length === 0 && (
           <div className="py-12 text-center text-sm text-gray-500">
-            No results match your filters. Try adjusting period or course.
+            No results match your filters. Try adjusting period, course, or location.
           </div>
         )}
       </div>

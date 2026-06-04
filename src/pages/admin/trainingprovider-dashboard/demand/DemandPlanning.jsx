@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -19,6 +19,11 @@ import {
   Legend,
 } from "recharts";
 import trainerDashboardService from "../../../../services/trainerDashboardService";
+import SearchableFilterSelect from "../../../../components/common/SearchableFilterSelect";
+import {
+  buildCountryLocationFilterOptions,
+  filterRenewalRowsByLocation,
+} from "../../../../utils/trainerDemandLocationOptions";
 
 const SUMMARY_FALLBACK = {
   certificatesExpiring: 0,
@@ -42,6 +47,7 @@ function DemandPlanning() {
   const navigate = useNavigate();
   const [year, setYear] = useState("all");
   const [course, setCourse] = useState("all");
+  const [location, setLocation] = useState("all");
   const [rangeTab, setRangeTab] = useState("30 Days");
   const [searchTerm, setSearchTerm] = useState("");
   const [dashboardData, setDashboardData] = useState({
@@ -83,6 +89,8 @@ function DemandPlanning() {
           period: periodQuery,
           year,
           course,
+          region: location !== "all" ? location : undefined,
+          city: location !== "all" ? location : undefined,
           search: searchTerm,
         });
         if (!alive) return;
@@ -119,11 +127,16 @@ function DemandPlanning() {
     return () => {
       alive = false;
     };
-  }, [course, periodQuery, searchTerm, year]);
+  }, [course, location, periodQuery, searchTerm, year]);
+
+  const locationOptions = useMemo(() => buildCountryLocationFilterOptions(), []);
 
   const forecastData = dashboardData.forecast;
   const filteredEngagementCourses = dashboardData.engagementCourses;
-  const filteredRenewalDemand = dashboardData.renewalDemand;
+  const filteredRenewalDemand = useMemo(
+    () => filterRenewalRowsByLocation(dashboardData.renewalDemand, location),
+    [dashboardData.renewalDemand, location],
+  );
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -183,6 +196,14 @@ function DemandPlanning() {
               { value: "gwo", label: "GWO Sea Survival" },
               { value: "medical", label: "Medical Care Onboard" },
             ]}
+          />
+          <SearchableFilterSelect
+            label="Location"
+            value={location}
+            onChange={setLocation}
+            options={locationOptions}
+            placeholder="Search country..."
+            minWidth="min-w-[200px]"
           />
         </div>
       </div>
@@ -560,6 +581,7 @@ function DemandPlanning() {
                               state: {
                                 certificate: row.bucket || row.course,
                                 period: "all",
+                                city: location !== "all" ? location : undefined,
                               },
                             })
                           }
@@ -577,7 +599,7 @@ function DemandPlanning() {
 
           {filteredRenewalDemand.length === 0 && (
             <p className="px-4 py-6 text-sm text-gray-500 text-center">
-              No results match your filters. Try adjusting period or course.
+              No results match your filters. Try adjusting period, course, or location.
             </p>
           )}
 

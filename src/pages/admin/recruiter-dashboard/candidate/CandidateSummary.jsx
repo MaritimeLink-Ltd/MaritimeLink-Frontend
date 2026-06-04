@@ -249,6 +249,7 @@ function CandidateSummary({
     const [fetchedCandidate, setFetchedCandidate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [showDocumentWallet, setShowDocumentWallet] = useState(false);
+    const [showDocumentExpiryModal, setShowDocumentExpiryModal] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
 
     const getInitialStage = () => {
@@ -648,11 +649,22 @@ function CandidateSummary({
         location.pathname.startsWith('/recruiter/candidate/') &&
         !location.state?.fromJobDetail;
 
-    /** Recruiter “search candidates” profile: hide wallet / sensitive docs (resume still via View Resume). */
+    const isTrainingProviderCandidateBrowse =
+        !isAdmin &&
+        currentUserType === 'training-provider' &&
+        typeof location.pathname === 'string' &&
+        location.pathname.startsWith('/trainingprovider/candidate/') &&
+        !location.state?.fromJobDetail &&
+        !location.state?.fromAttendance;
+
+    /** Recruiter / trainer discovery: hide wallet file access; show expiry list only. */
     const suppressDocumentWallet =
         Boolean(hideDocumentWalletProp) ||
         Boolean(location.state?.fromCandidateSearch) ||
-        isRecruiterSearchCandidateDetail;
+        isRecruiterSearchCandidateDetail ||
+        isTrainingProviderCandidateBrowse;
+
+    const showDocumentExpiryList = suppressDocumentWallet && !isAdmin;
 
     const adminCreatedJobApplicationView =
         isAdmin &&
@@ -846,6 +858,26 @@ function CandidateSummary({
             })),
         };
     }, [attachedDocuments, resume, cvUrl, coverLetter, coverLetterUrl, applicationAttachments, walletJobApplicationOnly]);
+
+    const documentExpiryList = useMemo(() => {
+        if (!showDocumentExpiryList) return [];
+
+        const docs = Array.isArray(attachedDocuments) ? attachedDocuments : [];
+        return docs
+            .filter((d) => d && (d.name || d.number || d.category))
+            .map((d, idx) => ({
+                id: d.id || `doc-expiry-${idx}`,
+                name: d.name || d.number || 'Document',
+                category: formatWalletCategoryTitle(d.category),
+                number: d.number ? String(d.number) : null,
+                expiryDate: toDisplayDate(d.expiryDate),
+                status: getDocStatus(d.expiryDate),
+            }))
+            .sort(
+                (a, b) =>
+                    a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
+            );
+    }, [attachedDocuments, showDocumentExpiryList]);
 
     /**
      * Application pipeline: recruiters keep it on `/recruiter/candidate/*`.
@@ -1200,6 +1232,17 @@ function CandidateSummary({
                             </button>
                         ) : null}
 
+                        {showDocumentExpiryList ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowDocumentExpiryModal(true)}
+                                className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
+                            >
+                                <Folder className="h-5 w-5" />
+                                Documents
+                            </button>
+                        ) : null}
+
                         {adminMessagingAllowed ? (
                             <button
                                 type="button"
@@ -1542,6 +1585,87 @@ function CandidateSummary({
                                         : sessionBookingCanReleasePayout
                                             ? 'Reject / Refund'
                                             : 'Reject booking'}
+                                </button>
+                            </div>
+                        </div>
+                    </ModalOverlay>
+                )}
+
+                {showDocumentExpiryModal && (
+                    <ModalOverlay
+                        isOpen={showDocumentExpiryModal}
+                        onClose={() => setShowDocumentExpiryModal(false)}
+                        className="max-w-2xl"
+                        zIndex={10050}
+                    >
+                        <div className="bg-white rounded-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-[#003971] mb-1">Documents</h3>
+                                    <p className="text-sm text-gray-600">
+                                        Certificate names and expiry dates — files are not available to view or download.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDocumentExpiryModal(false)}
+                                    className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                    aria-label="Close"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {documentExpiryList.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {documentExpiryList.map((doc) => {
+                                            const badge = getStatusBadge(doc.status);
+                                            return (
+                                                <div
+                                                    key={doc.id}
+                                                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-50 rounded-xl p-4 border border-gray-100"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-gray-900">{doc.name}</p>
+                                                        <p className="text-xs text-gray-500 mt-0.5">
+                                                            {doc.category}
+                                                            {doc.number ? ` · ${doc.number}` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                                        <div className="text-sm text-gray-600 flex items-center gap-1.5">
+                                                            <Calendar className="h-4 w-4 text-gray-400" />
+                                                            <span>
+                                                                Expires:{' '}
+                                                                <span className="font-medium text-gray-800">{doc.expiryDate}</span>
+                                                            </span>
+                                                        </div>
+                                                        <div
+                                                            className={`${badge.cls} px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1`}
+                                                        >
+                                                            {badge.icon}
+                                                            {badge.label}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="bg-gray-50 p-5 rounded-xl text-sm text-gray-600 text-center">
+                                        No documents on file for this professional.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 border-t border-gray-200 flex justify-end flex-shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDocumentExpiryModal(false)}
+                                    className="bg-[#003971] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#002855] transition-colors"
+                                >
+                                    Close
                                 </button>
                             </div>
                         </div>

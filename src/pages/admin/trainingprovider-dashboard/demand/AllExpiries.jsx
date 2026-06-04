@@ -36,7 +36,10 @@ function AllExpiries() {
     normalizeInitialPeriod(location.state?.period),
   );
   const [year, setYear] = useState("all");
-  const [city, setCity] = useState("all");
+  const [city, setCity] = useState(() => {
+    const fromNav = location.state?.city;
+    return fromNav && String(fromNav).trim() ? String(fromNav).trim() : "all";
+  });
   const [certificateType, setCertificateType] = useState(() =>
     normalizeInitialCertificate(location.state?.certificate),
   );

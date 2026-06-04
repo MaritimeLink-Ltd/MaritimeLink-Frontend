@@ -13,6 +13,7 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { COUNTRIES } from '../../../../utils/countries';
+import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../utils/courseCurrency';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -109,6 +110,7 @@ export default function CreateCourse() {
             contractType: 'Full-time',
             description: form.description,
             price: Number(form.price) || 0,
+            currency: DEFAULT_COURSE_CURRENCY,
             courseType: 'INTERNAL',
             duration: form.defaultDuration,
             issuingAuthority: form.issuingAuthority,
@@ -200,7 +202,6 @@ export default function CreateCourse() {
                         startTime: "09:00",
                         endTime: "17:00",
                         location: locationStr,
-                        instructor: "TBD", // Defaulting as form doesn't capture instructor
                         totalSeats: Number(s.seatCapacity) || 10,
                         ...(s.enrollmentDeadline
                             ? { enrollmentDeadline: new Date(s.enrollmentDeadline).toISOString() }
@@ -429,7 +430,7 @@ export default function CreateCourse() {
                                     </div>
                                     <div>
                                         <label className="block text-gray-900 font-medium mb-2 text-base">
-                                            Course Price | USD
+                                            {COURSE_PRICE_FIELD_LABEL}
                                         </label>
                                         <input
                                             type="text"

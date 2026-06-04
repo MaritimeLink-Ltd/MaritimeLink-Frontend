@@ -21,6 +21,7 @@ import VerificationSubmittedModal from '../../../components/modals/VerificationS
 import { useKycWizard } from '../../../hooks/useKycWizard';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
+import { resolveRecruiterDisplayName } from '../../../utils/profilePhoto';
 
 function toDateInputValue(d) {
     const x = new Date(d);
@@ -72,16 +73,10 @@ function readRecruiterDashboardHeaderUser() {
         const savedPhoto = localStorage.getItem('profileImage');
         const userEmail = localStorage.getItem('userEmail') || '';
         const profile = raw ? JSON.parse(raw) : {};
-        const firstName = String(profile.firstName || '').trim();
-        const lastName = String(profile.lastName || '').trim();
-        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() ||
-            String(profile.fullName || profile.name || '').trim();
         const email = profile.email || userEmail;
         const organizationName = String(profile.organizationName || profile.companyName || '').trim();
-        const welcomeName =
-            firstName ||
-            (fullName ? fullName.split(/\s+/)[0] : '') ||
-            (email ? email.split('@')[0] : '');
+        const displayName = resolveRecruiterDisplayName(profile, 'Recruiter');
+        const welcomeName = displayName.split(/\s+/)[0] || '';
         return {
             welcomeLine: welcomeName ? `Welcome back, ${welcomeName}` : 'Welcome back',
             dateLabel: new Date().toLocaleDateString(undefined, {
@@ -90,7 +85,7 @@ function readRecruiterDashboardHeaderUser() {
                 day: 'numeric',
                 year: 'numeric',
             }),
-            displayName: fullName || email || 'Recruiter',
+            displayName,
             avatarUrl:
                 savedPhoto ||
                 profile.profilePhoto ||

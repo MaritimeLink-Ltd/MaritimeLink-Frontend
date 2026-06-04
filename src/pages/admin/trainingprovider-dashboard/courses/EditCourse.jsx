@@ -10,6 +10,7 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { COUNTRIES } from '../../../../utils/countries';
+import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../utils/courseCurrency';
 import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 
 const courseTitleOptions = [
@@ -96,7 +97,7 @@ export default function EditCourse() {
                 duration: form.defaultDuration,
                 description: form.description,
                 price: Number(form.price) || 0,
-                currency: 'USD',
+                currency: DEFAULT_COURSE_CURRENCY,
                 contractType: 'Full-time'
             };
 
@@ -340,7 +341,7 @@ export default function EditCourse() {
                             </div>
                             <div>
                                 <label className="block text-gray-900 font-medium mb-2 text-base">
-                                    Course Price | USD
+                                    {COURSE_PRICE_FIELD_LABEL}
                                 </label>
                                 <input
                                     type="text"

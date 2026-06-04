@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
 
 const statusPillStyles = {
   warning: 'bg-amber-50 text-amber-700',
@@ -136,7 +137,7 @@ export default function CourseDetail() {
         if (courseResponse.status === 'success' && courseResponse.data?.course) {
           const course = courseResponse.data.course;
           setCourseEntity(course);
-          const currencySymbol = course.currency === 'USD' ? '$' : course.currency === 'GBP' ? '£' : '';
+          const currencySymbol = getCourseCurrencySymbol(course.currency);
           
           let computedTotalSeats = course.capacity || 0;
           if (fetchedSessions.length > 0 && computedTotalSeats === 0) {

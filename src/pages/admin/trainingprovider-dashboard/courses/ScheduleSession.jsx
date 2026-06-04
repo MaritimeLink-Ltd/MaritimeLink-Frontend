@@ -214,7 +214,6 @@ export default function ScheduleSession() {
           startTime: "09:00",
           endTime: "17:00",
           location: form.location || 'Online',
-          instructor: "TBD",
           totalSeats: Number(form.seatCapacity) || 0
       };
 

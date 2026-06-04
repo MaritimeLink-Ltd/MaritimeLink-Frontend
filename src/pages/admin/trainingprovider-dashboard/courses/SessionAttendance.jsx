@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
+import { formatCoursePrice } from '../../../../utils/courseCurrency';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
 
@@ -92,8 +93,10 @@ function mapAdminBookingRow(booking, index) {
   const prof = booking.professional || {};
   const pid = prof.id || booking.professionalId;
   const canonical = normalizeBookingStatus(booking.bookingStatus);
-  const currency = booking.currency === 'GBP' ? '£' : booking.currency === 'USD' ? '$' : '';
-  const amt = booking.amountPaid != null && booking.amountPaid !== '' ? `${currency}${booking.amountPaid}` : null;
+  const amt =
+    booking.amountPaid != null && booking.amountPaid !== ''
+      ? formatCoursePrice(booking.amountPaid, booking.currency)
+      : null;
   return {
     key: booking.id || `admin-b-${index}`,
     bookingId: booking.id,
@@ -271,7 +274,7 @@ export default function SessionAttendance() {
       if (refunded) {
         const amountLabel =
           refund.amount != null && refund.currency
-            ? `${refund.currency === 'GBP' ? '£' : ''}${Number(refund.amount).toFixed(2)}${refund.currency !== 'GBP' ? ` ${refund.currency}` : ''}`
+            ? formatCoursePrice(Number(refund.amount).toFixed(2), refund.currency)
             : 'Full amount';
         toast.success(
           res?.message ||

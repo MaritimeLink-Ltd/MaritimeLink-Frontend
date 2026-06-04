@@ -84,6 +84,7 @@ function AdminSettings() {
             if (profilePatch.profilePhotoUrl !== undefined) {
                 persistProfilePhotoCache(profilePatch.profilePhotoUrl);
             }
+            window.dispatchEvent(new Event('recruiterProfileUpdated'));
         } catch (error) {
             console.error('Failed to sync recruiter profile cache:', error);
         }

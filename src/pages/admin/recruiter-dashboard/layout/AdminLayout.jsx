@@ -25,6 +25,7 @@ import {
 import {
     initialsFromName,
     resolveProfilePhotoUrl,
+    resolveRecruiterDisplayName,
 } from '../../../../utils/profilePhoto';
 
 function AdminLayout() {
@@ -44,9 +45,44 @@ function AdminLayout() {
         (async () => {
             try {
                 const response = await recruiterSettingsService.getSettings();
+                if (cancelled) return;
+
                 const notifications = response?.data?.notifications;
-                if (!cancelled && notifications) {
+                if (notifications) {
                     syncRecruiterNotificationPreferences(notifications);
+                }
+
+                const profile = response?.data?.profile;
+                if (profile) {
+                    const savedPhoto = localStorage.getItem('profileImage');
+                    const userEmail = localStorage.getItem('userEmail');
+                    const name = resolveRecruiterDisplayName(profile, 'Recruiter');
+                    const photo = resolveProfilePhotoUrl({ profile, savedPhoto });
+
+                    setUserData({
+                        name,
+                        email: profile.email || userEmail || '',
+                        photo,
+                    });
+
+                    try {
+                        const stored = JSON.parse(localStorage.getItem('userProfile') || '{}');
+                        localStorage.setItem(
+                            'userProfile',
+                            JSON.stringify({
+                                ...stored,
+                                ...profile,
+                                firstName: profile.firstName ?? stored.firstName,
+                                lastName: profile.lastName ?? stored.lastName,
+                                email: profile.email ?? stored.email,
+                            }),
+                        );
+                        if (profile.email) {
+                            localStorage.setItem('userEmail', profile.email);
+                        }
+                    } catch {
+                        /* non-blocking */
+                    }
                 }
             } catch {
                 /* non-blocking */
@@ -91,12 +127,8 @@ function AdminLayout() {
             if (savedProfile) {
                 try {
                     const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName) 
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
-                        : profile.fullName || 'Recruiter User';
-                    
                     setUserData({
-                        name: name,
+                        name: resolveRecruiterDisplayName(profile, 'Recruiter'),
                         email: profile.email || userEmail || '',
                         photo: resolveProfilePhotoUrl({ profile, savedPhoto }),
                     });
@@ -104,25 +136,28 @@ function AdminLayout() {
                     console.error('Error parsing userProfile in layout:', e);
                 }
             } else if (savedPhoto || userEmail) {
-                setUserData(prev => ({ 
-                    ...prev, 
+                setUserData((prev) => ({
+                    ...prev,
+                    name: resolveRecruiterDisplayName({ email: userEmail }, 'Recruiter'),
                     photo: savedPhoto || prev.photo,
-                    email: userEmail || prev.email
+                    email: userEmail || prev.email,
                 }));
             }
         };
 
         updateUserData();
         window.addEventListener('storage', updateUserData);
-        
+        window.addEventListener('recruiterProfileUpdated', updateUserData);
+
         const handleCustomPhotoUpdate = (e) => {
             const url = e.detail?.url;
             setUserData((prev) => ({ ...prev, photo: url || null }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
-        
+
         return () => {
             window.removeEventListener('storage', updateUserData);
+            window.removeEventListener('recruiterProfileUpdated', updateUserData);
             window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         };
     }, []);

@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
+import { DEFAULT_COURSE_CURRENCY, getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
 function formatSessionDateRange(start, end) {
@@ -119,7 +120,7 @@ function mapCourseSessionToRow(course, session, idx) {
     rawStart: start && !Number.isNaN(start.getTime()) ? start : null,
     rawEnd: end && !Number.isNaN(end.getTime()) ? end : null,
     rowRevenue,
-    currency: course.currency || 'USD',
+    currency: course.currency || DEFAULT_COURSE_CURRENCY,
   };
 }
 
@@ -226,7 +227,7 @@ export default function ManageSessions() {
     allRows.forEach((r) => {
       revenue += Number(r.rowRevenue) || 0;
     });
-    const currencySym = allRows[0]?.currency === 'GBP' ? '£' : '$';
+    const currencySym = getCourseCurrencySymbol(allRows[0]?.currency);
 
     return [
       {
@@ -305,7 +306,6 @@ export default function ManageSessions() {
 
   const handleExportCSV = () => {
     const headers = [
-      'Session ID',
       'Course',
       'Date',
       'Time',
@@ -317,7 +317,6 @@ export default function ManageSessions() {
       'Status',
     ];
     const csvData = filteredSessions.map((session) => [
-      session.displayId,
       session.courseTitle,
       session.date,
       session.time,
@@ -524,7 +523,7 @@ export default function ManageSessions() {
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Session ID
+                    Course
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Date & Time
@@ -565,10 +564,7 @@ export default function ManageSessions() {
                       className="hover:bg-gray-50/50 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-gray-900">
-                        <div>{session.displayId}</div>
-                        <div className="text-xs text-gray-400 font-normal truncate max-w-[200px]">
-                          {session.courseTitle}
-                        </div>
+                        <div className="truncate max-w-[240px]">{session.courseTitle}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -719,8 +715,8 @@ export default function ManageSessions() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Cancel Session?</h2>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to cancel session{' '}
-                <span className="font-semibold">{selectedSession.displayId}</span>? This action cannot be undone and
+                Are you sure you want to cancel the session for{' '}
+                <span className="font-semibold">{selectedSession.courseTitle}</span>? This action cannot be undone and
                 all bookings will be cancelled.
               </p>
               <div className="flex gap-3">
