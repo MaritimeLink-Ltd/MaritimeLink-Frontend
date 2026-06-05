@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, CheckCircle2, Upload, FileType, Check, Star, Folder, ChevronRight, Loader2 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import jobService from '../../../../services/jobService';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import documentService from '../../../../services/documentService';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = () => {
@@ -184,7 +186,13 @@ const ApplyToJob = () => {
             }
         } catch (error) {
             console.error('Application failed:', error);
-            alert('Failed to submit application. Please try again.');
+            toast.error(
+                getApiErrorMessage(
+                    error,
+                    'Failed to submit application. Please try again.',
+                ),
+                { duration: 5000, position: 'top-right' },
+            );
         } finally {
             setIsApplying(false);
         }
@@ -198,6 +206,7 @@ const ApplyToJob = () => {
 
     return (
         <div className="w-full min-h-screen flex justify-center py-10 px-4 sm:px-8 bg-white lg:bg-gray-50 overflow-y-auto">
+            <Toaster />
             {/* Main Form Container - matching dashboard sizing */}
             <div className="w-full max-w-xl bg-white lg:rounded-2xl lg:shadow-md p-2 sm:p-8 h-auto flex flex-col mb-10">
                 {isLoading || !job ? (
