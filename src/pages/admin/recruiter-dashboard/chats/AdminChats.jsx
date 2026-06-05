@@ -18,6 +18,8 @@ import {
     playRecruiterDesktopSound,
     shouldNotifyCandidateMessages,
 } from '../../../../utils/recruiterNotificationPreferences';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 /** UUID v1–v8 or common 24-char hex ids (e.g. Mongo ObjectId) */
 const ACCEPTABLE_CHAT_PEER_ID_RE =
@@ -27,6 +29,9 @@ const isAcceptableChatPeerId = (value) => ACCEPTABLE_CHAT_PEER_ID_RE.test(String
 
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
+    const isSupportChat =
+        new URLSearchParams(location.search || '').get('supportChat') === '1';
     const searchParams = new URLSearchParams(location.search || '');
     const initialConversation = location.state?.conversation || null;
     const requestedConversationId = initialConversation?.id || searchParams.get('conversationId');
@@ -391,7 +396,7 @@ function AdminChats({ candidateId: propCandidateId }) {
         scrollToBottom();
     }, [messagesList]);
 
-    const handleSendMessage = async () => {
+    const sendMessage = async () => {
         const text = messageInput.trim();
         if (!text || !selectedChat || sending) return;
         setSendError(null);
@@ -435,10 +440,20 @@ function AdminChats({ candidateId: propCandidateId }) {
         }
     };
 
+    const handleSendMessage = () => {
+        if (isSupportChat) {
+            void sendMessage();
+            return;
+        }
+        guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+            void sendMessage();
+        });
+    };
+
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            void handleSendMessage();
+            handleSendMessage();
         }
     };
 

@@ -96,9 +96,44 @@ export function hasSubmittedKyc(profile = readUserProfile()) {
   return false;
 }
 
+/**
+ * Stage 2 KYC complete: identity verified and admin has issued the verified badge.
+ * @param {Object} [profile]
+ * @returns {boolean}
+ */
+export function hasStage2KycAccess(profile = readUserProfile()) {
+  if (!profile || typeof profile !== 'object') return false;
+
+  if (profile.isVerified === true) return true;
+
+  const kycStatus = normalizeKycStatus(profile.kyc?.status);
+  return kycStatus === 'approved' || kycStatus === 'verified';
+}
+
+/** @deprecated Use hasStage2KycAccess — kept for existing imports. */
 export function isAdminVerifiedProfile(profile = readUserProfile()) {
-  const profileStatus = profile?.status?.toUpperCase();
-  return profileStatus === 'APPROVED' || profileStatus === 'VERIFIED' || profileStatus === 'ACTIVE';
+  return hasStage2KycAccess(profile);
+}
+
+/**
+ * Persist Stage 2 verification flags used by legacy layout checks.
+ * Stage 1 account-approval flags (recruiterAdminVerified, etc.) are unchanged.
+ * @param {Object} [profile]
+ */
+export function syncStage2KycFlags(profile = readUserProfile()) {
+  if (typeof window === 'undefined') return;
+
+  const hasAccess = hasStage2KycAccess(profile);
+  const userType = localStorage.getItem('userType') || localStorage.getItem('adminUserType') || '';
+
+  if (userType === 'professional') {
+    localStorage.setItem('adminVerified', hasAccess ? 'true' : 'false');
+    if (hasAccess) {
+      localStorage.setItem('professionalVerificationStatus', 'VERIFIED');
+    }
+  }
+
+  notifyKycProfileUpdated();
 }
 
 /**

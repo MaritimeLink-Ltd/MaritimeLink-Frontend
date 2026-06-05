@@ -7,6 +7,8 @@ import { API_ENDPOINTS } from '../../../../config/api.config';
 import documentService from '../../../../services/documentService';
 import { stripePromise } from '../../../../lib/stripeClient';
 import { DEFAULT_COURSE_CURRENCY, formatCoursePrice } from '../../../../utils/courseCurrency';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const COURSE_BOOKING_EXCLUDED_DOC_CATEGORIES = new Set([
     'APPLICATION_SUBMISSION',
@@ -143,6 +145,7 @@ function CoursePaymentForm({ clientSecret, bookingId, payLabel, onAbandon }) {
 
 const BookCourse = () => {
     const navigate = useNavigate();
+    const { guardRestrictedAction } = useKycGuard();
     const location = useLocation();
     const { courseId } = useParams();
     const [selectedDocuments, setSelectedDocuments] = useState([]);
@@ -272,7 +275,7 @@ const BookCourse = () => {
     }));
 
 
-    const handleStartCheckout = async () => {
+    const startCheckout = async () => {
         if (!selectedSessionCount) {
             return;
         }
@@ -314,6 +317,12 @@ const BookCourse = () => {
         } finally {
             setIsCheckoutLoading(false);
         }
+    };
+
+    const handleStartCheckout = () => {
+        guardRestrictedAction(KYC_ACTIONS.BOOK_COURSE, () => {
+            void startCheckout();
+        });
     };
 
     if (isLoading) {

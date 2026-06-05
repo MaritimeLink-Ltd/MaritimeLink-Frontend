@@ -14,9 +14,14 @@ import conversationService, {
     CONVERSATION_MESSAGE_PAGE_SIZE,
 } from '../../../../services/conversationService';
 import { subscribeConversationMessages } from '../../../../services/socketClient';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 function TrainingProviderChats({ candidateId: propCandidateId }) {
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
+    const isSupportChat =
+        new URLSearchParams(location.search || '').get('supportChat') === '1';
     const searchParams = new URLSearchParams(location.search || '');
     const initialConversation = location.state?.conversation || null;
     const requestedConversationId = initialConversation?.id || searchParams.get('conversationId');
@@ -306,7 +311,7 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
         scrollToBottom();
     }, [messagesList]);
 
-    const handleSendMessage = async () => {
+    const sendMessage = async () => {
         const text = messageInput.trim();
         if (!text || !selectedChat || sending) return;
         setSendError(null);
@@ -350,10 +355,20 @@ function TrainingProviderChats({ candidateId: propCandidateId }) {
         }
     };
 
+    const handleSendMessage = () => {
+        if (isSupportChat) {
+            void sendMessage();
+            return;
+        }
+        guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+            void sendMessage();
+        });
+    };
+
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            void handleSendMessage();
+            handleSendMessage();
         }
     };
 

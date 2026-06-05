@@ -9,10 +9,13 @@ import toast, { Toaster } from 'react-hot-toast';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../services/resumeService';
 import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
+import { useKycGuard } from '../../context/KycContext';
+import { KYC_ACTIONS } from '../../constants/kycRestrictedActions';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const navigate = useNavigate();
+    const { guardRestrictedAction } = useKycGuard();
     const location = useLocation();
     const [userData, setUserData] = useState({
         name: '',
@@ -248,7 +251,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         return pdf.output('blob');
     };
 
-    const handleDownloadPDF = async () => {
+    const downloadResumePdf = async () => {
         document.body.style.cursor = 'wait';
 
         try {
@@ -270,7 +273,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         }
     };
 
-    const handleShareResume = async () => {
+    const shareResumePdf = async () => {
         document.body.style.cursor = 'wait';
 
         try {
@@ -307,7 +310,19 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         }
     };
 
+    const handleDownloadPDF = () => {
+        if (isReadOnly) return;
+        guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            void downloadResumePdf();
+        });
+    };
 
+    const handleShareResume = () => {
+        if (isReadOnly) return;
+        guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            void shareResumePdf();
+        });
+    };
 
     // Helper to switch user types for demonstration
     const switchUserType = (type) => {

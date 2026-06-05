@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { ChevronDown, Search, Download, ChevronsUpDown } from "lucide-react";
 import trainerDashboardService from "../../../../services/trainerDashboardService";
+import { useKycGuard } from "../../../../context/KycContext";
+import { KYC_ACTIONS } from "../../../../constants/kycRestrictedActions";
 
 const periodOptions = [
   { value: "all", label: "All" },
@@ -30,6 +32,7 @@ const normalizeInitialCertificate = (value) => {
 };
 
 function AllExpiries() {
+  const { guardRestrictedAction } = useKycGuard();
   const navigate = useNavigate();
   const location = useLocation();
   const [period, setPeriod] = useState(() =>
@@ -365,7 +368,9 @@ function AllExpiries() {
                           e.stopPropagation();
                           const profileId = row.professionalId || row.id;
                           if (!profileId) return;
-                          navigate(`/trainingprovider/candidate/${profileId}`);
+                          guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+                            navigate(`/trainingprovider/candidate/${profileId}`);
+                          });
                         }}
                         className="px-3 py-1.5 rounded-lg bg-[#EBF3FF] text-[#003971] text-xs font-semibold hover:bg-[#d7e6ff] transition-colors cursor-pointer"
                       >

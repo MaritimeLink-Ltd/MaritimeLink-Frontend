@@ -28,6 +28,8 @@ import {
     Wallet,
     X,
 } from 'lucide-react';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const toDisplayDate = (value) => {
     if (!value) return 'N/A';
@@ -245,6 +247,8 @@ function CandidateSummary({
     /** Prefer explicit admin session (`adminUserType`) so stale `userType` from a prior recruiter login does not drop admin privileges. */
     const currentUserType = userTypeLs || adminUserTypeLs;
     const isAdmin = adminUserTypeLs === 'admin' || userTypeLs === 'admin';
+
+    const { guardRestrictedAction } = useKycGuard();
 
     const [fetchedCandidate, setFetchedCandidate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -1092,7 +1096,7 @@ function CandidateSummary({
         navigate(-1);
     };
 
-    const handleViewResume = () => {
+    const openResumeView = () => {
         const isDirectProfessional = location.state?.isProfessionalView || !!professional?.fullname;
 
         if (!isDirectProfessional && cvUrl) {
@@ -1147,6 +1151,30 @@ function CandidateSummary({
         } else {
             navigate('/admin/cv-resume', { state: { resumeData: resumeSnapshot } });
         }
+    };
+
+    const handleViewResume = () => {
+        guardRestrictedAction(KYC_ACTIONS.VIEW_RESUME, openResumeView);
+    };
+
+    const handleOpenDocumentWallet = () => {
+        guardRestrictedAction(KYC_ACTIONS.VIEW_DOCUMENT_WALLET, () => {
+            setShowDocumentWallet(true);
+        });
+    };
+
+    const handleMessageProfessional = () => {
+        guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+            const pid = resolveMessagingProfessionalId(professional, candidateId);
+            if (onMessage) {
+                onMessage(pid, candidate.name);
+                return;
+            }
+            const chatsPath = resolveChatsPathForCurrentUser(location.pathname);
+            navigate(chatsPath, {
+                state: { candidateId: pid, candidateName: candidate.name },
+            });
+        });
     };
 
     if (isLoading) {
@@ -1226,7 +1254,7 @@ function CandidateSummary({
                         )}
 
                         {!suppressDocumentWallet && canOpenDocumentWallet ? (
-                            <button onClick={() => setShowDocumentWallet(true)} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
+                            <button onClick={handleOpenDocumentWallet} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <Wallet className="h-5 w-5" />
                                 View Document Wallet
                             </button>
@@ -1246,17 +1274,7 @@ function CandidateSummary({
                         {adminMessagingAllowed ? (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    const pid = resolveMessagingProfessionalId(professional, candidateId);
-                                    if (onMessage) {
-                                        onMessage(pid, candidate.name);
-                                        return;
-                                    }
-                                    const chatsPath = resolveChatsPathForCurrentUser(location.pathname);
-                                    navigate(chatsPath, {
-                                        state: { candidateId: pid, candidateName: candidate.name },
-                                    });
-                                }}
+                                onClick={handleMessageProfessional}
                                 className="border-2 border-[#003971] text-[#003971] px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#003971] hover:text-white transition-colors"
                             >
                                 <MessageSquare className="h-5 w-5" />

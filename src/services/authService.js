@@ -6,7 +6,7 @@
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
-import { mergeAuthUserProfile, syncKycSubmittedFlag } from '../utils/kycStatus';
+import { mergeAuthUserProfile, syncKycSubmittedFlag, syncStage2KycFlags } from '../utils/kycStatus';
 import { markTermsAcceptedLocally } from '../utils/termsAcceptance';
 import recruiterSettingsService from './recruiterSettingsService';
 import trainerSettingsService from './trainerSettingsService';
@@ -383,7 +383,8 @@ class AuthService {
                         localStorage.setItem(`${prefix}AdminVerified`, 'false');
                     }
 
-                    syncKycSubmittedFlag(profile);
+                    syncKycSubmittedFlag(normalizedProfile);
+                    syncStage2KycFlags(normalizedProfile);
                 }
             }
 
@@ -754,6 +755,7 @@ class AuthService {
 
                 localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
                 syncKycSubmittedFlag(normalizedUser);
+                syncStage2KycFlags(normalizedUser);
 
                 if (profilePhoto) {
                     // Keep legacy consumers in sync while API photo remains the source of truth.

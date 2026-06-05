@@ -24,12 +24,15 @@ import authService from '../../../../services/authService';
 import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.config';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const WALLET_EXCLUDED_CATEGORIES = new Set(['CV_RESUME', 'COVER_LETTER']);
 
 const DocumentsWallet = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
     const [view, setView] = useState('list'); // 'list', 'upload', 'edit', 'detail', 'category'
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -267,8 +270,7 @@ const DocumentsWallet = () => {
         return '';
     };
 
-    // Handle Export Document Pack
-    const handleExportDocumentPack = async () => {
+    const exportDocumentPack = async () => {
         if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
@@ -378,8 +380,13 @@ const DocumentsWallet = () => {
         }
     };
 
-    // Handle Share Secure Link
-    const handleShareSecureLink = async () => {
+    const handleExportDocumentPack = () => {
+        guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            void exportDocumentPack();
+        });
+    };
+
+    const shareSecureLink = async () => {
         if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
@@ -411,6 +418,12 @@ const DocumentsWallet = () => {
         } finally {
             setShareLoading(false);
         }
+    };
+
+    const handleShareSecureLink = () => {
+        guardRestrictedAction(KYC_ACTIONS.SHARE_DOCUMENT_LINK, () => {
+            void shareSecureLink();
+        });
     };
 
     // Copy link to clipboard

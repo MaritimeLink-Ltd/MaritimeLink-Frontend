@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const CATEGORY_TO_API = {
     'Deck Officer': 'OFFICER',
@@ -71,6 +73,7 @@ const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
 
 const Jobs = () => {
     const navigate = useNavigate();
+    const { guardRestrictedAction } = useKycGuard();
     const PAGE_SIZE = 10;
 
 
@@ -415,10 +418,12 @@ const Jobs = () => {
                                         ) : (
                                             <button
                                                 onClick={() => {
-                                                    navigate(`/personal/jobs/apply/${selectedJob.id}`);
-                                                    setAppliedJobs(prev => new Set([...prev, selectedJob.id]));
-                                                    setShowAppliedModal(true);
-                                                    setTimeout(() => setShowAppliedModal(false), 2000);
+                                                    guardRestrictedAction(KYC_ACTIONS.APPLY_JOB, () => {
+                                                        navigate(`/personal/jobs/apply/${selectedJob.id}`);
+                                                        setAppliedJobs(prev => new Set([...prev, selectedJob.id]));
+                                                        setShowAppliedModal(true);
+                                                        setTimeout(() => setShowAppliedModal(false), 2000);
+                                                    });
                                                 }}
                                                 className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                             >

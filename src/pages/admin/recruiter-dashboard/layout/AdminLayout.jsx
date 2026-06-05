@@ -27,6 +27,7 @@ import {
     resolveProfilePhotoUrl,
     resolveRecruiterDisplayName,
 } from '../../../../utils/profilePhoto';
+import { KycProvider } from '../../../../context/KycContext';
 
 function AdminLayout() {
     const location = useLocation();
@@ -162,17 +163,6 @@ function AdminLayout() {
         };
     }, []);
 
-    const isRecruiterVerified = typeof window !== 'undefined' && localStorage.getItem('recruiterAdminVerified') === 'true';
-    const recruiterSearchPaths = ['/recruiter/search', '/admin/search'];
-    const recruiterJobPaths = ['/recruiter/jobs', '/admin/jobs'];
-    const recruiterChatPaths = ['/recruiter/chats', '/admin/chats'];
-    const isSupportChatRoute =
-        location.pathname === '/recruiter/chats' &&
-        new URLSearchParams(location.search || '').get('supportChat') === '1';
-    const isRestrictedRecruiterRoute = [...recruiterSearchPaths, ...recruiterJobPaths, ...recruiterChatPaths].some(
-        (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
-    ) && !isSupportChatRoute;
-
     const isActive = (path) =>
         location.pathname === path ||
         (path === '/recruiter/search' && location.pathname === '/admin/search') ||
@@ -204,6 +194,7 @@ function AdminLayout() {
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     return (
+        <KycProvider userType="recruiter" storagePrefix="recruiter">
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
@@ -357,26 +348,9 @@ function AdminLayout() {
 
                 {/* Main Page Content */}
                 <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-8 py-6">
-                    {!isRecruiterVerified && isRestrictedRecruiterRoute ? (
-                        <div className="h-full flex items-center justify-center">
-                            <div className="max-w-2xl text-center space-y-3">
-                                <h1 className="text-3xl md:text-4xl font-bold text-[#003971]">
-                                    Welcome to MaritimeLink
-                                </h1>
-                                <p className="text-gray-600">
-                                    Thanks for joining us.
-                                </p>
-                                <p className="text-gray-500 text-sm md:text-base">
-                                    Search, jobs, and chats will become available once your recruiter account has been
-                                    verified by our admin team.
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <TermsAcceptanceGuard>
-                            <Outlet />
-                        </TermsAcceptanceGuard>
-                    )}
+                    <TermsAcceptanceGuard>
+                        <Outlet />
+                    </TermsAcceptanceGuard>
                 </main>
             </div>
 
@@ -413,6 +387,7 @@ function AdminLayout() {
                 </div>
             </ModalOverlay>
         </div>
+        </KycProvider>
     );
 }
 

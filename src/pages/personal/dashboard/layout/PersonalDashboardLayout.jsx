@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { KycProvider } from '../../../../context/KycContext';
 import {
     Home,
     FileText,
@@ -102,37 +103,8 @@ function PersonalDashboardLayout() {
 
     const isActive = (path) => location.pathname === path;
 
-    // Admin verification state for professionals
-    const isVerifiedByAdmin = useMemo(() => {
-        // Check the verification status saved from login response
-        const verificationStatus = localStorage.getItem('professionalVerificationStatus');
-        if (verificationStatus && verificationStatus.toUpperCase() === 'VERIFIED') return true;
-
-        // Primary flag that can be set after backoffice approval
-        const adminFlag = localStorage.getItem('adminVerified');
-        if (adminFlag === 'true') return true;
-
-        return false;
-    }, []);
-
     // Full-width pages without sidebar (e.g. focused job lists)
     const isFullScreenPage = location.pathname === '/personal/my-jobs';
-
-    // Pages that are always allowed even before admin verification
-    const isAlwaysAllowedPath = useMemo(() => {
-        const path = location.pathname;
-        // KYC dashboard (shows verification dialogs)
-        if (path === '/personal/dashboard') return true;
-        // Resume view
-        if (path === '/personal/resume') return true;
-        // Document wallet and nested document views
-        if (path === '/personal/documents') return true;
-        if (path.startsWith('/personal/documents/')) return true;
-        return false;
-    }, [location.pathname]);
-
-    // Whether the current route is restricted (not allowed before verification)
-    const isRestrictedRoute = !isVerifiedByAdmin && !isAlwaysAllowedPath;
 
     const handleLogout = () => {
         authService.logout();
@@ -140,7 +112,7 @@ function PersonalDashboardLayout() {
         setShowLogoutModal(false);
     };
 
-    const allNavItems = [
+    const navItems = [
         { name: 'Dashboard', path: '/personal/dashboard', icon: Home },
         { name: 'Resume', path: '/personal/resume', icon: FileText },
         { name: 'Documents', path: '/personal/documents', icon: Folder },
@@ -150,16 +122,10 @@ function PersonalDashboardLayout() {
         { name: 'Profile', path: '/personal/profile', icon: User },
     ];
 
-    // If not verified, only show Dashboard, Resume, Documents in sidebar
-    const navItems = isVerifiedByAdmin
-        ? allNavItems
-        : allNavItems.filter(item =>
-            ['/personal/dashboard', '/personal/resume', '/personal/documents'].includes(item.path)
-        );
-
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
     return (
+        <KycProvider userType="professional" storagePrefix="professional">
         <div className="h-screen bg-white flex overflow-hidden">
             <Toaster position="top-right" />
             {/* Mobile Sidebar Overlay */}
@@ -293,35 +259,9 @@ function PersonalDashboardLayout() {
                 {/* Page Content */}
                 <main className="flex-1 min-h-0 overflow-hidden bg-white">
                     <div className="h-full min-h-0 overflow-y-auto scrollbar-hide">
-                        {isRestrictedRoute ? (
-                            <div className="h-full flex items-center justify-center p-6">
-                                <div className="max-w-lg text-center space-y-4">
-                                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
-                                        <AlertTriangle size={40} className="text-amber-600" />
-                                    </div>
-                                    <h1 className="text-2xl md:text-3xl font-bold text-[#003971]">
-                                        Account Under Review
-                                    </h1>
-                                    <p className="text-gray-600">
-                                        Your account is currently being reviewed by our admin team.
-                                    </p>
-                                    <p className="text-gray-500 text-sm">
-                                        Once your KYC verification is approved, you will have full access to Jobs, Training, Chats, and Profile.
-                                        In the meantime, you can update your <strong>Resume</strong> and <strong>Documents</strong>.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate('/personal/dashboard')}
-                                        className="mt-4 px-6 py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#002855] transition-colors"
-                                    >
-                                        Go to Dashboard
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <TermsAcceptanceGuard>
-                                <Outlet />
-                            </TermsAcceptanceGuard>
-                        )}
+                        <TermsAcceptanceGuard>
+                            <Outlet />
+                        </TermsAcceptanceGuard>
                     </div>
                 </main>
             </div>
@@ -357,6 +297,7 @@ function PersonalDashboardLayout() {
                 </div>
             </ModalOverlay>
         </div>
+        </KycProvider>
     );
 }
 

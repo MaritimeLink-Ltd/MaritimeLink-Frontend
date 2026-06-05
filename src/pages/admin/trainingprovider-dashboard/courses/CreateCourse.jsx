@@ -14,6 +14,8 @@ import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { COUNTRIES } from '../../../../utils/countries';
 import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../utils/courseCurrency';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -48,6 +50,7 @@ function formatSessionDateDisplay(value) {
 export default function CreateCourse() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
     const isAdmin = location.pathname.includes('/admin/');
     const submitLockRef = useRef(false);
     const [step, setStep] = useState(1);
@@ -174,7 +177,7 @@ export default function CreateCourse() {
         setSessionForm(emptySessionForm);
     };
 
-    const handleSavePublish = async () => {
+    const saveAndPublishCourse = async () => {
         if (isLoading || submitLockRef.current) return;
         submitLockRef.current = true;
         setIsLoading(true);
@@ -237,6 +240,16 @@ export default function CreateCourse() {
             setIsLoading(false);
             submitLockRef.current = false;
         }
+    };
+
+    const handleSavePublish = () => {
+        if (isAdmin) {
+            void saveAndPublishCourse();
+            return;
+        }
+        guardRestrictedAction(KYC_ACTIONS.PUBLISH_COURSE, () => {
+            void saveAndPublishCourse();
+        });
     };
 
     const handleCancel = () => {

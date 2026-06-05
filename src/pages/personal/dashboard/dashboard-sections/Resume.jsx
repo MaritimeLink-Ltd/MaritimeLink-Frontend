@@ -11,8 +11,11 @@ import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import { shareOrDownloadFile } from '../../../../utils/shareFile';
 import { formatDisplayDate, formatDateRange } from '../../../../utils/formatDate';
 import toast from 'react-hot-toast';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, formData }) => {
+    const { guardRestrictedAction } = useKycGuard();
     const navigate = useNavigate();
     const [membershipTier, setMembershipTier] = useState('FREE');
     const [userData, setUserData] = useState({
@@ -378,8 +381,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         return pdf.output('blob');
     };
 
-    const handleDownloadPDF = async () => {
-        // Show loading state
+    const downloadResumePdf = async () => {
         document.body.style.cursor = 'wait';
 
         try {
@@ -402,7 +404,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         }
     };
 
-    const handleShareResume = async () => {
+    const shareResumePdf = async () => {
         document.body.style.cursor = 'wait';
 
         try {
@@ -437,6 +439,18 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         } finally {
             document.body.style.cursor = 'default';
         }
+    };
+
+    const handleDownloadPDF = () => {
+        guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            void downloadResumePdf();
+        });
+    };
+
+    const handleShareResume = () => {
+        guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            void shareResumePdf();
+        });
     };
 
     const renderStars = (rating) => {

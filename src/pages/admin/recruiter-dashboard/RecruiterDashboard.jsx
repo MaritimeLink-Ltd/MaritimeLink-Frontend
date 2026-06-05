@@ -11,14 +11,7 @@ import {
     RefreshCw,
     Bell,
 } from 'lucide-react';
-import VerifyIdentityModal from '../../../components/modals/VerifyIdentityModal';
-import SelectDocumentModal from '../../../components/modals/SelectDocumentModal';
-import UploadDocumentModal from '../../../components/modals/UploadDocumentModal';
-import VerifyDetailsModal from '../../../components/modals/VerifyDetailsModal';
-import TakeSelfieModal from '../../../components/modals/TakeSelfieModal';
-import ProcessingDocumentModal from '../../../components/modals/ProcessingDocumentModal';
-import VerificationSubmittedModal from '../../../components/modals/VerificationSubmittedModal';
-import { useKycWizard } from '../../../hooks/useKycWizard';
+import { useKyc } from '../../../context/KycContext';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 import { resolveRecruiterDisplayName } from '../../../utils/profilePhoto';
@@ -176,36 +169,11 @@ function RecruiterDashboard({ onNavigate }) {
     });
 
     const {
-        kycStatus,
+        hasStage2Access,
         hasKycSubmitted,
         isKycUnderReview,
-        hasFullAccess,
-        ui: {
-            showVerifyIdentityModal,
-            showSelectDocumentModal,
-            showUploadDocumentModal,
-            showVerifyDetailsModal,
-            showTakeSelfieModal,
-            showProcessingModal,
-            showVerificationSubmittedModal,
-            selectedDocumentType,
-            kycData,
-            isSubmittingDetails,
-        },
-        actions: {
-            handleStartVerification,
-            handleSelectDocument,
-            handleDocumentUploaded,
-            handleDetailsVerified,
-            handleSelfieTaken,
-            handleVerificationComplete,
-            handleSkipVerification,
-            setShowSelectDocumentModal,
-            setShowUploadDocumentModal,
-            setShowVerifyDetailsModal,
-            setShowTakeSelfieModal,
-        },
-    } = useKycWizard({ userType: 'recruiter', storagePrefix: 'recruiter' });
+        actions: { handleStartVerification },
+    } = useKyc() || {};
 
     useEffect(() => {
         const syncHeaderUser = () => setHeaderUser(readRecruiterDashboardHeaderUser());
@@ -220,7 +188,6 @@ function RecruiterDashboard({ onNavigate }) {
     }, []);
 
     const loadDashboardData = useCallback(async () => {
-        if (!hasFullAccess) return;
         setIsRefreshing(true);
         setActionItemsLoading(true);
         setStatsError(null);
@@ -295,7 +262,7 @@ function RecruiterDashboard({ onNavigate }) {
             setIsRefreshing(false);
             setActionItemsLoading(false);
         }
-    }, [hasFullAccess, timeFilter, customRangeApplied.from, customRangeApplied.to]);
+    }, [timeFilter, customRangeApplied.from, customRangeApplied.to]);
 
     useEffect(() => {
         loadDashboardData();
@@ -455,52 +422,39 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    const isPreKyc = !hasKycSubmitted && (!kycStatus || kycStatus === 'pending' || kycStatus === 'rejected' || kycStatus === 'skipped');
-
-    const renderKycGate = () => {
-        if (isKycUnderReview) {
-            return (
-                <div className="h-full flex items-center justify-center p-8">
-                    <div className="max-w-2xl text-center">
-                        <h1 className="text-3xl md:text-4xl font-bold text-[#003971] mb-4">
-                            Welcome to MaritimeLink
-                        </h1>
-                        <p className="text-gray-600 mb-2">Thanks for submitting your KYC details.</p>
-                        <p className="text-gray-500">
-                            Your information and documents are currently under review by our team.
-                            Once verification is complete, you will be granted full access to your recruiter dashboard.
-                        </p>
+    return (
+        <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
+            {!hasStage2Access && (
+                <div className="border border-amber-100 bg-amber-50/80 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                            <AlertTriangle size={20} className="text-amber-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-[#003971]">
+                                {isKycUnderReview || hasKycSubmitted
+                                    ? 'Identity verification under review'
+                                    : 'Complete identity verification'}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                                {isKycUnderReview || hasKycSubmitted
+                                    ? 'You can browse the platform. Viewing resumes, publishing jobs, and messaging unlock once your verified badge is issued.'
+                                    : 'Complete Stage 2 KYC to view resumes, publish jobs, and message professionals.'}
+                            </p>
+                        </div>
                     </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="h-full flex items-center justify-center p-8">
-                <div className="max-w-2xl text-center space-y-4">
-                    <h1 className="text-3xl md:text-4xl font-bold text-[#003971]">
-                        Welcome to MaritimeLink
-                    </h1>
-                    <p className="text-gray-600">Thanks for joining us.</p>
-                    <p className="text-gray-500">
-                        To protect your company and professionals on the platform, we need to verify your identity
-                        and company details. Complete your KYC to unlock all recruiter features.
-                    </p>
-                    <div className="pt-2">
+                    {!hasKycSubmitted && !isKycUnderReview && handleStartVerification ? (
                         <button
+                            type="button"
                             onClick={handleStartVerification}
-                            className="inline-flex items-center px-6 py-3 rounded-full bg-[#003971] text-white font-semibold text-sm hover:bg-[#002855] transition-colors"
+                            className="shrink-0 inline-flex items-center px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002855] transition-colors"
                         >
                             Start verification
                         </button>
-                    </div>
+                    ) : null}
                 </div>
-            </div>
-        );
-    };
+            )}
 
-    return (
-        <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
@@ -588,14 +542,13 @@ function RecruiterDashboard({ onNavigate }) {
                 </div>
             </div>
 
-            {statsError && hasFullAccess && (
+            {statsError && (
                 <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                     {statsError}
                 </p>
             )}
 
-            {hasFullAccess ? (
-                <>
+            <>
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {stats.map((stat) => (
@@ -855,49 +808,7 @@ function RecruiterDashboard({ onNavigate }) {
                             </button>
                         </div>
                     </div>
-                </>
-            ) : (
-                renderKycGate()
-            )}
-
-            {/* KYC Modals */}
-            <VerifyIdentityModal
-                isOpen={showVerifyIdentityModal}
-                onClose={handleSkipVerification}
-                onStartVerification={handleStartVerification}
-            />
-            <SelectDocumentModal
-                isOpen={showSelectDocumentModal}
-                onClose={() => setShowSelectDocumentModal(false)}
-                onSelectDocument={handleSelectDocument}
-            />
-            <UploadDocumentModal
-                isOpen={showUploadDocumentModal}
-                onClose={() => setShowUploadDocumentModal(false)}
-                onUploadComplete={handleDocumentUploaded}
-                documentType={selectedDocumentType}
-                userType="recruiter"
-            />
-            <VerifyDetailsModal
-                isOpen={showVerifyDetailsModal}
-                onClose={() => setShowVerifyDetailsModal(false)}
-                onConfirm={handleDetailsVerified}
-                initialData={kycData}
-                documentType={selectedDocumentType}
-                isSubmitting={isSubmittingDetails}
-            />
-            <TakeSelfieModal
-                isOpen={showTakeSelfieModal}
-                onClose={() => setShowTakeSelfieModal(false)}
-                onSelfieTaken={handleSelfieTaken}
-            />
-            <ProcessingDocumentModal
-                isOpen={showProcessingModal}
-            />
-            <VerificationSubmittedModal
-                isOpen={showVerificationSubmittedModal}
-                onClose={handleVerificationComplete}
-            />
+            </>
         </div>
     );
 }

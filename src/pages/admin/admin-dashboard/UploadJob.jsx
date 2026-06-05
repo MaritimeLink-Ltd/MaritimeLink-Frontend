@@ -3,10 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2, Trash2 } from 'lucide-react';
 import jobService from '../../../services/jobService';
 import { COUNTRY_NAMES } from '../../../utils/countries';
+import { useKycGuard } from '../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../constants/kycRestrictedActions';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
     const editData = location.state?.jobData;
     const isEditMode = location.state?.isEdit || false;
     const dashboardType = location.state?.dashboardType || 'recruiter'; // 'admin' or 'recruiter'
@@ -225,8 +228,17 @@ function UploadJob({ onBack: onBackProp }) {
         }
     };
 
-    const handlePublish = async () => {
-        await submitJob('ACTIVE');
+    const handlePublish = () => {
+        const publish = () => {
+            void submitJob('ACTIVE');
+        };
+
+        if (dashboardType === 'recruiter') {
+            guardRestrictedAction(KYC_ACTIONS.PUBLISH_JOB, publish);
+            return;
+        }
+
+        publish();
     };
 
     const handleSaveDraft = async () => {

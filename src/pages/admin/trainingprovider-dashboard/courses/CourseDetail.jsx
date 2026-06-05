@@ -17,6 +17,8 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const statusPillStyles = {
   warning: 'bg-amber-50 text-amber-700',
@@ -60,6 +62,7 @@ function getSessionBookingMetrics(session) {
 }
 
 export default function CourseDetail() {
+  const { guardRestrictedAction } = useKycGuard();
   const navigate = useNavigate();
   const location = useLocation();
   const { courseId } = useParams();
@@ -349,7 +352,7 @@ export default function CourseDetail() {
     return 'Archived';
   };
 
-  const handleConfirmStatusChange = async () => {
+  const performStatusChange = async () => {
     if (!resolvedCourseId || !currentStatusConfig) return;
 
     setIsStatusUpdating(true);
@@ -411,6 +414,20 @@ export default function CourseDetail() {
     } finally {
       setIsStatusUpdating(false);
     }
+  };
+
+  const handleConfirmStatusChange = () => {
+    const isTrainingProviderRoute = location.pathname.includes('/trainingprovider/courses');
+    const isPublishing = status === 'Draft';
+
+    if (isTrainingProviderRoute && isPublishing) {
+      guardRestrictedAction(KYC_ACTIONS.PUBLISH_COURSE, () => {
+        void performStatusChange();
+      });
+      return;
+    }
+
+    void performStatusChange();
   };
 
   const handleCancelStatusChange = () => {

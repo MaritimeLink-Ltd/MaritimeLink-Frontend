@@ -4,11 +4,13 @@ import resolveKycEntityId from '../utils/resolveKycEntityId';
 import {
   readUserProfile,
   hasSubmittedKyc,
-  isAdminVerifiedProfile,
+  hasStage2KycAccess,
   getEffectiveKycStatus,
   persistKycSubmittedToProfile,
   shouldPromptVerifyIdentity,
+  syncStage2KycFlags,
 } from '../utils/kycStatus';
+import { refreshKycProfileFromApi } from '../utils/kycProfileRefresh';
 
 const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
 
@@ -45,7 +47,7 @@ export function useKycWizard({ userType, storagePrefix }) {
     };
   }, [refreshUserProfile]);
 
-  const isAdminVerified = useMemo(() => isAdminVerifiedProfile(userProfile), [userProfile]);
+  const hasStage2Access = useMemo(() => hasStage2KycAccess(userProfile), [userProfile]);
 
   const backendKycStatus = userProfile.kycStatus || userProfile.kyc_status;
   const initialKycStatus = getEffectiveKycStatus(userProfile, backendKycStatus || 'pending');
@@ -62,25 +64,44 @@ export function useKycWizard({ userType, storagePrefix }) {
     [userProfile, kycStatus]
   );
 
-  const isKycUnderReview = hasKycSubmitted && !isAdminVerified;
-  const hasFullAccess = isAdminVerified;
+  const isKycUnderReview = hasKycSubmitted && !hasStage2Access;
+  const hasFullAccess = hasStage2Access;
 
-  const shouldShowKycWizard = !isAdminVerified && !hasKycSubmitted && !sessionSkipped;
+  const shouldShowKycWizard = !hasStage2Access && !hasKycSubmitted && !sessionSkipped;
 
   const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(false);
+  const [showKycRequiredModal, setShowKycRequiredModal] = useState(false);
+  const [kycRequiredActionLabel, setKycRequiredActionLabel] = useState('');
 
   useEffect(() => {
     if (!profileHydrated) return;
 
     const shouldShow = shouldPromptVerifyIdentity({
-      isAdminVerified,
+      isAdminVerified: hasStage2Access,
       sessionSkipped,
       profile: userProfile,
       localKycStatus: kycStatus,
     });
 
     setShowVerifyIdentityModal(shouldShow);
-  }, [profileHydrated, isAdminVerified, sessionSkipped, userProfile, kycStatus]);
+  }, [profileHydrated, hasStage2Access, sessionSkipped, userProfile, kycStatus]);
+
+  useEffect(() => {
+    syncStage2KycFlags(userProfile);
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (!profileHydrated || hasStage2Access) return undefined;
+
+    const pollMs = hasKycSubmitted ? 30000 : 60000;
+    const tick = async () => {
+      const updated = await refreshKycProfileFromApi(userType);
+      if (updated) refreshUserProfile();
+    };
+
+    const interval = setInterval(tick, pollMs);
+    return () => clearInterval(interval);
+  }, [profileHydrated, hasStage2Access, hasKycSubmitted, userType, refreshUserProfile]);
 
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
@@ -249,12 +270,34 @@ export function useKycWizard({ userType, storagePrefix }) {
     setShowVerifyIdentityModal(false);
   };
 
+  const guardRestrictedAction = useCallback(
+    (actionLabel, callback) => {
+      if (hasStage2Access) {
+        callback?.();
+        return true;
+      }
+
+      setKycRequiredActionLabel(actionLabel || '');
+      setShowKycRequiredModal(true);
+      return false;
+    },
+    [hasStage2Access]
+  );
+
+  const handleKycRequiredStart = () => {
+    setShowKycRequiredModal(false);
+    handleStartVerification();
+  };
+
   return {
+    userType,
     kycStatus,
     hasKycSubmitted,
     shouldShowKycWizard,
     isKycUnderReview,
     hasFullAccess,
+    hasStage2Access,
+    guardRestrictedAction,
     ui: {
       showVerifyIdentityModal,
       showSelectDocumentModal,
@@ -263,6 +306,8 @@ export function useKycWizard({ userType, storagePrefix }) {
       showTakeSelfieModal,
       showProcessingModal,
       showVerificationSubmittedModal,
+      showKycRequiredModal,
+      kycRequiredActionLabel,
       selectedDocumentType,
       kycData,
       isSubmittingDetails,
@@ -276,6 +321,7 @@ export function useKycWizard({ userType, storagePrefix }) {
       handleSelfieTaken,
       handleVerificationComplete,
       handleSkipVerification,
+      handleKycRequiredStart,
       setShowVerifyIdentityModal,
       setShowSelectDocumentModal,
       setShowUploadDocumentModal,
@@ -283,6 +329,7 @@ export function useKycWizard({ userType, storagePrefix }) {
       setShowTakeSelfieModal,
       setShowProcessingModal,
       setShowVerificationSubmittedModal,
+      setShowKycRequiredModal,
     },
   };
 }

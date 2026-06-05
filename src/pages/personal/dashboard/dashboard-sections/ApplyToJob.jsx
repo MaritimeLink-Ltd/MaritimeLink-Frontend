@@ -5,6 +5,8 @@ import jobService from '../../../../services/jobService';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import documentService from '../../../../services/documentService';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 // Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
 
 const ApplyToJob = () => {
@@ -130,7 +132,9 @@ const ApplyToJob = () => {
         }
     };
 
-    const handleApply = async () => {
+    const { guardRestrictedAction } = useKycGuard();
+
+    const submitApplication = async () => {
         if (!selectedResume) return;
 
         setIsApplying(true);
@@ -184,6 +188,12 @@ const ApplyToJob = () => {
         } finally {
             setIsApplying(false);
         }
+    };
+
+    const handleApply = () => {
+        guardRestrictedAction(KYC_ACTIONS.APPLY_JOB, () => {
+            void submitApplication();
+        });
     };
 
     return (

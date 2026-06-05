@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const API_CATEGORY_LABEL = {
     OFFICER: 'Officer',
@@ -90,16 +92,20 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
     const rejectionReason =
         applicationRejectionReason || job?.applicationRejectionReason || '';
 
+    const { guardRestrictedAction } = useKycGuard();
+
     const handleApply = () => {
         if (!job) return;
-        if (onApplyClick) {
-            setApplied(true);
-            setShowAppliedModal(true);
-            setTimeout(() => setShowAppliedModal(false), 2000);
-            onApplyClick(job);
-        } else {
-            navigate(`/personal/jobs/apply/${job.id}`);
-        }
+        guardRestrictedAction(KYC_ACTIONS.APPLY_JOB, () => {
+            if (onApplyClick) {
+                setApplied(true);
+                setShowAppliedModal(true);
+                setTimeout(() => setShowAppliedModal(false), 2000);
+                onApplyClick(job);
+            } else {
+                navigate(`/personal/jobs/apply/${job.id}`);
+            }
+        });
     };
 
     if (isLoading) {

@@ -14,6 +14,8 @@ import {
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
 import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 /** Real profile photo URLs only — no placeholders; blocks known dummy hosts. */
 function resolveProfessionalAvatarUrl(prof) {
@@ -89,6 +91,7 @@ function isAdminCreatedJob(job) {
 }
 
 function JobDetail({ onBack, jobId: jobIdProp }) {
+    const { guardRestrictedAction } = useKycGuard();
     const navigate = useNavigate();
     const { jobId: jobIdFromRoute } = useParams();
     const jobId = jobIdProp || jobIdFromRoute;
@@ -539,7 +542,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         }
     };
 
-    const handleJobStatusUpdate = async (nextStatus) => {
+    const performJobStatusUpdate = async (nextStatus) => {
         if (!jobId) return;
         try {
             const response = await jobService.updateJobStatus(jobId, nextStatus);
@@ -551,6 +554,16 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         } catch (error) {
             console.error('Failed to update job status:', error);
         }
+    };
+
+    const handleJobStatusUpdate = (nextStatus) => {
+        if (nextStatus === 'ACTIVE') {
+            guardRestrictedAction(KYC_ACTIONS.PUBLISH_JOB, () => {
+                void performJobStatusUpdate(nextStatus);
+            });
+            return;
+        }
+        void performJobStatusUpdate(nextStatus);
     };
 
     const handleFlagJob = async () => {
