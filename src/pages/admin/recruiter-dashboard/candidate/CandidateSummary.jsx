@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import KycRestrictedView from '../../../../components/kyc/KycRestrictedView';
 import {
     buildSeaServiceExperience,
     formatTotalSeaTimeLabel,
@@ -250,7 +251,15 @@ function CandidateSummary({
     const currentUserType = userTypeLs || adminUserTypeLs;
     const isAdmin = adminUserTypeLs === 'admin' || userTypeLs === 'admin';
 
-    const { guardRestrictedAction } = useKycGuard();
+    const { guardRestrictedAction, hasStage2Access, isKycUnderReview } = useKycGuard();
+
+    const requiresKycForProfileView =
+        !isAdmin &&
+        (currentUserType === 'recruiter' ||
+            currentUserType === 'training-provider' ||
+            location.pathname.startsWith('/recruiter/candidate/') ||
+            location.pathname.startsWith('/trainingprovider/candidate/') ||
+            Boolean(propCandidateId));
 
     const [fetchedCandidate, setFetchedCandidate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -302,6 +311,11 @@ function CandidateSummary({
 
     useEffect(() => {
         const fetchCandidateDetails = async () => {
+            if (requiresKycForProfileView && !hasStage2Access) {
+                setIsLoading(false);
+                return;
+            }
+
             const rawApplicant = location.state?.candidateData?.rawApplicant;
             const fromJobDetail = !!location.state?.fromJobDetail;
             const rowFromJob = location.state?.candidateData;
@@ -522,7 +536,7 @@ function CandidateSummary({
         };
 
         fetchCandidateDetails();
-    }, [candidateId, isAdmin, currentUserType, location.state, normalizedFallback]);
+    }, [candidateId, isAdmin, currentUserType, location.state, normalizedFallback, requiresKycForProfileView, hasStage2Access]);
 
     const resolveApplicantData = () => {
         const fallback = normalizedFallback;
@@ -675,13 +689,7 @@ function CandidateSummary({
 
     const showDocumentExpiryList = suppressDocumentWallet && !isAdmin;
 
-    const skipKycOnTrainingProviderProfile = isTrainingProviderCandidateBrowse;
-
     const runProfileAction = (actionLabel, callback) => {
-        if (skipKycOnTrainingProviderProfile) {
-            callback?.();
-            return;
-        }
         guardRestrictedAction(actionLabel, callback);
     };
 
@@ -1192,6 +1200,16 @@ function CandidateSummary({
                 <div className="w-10 h-10 border-4 border-[#003971] border-t-transparent rounded-full animate-spin" />
                 <p className="text-gray-500 font-medium">Loading candidate details...</p>
             </div>
+        );
+    }
+
+    if (requiresKycForProfileView && !hasStage2Access) {
+        return (
+            <KycRestrictedView
+                actionLabel={KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE}
+                isUnderReview={isKycUnderReview}
+                onBack={handleBack}
+            />
         );
     }
 

@@ -17,6 +17,8 @@ import { formatCoursePrice } from '../../../../utils/courseCurrency';
 import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 function normalizeBookingStatus(raw) {
   const s = String(raw || '').toUpperCase();
@@ -116,6 +118,7 @@ function mapAdminBookingRow(booking, index) {
 export default function SessionAttendance() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { guardRestrictedAction } = useKycGuard();
   const [searchParams] = useSearchParams();
 
   const sessionId =
@@ -140,6 +143,44 @@ export default function SessionAttendance() {
   const [selectedAttendee, setSelectedAttendee] = useState(null);
   const [approvingBookingId, setApprovingBookingId] = useState(null);
   const [rejectingBookingId, setRejectingBookingId] = useState(null);
+
+  const navigateToAttendeeProfile = (attendee) => {
+    guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+      navigate(
+        isAdminAttendance
+          ? `/admin/marketplace/candidate/${attendee.professionalId}`
+          : `/trainingprovider/candidate/${attendee.professionalId}`,
+        {
+          state: {
+            fromAttendance: true,
+            isProfessionalView: true,
+            bookingId: attendee.bookingId,
+            bookingStatus: attendee.statusRaw,
+            paymentStatus: attendee.paymentRaw,
+            sessionId: sessionId || attendee.sessionId || undefined,
+            courseId: courseId || undefined,
+            adminCourseBookingsMode: adminCourseBookingsMode || false,
+            returnPath: returnPath || undefined,
+            courseTitle: courseTitle || undefined,
+          },
+        },
+      );
+    });
+  };
+
+  const navigateToAttendeeMessage = (attendee) => {
+    guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+      navigate(
+        isAdminAttendance ? '/admin/admin-chats' : '/trainingprovider/chats',
+        {
+          state: {
+            candidateId: attendee.professionalId,
+            candidateName: attendee.name,
+          },
+        },
+      );
+    });
+  };
 
   const loadAttendees = useCallback(async () => {
     if (adminCourseBookingsMode) {
@@ -612,28 +653,7 @@ export default function SessionAttendance() {
                           )}
                           <button
                             type="button"
-                            onClick={() =>
-                              navigate(
-                                isAdminAttendance
-                                  ? `/admin/marketplace/candidate/${attendee.professionalId}`
-                                  : `/trainingprovider/candidate/${attendee.professionalId}`,
-                                {
-                                  state: {
-                                    fromAttendance: true,
-                                    /** Load /api/admin|trainer/bookings/:id (booking detail) for attendee docs + profile */
-                                    isProfessionalView: true,
-                                    bookingId: attendee.bookingId,
-                                    bookingStatus: attendee.statusRaw,
-                                    paymentStatus: attendee.paymentRaw,
-                                    sessionId: sessionId || attendee.sessionId || undefined,
-                                    courseId: courseId || undefined,
-                                    adminCourseBookingsMode: adminCourseBookingsMode || false,
-                                    returnPath: returnPath || undefined,
-                                    courseTitle: courseTitle || undefined,
-                                  },
-                                }
-                              )
-                            }
+                            onClick={() => navigateToAttendeeProfile(attendee)}
                             className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50"
                           >
                             View Profile
@@ -641,17 +661,7 @@ export default function SessionAttendance() {
                           {(!isAdminAttendance || adminCourseBookingsMode) && (
                             <button
                               type="button"
-                              onClick={() =>
-                                navigate(
-                                  isAdminAttendance ? '/admin/admin-chats' : '/trainingprovider/chats',
-                                  {
-                                    state: {
-                                      candidateId: attendee.professionalId,
-                                      candidateName: attendee.name,
-                                    },
-                                  }
-                                )
-                              }
+                              onClick={() => navigateToAttendeeMessage(attendee)}
                               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                             >
                               <Mail className="h-3.5 w-3.5" />

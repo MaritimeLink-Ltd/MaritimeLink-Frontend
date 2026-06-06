@@ -146,6 +146,16 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         }
         return state;
     };
+
+    const navigateToApplicantProfile = (applicant) => {
+        guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+            const candidateRoute = location.pathname.includes('/marketplace')
+                ? `/admin/marketplace/candidate/${applicant.id}`
+                : `/recruiter/candidate/${applicant.id}`;
+            navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
+        });
+    };
+
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -471,8 +481,14 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
         }
     };
 
-    const handleInviteToApply = async (professionalId) => {
+    const handleInviteToApply = (professionalId) => {
         if (suppressAdminRecruiterInviteHireFlow) return;
+        guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+            void performInviteToApply(professionalId);
+        });
+    };
+
+    const performInviteToApply = async (professionalId) => {
         setInvitedApplicants((prev) => [...prev, professionalId]);
         try {
             // Must use the same `isAdminPath` as applicants fetch (path + not recruiter).
@@ -931,12 +947,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                 ) : null}
                                                 <div>
                                                     <button
-                                                        onClick={() => {
-                                                            const candidateRoute = location.pathname.includes('/marketplace')
-                                                                ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                : `/recruiter/candidate/${applicant.id}`;
-                                                            navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
-                                                        }}
+                                                        onClick={() => navigateToApplicantProfile(applicant)}
                                                         className="font-semibold text-gray-900 hover:text-blue-600 text-left"
                                                     >
                                                         {applicant.name}
@@ -973,12 +984,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                 {activeTab === 'all' && (
                                                     <div className="flex flex-col items-start gap-1">
                                                         <button
-                                                            onClick={() => {
-                                                                const candidateRoute = location.pathname.includes('/marketplace')
-                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                    : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
-                                                            }}
+                                                            onClick={() => navigateToApplicantProfile(applicant)}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
                                                             View Profile
@@ -989,12 +995,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                 {activeTab === 'new' && (
                                                     <div className="flex flex-col items-start gap-1">
                                                         <button
-                                                            onClick={() => {
-                                                                const candidateRoute = location.pathname.includes('/marketplace')
-                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                    : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
-                                                            }}
+                                                            onClick={() => navigateToApplicantProfile(applicant)}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
                                                             View Profile
@@ -1005,12 +1006,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                 {activeTab === 'matches' && (
                                                     <div className="flex items-center gap-3">
                                                         <button
-                                                            onClick={() => {
-                                                                const candidateRoute = location.pathname.includes('/marketplace')
-                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                    : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
-                                                            }}
+                                                            onClick={() => navigateToApplicantProfile(applicant)}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
                                                             View Profile
@@ -1033,12 +1029,7 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                                     <div className="flex flex-col items-start gap-1">
                                                         <button
                                                             type="button"
-                                                            onClick={() => {
-                                                                const candidateRoute = location.pathname.includes('/marketplace')
-                                                                    ? `/admin/marketplace/candidate/${applicant.id}`
-                                                                    : `/recruiter/candidate/${applicant.id}`;
-                                                                navigate(candidateRoute, { state: buildApplicantProfileNavState(applicant) });
-                                                            }}
+                                                            onClick={() => navigateToApplicantProfile(applicant)}
                                                             className="text-blue-600 font-semibold hover:underline text-sm"
                                                         >
                                                             View Profile

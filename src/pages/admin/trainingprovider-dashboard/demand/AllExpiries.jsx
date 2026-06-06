@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { ChevronDown, Search, Download, ChevronsUpDown } from "lucide-react";
 import trainerDashboardService from "../../../../services/trainerDashboardService";
+import { useKycGuard } from "../../../../context/KycContext";
+import { KYC_ACTIONS } from "../../../../constants/kycRestrictedActions";
 
 const periodOptions = [
   { value: "all", label: "All" },
@@ -32,6 +34,7 @@ const normalizeInitialCertificate = (value) => {
 function AllExpiries() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { guardRestrictedAction } = useKycGuard();
   const [period, setPeriod] = useState(() =>
     normalizeInitialPeriod(location.state?.period),
   );
@@ -171,15 +174,17 @@ function AllExpiries() {
   const openProfessionalProfile = (row) => {
     const profileId = row.professionalId;
     if (!profileId) return;
-    navigate(`/trainingprovider/candidate/${profileId}`, {
-      state: {
-        isProfessionalView: true,
-        returnPath: "/trainingprovider/expiries",
-        candidateData: {
-          fullname: row.professionalName,
-          rank: row.rank,
+    guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+      navigate(`/trainingprovider/candidate/${profileId}`, {
+        state: {
+          isProfessionalView: true,
+          returnPath: "/trainingprovider/expiries",
+          candidateData: {
+            fullname: row.professionalName,
+            rank: row.rank,
+          },
         },
-      },
+      });
     });
   };
 

@@ -15,6 +15,8 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { formatDisplayDate, formatSessionDateRange } from '../../../../utils/formatDate';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 function fullName(professional = {}) {
     return professional.fullname || [professional.firstName, professional.middleName, professional.lastName].filter(Boolean).join(' ') || 'Unknown trainee';
@@ -121,6 +123,7 @@ function mapBookingToView(booking) {
 
 export default function BookingDetail() {
     const navigate = useNavigate();
+    const { guardRestrictedAction } = useKycGuard();
     const { bookingId } = useParams();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -305,16 +308,18 @@ export default function BookingDetail() {
     };
 
     const handleViewProfile = (trainee) => {
-        navigate(`/trainingprovider/candidate/${trainee.professionalId}`, {
-            state: {
-                fromAttendance: true,
-                isProfessionalView: true,
-                bookingId: trainee.bookingId,
-                sessionId: trainee.sessionId,
-                bookingStatus: booking?.bookingStatus,
-                returnPath: `/trainingprovider/bookings/${bookingId}`,
-                courseTitle: sessionInfo.course,
-            },
+        guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+            navigate(`/trainingprovider/candidate/${trainee.professionalId}`, {
+                state: {
+                    fromAttendance: true,
+                    isProfessionalView: true,
+                    bookingId: trainee.bookingId,
+                    sessionId: trainee.sessionId,
+                    bookingStatus: booking?.bookingStatus,
+                    returnPath: `/trainingprovider/bookings/${bookingId}`,
+                    courseTitle: sessionInfo.course,
+                },
+            });
         });
     };
 

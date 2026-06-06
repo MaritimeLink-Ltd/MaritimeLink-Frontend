@@ -6,6 +6,8 @@ import {
     buildSeaServiceExperience,
     formatTotalSeaTimeLabel,
 } from '../../../../utils/seaServiceExperience';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const normalizeCandidateProfile = (candidate = {}) => ({
     ...candidate,
@@ -29,6 +31,7 @@ const normalizeCandidateProfile = (candidate = {}) => ({
 });
 
 const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, onMessage }) => {
+    const { guardRestrictedAction } = useKycGuard();
     const [candidateData, setCandidateData] = useState(candidate ? normalizeCandidateProfile(candidate) : null);
     const [isLoading, setIsLoading] = useState(!candidate);
     const [loadError, setLoadError] = useState('');
@@ -178,21 +181,21 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                             {/* Action Buttons */}
                             <div className="flex flex-wrap gap-3">
                                 <button
-                                    onClick={onViewResume}
+                                    onClick={() => guardRestrictedAction(KYC_ACTIONS.VIEW_RESUME, onViewResume)}
                                     className="flex items-center gap-2 bg-[#003971] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                 >
                                     <FileText size={18} />
                                     View Resume
                                 </button>
                                 <button
-                                    onClick={onViewDocuments}
+                                    onClick={() => guardRestrictedAction(KYC_ACTIONS.VIEW_DOCUMENT_WALLET, onViewDocuments)}
                                     className="flex items-center gap-2 bg-[#003971] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                 >
                                     <Folder size={18} />
                                     View Document Wallet
                                 </button>
                                 <button
-                                    onClick={onMessage}
+                                    onClick={() => guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, onMessage)}
                                     className="flex items-center gap-2 border-2 border-[#003971] text-[#003971] px-6 py-3 rounded-full text-sm font-medium hover:bg-[#003971]/5 transition-colors"
                                 >
                                     <MessageCircle size={18} />

@@ -14,6 +14,8 @@ import {
     Search,
 } from 'lucide-react';
 import recruiterCandidateService from '../../../../services/recruiterCandidateService';
+import { useKycGuard } from '../../../../context/KycContext';
+import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const PAGE_SIZE = 6;
 
@@ -60,6 +62,7 @@ const getCandidateName = (candidate) => candidate?.fullname || candidate?.name |
 function AdminSearch({ onViewCandidate }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const { guardRestrictedAction } = useKycGuard();
     const requestRef = useRef(0);
     const debounceRef = useRef(null);
 
@@ -163,12 +166,14 @@ function AdminSearch({ onViewCandidate }) {
     };
 
     const handleCandidateView = (candidate) => {
-        if (onViewCandidate) {
-            onViewCandidate(candidate);
-            return;
-        }
-        navigate(`/recruiter/candidate/${candidate?.id}`, {
-            state: { candidateData: candidate, isProfessionalView: true, fromCandidateSearch: true },
+        guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
+            if (onViewCandidate) {
+                onViewCandidate(candidate);
+                return;
+            }
+            navigate(`/recruiter/candidate/${candidate?.id}`, {
+                state: { candidateData: candidate, isProfessionalView: true, fromCandidateSearch: true },
+            });
         });
     };
 

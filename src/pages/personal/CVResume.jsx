@@ -11,11 +11,12 @@ import resumeService from '../../services/resumeService';
 import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
 import { useKycGuard } from '../../context/KycContext';
 import { KYC_ACTIONS } from '../../constants/kycRestrictedActions';
+import KycRestrictedView from '../../components/kyc/KycRestrictedView';
 import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../utils/profilePhoto';
 
 const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const navigate = useNavigate();
-    const { guardRestrictedAction } = useKycGuard();
+    const { guardRestrictedAction, hasStage2Access, isKycUnderReview } = useKycGuard();
     const location = useLocation();
     const [userData, setUserData] = useState({
         name: '',
@@ -355,6 +356,27 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
             />
         ));
     };
+
+    const isPlatformAdmin =
+        typeof window !== 'undefined' &&
+        (localStorage.getItem('adminUserType') === 'admin' ||
+            localStorage.getItem('userType') === 'admin');
+
+    const isRecruiterOrTrainerResumeView =
+        isReadOnly &&
+        (location.pathname.includes('/admin/cv-resume') ||
+            location.pathname.includes('/trainingprovider/cv-resume')) &&
+        Boolean(location.state?.resumeData || resumeData);
+
+    if (isRecruiterOrTrainerResumeView && !isPlatformAdmin && !hasStage2Access) {
+        return (
+            <KycRestrictedView
+                actionLabel={KYC_ACTIONS.VIEW_RESUME}
+                isUnderReview={isKycUnderReview}
+                onBack={() => navigate(-1)}
+            />
+        );
+    }
 
     return (
         <div className="h-full flex flex-col overflow-hidden bg-[#F5F7FA]">
