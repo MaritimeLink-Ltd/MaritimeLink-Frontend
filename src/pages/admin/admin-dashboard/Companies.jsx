@@ -58,10 +58,7 @@ function mapApiCompany(c) {
         type: typeLabel,
         rawType: c.type,
         source: c.source || 'company',
-        detailPath:
-            c.source === 'recruiter'
-                ? `/admin/accounts/${c.id}`
-                : `/admin/companies/${c.id}`,
+        detailPath: `/admin/companies/${encodeURIComponent(c.id)}`,
         accountKind: c.type === 'TRAINING_AGENT' ? 'trainer' : 'recruiter',
         website: displaySite,
         websiteHref: href,
@@ -73,6 +70,8 @@ function mapApiCompany(c) {
         joinedAt: formatCompaniesRelativeTime(c.createdAt),
         lastActive: formatCompaniesRelativeTime(c.lastActive),
         members: Number(c._count?.members) || 0,
+        canMerge: Boolean(c.canMerge),
+        staffIds: Array.isArray(c.staffIds) ? c.staffIds : [],
     };
 }
 
@@ -90,7 +89,7 @@ function Companies() {
 
     // Filter states (declared before loadCompanies so callbacks can depend on them)
     const [statusFilter, setStatusFilter] = useState('');
-    const [typeFilter, setTypeFilter] = useState('');
+    const [claimFilter, setClaimFilter] = useState('');
     const [countryFilter, setCountryFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalEntries, setTotalEntries] = useState(0);
@@ -103,8 +102,8 @@ function Companies() {
             const query = {};
             if (activeTab === 'Recruiters') query.type = 'RECRUITMENT_AGENT';
             else if (activeTab === 'Training Providers') query.type = 'TRAINING_AGENT';
-            if (typeFilter === 'Claimed') query.status = 'CLAIMED';
-            else if (typeFilter === 'Unclaimed') query.status = 'UNCLAIMED';
+            if (claimFilter === 'CLAIMED') query.status = 'CLAIMED';
+            else if (claimFilter === 'UNCLAIMED') query.status = 'UNCLAIMED';
             if (countryFilter) query.country = countryFilter;
             if (searchQuery.trim()) query.search = searchQuery.trim();
             query.page = currentPage;
@@ -136,7 +135,7 @@ function Companies() {
             setIsRefreshing(false);
             setLoading(false);
         }
-    }, [activeTab, typeFilter, countryFilter, searchQuery, currentPage]);
+    }, [activeTab, claimFilter, countryFilter, searchQuery, currentPage]);
 
     useEffect(() => {
         loadCompanies();
@@ -151,7 +150,7 @@ function Companies() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, searchQuery, statusFilter, typeFilter, countryFilter]);
+    }, [activeTab, searchQuery, statusFilter, claimFilter, countryFilter]);
 
     const totalCount = companyStats?.total?.count ?? companies.length;
     const totalToday = companyStats?.total?.today ?? 0;
@@ -160,37 +159,48 @@ function Companies() {
 
     const stats = [
         {
+            key: 'total',
             value: String(totalCount),
             label: 'Total Companies',
             sublabel: totalToday > 0 ? `+${totalToday} today` : 'No new today',
             icon: Building,
             iconColor: 'text-blue-500',
             iconBg: 'bg-blue-50',
-            cardBg: 'bg-blue-50'
+            cardBg: 'bg-blue-50/50',
+            active: claimFilter === '',
         },
         {
+            key: 'claimed',
             value: String(claimedCount),
             label: 'Claimed',
             sublabel: 'Verified organizations',
             icon: CheckCircle,
             iconColor: 'text-green-500',
             iconBg: 'bg-green-50',
-            cardBg: 'bg-white'
+            cardBg: 'bg-white',
+            active: claimFilter === 'CLAIMED',
         },
         {
+            key: 'unclaimed',
             value: String(unclaimedCount),
             label: 'Unclaimed',
             sublabel: 'Action needed',
             icon: AlertTriangle,
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-50',
-            cardBg: 'bg-white'
+            cardBg: 'bg-white',
+            active: claimFilter === 'UNCLAIMED',
         },
     ];
 
+    const handleStatClick = (key) => {
+        if (key === 'total') setClaimFilter('');
+        else if (key === 'claimed') setClaimFilter('CLAIMED');
+        else if (key === 'unclaimed') setClaimFilter('UNCLAIMED');
+    };
+
     const itemsPerPage = ITEMS_PER_PAGE;
 
-    const uniqueTypes = ['Claimed', 'Unclaimed'];
     const uniqueCountries = [...new Set(companies.map((c) => c.country).filter((c) => c && c !== '—'))].sort();
     const uniqueStatuses = ['Complete', 'Incomplete'];
 
@@ -270,32 +280,40 @@ function Companies() {
             {/* Unified Stats Card */}
             <div className="flex-shrink-0 bg-white rounded-3xl border border-gray-100 overflow-hidden mb-6 shadow-sm">
                 <div className="grid grid-cols-3 divide-x divide-gray-100">
-                    {/* Total Companies - Special Style */}
-                    <div className="p-6 bg-blue-50/50 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-white border border-blue-100 flex items-center justify-center text-blue-600">
-                            <Building className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold text-gray-900 mb-0.5 whitespace-nowrap">
-                                Total Companies <span className="text-gray-500 font-normal">({stats[0].value})</span>
-                            </div>
-                            <div className="text-sm font-bold text-blue-500">{stats[0].sublabel}</div>
-                        </div>
-                    </div>
-
-                    {/* Other Stats */}
-                    {stats.slice(1).map((stat, index) => (
-                        <div key={index} className="p-6 flex items-center gap-4">
-                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${stat.iconBg}`}>
-                                <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                    {stats.map((stat) => (
+                        <button
+                            key={stat.key}
+                            type="button"
+                            onClick={() => handleStatClick(stat.key)}
+                            className={`p-6 flex items-center gap-4 text-left transition-colors hover:bg-gray-50/80 ${
+                                stat.active ? 'ring-2 ring-inset ring-[#1e5a8f]/30' : ''
+                            } ${stat.key === 'total' ? 'bg-blue-50/50' : ''}`}
+                        >
+                            <div
+                                className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+                                    stat.key === 'total'
+                                        ? 'bg-white border border-blue-100 text-blue-600'
+                                        : stat.iconBg
+                                }`}
+                            >
+                                <stat.icon
+                                    className={`h-6 w-6 ${stat.key === 'total' ? 'text-blue-600' : stat.iconColor}`}
+                                />
                             </div>
                             <div>
                                 <div className="text-lg font-bold text-gray-900 mb-0.5 whitespace-nowrap">
-                                    {stat.label} <span className="text-gray-500 font-normal">({stat.value})</span>
+                                    {stat.label}{' '}
+                                    <span className="text-gray-500 font-normal">({stat.value})</span>
                                 </div>
-                                <div className="text-sm text-gray-400 font-medium">{stat.sublabel}</div>
+                                <div
+                                    className={`text-sm font-medium ${
+                                        stat.key === 'total' ? 'text-blue-500 font-bold' : 'text-gray-400'
+                                    }`}
+                                >
+                                    {stat.sublabel}
+                                </div>
                             </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
             </div>
@@ -352,39 +370,6 @@ function Companies() {
                                 )}
                             </div>
 
-                            {/* Type Dropdown */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => toggleDropdown('type')}
-                                    className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 ${typeFilter ? 'border-[#1e5a8f] text-[#1e5a8f] bg-blue-50' : 'border-gray-200 text-gray-700'}`}
-                                >
-                                    Type {typeFilter && `(Selected)`}
-                                    <ChevronDown className="h-4 w-4" />
-                                </button>
-                                {openDropdown === 'type' && (
-                                    <>
-                                        <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown('')} />
-                                        <div className="absolute top-full right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
-                                            <button
-                                                onClick={() => { setTypeFilter(''); setOpenDropdown(''); }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${typeFilter === '' ? 'font-bold text-[#1e5a8f]' : 'text-gray-700'}`}
-                                            >
-                                                All Types
-                                            </button>
-                                            {uniqueTypes.map(type => (
-                                                <button
-                                                    key={type}
-                                                    onClick={() => { setTypeFilter(type); setOpenDropdown(''); }}
-                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${typeFilter === type ? 'font-bold text-[#1e5a8f]' : 'text-gray-700'}`}
-                                                >
-                                                    {type}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
                             {/* Country Dropdown */}
                             <div className="relative">
                                 <button
@@ -421,7 +406,7 @@ function Companies() {
                             <button
                                 onClick={() => {
                                     setStatusFilter('');
-                                    setTypeFilter('');
+                                    setClaimFilter('');
                                     setCountryFilter('');
                                     setSearchQuery('');
                                     setActiveTab('All Companies');
@@ -459,6 +444,9 @@ function Companies() {
                                     Country
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                    Staff
+                                </th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">
                                     Tier
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">
@@ -478,13 +466,13 @@ function Companies() {
                         <tbody className="bg-white divide-y divide-gray-50">
                             {loading && companies.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-gray-500">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-sm text-gray-500">
                                         Loading companies…
                                     </td>
                                 </tr>
                             ) : currentCompanies.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-gray-500">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-sm text-gray-500">
                                         No companies match your filters.
                                     </td>
                                 </tr>
@@ -516,6 +504,12 @@ function Companies() {
                                         <span className="text-sm text-gray-700 font-medium">{company.country}</span>
                                     </td>
                                     <td className="px-6 py-4">
+                                        <span className="text-sm font-semibold text-gray-900">{company.members}</span>
+                                        {company.canMerge && company.members > 1 ? (
+                                            <span className="ml-2 text-xs text-orange-600 font-medium">Ungrouped</span>
+                                        ) : null}
+                                    </td>
+                                    <td className="px-6 py-4">
                                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${company.tier === 'Pro'
                                             ? 'text-[#1e5a8f]'
                                             : 'text-gray-500'
@@ -537,16 +531,6 @@ function Companies() {
                                     <td className="px-6 py-4 text-right">
                                         <Link
                                             to={company.detailPath}
-                                            state={
-                                                company.source === 'recruiter'
-                                                    ? {
-                                                          dashboardType:
-                                                              company.accountKind === 'trainer'
-                                                                  ? 'training-provider'
-                                                                  : 'recruiter',
-                                                      }
-                                                    : undefined
-                                            }
                                             className="text-sm font-bold text-[#1e5a8f] hover:underline"
                                         >
                                             View Details

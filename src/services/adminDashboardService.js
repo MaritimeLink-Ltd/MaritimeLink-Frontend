@@ -109,6 +109,14 @@ class AdminDashboardService {
         if (!id) throw new Error('Company id is required');
         return httpClient.patch(API_ENDPOINTS.ADMIN.COMPANY_DETAIL(id), body);
     }
+
+    /**
+     * POST /api/admin/companies/merge
+     * @param {{ recruiterIds: string[], targetCompanyId?: string, name?: string }} body
+     */
+    async mergeCompanies(body) {
+        return httpClient.post(API_ENDPOINTS.ADMIN.COMPANY_MERGE, body);
+    }
 }
 
 export default new AdminDashboardService();

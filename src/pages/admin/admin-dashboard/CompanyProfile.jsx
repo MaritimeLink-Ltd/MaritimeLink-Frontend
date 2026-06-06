@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ExternalLink, Loader2, AlertCircle, RefreshCw, Users } from 'lucide-react';
 import adminDashboardService from '../../../services/adminDashboardService';
 
 function formatRelativeTime(iso) {
@@ -107,6 +107,8 @@ function CompanyProfile() {
     const { id: companyId } = useParams();
 
     const [company, setCompany] = useState(null);
+    const [staff, setStaff] = useState([]);
+    const [canMerge, setCanMerge] = useState(false);
     const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -125,13 +127,17 @@ function CompanyProfile() {
             const payload = res?.data ?? res;
             const c = payload?.company ?? res?.company;
             const activity = payload?.recentActivity ?? res?.recentActivity ?? [];
+            const staffList = payload?.staff ?? res?.staff ?? [];
             if (!c) {
                 setError('Company not found');
                 setCompany(null);
+                setStaff([]);
                 setRecentActivity([]);
                 return;
             }
             setCompany(c);
+            setStaff(Array.isArray(staffList) ? staffList : []);
+            setCanMerge(Boolean(payload?.canMerge ?? res?.canMerge));
             setRecentActivity(
                 Array.isArray(activity)
                     ? activity.filter((log) => !COMPANY_MEMBER_ACTIONS.has(log?.action))
@@ -141,6 +147,7 @@ function CompanyProfile() {
             console.error('Failed to load company:', e);
             setError(e?.message || 'Could not load company');
             setCompany(null);
+            setStaff([]);
             setRecentActivity([]);
         } finally {
             setLoading(false);
@@ -169,6 +176,37 @@ function CompanyProfile() {
             }
         },
         [companyId, loadCompany]
+    );
+
+    const handleMergeStaff = useCallback(async () => {
+        if (!staff.length) return;
+        setActionBusy(true);
+        setError(null);
+        try {
+            const res = await adminDashboardService.mergeCompanies({
+                recruiterIds: staff.map((member) => member.id),
+                name: company?.name,
+            });
+            const mergedId = res?.data?.company?.id ?? res?.company?.id;
+            if (mergedId && mergedId !== companyId) {
+                navigate(`/admin/companies/${mergedId}`, { replace: true });
+                return;
+            }
+            await loadCompany();
+        } catch (e) {
+            console.error(e);
+            setError(e?.message || 'Merge failed');
+        } finally {
+            setActionBusy(false);
+        }
+    }, [staff, company?.name, companyId, navigate, loadCompany]);
+
+    const staffAccountPath = useCallback(
+        (member) =>
+            `/admin/accounts/${member.id}?dashboardType=${
+                member.role === 'TRAINING_AGENT' ? 'training-provider' : 'recruiter'
+            }`,
+        []
     );
 
     if (loading && !company) {
@@ -280,6 +318,16 @@ function CompanyProfile() {
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2 shrink-0">
+                        {canMerge ? (
+                            <button
+                                type="button"
+                                disabled={actionBusy}
+                                onClick={handleMergeStaff}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 disabled:opacity-50"
+                            >
+                                Merge into company profile
+                            </button>
+                        ) : null}
                         <button
                             type="button"
                             disabled={actionBusy}
@@ -304,6 +352,69 @@ function CompanyProfile() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white rounded-xl border border-gray-100 p-6">
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                <Users className="h-5 w-5 text-[#1e5a8f]" />
+                                Registered staff ({staff.length})
+                            </h3>
+                        </div>
+                        {staff.length === 0 ? (
+                            <p className="text-sm text-gray-500">No staff registered for this company yet.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="pb-3 text-left text-xs font-bold text-gray-500 uppercase">Name</th>
+                                            <th className="pb-3 text-left text-xs font-bold text-gray-500 uppercase">Email</th>
+                                            <th className="pb-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
+                                            <th className="pb-3 text-left text-xs font-bold text-gray-500 uppercase">Joined</th>
+                                            <th className="pb-3 text-right text-xs font-bold text-gray-500 uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {staff.map((member) => {
+                                            const fullName = [member.firstName, member.lastName]
+                                                .filter(Boolean)
+                                                .join(' ')
+                                                .trim();
+                                            return (
+                                                <tr key={member.id} className="hover:bg-gray-50/50">
+                                                    <td className="py-3 pr-4">
+                                                        <div className="text-sm font-semibold text-gray-900">
+                                                            {fullName || member.organizationName || '—'}
+                                                        </div>
+                                                        {!member.isLinked ? (
+                                                            <span className="text-xs text-orange-600">Not linked</span>
+                                                        ) : null}
+                                                    </td>
+                                                    <td className="py-3 pr-4 text-sm text-gray-600">{member.email}</td>
+                                                    <td className="py-3 pr-4">
+                                                        <span className="text-xs font-semibold text-gray-700">
+                                                            {member.status || '—'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 pr-4 text-sm text-gray-500">
+                                                        {formatRelativeTime(member.createdAt)}
+                                                    </td>
+                                                    <td className="py-3 text-right">
+                                                        <Link
+                                                            to={staffAccountPath(member)}
+                                                            className="text-sm font-bold text-[#1e5a8f] hover:underline"
+                                                        >
+                                                            View account
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="bg-white rounded-xl border border-gray-100 p-6">
                         <h3 className="text-base font-bold text-gray-900 mb-5">Company information</h3>
                         <div className="space-y-5">
