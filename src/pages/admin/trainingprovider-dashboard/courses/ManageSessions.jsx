@@ -14,20 +14,11 @@ import {
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { DEFAULT_COURSE_CURRENCY, getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 
-function formatSessionDateRange(start, end) {
-  if (!start || !end) return '—';
-  const s = start instanceof Date ? start : new Date(start);
-  const e = end instanceof Date ? end : new Date(end);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return '—';
-  const sameYear = s.getFullYear() === e.getFullYear();
-  const left = `${s.toLocaleString('default', { month: 'short' })} ${s.getDate()}`;
-  const right = `${e.toLocaleString('default', { month: 'short' })} ${e.getDate()}, ${e.getFullYear()}`;
-  if (sameYear && s.getMonth() === e.getMonth() && s.getDate() === e.getDate()) {
-    return `${s.toLocaleString('default', { month: 'short' })} ${s.getDate()}, ${s.getFullYear()}`;
-  }
-  return `${left} - ${right}`;
+function formatSessionDateRangeLocal(start, end) {
+  return formatSessionDateRange(start, end, { fallback: '—' });
 }
 
 function toInputDate(d) {
@@ -84,7 +75,7 @@ function mapCourseSessionToRow(course, session, idx) {
   }
   const start = session.startDate ? new Date(session.startDate) : null;
   const end = session.endDate ? new Date(session.endDate) : null;
-  const dateLabel = formatSessionDateRange(start, end);
+  const dateLabel = formatSessionDateRangeLocal(start, end);
   const startT = session.startTime || '';
   const endT = session.endTime || '';
   const timeLabel = startT && endT ? `${startT} - ${endT}` : startT || endT || '—';

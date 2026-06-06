@@ -14,6 +14,7 @@ import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { COUNTRIES } from '../../../../utils/countries';
 import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../utils/courseCurrency';
+import { formatDisplayDate } from '../../../../utils/formatDate';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
@@ -41,10 +42,7 @@ function openDatePicker(inputRef) {
 }
 
 function formatSessionDateDisplay(value) {
-    if (!value) return '';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatDisplayDate(value);
 }
 
 export default function CreateCourse() {

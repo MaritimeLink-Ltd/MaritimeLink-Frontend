@@ -19,6 +19,7 @@ import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { getApiErrorMessage, isSuccessfulMutationResponse } from '../../../../utils/apiError';
 import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
@@ -176,10 +177,10 @@ export default function CourseDetail() {
           
           if (fetchedSessions.length > 0) {
             const mappedSessions = fetchedSessions.map((s, idx) => {
+               const datesStr = formatSessionDateRange(s.startDate, s.endDate, {
+                 fallback: '—',
+               });
                const startDate = new Date(s.startDate);
-               const endDate = new Date(s.endDate);
-               const datesStr = `${startDate.getDate()} ${startDate.toLocaleString('default', { month: 'short' })} - ${endDate.getDate()} ${endDate.toLocaleString('default', { month: 'short' })}, ${endDate.getFullYear()}`;
-               
                const total = Number(s.totalSeats) || 0;
                const available = Number(s.availableSeats) || 0;
                const metrics = getSessionBookingMetrics(s);
