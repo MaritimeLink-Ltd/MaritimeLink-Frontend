@@ -3,6 +3,7 @@ import recruiterSettingsService from '../services/recruiterSettingsService';
 import trainerSettingsService from '../services/trainerSettingsService';
 import {
   mergeAuthUserProfile,
+  notifyKycProfileUpdated,
   readUserProfile,
   syncKycSubmittedFlag,
   syncStage2KycFlags,

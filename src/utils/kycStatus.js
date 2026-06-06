@@ -104,10 +104,21 @@ export function hasSubmittedKyc(profile = readUserProfile()) {
 export function hasStage2KycAccess(profile = readUserProfile()) {
   if (!profile || typeof profile !== 'object') return false;
 
-  if (profile.isVerified === true) return true;
+  const kycStatus = normalizeKycStatus(
+    profile.kyc?.status ?? profile.kycStatus ?? profile.kyc_status,
+  );
 
-  const kycStatus = normalizeKycStatus(profile.kyc?.status);
-  return kycStatus === 'approved' || kycStatus === 'verified';
+  if (kycStatus === 'rejected') return false;
+
+  if (kycStatus === 'approved' || kycStatus === 'verified') {
+    return true;
+  }
+
+  if (profile.isVerified === true) {
+    return true;
+  }
+
+  return false;
 }
 
 /** @deprecated Use hasStage2KycAccess — kept for existing imports. */
