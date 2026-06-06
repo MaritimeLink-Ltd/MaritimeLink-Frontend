@@ -171,6 +171,22 @@ function kycStatusBadgeClass(status) {
     return 'bg-orange-50 text-orange-700 border border-orange-200';
 }
 
+function isKycDecisionComplete(kyc) {
+    const status = String(kyc?.status || '').toUpperCase();
+    return status === 'APPROVED' || status === 'REJECTED';
+}
+
+function canReviewProfessionalKyc(kyc) {
+    if (isKycDecisionComplete(kyc)) return false;
+    const status = String(kyc?.status || '').toUpperCase();
+    return (
+        recruiterKycSubmitted(kyc) ||
+        status === 'PENDING' ||
+        status === 'SUBMITTED' ||
+        status === 'UNDER_REVIEW'
+    );
+}
+
 function formatDocumentTypeLabel(raw) {
     if (!raw) return '—';
     return String(raw)
@@ -578,6 +594,7 @@ function AccountProfile() {
     const [editNoteContent, setEditNoteContent] = useState('');
     const [showRejectPopup, setShowRejectPopup] = useState(false);
     const [showApprovePopup, setShowApprovePopup] = useState(false);
+    const [reviewActionTarget, setReviewActionTarget] = useState('account');
     const [rejectReason, setRejectReason] = useState('');
     const [showActionNotification, setShowActionNotification] = useState(false);
     const [actionNotificationMessage, setActionNotificationMessage] = useState('');
@@ -758,6 +775,10 @@ function AccountProfile() {
     const s2 = profileData.stage2Checks || { idDocuments: false, addressVerified: false };
     const riskAnalysis = buildRiskAnalysisDisplay(profileData);
     const currentAdminAuthor = getCurrentAdminAuthor();
+    const kycDecisionComplete = isKycDecisionComplete(profileData.kyc);
+    const showProfessionalKycActions =
+        isProfessionalAccount && canReviewProfessionalKyc(profileData.kyc);
+    const isKycReviewPopup = isProfessionalAccount || reviewActionTarget === 'kyc';
 
     // Use API documents if available, otherwise empty array (no mock data)
     const documents = Array.isArray(apiDocuments) ? apiDocuments : [];
@@ -878,24 +899,50 @@ function AccountProfile() {
     };
 
     // Handle Reject Account
-    const handleRejectAccount = () => {
+    const handleRejectAccount = (target = 'account') => {
+        setReviewActionTarget(target);
         setShowRejectPopup(true);
     };
 
     const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+
+    const applyLocalKycStatus = (status) => {
+        setRecruiterData((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                kyc: { ...(prev.kyc || {}), status },
+                stage2Status: status === 'APPROVED' ? 'COMPLETED' : prev.stage2Status,
+                status: status === 'APPROVED' ? 'VERIFIED' : prev.status,
+            };
+        });
+    };
 
     const confirmRejectAccount = async () => {
         if (!rejectReason.trim()) return;
 
         if (isUUID) {
             setIsSubmittingAction(true);
-            // Backend updates login status for both RECRUITMENT_AGENT and TRAINING_AGENT via recruiters status route
-            const statusEndpoint = API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
             try {
-                await httpClient.patch(statusEndpoint, {
-                    status: 'REJECTED'
-                });
-                setActionNotificationMessage('Account rejected successfully!');
+                if (isProfessionalAccount) {
+                    await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
+                        status: 'REJECTED',
+                        rejectionReason: rejectReason.trim(),
+                    });
+                    applyLocalKycStatus('REJECTED');
+                } else {
+                    const statusEndpoint = isTrainer
+                        ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
+                        : API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
+                    await httpClient.patch(statusEndpoint, {
+                        status: 'REJECTED',
+                    });
+                }
+                setActionNotificationMessage(
+                    isProfessionalAccount
+                        ? 'Professional KYC rejected successfully!'
+                        : 'Account rejected successfully!',
+                );
                 setShowActionNotification(true);
                 setShowRejectPopup(false);
                 setRejectReason('');
@@ -903,14 +950,14 @@ function AccountProfile() {
                 const navMsg = isTrainer
                     ? 'Training provider account rejected successfully!'
                     : isProfessionalAccount
-                        ? 'Professional account rejected successfully!'
+                        ? 'Professional KYC rejected successfully!'
                         : 'Recruiter account rejected successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
                     navigate('/admin/accounts', { state: { activeTab: navTab, successMessage: navMsg } });
                 }, 2000);
             } catch (err) {
-                console.error('Failed to reject recruiter:', err);
+                console.error('Failed to reject account:', err);
                 setActionNotificationMessage('Failed to reject account. Please try again.');
                 setShowActionNotification(true);
                 setTimeout(() => setShowActionNotification(false), 3000);
@@ -935,33 +982,47 @@ function AccountProfile() {
     };
 
     // Handle Approve Account
-    const handleApproveAccount = () => {
+    const handleApproveAccount = (target = 'account') => {
+        setReviewActionTarget(target);
         setShowApprovePopup(true);
     };
 
     const confirmApproveAccount = async () => {
         if (isUUID) {
             setIsSubmittingAction(true);
-            const statusEndpoint = API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
             try {
-                await httpClient.patch(statusEndpoint, {
-                    status: 'APPROVED'
-                });
-                setActionNotificationMessage('Account approved successfully!');
+                if (isProfessionalAccount) {
+                    await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
+                        status: 'APPROVED',
+                    });
+                    applyLocalKycStatus('APPROVED');
+                } else {
+                    const statusEndpoint = isTrainer
+                        ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
+                        : API_ENDPOINTS.ADMIN.UPDATE_RECRUITER_STATUS(id);
+                    await httpClient.patch(statusEndpoint, {
+                        status: 'APPROVED',
+                    });
+                }
+                setActionNotificationMessage(
+                    isProfessionalAccount
+                        ? 'Professional KYC approved successfully!'
+                        : 'Account approved successfully!',
+                );
                 setShowActionNotification(true);
                 setShowApprovePopup(false);
                 const navTab = isTrainer ? 'Training Providers' : isProfessionalAccount ? 'Professionals' : 'Recruiters';
                 const navMsg = isTrainer
                     ? 'Training provider account approved successfully!'
                     : isProfessionalAccount
-                        ? 'Professional account approved successfully!'
+                        ? 'Professional KYC approved successfully!'
                         : 'Recruiter account approved successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
                     navigate('/admin/accounts', { state: { activeTab: navTab, successMessage: navMsg } });
                 }, 2000);
             } catch (err) {
-                console.error('Failed to approve recruiter:', err);
+                console.error('Failed to approve account:', err);
                 setActionNotificationMessage('Failed to approve account. Please try again.');
                 setShowActionNotification(true);
                 setTimeout(() => setShowActionNotification(false), 3000);
@@ -1180,7 +1241,9 @@ function AccountProfile() {
                                 <AlertTriangle className="h-6 w-6 text-red-600" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Reject Account</h3>
+                                <h3 className="text-xl font-bold text-gray-900">
+                                    {isKycReviewPopup ? 'Reject KYC' : 'Reject Account'}
+                                </h3>
                                 <p className="text-sm text-gray-500">This action cannot be undone</p>
                             </div>
                         </div>
@@ -1191,7 +1254,11 @@ function AccountProfile() {
                             <textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
-                                placeholder="Please provide a reason for rejecting this account..."
+                                placeholder={
+                                    isKycReviewPopup
+                                        ? 'Please provide a reason for rejecting this KYC submission...'
+                                        : 'Please provide a reason for rejecting this account...'
+                                }
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
                                 rows="4"
                             />
@@ -1208,7 +1275,7 @@ function AccountProfile() {
                                 disabled={!rejectReason.trim()}
                                 className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Reject Account
+                                {isKycReviewPopup ? 'Reject KYC' : 'Reject Account'}
                             </button>
                         </div>
                     </div>
@@ -1224,12 +1291,18 @@ function AccountProfile() {
                                 <CheckCircle className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Approve Account</h3>
-                                <p className="text-sm text-gray-500">Confirm account approval</p>
+                                <h3 className="text-xl font-bold text-gray-900">
+                                    {isKycReviewPopup ? 'Approve KYC' : 'Approve Account'}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                    {isKycReviewPopup ? 'Confirm KYC approval' : 'Confirm account approval'}
+                                </p>
                             </div>
                         </div>
                         <p className="text-gray-600 mb-6">
-                            Are you sure you want to approve this account? The user will be notified and granted full access to the platform.
+                            {isKycReviewPopup
+                                ? 'Are you sure you want to approve this KYC submission? The professional will be notified and marked as verified.'
+                                : 'Are you sure you want to approve this account? The user will be notified and granted full access to the platform.'}
                         </p>
                         <div className="flex gap-3">
                             <button
@@ -1242,7 +1315,7 @@ function AccountProfile() {
                                 onClick={confirmApproveAccount}
                                 className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
                             >
-                                Approve Account
+                                {isKycReviewPopup ? 'Approve KYC' : 'Approve Account'}
                             </button>
                         </div>
                     </div>
@@ -1522,6 +1595,38 @@ function AccountProfile() {
                                                 <span className={s2.addressVerified ? 'text-gray-700' : 'text-gray-500'}>Address Verification</span>
                                             </div>
                                         </div>
+
+                                        {isProfessionalAccount && (
+                                            <div className="mt-4 pt-4 border-t border-orange-200/80 flex flex-wrap items-center justify-end gap-3">
+                                                {showProfessionalKycActions ? (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRejectAccount('kyc')}
+                                                            className="px-4 py-2 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                                                        >
+                                                            Reject KYC
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleApproveAccount('kyc')}
+                                                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                                                        >
+                                                            <CheckCircle className="h-4 w-4" />
+                                                            Approve KYC
+                                                        </button>
+                                                    </>
+                                                ) : kycDecisionComplete ? (
+                                                    <span className={`px-3 py-1.5 text-xs font-bold rounded-md ${kycStatusBadgeClass(profileData.kyc?.status)}`}>
+                                                        KYC {String(profileData.kyc?.status || '').toUpperCase()}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs font-medium text-gray-500">
+                                                        KYC review available after documents are submitted
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1574,9 +1679,9 @@ function AccountProfile() {
                                         </div>
                                         <h3 className="text-base font-bold text-gray-900">Stage 1: Account Approval</h3>
                                     </div>
-                                    {profileData.status !== 'APPROVED' && (
+                                    {profileData.status !== 'APPROVED' && !isProfessionalAccount && (
                                         <button
-                                            onClick={handleApproveAccount}
+                                            onClick={() => handleApproveAccount('account')}
                                             className="flex items-center gap-2 px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] transition-colors"
                                         >
                                             <CheckCircle className="h-4 w-4" />
@@ -1850,20 +1955,42 @@ function AccountProfile() {
                                 >
                                     Cancel review
                                 </button>
-                                {profileData.status === 'APPROVED' ? (
+                                {isProfessionalAccount ? (
+                                    kycDecisionComplete ? (
+                                        <span className={`px-4 py-2.5 rounded-lg text-sm font-semibold border ${kycStatusBadgeClass(profileData.kyc?.status)}`}>
+                                            KYC {String(profileData.kyc?.status || '').toUpperCase()}
+                                        </span>
+                                    ) : showProfessionalKycActions ? (
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleRejectAccount('kyc')}
+                                                className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                                            >
+                                                Reject KYC
+                                            </button>
+                                            <button
+                                                onClick={() => handleApproveAccount('kyc')}
+                                                className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                                            >
+                                                <CheckCircle className="h-4 w-4" />
+                                                Approve KYC
+                                            </button>
+                                        </div>
+                                    ) : null
+                                ) : profileData.status === 'APPROVED' ? (
                                     <span className="px-4 py-2.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
                                         ✓ APPROVED
                                     </span>
                                 ) : (
                                     <div className="flex items-center gap-3">
                                         <button
-                                            onClick={handleRejectAccount}
+                                            onClick={() => handleRejectAccount('account')}
                                             className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
                                         >
                                             Reject Account
                                         </button>
                                         <button
-                                            onClick={handleApproveAccount}
+                                            onClick={() => handleApproveAccount('account')}
                                             className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
                                         >
                                             <CheckCircle className="h-4 w-4" />
@@ -2127,7 +2254,31 @@ function AccountProfile() {
                                 >
                                     Cancel review
                                 </button>
-                                {profileData.status === 'APPROVED' ? (
+                                {isProfessionalAccount ? (
+                                    kycDecisionComplete ? (
+                                        <span className={`px-4 py-2.5 rounded-lg text-sm font-semibold border ${kycStatusBadgeClass(profileData.kyc?.status)}`}>
+                                            KYC {String(profileData.kyc?.status || '').toUpperCase()}
+                                        </span>
+                                    ) : showProfessionalKycActions ? (
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRejectAccount('kyc')}
+                                                className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                                            >
+                                                Reject KYC
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleApproveAccount('kyc')}
+                                                className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+                                            >
+                                                <CheckCircle className="h-4 w-4" />
+                                                Approve KYC
+                                            </button>
+                                        </div>
+                                    ) : null
+                                ) : profileData.status === 'APPROVED' ? (
                                     <span className="px-4 py-2.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
                                         ✓ APPROVED
                                     </span>
@@ -2135,14 +2286,14 @@ function AccountProfile() {
                                     <div className="flex items-center gap-3">
                                         <button
                                             type="button"
-                                            onClick={handleRejectAccount}
+                                            onClick={() => handleRejectAccount('kyc')}
                                             className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
                                         >
                                             Reject Account
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={handleApproveAccount}
+                                            onClick={() => handleApproveAccount('kyc')}
                                             className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
                                         >
                                             <CheckCircle className="h-4 w-4" />
