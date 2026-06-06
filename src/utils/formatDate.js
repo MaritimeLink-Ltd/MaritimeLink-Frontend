@@ -31,3 +31,20 @@ export function formatDateRange(start, end) {
 
   return `${s}${s && e ? ' To ' : ''}${e}`.trim();
 }
+
+/**
+ * Formats a course/session start/end range (date only).
+ * e.g. "1 Jun 2026 - 9 Jun 2026"
+ */
+export function formatSessionDateRange(
+  start,
+  end,
+  { separator = ' - ', fallback = 'TBA' } = {},
+) {
+  const s = formatDisplayDate(start);
+  const e = formatDisplayDate(end);
+
+  if (!s && !e) return fallback;
+  if (s && e && s !== e) return `${s}${separator}${e}`;
+  return s || e;
+}
