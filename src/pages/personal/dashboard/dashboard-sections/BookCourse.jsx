@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../../../../config/api.config';
 import documentService from '../../../../services/documentService';
 import { stripePromise } from '../../../../lib/stripeClient';
 import { DEFAULT_COURSE_CURRENCY, formatCoursePrice } from '../../../../utils/courseCurrency';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
@@ -34,9 +35,7 @@ const isCourseWalletDocument = (doc) => {
 const mapSessionsArray = (sessions) => {
     if (!Array.isArray(sessions)) return [];
     return sessions.map((session) => {
-        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
-        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
-        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
+        const eventDate = formatSessionDateRange(session.startDate, session.endDate);
         const total = Number(session.totalSeats) || 0;
         const enrolled = Number(session.enrolledCount) || 0;
         const availableSpaces = Number.isFinite(Number(session.availableSeats))
