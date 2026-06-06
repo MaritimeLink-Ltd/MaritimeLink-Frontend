@@ -6,6 +6,7 @@ import {
     BookOpen,
     Calendar,
     UserCircle,
+    User,
     Bell,
     ChevronDown,
     Menu,
@@ -20,19 +21,11 @@ import {
     shouldNotifyCandidateMessages,
     syncRecruiterNotificationPreferences,
 } from '../../../../utils/recruiterNotificationPreferences';
-import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 import { KycProvider } from '../../../../context/KycContext';
-
-function initialsFromName(name) {
-    const parts = String(name || '')
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    if (parts.length === 1 && parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return '?';
-}
+import {
+    isPlaceholderProfilePhoto,
+    resolveProfilePhotoUrl,
+} from '../../../../utils/profilePhoto';
 
 function TrainingProviderLayout() {
     const location = useLocation();
@@ -94,34 +87,34 @@ function TrainingProviderLayout() {
             const savedProfile = localStorage.getItem('userProfile');
             const savedPhoto = localStorage.getItem('profileImage');
             const userEmail = localStorage.getItem('userEmail');
-            
+
+            if (savedPhoto && isPlaceholderProfilePhoto(savedPhoto)) {
+                localStorage.removeItem('profileImage');
+            }
+
+            let profile = {};
             if (savedProfile) {
                 try {
-                    const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName) 
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
-                        : profile.fullName || 'Training Provider User';
-                    
-                    setUserData({
-                        name,
-                        email: profile.email || userEmail || '',
-                        photo:
-                            savedPhoto ||
-                            profile.profilePhoto ||
-                            profile.profilePhotoUrl ||
-                            profile.photo ||
-                            null,
-                    });
+                    profile = JSON.parse(savedProfile);
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
                 }
-            } else if (savedPhoto || userEmail) {
-                setUserData(prev => ({ 
-                    ...prev, 
-                    photo: savedPhoto || prev.photo,
-                    email: userEmail || prev.email
-                }));
             }
+
+            const name = (profile.firstName || profile.lastName)
+                ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+                : profile.fullName || 'Training Provider User';
+
+            const photo = resolveProfilePhotoUrl({
+                profile,
+                savedPhoto: localStorage.getItem('profileImage') || '',
+            });
+
+            setUserData({
+                name,
+                email: profile.email || userEmail || '',
+                photo,
+            });
         };
 
         updateUserData();
@@ -129,7 +122,10 @@ function TrainingProviderLayout() {
         
         const handleCustomPhotoUpdate = (e) => {
             const url = e.detail?.url;
-            setUserData((prev) => ({ ...prev, photo: url || null }));
+            setUserData((prev) => ({
+                ...prev,
+                photo: url && !isPlaceholderProfilePhoto(url) ? url : null,
+            }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         
@@ -250,18 +246,18 @@ function TrainingProviderLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors"
                                 >
-                                    {userData.photo ? (
+                                    {userData.photo && !isPlaceholderProfilePhoto(userData.photo) ? (
                                         <img
                                             className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
                                             src={userData.photo}
                                             alt=""
+                                            onError={() =>
+                                                setUserData((prev) => ({ ...prev, photo: null }))
+                                            }
                                         />
                                     ) : (
-                                        <div
-                                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-[#003971]/10 text-[#003971] flex items-center justify-center text-xs font-bold"
-                                            title={userData.name || userData.email}
-                                        >
-                                            {initialsFromName(userData.name || userData.email || 'U')}
+                                        <div className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
+                                            <User className="h-5 w-5 text-gray-400" />
                                         </div>
                                     )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left min-w-0">
@@ -302,9 +298,7 @@ function TrainingProviderLayout() {
 
                 {/* Main Page Content */}
                 <main className="flex-1 overflow-y-auto bg-[#F5F7FA] p-4 md:p-6 lg:p-8">
-                    <TermsAcceptanceGuard>
-                        <Outlet />
-                    </TermsAcceptanceGuard>
+                    <Outlet />
                 </main>
             </div>
 

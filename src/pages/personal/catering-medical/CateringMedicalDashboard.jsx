@@ -11,11 +11,9 @@ import AcademicQualifications from '../officer-category/dashboard-sections/Acade
 import MedicalTravelDocs from '../officer-category/dashboard-sections/MedicalTravelDocs';
 import BiometricsNextOfKin from '../officer-category/dashboard-sections/BiometricsNextOfKin';
 import Resume from '../dashboard/dashboard-sections/Resume';
-import useTermsAcceptance from '../../../hooks/useTermsAcceptance';
 
 const CateringMedicalDashboard = () => {
   const navigate = useNavigate();
-  useTermsAcceptance();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -333,9 +331,8 @@ const CateringMedicalDashboard = () => {
     try {
       setIsLoading(true);
       await resumeService.submitBulkResume(allData, 'PUT');
-      const completingSignup = activeSection > sections.length;
       navigate('/personal/documents', {
-        state: completingSignup ? { showDocumentWalletPrompt: true } : undefined,
+        state: { showDocumentWalletPrompt: true },
       });
     } catch (error) {
       alert(getApiErrorMessage(error, 'Failed to save resume. Please try again.'));

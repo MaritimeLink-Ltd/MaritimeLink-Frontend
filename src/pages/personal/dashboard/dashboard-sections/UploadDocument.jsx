@@ -254,13 +254,22 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
 
         // Field validation
         const requiredFields = isOcrRequired
-            ? ['certificateName', 'certificateNumber', 'issuingCountry', 'dateOfIssue', 'validTill']
+            ? ['certificateName', 'certificateNumber', 'issuingCountry', 'dateOfIssue']
             : ['certificateName'];
 
         const hasEmpty = requiredFields.some(f => !formData[f]?.trim());
         if (hasEmpty) {
             toast.error('Please fill in all required fields.', { position: 'top-right' });
             return;
+        }
+
+        if (formData.dateOfIssue && formData.validTill) {
+            const issueDate = new Date(formData.dateOfIssue);
+            const expiryDate = new Date(formData.validTill);
+            if (issueDate >= expiryDate) {
+                toast.error('Date of Issue must be before Expiry Date.', { position: 'top-right' });
+                return;
+            }
         }
 
         try {
@@ -440,7 +449,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                 </div>
                                 <div className="flex-1 space-y-2">
                                     <label className="block text-sm font-medium text-gray-700">
-                                        Valid Till <span className="text-red-500">*</span>
+                                        Expiry Date <span className="text-gray-400 font-normal">(Optional)</span>
                                     </label>
                                     <input
                                         type="date"
@@ -483,7 +492,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                             number: 'Certificate Number',
                                             issuingCountry: 'Issuing Country',
                                             issueDate: 'Date Of Issue',
-                                            expiryDate: 'Valid Till',
+                                            expiryDate: 'Expiry Date',
                                         };
                                         const label = labelMap[key] || key;
                                         const enteredLabel =

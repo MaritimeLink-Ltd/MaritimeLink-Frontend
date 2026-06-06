@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
-import {
-    hasAcceptedTermsLocally,
-    profileIndicatesTermsAccepted,
-    syncTermsAcceptedFromProfile,
-} from '../../../utils/termsAcceptance';
+import { syncTermsAcceptedFromProfile } from '../../../utils/termsAcceptance';
 
 function TrainingProviderLogin() {
     const navigate = useNavigate();
@@ -57,24 +53,13 @@ function TrainingProviderLogin() {
                 status === 'active' ||
                 status === 'approved';
 
-            const termsOk =
-                syncTermsAcceptedFromProfile(profile) ||
-                hasAcceptedTermsLocally() ||
-                profileIndicatesTermsAccepted(profile);
-
-            const dashboardPath = '/trainingprovider-dashboard';
+            syncTermsAcceptedFromProfile(profile);
 
             if (approved) {
                 localStorage.setItem('trainingProviderAdminVerified', 'true');
             }
 
-            if (termsOk) {
-                navigate(dashboardPath);
-            } else {
-                navigate('/accept-terms', {
-                    state: { returnTo: dashboardPath, userType: 'training-provider' },
-                });
-            }
+            navigate('/trainingprovider-dashboard');
         } catch (err) {
             console.error('Login error:', err);
             setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

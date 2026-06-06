@@ -3,7 +3,12 @@ export const PLACEHOLDER_PROFILE_IMAGE = '/images/login-image.webp';
 export function isPlaceholderProfilePhoto(url) {
     const value = String(url || '').trim();
     if (!value) return true;
-    return value === PLACEHOLDER_PROFILE_IMAGE || value.endsWith('/login-image.webp');
+    return (
+        value === PLACEHOLDER_PROFILE_IMAGE
+        || value.endsWith('/login-image.webp')
+        || value.includes('images.unsplash.com')
+        || value.includes('placehold.co')
+    );
 }
 
 export function resolveProfilePhotoUrl({ profile = {}, savedPhoto = '' } = {}) {

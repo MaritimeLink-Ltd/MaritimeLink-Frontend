@@ -14,8 +14,10 @@ import {
   Loader2,
   Trash2
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { getApiErrorMessage, isSuccessfulMutationResponse } from '../../../../utils/apiError';
 import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
@@ -113,6 +115,8 @@ export default function CourseDetail() {
   const [statusError, setStatusError] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
 
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [isDeletingSession, setIsDeletingSession] = useState(false);
@@ -436,36 +440,83 @@ export default function CourseDetail() {
   };
 
   const handleDeleteCourse = async () => {
+    if (!resolvedCourseId || !canManageCourseActions) return;
+
     try {
       setIsDeleting(true);
+      setDeleteError('');
       const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE(resolvedCourseId));
-      if (response.status === 'success') {
-        navigate(
-          isAdminMarketplaceCourse ? '/admin/marketplace' : '/trainingprovider/courses'
-        );
+
+      if (!isSuccessfulMutationResponse(response)) {
+        const message =
+          getApiErrorMessage(
+            { data: response },
+            'Could not delete this course. Please try again.',
+          );
+        setDeleteError(message);
+        toast.error(message);
+        return;
       }
+
+      setIsDeleteDialogOpen(false);
+      setShowDeleteSuccessModal(true);
+      setTimeout(() => {
+        setShowDeleteSuccessModal(false);
+        navigate(
+          isAdminMarketplaceCourse ? '/admin/marketplace' : '/trainingprovider/courses',
+          { state: { refreshCoursesAt: Date.now() } },
+        );
+      }, 1500);
     } catch (err) {
       console.error('Failed to delete course:', err);
+      const message = getApiErrorMessage(err, 'Could not delete this course. Please try again.');
+      setDeleteError(message);
+      toast.error(message);
     } finally {
       setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
     }
   };
 
   const handleDeleteSession = async () => {
     if (!sessionToDelete) return;
+
+    const sessionId = sessionToDelete.apiSessionId || sessionToDelete.id;
+    if (!sessionId || String(sessionId).startsWith('S')) {
+      toast.error('This session cannot be deleted because its id is missing.');
+      setSessionToDelete(null);
+      return;
+    }
+
     try {
       setIsDeletingSession(true);
-      const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE_SESSION(sessionToDelete.id));
-      if (response.status === 'success') {
-          // Remove session from sessionData natively to reflect immediately
-          setSessionData(prev => prev.filter(s => s.id !== sessionToDelete.id));
+      const response = await httpClient.delete(API_ENDPOINTS.COURSES.DELETE_SESSION(sessionId));
+
+      if (!isSuccessfulMutationResponse(response)) {
+        toast.error(
+          getApiErrorMessage(
+            { data: response },
+            'Could not delete this session. Please try again.',
+          ),
+        );
+        return;
       }
+
+      setSessionData((prev) => prev.filter((s) => s.id !== sessionToDelete.id));
+      setCourseSummary((prev) =>
+        prev
+          ? {
+              ...prev,
+              sessions: Math.max(0, (prev.sessions || 0) - 1),
+            }
+          : prev,
+      );
+      toast.success('Session deleted successfully.');
+      setSessionToDelete(null);
     } catch (err) {
       console.error('Failed to delete session:', err);
+      toast.error(getApiErrorMessage(err, 'Could not delete this session. Please try again.'));
     } finally {
       setIsDeletingSession(false);
-      setSessionToDelete(null);
     }
   };
 
@@ -496,6 +547,7 @@ export default function CourseDetail() {
 
   return (
     <div className="flex flex-col min-h-full">
+      <Toaster position="top-right" />
       {/* Back Button */}
       <button
         type="button"
@@ -546,7 +598,10 @@ export default function CourseDetail() {
           {canManageCourseActions ? (
             <button
               type="button"
-              onClick={() => setIsDeleteDialogOpen(true)}
+              onClick={() => {
+                setDeleteError('');
+                setIsDeleteDialogOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-2.5 text-sm font-semibold shadow-sm hover:bg-red-100 transition-colors"
             >
               <Trash2 className="h-4 w-4" />
@@ -764,7 +819,13 @@ export default function CourseDetail() {
                               <button
                                 type="button"
                                 onClick={() => setSessionToDelete(session)}
-                                className="inline-flex items-center justify-center rounded-xl bg-red-50 p-2 text-red-600 hover:bg-red-100 transition-colors"
+                                disabled={!session.apiSessionId}
+                                title={
+                                  session.apiSessionId
+                                    ? 'Delete session'
+                                    : 'Session id missing — cannot delete'
+                                }
+                                className="inline-flex items-center justify-center rounded-xl bg-red-50 p-2 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -874,6 +935,25 @@ export default function CourseDetail() {
         </div>
       )}
 
+      {/* Course Deleted Success Modal */}
+      {showDeleteSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-in fade-in zoom-in duration-200">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-gray-900">Course Deleted</h3>
+              <p className="text-sm text-gray-500">
+                {courseSummary?.title
+                  ? `"${courseSummary.title}" has been deleted successfully.`
+                  : 'The course has been deleted successfully.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Course Confirmation Modal */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
@@ -881,14 +961,23 @@ export default function CourseDetail() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               Delete Course?
             </h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-gray-500 mb-4">
               Are you sure you want to delete this course? This action is permanent and cannot be undone. All sessions under this course will also be removed.
             </p>
+            {deleteError ? (
+              <p className="text-sm text-red-600 mb-4" role="alert">
+                {deleteError}
+              </p>
+            ) : null}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setIsDeleteDialogOpen(false)}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setDeleteError('');
+                  setIsDeleteDialogOpen(false);
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
               >
                 Cancel
               </button>

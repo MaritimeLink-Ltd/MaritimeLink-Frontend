@@ -137,6 +137,21 @@ export function formatApiErrorPayload(data, fallback = 'An error occurred') {
  * @param {string} [fallback]
  * @returns {string}
  */
+/**
+ * Treats a parsed DELETE/PATCH/POST body as successful when HTTP already succeeded.
+ * Backends may return 204, empty JSON, or omit `status: 'success'`.
+ * @param {unknown} response
+ * @returns {boolean}
+ */
+export function isSuccessfulMutationResponse(response) {
+    if (response == null || response === '') return true;
+    if (typeof response === 'string') return true;
+    if (typeof response !== 'object') return true;
+    if (response.status === 'success' || response.success === true) return true;
+    if (response.status === 'error' || response.success === false) return false;
+    return true;
+}
+
 export function getApiErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
   if (!error) return fallback;
 

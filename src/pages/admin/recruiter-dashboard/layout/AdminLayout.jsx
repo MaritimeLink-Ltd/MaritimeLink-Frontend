@@ -6,6 +6,7 @@ import {
     Briefcase,
     MessageSquare,
     UserCircle,
+    User,
     Bell,
     ChevronDown,
     Menu,
@@ -15,7 +16,6 @@ import {
 import authService from '../../../../services/authService';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
-import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 import { connectSocket } from '../../../../services/socketClient';
 import {
     playRecruiterDesktopSound,
@@ -23,7 +23,7 @@ import {
     syncRecruiterNotificationPreferences,
 } from '../../../../utils/recruiterNotificationPreferences';
 import {
-    initialsFromName,
+    isPlaceholderProfilePhoto,
     resolveProfilePhotoUrl,
     resolveRecruiterDisplayName,
 } from '../../../../utils/profilePhoto';
@@ -140,7 +140,7 @@ function AdminLayout() {
                 setUserData((prev) => ({
                     ...prev,
                     name: resolveRecruiterDisplayName({ email: userEmail }, 'Recruiter'),
-                    photo: savedPhoto || prev.photo,
+                    photo: resolveProfilePhotoUrl({ savedPhoto: savedPhoto || '' }),
                     email: userEmail || prev.email,
                 }));
             }
@@ -152,7 +152,10 @@ function AdminLayout() {
 
         const handleCustomPhotoUpdate = (e) => {
             const url = e.detail?.url;
-            setUserData((prev) => ({ ...prev, photo: url || null }));
+            setUserData((prev) => ({
+                ...prev,
+                photo: url && !isPlaceholderProfilePhoto(url) ? url : null,
+            }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
 
@@ -295,7 +298,7 @@ function AdminLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center space-x-3 cursor-pointer p-0.5 rounded-full hover:bg-gray-50 transition-colors"
                                 >
-                                    {userData.photo ? (
+                                    {userData.photo && !isPlaceholderProfilePhoto(userData.photo) ? (
                                         <img
                                             className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
                                             src={userData.photo}
@@ -305,11 +308,8 @@ function AdminLayout() {
                                             }
                                         />
                                     ) : (
-                                        <div
-                                            className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-[#003971]/10 text-[#003971] flex items-center justify-center text-xs font-bold"
-                                            title={userData.name || userData.email}
-                                        >
-                                            {initialsFromName(userData.name || userData.email || 'U')}
+                                        <div className="h-10 w-10 rounded-full border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center">
+                                            <User className="h-5 w-5 text-gray-400" />
                                         </div>
                                     )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
@@ -348,9 +348,7 @@ function AdminLayout() {
 
                 {/* Main Page Content */}
                 <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-8 py-6">
-                    <TermsAcceptanceGuard>
-                        <Outlet />
-                    </TermsAcceptanceGuard>
+                    <Outlet />
                 </main>
             </div>
 

@@ -2,7 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
+import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiUser } from 'react-icons/fi';
+import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
 import ResumeExportMenu from '../../../../components/resume/ResumeExportMenu';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../../../services/resumeService';
@@ -25,7 +26,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         phone: '',
         email: '',
         address: '',
-        image: localStorage.getItem('profileImage') || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        image: resolveProfilePhotoUrl({ savedPhoto: localStorage.getItem('profileImage') || '' }),
         professionalSummary: '',
         skills: [],
         licenses: [],
@@ -131,9 +132,16 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     phone: pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number ? `${pi.countryCode || pi.phoneCode || pi.country_code || pi.phone_code || ''} ${pi.contactNumber || pi.phoneNumber || pi.phone || pi.contact_number || pi.phone_number}`.trim() : prevData.phone,
                     email: pi.email || pi.emailAddress || pi.email_address || prevData.email,
                     address: [pi.streetAddress || pi.address || pi.street_address, pi.city, pi.state, pi.zipCode || pi.postcode || pi.zip_code || pi.post_code, pi.country].filter(Boolean).join(', ') || prevData.address,
-                    image: isApiPayload
-                        ? (data.profilePhotoUrl || data.profilePhoto || data.profile_photo || localStorage.getItem('profileImage') || prevData.image)
-                        : (localStorage.getItem('profileImage') || prevData.image),
+                    image: resolveProfilePhotoUrl({
+                        profile: {
+                            profilePhotoUrl: data.profilePhotoUrl || pi.profilePhotoUrl,
+                            profilePhoto: data.profilePhoto || data.profile_photo || pi.profilePhoto,
+                            photo: pi.photo,
+                        },
+                        savedPhoto: localStorage.getItem('profileImage') || '',
+                    }) ?? (
+                        prevData.image && !isPlaceholderProfilePhoto(prevData.image) ? prevData.image : null
+                    ),
                     professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
                     
                     skills: isApiPayload 
@@ -277,9 +285,16 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     console.log("Resume Fetch Result:", data);
                     if (data) {
                         processData(data, true);
-                        if (data.profilePhotoUrl || data.profilePhoto || data.profile_photo) {
-                            const photo = data.profilePhotoUrl || data.profilePhoto || data.profile_photo;
+                        const photo = resolveProfilePhotoUrl({
+                            profile: {
+                                profilePhotoUrl: data.profilePhotoUrl,
+                                profilePhoto: data.profilePhoto || data.profile_photo,
+                            },
+                        });
+                        if (photo) {
                             localStorage.setItem('profileImage', photo);
+                        } else {
+                            localStorage.removeItem('profileImage');
                         }
                     } else {
                         console.warn("Resume: API returned null or empty data");
@@ -295,9 +310,9 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
         // Listen for photo updates from the Profile page
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, image: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            const resolved = url && !isPlaceholderProfilePhoto(url) ? url : null;
+            setUserData(prev => ({ ...prev, image: resolved }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
 
@@ -507,11 +522,17 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                             {/* Profile Image */}
                             <div className="flex-shrink-0">
-                                <img
-                                    src={userData.image}
-                                    alt={userData.name}
-                                    className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl object-cover mx-auto sm:mx-0"
-                                />
+                                {userData.image && !isPlaceholderProfilePhoto(userData.image) ? (
+                                    <img
+                                        src={userData.image}
+                                        alt={userData.name}
+                                        className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl object-cover mx-auto sm:mx-0"
+                                    />
+                                ) : (
+                                    <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
+                                        <FiUser className="text-gray-400" size={56} />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Personal Details */}

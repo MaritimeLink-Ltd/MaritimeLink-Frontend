@@ -18,9 +18,9 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
+import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
 import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
-import TermsAcceptanceGuard from '../../../../components/auth/TermsAcceptanceGuard';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
@@ -31,47 +31,79 @@ function PersonalDashboardLayout() {
     const [userData, setUserData] = useState({
         name: 'User Profile',
         email: '',
-        photo: '/images/login-image.webp'
+        photo: null,
     });
 
     React.useEffect(() => {
         const updateUserData = () => {
             const savedProfile = localStorage.getItem('userProfile');
+            const savedPhoto = localStorage.getItem('profileImage');
             const userEmail = localStorage.getItem('userEmail');
 
+            if (savedPhoto && isPlaceholderProfilePhoto(savedPhoto)) {
+                localStorage.removeItem('profileImage');
+            }
+
+            let profile = {};
             if (savedProfile) {
                 try {
-                    const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName)
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
-                        : profile.fullName || profile.fullname || 'User Profile';
-                    const apiPhoto = profile.profilePhotoUrl || profile.profilePhoto || profile.photo;
-
-                    setUserData({
-                        name: name,
-                        email: profile.email || userEmail || '',
-                        photo: apiPhoto || '/images/login-image.webp'
-                    });
+                    profile = JSON.parse(savedProfile);
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
                 }
-            } else if (userEmail) {
-                setUserData(prev => ({
+            }
+
+            const name = (profile.firstName || profile.lastName)
+                ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+                : profile.fullName || profile.fullname || 'User Profile';
+
+            const photo = resolveProfilePhotoUrl({
+                profile,
+                savedPhoto: localStorage.getItem('profileImage') || '',
+            });
+
+            setUserData({
+                name,
+                email: profile.email || userEmail || '',
+                photo,
+            });
+        };
+
+        const loadAccountPhoto = async () => {
+            try {
+                const accountResponse = await authService.getMyAccount();
+                const professional = accountResponse?.data?.professional;
+                if (!professional) return;
+
+                const photo = resolveProfilePhotoUrl({
+                    profile: professional,
+                    savedPhoto: localStorage.getItem('profileImage') || '',
+                });
+                const name = professional.fullname
+                    || `${professional.firstName || ''} ${professional.lastName || ''}`.trim()
+                    || 'User Profile';
+
+                setUserData((prev) => ({
                     ...prev,
-                    email: userEmail || prev.email
+                    name: name || prev.name,
+                    email: professional.email || prev.email,
+                    photo,
                 }));
+            } catch {
+                /* non-blocking */
             }
         };
 
         updateUserData();
+        loadAccountPhoto();
         // Also listen for potential changes (if other components update it)
         window.addEventListener('storage', updateUserData);
         
         // Listen for the custom event from the Profile upload
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, photo: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            const resolved = url && !isPlaceholderProfilePhoto(url) ? url : null;
+            setUserData(prev => ({ ...prev, photo: resolved }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         
@@ -208,11 +240,17 @@ function PersonalDashboardLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
                                 >
-                                    <img
-                                        src={userData.photo}
-                                        alt="Profile"
-                                        className="w-8 h-8 rounded-full object-cover"
-                                    />
+                                    {userData.photo && !isPlaceholderProfilePhoto(userData.photo) ? (
+                                        <img
+                                            src={userData.photo}
+                                            alt="Profile"
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <User className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                    )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
                                         <span className="text-sm font-semibold text-gray-900 leading-none mb-1">{userData.name}</span>
                                         {userData.email && (
@@ -259,9 +297,7 @@ function PersonalDashboardLayout() {
                 {/* Page Content */}
                 <main className="flex-1 min-h-0 overflow-hidden bg-white">
                     <div className="h-full min-h-0 overflow-y-auto scrollbar-hide">
-                        <TermsAcceptanceGuard>
-                            <Outlet />
-                        </TermsAcceptanceGuard>
+                        <Outlet />
                     </div>
                 </main>
             </div>

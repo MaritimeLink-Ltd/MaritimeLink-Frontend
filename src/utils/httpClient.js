@@ -38,8 +38,22 @@ class HttpClient {
     async handleResponse(response) {
         const contentType = response.headers.get('content-type');
         const isJson = contentType && contentType.includes('application/json');
+        const rawText = await response.text();
 
-        const data = isJson ? await response.json() : await response.text();
+        let data;
+        if (isJson) {
+            if (!rawText || !rawText.trim()) {
+                data = null;
+            } else {
+                try {
+                    data = JSON.parse(rawText);
+                } catch {
+                    data = rawText;
+                }
+            }
+        } else {
+            data = rawText;
+        }
 
         if (response.status === 401) {
             const token = localStorage.getItem('authToken');

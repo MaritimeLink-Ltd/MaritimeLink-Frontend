@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     BookOpen,
     Calendar,
@@ -44,6 +44,7 @@ function getSessionBookingMetrics(session) {
 
 function TrainingProviderCourses() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState('all');
@@ -158,7 +159,7 @@ function TrainingProviderCourses() {
         };
 
         fetchCourses();
-    }, []);
+    }, [location.state?.refreshCoursesAt]);
 
     const filteredCourses = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();

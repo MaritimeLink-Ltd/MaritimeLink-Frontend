@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft } from 'react-icons/fi';
+import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiMenu, FiArrowLeft, FiUser } from 'react-icons/fi';
 import ResumeExportMenu from '../../components/resume/ResumeExportMenu';
 import { shareOrDownloadFile } from '../../utils/shareFile';
 import toast, { Toaster } from 'react-hot-toast';
@@ -11,7 +11,7 @@ import resumeService from '../../services/resumeService';
 import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
 import { useKycGuard } from '../../context/KycContext';
 import { KYC_ACTIONS } from '../../constants/kycRestrictedActions';
-// Logo image is now in public/images. Use direct path in <img src="/images/logo.png" />
+import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../utils/profilePhoto';
 
 const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const navigate = useNavigate();
@@ -24,7 +24,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         phone: '',
         email: '',
         address: '',
-        image: localStorage.getItem('profileImage') || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        image: resolveProfilePhotoUrl({ savedPhoto: localStorage.getItem('profileImage') || '' }),
         professionalSummary: '',
         skills: [],
         licenses: [],
@@ -80,7 +80,16 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                     phone: pi.contactNumber || pi.phoneNumber ? `${pi.countryCode || pi.phoneCode || ''} ${pi.contactNumber || pi.phoneNumber}`.trim() : (data.phoneNumber || prevData.phone),
                     email: pi.email || pi.emailAddress || data.emailAddress || prevData.email,
                     address: [pi.streetAddress || pi.address || data.address, pi.city || data.city, pi.state || data.state, pi.zipCode || pi.postcode || data.postcode, pi.country || data.country].filter(Boolean).join(', ') || prevData.address,
-                    image: data.profilePhoto || prevData.image,
+                    image: resolveProfilePhotoUrl({
+                        profile: {
+                            profilePhotoUrl: data.profilePhotoUrl,
+                            profilePhoto: data.profilePhoto || pi.profilePhoto,
+                            photo: pi.photo,
+                        },
+                        savedPhoto: localStorage.getItem('profileImage') || '',
+                    }) ?? (
+                        prevData.image && !isPlaceholderProfilePhoto(prevData.image) ? prevData.image : null
+                    ),
                     professionalSummary: ps.professionalSummary || ps.summary || (typeof ps === 'string' ? ps : '') || prevData.professionalSummary,
                     skills: getArray(sk).map(s => ({ name: s.skillName, rating: s.rating })),
                     licenses: getArray(lic).filter(l => !l.isEndorsement).map(l => ({
@@ -417,11 +426,17 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                                 {/* Profile Image */}
                                 <div className="flex-shrink-0">
-                                    <img
-                                        src={userData.image}
-                                        alt={userData.name}
-                                        className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl object-cover mx-auto sm:mx-0"
-                                    />
+                                    {userData.image && !isPlaceholderProfilePhoto(userData.image) ? (
+                                        <img
+                                            src={userData.image}
+                                            alt={userData.name}
+                                            className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl object-cover mx-auto sm:mx-0"
+                                        />
+                                    ) : (
+                                        <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
+                                            <FiUser className="text-gray-400" size={56} />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Personal Details */}

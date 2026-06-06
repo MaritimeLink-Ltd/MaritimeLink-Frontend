@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Download,
     Share2,
@@ -53,6 +53,7 @@ const DocumentsWallet = () => {
     const [linkCopied, setLinkCopied] = useState(false);
     const [shareLoading, setShareLoading] = useState(false);
     const [shareDetails, setShareDetails] = useState(null);
+    const signupPromptHandledRef = useRef(false);
 
     // Real data state
     const [documents, setDocuments] = useState([]);
@@ -166,14 +167,13 @@ const DocumentsWallet = () => {
     }, [documents]);
 
     useEffect(() => {
-        if (isLoading || !location.state?.showDocumentWalletPrompt) return;
+        if (isLoading || signupPromptHandledRef.current) return;
+        if (!location.state?.showDocumentWalletPrompt) return;
 
+        signupPromptHandledRef.current = true;
         navigate(location.pathname, { replace: true, state: {} });
-
-        if (walletDocumentsForShare.length === 0) {
-            setShowSignupPrompt(true);
-        }
-    }, [isLoading, location.state, location.pathname, navigate, walletDocumentsForShare.length]);
+        setShowSignupPrompt(true);
+    }, [isLoading, location.state, location.pathname, navigate]);
 
     const walletFolderRows = useMemo(() => {
         const walletDocs = documents.filter((d) => d.category && !WALLET_EXCLUDED_CATEGORIES.has(d.category));

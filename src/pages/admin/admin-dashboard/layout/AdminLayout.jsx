@@ -6,7 +6,6 @@ import {
     isPlatformAdminSession,
 } from '../../../../utils/sessionManager';
 import {
-    initialsFromName,
     isPlaceholderProfilePhoto,
     resolveProfilePhotoUrl,
 } from '../../../../utils/profilePhoto';
@@ -259,15 +258,15 @@ function AdminLayout() {
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50"
                                 >
-                                    {userData.photo ? (
+                                    {userData.photo && !isPlaceholderProfilePhoto(userData.photo) ? (
                                         <img
                                             src={userData.photo}
                                             alt="User avatar"
                                             className="w-8 h-8 rounded-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-8 h-8 rounded-full bg-[#0f385c] text-white flex items-center justify-center text-xs font-bold">
-                                            {initialsFromName(userData.name)}
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <UserIcon className="h-4 w-4 text-gray-400" />
                                         </div>
                                     )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">

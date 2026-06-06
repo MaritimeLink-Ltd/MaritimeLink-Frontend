@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { ChevronDown, Search, Download, ChevronsUpDown } from "lucide-react";
 import trainerDashboardService from "../../../../services/trainerDashboardService";
-import { useKycGuard } from "../../../../context/KycContext";
-import { KYC_ACTIONS } from "../../../../constants/kycRestrictedActions";
 
 const periodOptions = [
   { value: "all", label: "All" },
@@ -32,7 +30,6 @@ const normalizeInitialCertificate = (value) => {
 };
 
 function AllExpiries() {
-  const { guardRestrictedAction } = useKycGuard();
   const navigate = useNavigate();
   const location = useLocation();
   const [period, setPeriod] = useState(() =>
@@ -132,7 +129,7 @@ function AllExpiries() {
 
   const handleExportCSV = () => {
     const headers = [
-      "Certificate Type",
+      "Name",
       "Expiry Date",
       "Days Left",
       "Location",
@@ -146,7 +143,7 @@ function AllExpiries() {
         ),
       );
       return [
-        r.certificateType,
+        r.professionalName,
         formatDate(r.expiryDate),
         `${daysLeft} days`,
         r.location,
@@ -170,6 +167,22 @@ function AllExpiries() {
   const handleDownloadReport = () => {
     toast.success("Report download started");
   };
+
+  const openProfessionalProfile = (row) => {
+    const profileId = row.professionalId;
+    if (!profileId) return;
+    navigate(`/trainingprovider/candidate/${profileId}`, {
+      state: {
+        isProfessionalView: true,
+        returnPath: "/trainingprovider/expiries",
+        candidateData: {
+          fullname: row.professionalName,
+          rank: row.rank,
+        },
+      },
+    });
+  };
+
   return (
     <div className="min-h-full flex flex-col pb-6">
       <Toaster position="top-right" />
@@ -306,7 +319,7 @@ function AllExpiries() {
               <tr className="border-b border-gray-100 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
                 <th className="px-4 py-3 text-left">
                   <span className="flex items-center gap-1">
-                    Certificate Type <ChevronsUpDown className="h-3.5 w-3.5" />
+                    Name <ChevronsUpDown className="h-3.5 w-3.5" />
                   </span>
                 </th>
                 <th className="px-4 py-3 text-left">
@@ -342,7 +355,7 @@ function AllExpiries() {
                     className={`hover:bg-gray-50/60 transition-colors ${!isLast ? "border-b border-gray-50" : ""}`}
                   >
                     <td className="px-4 py-3 font-semibold text-gray-900">
-                      {row.certificateType}
+                      {row.professionalName}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
                       {formatDate(row.expiryDate)}
@@ -366,11 +379,7 @@ function AllExpiries() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          const profileId = row.professionalId || row.id;
-                          if (!profileId) return;
-                          guardRestrictedAction(KYC_ACTIONS.VIEW_PROFESSIONAL_PROFILE, () => {
-                            navigate(`/trainingprovider/candidate/${profileId}`);
-                          });
+                          openProfessionalProfile(row);
                         }}
                         className="px-3 py-1.5 rounded-lg bg-[#EBF3FF] text-[#003971] text-xs font-semibold hover:bg-[#d7e6ff] transition-colors cursor-pointer"
                       >

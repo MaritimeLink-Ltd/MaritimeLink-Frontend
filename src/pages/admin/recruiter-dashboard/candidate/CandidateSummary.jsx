@@ -24,7 +24,6 @@ import {
     Ship,
     Sparkles,
     Star,
-    Crown,
     Wallet,
     X,
 } from 'lucide-react';
@@ -433,7 +432,10 @@ function CandidateSummary({
             if (!isAdmin) {
                 try {
                     setIsLoading(true);
-                    const response = await recruiterCandidateService.getCandidateProfile(candidateId);
+                    const profileUrl = isTrainingProviderUser
+                        ? API_ENDPOINTS.TRAINER.PROFESSIONAL_DETAIL(candidateId)
+                        : API_ENDPOINTS.RECRUITER.PROFESSIONAL_DETAIL(candidateId);
+                    const response = await httpClient.get(profileUrl);
                     const responseData = response?.data?.data || response?.data;
                     const obj = responseData?.professional ? responseData.professional : responseData;
 
@@ -669,6 +671,16 @@ function CandidateSummary({
         isTrainingProviderCandidateBrowse;
 
     const showDocumentExpiryList = suppressDocumentWallet && !isAdmin;
+
+    const skipKycOnTrainingProviderProfile = isTrainingProviderCandidateBrowse;
+
+    const runProfileAction = (actionLabel, callback) => {
+        if (skipKycOnTrainingProviderProfile) {
+            callback?.();
+            return;
+        }
+        guardRestrictedAction(actionLabel, callback);
+    };
 
     const adminCreatedJobApplicationView =
         isAdmin &&
@@ -1154,17 +1166,17 @@ function CandidateSummary({
     };
 
     const handleViewResume = () => {
-        guardRestrictedAction(KYC_ACTIONS.VIEW_RESUME, openResumeView);
+        runProfileAction(KYC_ACTIONS.VIEW_RESUME, openResumeView);
     };
 
     const handleOpenDocumentWallet = () => {
-        guardRestrictedAction(KYC_ACTIONS.VIEW_DOCUMENT_WALLET, () => {
+        runProfileAction(KYC_ACTIONS.VIEW_DOCUMENT_WALLET, () => {
             setShowDocumentWallet(true);
         });
     };
 
     const handleMessageProfessional = () => {
-        guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
+        runProfileAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
             const pid = resolveMessagingProfessionalId(professional, candidateId);
             if (onMessage) {
                 onMessage(pid, candidate.name);
@@ -1208,15 +1220,7 @@ function CandidateSummary({
                             )}
 
                             <div>
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                    <h1 className="text-2xl font-bold text-gray-900">{candidate.name}</h1>
-                                    {candidate.isPremium && (
-                                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 flex items-center gap-1">
-                                            <Crown className="h-3.5 w-3.5" />
-                                            Premium
-                                        </span>
-                                    )}
-                                </div>
+                                <h1 className="text-2xl font-bold text-gray-900 mb-1">{candidate.name}</h1>
                                 <p className="text-lg text-gray-600 font-medium mb-3">{candidate.rank}</p>
                                 <div className="space-y-2">
                                     {candidate.vesselTypes.map((v, i) => (

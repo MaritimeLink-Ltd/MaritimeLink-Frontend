@@ -3,7 +3,7 @@ import ModalOverlay from '../common/ModalOverlay';
 
 function DocumentWalletSignupPromptModal({ isOpen, onClose, onUpload }) {
     return (
-        <ModalOverlay isOpen={isOpen} onClose={onClose} className="max-w-lg">
+        <ModalOverlay isOpen={isOpen} onClose={onClose} className="max-w-lg" closeOnBackdrop={false}>
             <div className="bg-white rounded-2xl p-8 w-full relative shadow-xl">
                 <button
                     type="button"
