@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -11,6 +11,7 @@ import authService from '../../../../services/authService';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import { shareOrDownloadFile } from '../../../../utils/shareFile';
 import { formatDisplayDate, formatDateRange } from '../../../../utils/formatDate';
+import { buildSeaServiceExperience, formatTotalSeaTimeLabel } from '../../../../utils/seaServiceExperience';
 import toast from 'react-hot-toast';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
@@ -468,6 +469,11 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
         });
     };
 
+    const seaExperience = useMemo(
+        () => buildSeaServiceExperience(userData.seaServiceLog || []),
+        [userData.seaServiceLog],
+    );
+
     const renderStars = (rating) => {
         return [...Array(5)].map((_, index) => (
             <FaStar
@@ -553,6 +559,14 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                                         <FiMapPin size={16} className="text-gray-500" />
                                         <span className="text-xs sm:text-sm">{userData.address}</span>
                                     </div>
+                                    {seaExperience.total.totalMonths > 0 ? (
+                                        <div className="flex items-center gap-2 text-gray-700">
+                                            <FiBriefcase size={16} className="text-gray-500" />
+                                            <span className="text-xs sm:text-sm font-medium">
+                                                {formatTotalSeaTimeLabel(userData.seaServiceLog)}
+                                            </span>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -568,6 +582,23 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                             <p className="text-gray-700 leading-relaxed text-sm">
                                 {userData.professionalSummary}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Experience Summary */}
+                    {seaExperience.experienceLines.length > 0 && (
+                        <div className="mb-8">
+                            <div className="flex items-center gap-2 mb-4">
+                                <FiBriefcase size={20} className="text-[#1E3A5F]" />
+                                <h2 className="text-xl font-bold text-[#1E3A5F]">Experience</h2>
+                            </div>
+                            <div className="space-y-2">
+                                {seaExperience.experienceLines.map((line, index) => (
+                                    <p key={index} className="text-sm text-gray-700 font-medium">
+                                        {line}
+                                    </p>
+                                ))}
+                            </div>
                         </div>
                     )}
 

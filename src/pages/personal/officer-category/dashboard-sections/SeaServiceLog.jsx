@@ -219,13 +219,13 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
 
           <div>
             <label htmlFor="type" className="block text-gray-700 font-medium mb-1 text-sm">
-              Type
+              Vessel Type
             </label>
             <input
               type="text"
               id="type"
               name="type"
-              placeholder="Enter vessel type"
+              placeholder="Enter vessel type (e.g. LNG Tanker)"
               value={currentSeaService.type}
               onChange={handleSeaServiceChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"

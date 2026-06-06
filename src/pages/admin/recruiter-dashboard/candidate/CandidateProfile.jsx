@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Ship, Anchor, Clock, Star } from 'lucide-react';
+import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Anchor, Clock, Star } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import {
+    buildSeaServiceExperience,
+    formatTotalSeaTimeLabel,
+} from '../../../../utils/seaServiceExperience';
 
 const normalizeCandidateProfile = (candidate = {}) => ({
     ...candidate,
@@ -63,15 +67,7 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                 const professional = responseData?.professional || responseData;
                 const resume = professional?.resume || responseData?.resume || {};
                 const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
-                const vesselTypes = [...new Set(seaService.map((s) => s.vesselType).filter(Boolean))];
-
-                const experience = seaService.length > 0
-                    ? seaService.map((s) => {
-                        const role = s.role || 'Role not provided';
-                        const vessel = s.vesselName || s.vesselType || 'Vessel not provided';
-                        return `${role} - ${vessel}`;
-                    })
-                    : ['No experience records available'];
+                const seaExperience = buildSeaServiceExperience(seaService);
 
                 const skills = Array.isArray(resume?.skills)
                     ? resume.skills.map((s) => ({ name: s.skillName || s.name || 'Unnamed skill', rating: Number(s.rating) || 0 }))
@@ -84,9 +80,10 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                     email: professional?.email || '',
                     profileImage: professional?.profilePhotoUrl || professional?.avatarUrl || '',
                     isCompliant: professional?.isVerified || false,
-                    vesselTypes: vesselTypes.length > 0 ? vesselTypes : ['No vessel experience available'],
-                    seaTime: professional?.totalYearsExperience ? `${professional.totalYearsExperience} years experience` : 'No sea time recorded',
-                    experience,
+                    seaTime: formatTotalSeaTimeLabel(seaService),
+                    experience: seaExperience.experienceLines.length > 0
+                        ? seaExperience.experienceLines
+                        : ['No experience summary available'],
                     skills,
                 });
                 setLoadError('');
@@ -170,14 +167,8 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                                 )}
                             </div>
 
-                            {/* Vessel Types and Sea Time */}
+                            {/* Sea Time */}
                             <div className="space-y-3 mb-6">
-                                {candidateData.vesselTypes.map((vessel, index) => (
-                                    <div key={index} className="flex items-center gap-2 text-gray-700">
-                                        <Ship size={18} className="text-[#003971]" />
-                                        <span>{vessel}</span>
-                                    </div>
-                                ))}
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <Clock size={18} className="text-[#003971]" />
                                     <span>{candidateData.seaTime}</span>

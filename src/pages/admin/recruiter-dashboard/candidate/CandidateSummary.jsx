@@ -21,7 +21,6 @@ import {
     Folder,
     Headphones,
     MessageSquare,
-    Ship,
     Sparkles,
     Star,
     Wallet,
@@ -29,6 +28,10 @@ import {
 } from 'lucide-react';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import {
+    buildSeaServiceExperience,
+    formatTotalSeaTimeLabel,
+} from '../../../../utils/seaServiceExperience';
 
 const toDisplayDate = (value) => {
     if (!value) return 'N/A';
@@ -702,20 +705,13 @@ function CandidateSummary({
 
     const candidate = useMemo(() => {
         const seaService = Array.isArray(resume?.seaService) ? resume.seaService : [];
-        const vesselTypes = [...new Set(seaService.map((s) => s.vesselType).filter(Boolean))];
-        const experience = seaService.map((s) => {
-            const role = s.role || 'Role not provided';
-            const vessel = s.vesselName || s.vesselType || 'Vessel not provided';
-            const range = `${toDisplayDate(s.joiningDate)} - ${s.tillDate ? toDisplayDate(s.tillDate) : 'Present'}`;
-            return `${role} - ${vessel} (${range})`;
-        });
+        const seaExperience = buildSeaServiceExperience(seaService);
 
         const skills = Array.isArray(resume?.skills)
             ? resume.skills.map((s) => ({ name: s.skillName || s.name || 'Unnamed skill', rating: Number(s.rating) || 0 }))
             : [];
 
         const rank = professional?.profession || professional?.subcategory || resume?.subcategory || resume?.category || fallback.rank || 'N/A';
-        const years = Number(professional?.totalYearsExperience);
 
         return {
             name:
@@ -735,10 +731,11 @@ function CandidateSummary({
             location: professional?.location || resume?.country || fallback.location || 'N/A',
             tier: professional?.tier || fallback.tier || 'FREE',
             isPremium: String(professional?.tier || fallback.tier || '').toUpperCase() === 'PRO',
-            vesselTypes,
-            seaTime: Number.isFinite(years) ? `${years} years experience` : (seaService.length ? `${seaService.length} sea service record(s)` : 'No sea service recorded'),
+            vesselTypes: seaExperience.uniqueVesselTypes,
+            seaTime: formatTotalSeaTimeLabel(seaService),
+            seaExperience,
             compliant: professional?.isVerified || professional?.kyc?.status === 'APPROVED' || false,
-            experience,
+            experience: seaExperience.experienceLines,
             skills,
         };
     }, [professional, resume, fallback]);
@@ -1223,12 +1220,6 @@ function CandidateSummary({
                                 <h1 className="text-2xl font-bold text-gray-900 mb-1">{candidate.name}</h1>
                                 <p className="text-lg text-gray-600 font-medium mb-3">{candidate.rank}</p>
                                 <div className="space-y-2">
-                                    {candidate.vesselTypes.map((v, i) => (
-                                        <div key={i} className="flex items-center gap-2 text-gray-700">
-                                            <Ship className="h-4 w-4 text-[#003971]" />
-                                            <span className="font-medium">{v}</span>
-                                        </div>
-                                    ))}
                                     <div className="flex items-center gap-2 text-gray-700">
                                         <Clock className="h-4 w-4 text-[#003971]" />
                                         <span className="font-medium">{candidate.seaTime}</span>
