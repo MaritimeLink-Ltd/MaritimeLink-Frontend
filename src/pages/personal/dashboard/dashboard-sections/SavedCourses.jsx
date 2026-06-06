@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, Bookmark, Loader2, ClipboardList, ChevronRight } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 
 /** Matches BookCourse / Training session rows for navigation state */
 const mapSessionsForBookCourse = (sessions) => {
     if (!Array.isArray(sessions)) return [];
     return sessions.map((session) => {
-        const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
-        const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
-        const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : sDate || eDate || 'TBA';
+        const eventDate = formatSessionDateRange(session.startDate, session.endDate);
         const total = Number(session.totalSeats) || 0;
         const enrolled = Number(session.enrolledCount) || 0;
         const availableSpaces = Math.max(0, total - enrolled);
@@ -32,10 +31,10 @@ const displayCourseProvider = (course) =>
 const formatDateRange = (sessions) => {
     if (!Array.isArray(sessions) || sessions.length === 0) return 'Dates TBA';
     const s = sessions[0];
-    const start = s.startDate ? new Date(s.startDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
-    const end = s.endDate ? new Date(s.endDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
-    if (start && end && start !== end) return `${start} – ${end}`;
-    return start || end || 'Dates TBA';
+    return formatSessionDateRange(s.startDate, s.endDate, {
+        separator: ' – ',
+        fallback: 'Dates TBA',
+    });
 };
 
 const statusPillClass = (status) => {

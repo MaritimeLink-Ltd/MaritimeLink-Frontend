@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Award, ArrowLeft, X, Search, Loader2 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 
 /** Matches GET /api/professional/courses (browse) response shape: providerName, isSaved, etc. */
 const resolveCourseProvider = (course) =>
@@ -133,9 +134,7 @@ const Training = () => {
     const mapSessionsList = (sessions) => {
         if (!Array.isArray(sessions)) return [];
         return sessions.map((session) => {
-            const sDate = session.startDate ? new Date(session.startDate).toLocaleDateString() : '';
-            const eDate = session.endDate ? new Date(session.endDate).toLocaleDateString() : '';
-            const eventDate = sDate && eDate ? `${sDate} - ${eDate}` : (sDate || eDate || 'TBA');
+            const eventDate = formatSessionDateRange(session.startDate, session.endDate);
             const total = Number(session.totalSeats) || 0;
             const enrolled = Number(session.enrolledCount) || 0;
             const availableSpaces = Number.isFinite(Number(session.availableSeats))

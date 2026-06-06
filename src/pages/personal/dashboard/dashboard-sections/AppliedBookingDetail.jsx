@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Building2, Loader2, AlertCircle, Calendar, Clock, User, FileText, ExternalLink } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 
 const displayCourseLocation = (course, sessions) => {
     const raw = course?.location;
@@ -41,9 +42,7 @@ const paymentStatusLabel = (status) => {
 };
 
 const formatSessionWhen = (session) => {
-    const start = session.startDate ? new Date(session.startDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
-    const end = session.endDate ? new Date(session.endDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
-    const range = start && end && start !== end ? `${start} – ${end}` : start || end || 'TBA';
+    const range = formatSessionDateRange(session.startDate, session.endDate);
     const time =
         session.startTime && session.endTime ? `${session.startTime} – ${session.endTime}` : session.startTime || '';
     return { range, time };
