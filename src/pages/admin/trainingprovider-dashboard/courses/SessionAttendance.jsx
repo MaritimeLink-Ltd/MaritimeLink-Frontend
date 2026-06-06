@@ -14,6 +14,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import httpClient from '../../../../utils/httpClient';
 import { formatCoursePrice } from '../../../../utils/courseCurrency';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
 
@@ -79,13 +80,9 @@ function formatSessionHint(sessions) {
   if (!Array.isArray(sessions) || sessions.length === 0) return null;
   const s = sessions[0];
   if (!s?.startDate) return s?.location || null;
-  const start = new Date(s.startDate);
-  const end = s.endDate ? new Date(s.endDate) : null;
   const loc = s.location ? ` · ${s.location}` : '';
-  if (end && !Number.isNaN(end.getTime()) && !Number.isNaN(start.getTime())) {
-    return `${start.toLocaleDateString()} – ${end.toLocaleDateString()}${loc}`;
-  }
-  if (!Number.isNaN(start.getTime())) return `${start.toLocaleDateString()}${loc}`;
+  const range = formatSessionDateRange(s.startDate, s.endDate, { fallback: '' });
+  if (range) return `${range}${loc}`;
   return s.location || null;
 }
 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { formatSessionDateRange } from '../../../../utils/formatDate';
 
 const iconOptions = [
     { icon: LifeBuoy, iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
@@ -23,16 +24,10 @@ const iconOptions = [
 
 function formatDateRange(sessions, bookedAt) {
     const session = Array.isArray(sessions) && sessions.length > 0 ? sessions[0] : null;
-    const startRaw = session?.startDate || bookedAt;
-    if (!startRaw) return 'No session date';
-    const start = new Date(startRaw);
-    if (Number.isNaN(start.getTime())) return 'No session date';
-    const end = session?.endDate ? new Date(session.endDate) : null;
-    const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (!end || Number.isNaN(end.getTime()) || end.toDateString() === start.toDateString()) {
-        return startLabel;
-    }
-    return `${startLabel} - ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+    if (!session?.startDate && !bookedAt) return 'No session date';
+    return formatSessionDateRange(session?.startDate || bookedAt, session?.endDate, {
+        fallback: 'No session date',
+    });
 }
 
 function statusLabel(status) {

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
+import { formatDisplayDate, formatSessionDateRange } from '../../../../utils/formatDate';
 
 function fullName(professional = {}) {
     return professional.fullname || [professional.firstName, professional.middleName, professional.lastName].filter(Boolean).join(' ') || 'Unknown trainee';
@@ -28,22 +29,16 @@ function initials(name) {
         .join('') || 'T';
 }
 
-function formatDate(raw, options = { month: 'short', day: 'numeric', year: 'numeric' }) {
-    if (!raw) return 'Not set';
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) return 'Not set';
-    return date.toLocaleDateString(undefined, options);
+function formatDate(raw) {
+    return formatDisplayDate(raw) || 'Not set';
 }
 
 function formatSessionDate(sessions, bookedAt) {
     const session = Array.isArray(sessions) && sessions.length > 0 ? sessions[0] : null;
-    if (!session?.startDate) return formatDate(bookedAt);
-    const start = new Date(session.startDate);
-    const end = session.endDate ? new Date(session.endDate) : null;
-    if (!end || Number.isNaN(end.getTime()) || end.toDateString() === start.toDateString()) {
-        return formatDate(session.startDate);
-    }
-    return `${formatDate(session.startDate, { month: 'short', day: 'numeric' })} - ${formatDate(session.endDate)}`;
+    if (!session?.startDate && !bookedAt) return 'Not set';
+    return formatSessionDateRange(session?.startDate || bookedAt, session?.endDate, {
+        fallback: formatDate(bookedAt),
+    });
 }
 
 function statusLabel(status) {
