@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      setupFiles: './src/__tests__/setup.js',
+      globals: false,
+    },
     server: {
       proxy: {
         '/api': {
