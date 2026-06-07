@@ -23,6 +23,7 @@ import {
     MessageSquare,
     Sparkles,
     Star,
+    ShieldCheck,
     Wallet,
     X,
 } from 'lucide-react';
@@ -1270,6 +1271,19 @@ function CandidateSummary({
                             <button onClick={handleOpenDocumentWallet} className="bg-[#003971] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002855] transition-colors">
                                 <Wallet className="h-5 w-5" />
                                 View Document Wallet
+                            </button>
+                        ) : null}
+
+                        {isAdmin && location.pathname.includes('/admin/candidate/') && candidateId ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(`/admin/accounts/${candidateId}`, { state: { accountType: 'professional' } })
+                                }
+                                className="bg-[#1e5a8f] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#164773] transition-colors"
+                            >
+                                <ShieldCheck className="h-5 w-5" />
+                                Account &amp; KYC management
                             </button>
                         ) : null}
 

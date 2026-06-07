@@ -1373,11 +1373,11 @@ function Accounts() {
                                         <td className="px-4 py-4">
                                             {activeTab === 'Professionals' ? (
                                                 <Link
-                                                    to={`/admin/candidate/${account.id}`}
-                                                    state={{ isProfessionalView: true }}
+                                                    to={`/admin/accounts/${account.id}`}
+                                                    state={{ accountType: 'professional' }}
                                                     className="text-sm font-semibold text-[#1e5a8f] hover:underline"
                                                 >
-                                                    View Profile
+                                                    View Details
                                                 </Link>
                                             ) : (
                                                 <Link
