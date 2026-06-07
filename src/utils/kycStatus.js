@@ -97,28 +97,32 @@ export function hasSubmittedKyc(profile = readUserProfile()) {
 }
 
 /**
- * Stage 2 KYC complete: identity verified and admin has issued the verified badge.
+ * Resolve Stage 2 KYC status from profile fields populated at login / refresh.
+ * @param {Object} [profile]
+ * @returns {string}
+ */
+export function getStage2KycStatus(profile = readUserProfile()) {
+  if (!profile || typeof profile !== 'object') return '';
+
+  return normalizeKycStatus(
+    profile.kyc?.status ?? profile.kycStatus ?? profile.kyc_status,
+  );
+}
+
+/**
+ * Stage 2 KYC complete: admin has approved identity verification (verified badge issued).
+ * Note: `profile.isVerified` means email verified at registration — not Stage 2.
  * @param {Object} [profile]
  * @returns {boolean}
  */
 export function hasStage2KycAccess(profile = readUserProfile()) {
   if (!profile || typeof profile !== 'object') return false;
 
-  const kycStatus = normalizeKycStatus(
-    profile.kyc?.status ?? profile.kycStatus ?? profile.kyc_status,
-  );
+  const kycStatus = getStage2KycStatus(profile);
 
   if (kycStatus === 'rejected') return false;
 
-  if (kycStatus === 'approved' || kycStatus === 'verified') {
-    return true;
-  }
-
-  if (profile.isVerified === true) {
-    return true;
-  }
-
-  return false;
+  return kycStatus === 'approved' || kycStatus === 'verified';
 }
 
 /** @deprecated Use hasStage2KycAccess — kept for existing imports. */
@@ -177,12 +181,21 @@ export function notifyKycProfileUpdated() {
  */
 export function mergeAuthUserProfile(incoming = {}) {
   const existing = readUserProfile();
+  const incomingKyc = incoming?.kyc;
   const merged = {
     ...existing,
     ...incoming,
-    kyc: incoming?.kyc ?? existing?.kyc,
-    kycStatus: incoming?.kyc?.status ?? incoming?.kycStatus ?? existing?.kycStatus,
-    kyc_status: incoming?.kyc?.status ?? incoming?.kyc_status ?? existing?.kyc_status,
+    kyc:
+      incomingKyc !== undefined && incomingKyc !== null
+        ? {
+            ...(existing?.kyc && typeof existing.kyc === 'object' ? existing.kyc : {}),
+            ...incomingKyc,
+          }
+        : existing?.kyc,
+    kycStatus:
+      incomingKyc?.status ?? incoming?.kycStatus ?? existing?.kycStatus,
+    kyc_status:
+      incomingKyc?.status ?? incoming?.kyc_status ?? existing?.kyc_status,
   };
 
   if (incoming?.kycSubmitted === true || hasSubmittedKyc(merged)) {

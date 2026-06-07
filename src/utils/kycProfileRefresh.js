@@ -23,11 +23,35 @@ function extractProfileFromResponse(response, userType) {
   const data = response?.data ?? response ?? {};
 
   if (userType === 'professional') {
-    return data.professional || data.user || data;
+    const profile = data.professional || data.user || data;
+    if (profile && (data.kyc || data.kycSubmitted != null)) {
+      return {
+        ...profile,
+        kyc: data.kyc ?? profile.kyc,
+        kycSubmitted: data.kycSubmitted ?? profile.kycSubmitted,
+      };
+    }
+    return profile;
   }
 
-  if (userType === 'recruiter') {
-    return data.recruiter || data.profile || data;
+  if (userType === 'recruiter' || userType === 'training-provider') {
+    const recruiter = data.recruiter || data.trainingProvider || data.trainer;
+    const kyc = data.kyc ?? recruiter?.kyc;
+    const kycSubmitted = data.kycSubmitted ?? recruiter?.kycSubmitted;
+
+    if (recruiter) {
+      return { ...recruiter, kyc, kycSubmitted };
+    }
+
+    if (kyc || data.kycSubmitted != null) {
+      return {
+        ...(data.profile && typeof data.profile === 'object' ? data.profile : {}),
+        kyc,
+        kycSubmitted,
+      };
+    }
+
+    return data.profile || data;
   }
 
   return data.trainingProvider || data.trainer || data.profile || data;

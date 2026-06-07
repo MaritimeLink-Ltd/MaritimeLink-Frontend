@@ -27,15 +27,21 @@ describe('hasStage2KycAccess', () => {
     expect(hasStage2KycAccess({ kycStatus: 'verified' })).toBe(true);
   });
 
-  it('returns true when verified badge is issued (isVerified)', () => {
-    expect(hasStage2KycAccess({ isVerified: true })).toBe(true);
+  it('returns false when only email is verified (isVerified) without KYC approval', () => {
+    expect(hasStage2KycAccess({ isVerified: true })).toBe(false);
+    expect(
+      hasStage2KycAccess({
+        isVerified: true,
+        kyc: { status: 'PENDING' },
+      }),
+    ).toBe(false);
   });
 
   it('returns false for stage-1-only recruiter (approved account, no stage 2)', () => {
     expect(
       hasStage2KycAccess({
         status: 'APPROVED',
-        isVerified: false,
+        isVerified: true,
         kyc: { status: 'PENDING' },
       }),
     ).toBe(false);

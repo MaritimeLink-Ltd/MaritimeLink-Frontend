@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { useKycWizard } from '../hooks/useKycWizard';
 import KycWizardModals from '../components/kyc/KycWizardModals';
+import { hasStage2KycAccess, readUserProfile } from '../utils/kycStatus';
 
 const KycContext = createContext(null);
 
@@ -36,8 +37,11 @@ export function useKycGuard() {
     }
 
     if (!kyc) {
-      callback?.();
-      return true;
+      if (hasStage2KycAccess(readUserProfile())) {
+        callback?.();
+        return true;
+      }
+      return false;
     }
 
     return kyc.guardRestrictedAction(actionLabel, callback);
@@ -45,7 +49,10 @@ export function useKycGuard() {
 
   return {
     guardRestrictedAction,
-    hasStage2Access: isPlatformAdmin || kyc?.hasStage2Access || false,
+    hasStage2Access:
+      isPlatformAdmin ||
+      kyc?.hasStage2Access ||
+      hasStage2KycAccess(readUserProfile()),
     isKycUnderReview: kyc?.isKycUnderReview || false,
   };
 }

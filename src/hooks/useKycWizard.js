@@ -91,6 +91,14 @@ export function useKycWizard({ userType, storagePrefix }) {
   }, [userProfile]);
 
   useEffect(() => {
+    if (!profileHydrated) return undefined;
+
+    void refreshKycProfileFromApi(userType).then((updated) => {
+      if (updated) refreshUserProfile();
+    });
+  }, [profileHydrated, userType, refreshUserProfile]);
+
+  useEffect(() => {
     if (!profileHydrated || hasStage2Access) return undefined;
 
     const pollMs = hasKycSubmitted ? 30000 : 60000;
