@@ -17,6 +17,18 @@ export const normalizeSeaServiceLog = (log = {}) => ({
   role: log.role || '',
 });
 
+const resolveVesselTypeLabel = (log = {}) => {
+  const vesselType = displayVesselType(log.vesselType || log.vessel_type || log.type);
+  const vesselName = displayVesselType(log.vesselName || log.vessel_name);
+
+  if (!vesselType) return '';
+  if (vesselName && normalizeVesselTypeKey(vesselType) === normalizeVesselTypeKey(vesselName)) {
+    return '';
+  }
+
+  return vesselType;
+};
+
 export const diffMonthsBetween = (joiningDate, tillDate) => {
   if (!joiningDate || !tillDate) return 0;
 
@@ -67,7 +79,7 @@ export const getVesselTypeBreakdown = (logs = []) => {
   const vesselMonths = new Map();
 
   normalized.forEach((log) => {
-    const label = displayVesselType(log.vesselType);
+    const label = resolveVesselTypeLabel(log);
     const key = normalizeVesselTypeKey(label);
     if (!key) return;
 

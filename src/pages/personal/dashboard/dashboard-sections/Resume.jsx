@@ -184,10 +184,17 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                             imoNo: s.imoNumber || s.imo_number || s.imoNo,
                             flag: s.flag,
                             type: s.vesselType || s.vessel_type || s.type,
+                            vesselType: s.vesselType || s.vessel_type || s.type,
                             dwt: s.dwt,
                             meType: s.meType || s.me_type,
                             kw: s.kwType || s.kwtType || s.kw_type || s.kw,
-                            duration: formatDateRange(s.joiningDate || s.joining_date, s.tillDate || s.till_date),
+                            joiningDate: s.joiningDate || s.joining_date || s.signOn || null,
+                            tillDate: s.tillDate || s.till_date || s.till || s.signOff || null,
+                            till: s.tillDate || s.till_date || s.till || s.signOff || null,
+                            duration: formatDateRange(
+                                s.joiningDate || s.joining_date || s.signOn,
+                                s.tillDate || s.till_date || s.till || s.signOff,
+                            ),
                         }))
                         : getArray(sea.seaServiceLog || sea.seaServiceEntries || sea).map(s => ({
                             ...s,

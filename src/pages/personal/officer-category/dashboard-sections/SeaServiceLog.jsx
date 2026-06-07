@@ -130,6 +130,9 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
                 </button>
                 <div className="mb-2">
                   <p className="text-sm font-semibold text-gray-800">{entry.vesselName}</p>
+                  {entry.type ? (
+                    <p className="text-xs text-gray-600">{entry.type}</p>
+                  ) : null}
                   <p className="text-xs text-gray-500">{entry.role}</p>
                   <p className="text-xs text-gray-500">
                     {entry.joiningDate && entry.till ?
