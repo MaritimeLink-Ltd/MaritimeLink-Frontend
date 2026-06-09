@@ -5,6 +5,7 @@ import {
   formatTotalSeaTimeLabel,
   getVesselTypeBreakdown,
   normalizeSeaServiceLog,
+  pluralizeVesselTypeDisplay,
 } from '../utils/seaServiceExperience';
 
 const sampleLogs = [
@@ -39,7 +40,7 @@ describe('seaServiceExperience', () => {
     const total = calculateTotalSeaTime(sampleLogs);
     expect(total.totalMonths).toBeGreaterThan(0);
     expect(total.years).toBeGreaterThan(0);
-    expect(formatTotalSeaTimeLabel(sampleLogs)).toMatch(/^Total Sea Time: \d+ year/);
+    expect(formatTotalSeaTimeLabel(sampleLogs)).toMatch(/^\d+ year.*sea time$/);
   });
 
   it('groups duplicate vessel types and sums their time', () => {
@@ -51,14 +52,45 @@ describe('seaServiceExperience', () => {
     ]);
   });
 
-  it('builds Figma-style experience lines with vessel type breakdown', () => {
+  it('merges plural vessel type variants', () => {
+    const breakdown = getVesselTypeBreakdown([
+      {
+        vesselName: 'Glen Sannox',
+        vesselType: 'RoRo Ferries',
+        joiningDate: '2024-12-27',
+        tillDate: '2026-04-12',
+      },
+      {
+        vesselName: 'Loch Seaforth',
+        vesselType: 'RoRo Ferry',
+        joiningDate: '2026-05-13',
+        tillDate: '2026-05-28',
+      },
+    ]);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0].totalMonths).toBeGreaterThan(1);
+  });
+
+  it('builds Figma-style experience lines', () => {
     const experience = buildSeaServiceExperience(sampleLogs);
-    expect(experience.experienceLines[0]).toMatch(/^Total Sea Time:/);
-    expect(experience.experienceLines.some((line) => line.startsWith('LNG Tanker:'))).toBe(true);
+    expect(experience.experienceLines[0]).toMatch(/total sea service$/);
     expect(
-      experience.experienceLines.some((line) => line.startsWith('Offshore Support Vessel:')),
+      experience.experienceLines.some((line) => line.includes('on LNG Tankers')),
+    ).toBe(true);
+    expect(
+      experience.experienceLines.some((line) =>
+        line.includes('on Offshore Support Vessels'),
+      ),
     ).toBe(true);
     expect(experience.uniqueVesselTypes).toHaveLength(2);
+  });
+
+  it('pluralizes vessel types for breakdown lines', () => {
+    expect(pluralizeVesselTypeDisplay('LNG Tanker')).toBe('LNG Tankers');
+    expect(pluralizeVesselTypeDisplay('Offshore Support Vessel')).toBe(
+      'Offshore Support Vessels',
+    );
   });
 
   it('keeps vessel name separate from vessel type', () => {
@@ -76,13 +108,13 @@ describe('seaServiceExperience', () => {
     )).toBe(false);
   });
 
-  it('ignores entries where vessel type was mistakenly set to vessel name', () => {
+  it('ignores generic placeholder vessel types', () => {
     const experience = buildSeaServiceExperience([
       {
-        vesselName: 'LNG Lagos 2',
-        vesselType: 'LNG Lagos 2',
-        joiningDate: '2020-01-01',
-        tillDate: '2022-01-01',
+        vesselName: 'Test Ship',
+        vesselType: 'Vessel',
+        joiningDate: '2026-04-01',
+        tillDate: '2026-04-24',
       },
       {
         vesselName: 'LNG Pioneer',
@@ -94,6 +126,9 @@ describe('seaServiceExperience', () => {
 
     expect(experience.byVesselType).toHaveLength(1);
     expect(experience.byVesselType[0].vesselType).toBe('LNG Tanker');
+    expect(experience.experienceLines.some((line) => line.includes('on Vessel'))).toBe(
+      false,
+    );
   });
 
   it('reads wizard field aliases (type, till)', () => {

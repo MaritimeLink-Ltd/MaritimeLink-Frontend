@@ -1,12 +1,37 @@
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
 
-const normalizeVesselTypeKey = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase();
+const GENERIC_VESSEL_TYPE_KEYS = new Set([
+  'vessel',
+  'none',
+  'n/a',
+  'na',
+  'unknown',
+  'other',
+]);
 
-const displayVesselType = (value) =>
-  String(value || '').trim();
+const normalizeVesselTypeKey = (value) => {
+  let key = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+
+  if (!key || GENERIC_VESSEL_TYPE_KEYS.has(key)) return '';
+
+  const words = key.split(' ');
+  const last = words[words.length - 1];
+
+  if (last.endsWith('ies') && last.length > 4) {
+    words[words.length - 1] = `${last.slice(0, -3)}y`;
+  } else if (last.endsWith('es') && last.length > 3 && !last.endsWith('ss')) {
+    words[words.length - 1] = last.slice(0, -2);
+  } else if (last.endsWith('s') && last.length > 2 && !last.endsWith('ss')) {
+    words[words.length - 1] = last.slice(0, -1);
+  }
+
+  return words.join(' ');
+};
+
+const displayVesselType = (value) => String(value || '').trim();
 
 export const normalizeSeaServiceLog = (log = {}) => ({
   ...log,
@@ -20,9 +45,11 @@ export const normalizeSeaServiceLog = (log = {}) => ({
 const resolveVesselTypeLabel = (log = {}) => {
   const vesselType = displayVesselType(log.vesselType || log.vessel_type || log.type);
   const vesselName = displayVesselType(log.vesselName || log.vessel_name);
+  const typeKey = normalizeVesselTypeKey(vesselType);
 
-  if (!vesselType) return '';
-  if (vesselName && normalizeVesselTypeKey(vesselType) === normalizeVesselTypeKey(vesselName)) {
+  if (!typeKey) return '';
+
+  if (vesselName && normalizeVesselTypeKey(vesselName) === typeKey) {
     return '';
   }
 
@@ -51,6 +78,20 @@ export const monthsToYearsAndMonths = (totalMonths) => {
   };
 };
 
+/** Figma-style duration: "8 years 9 months" (no comma). */
+export const formatSeaServiceDurationCompact = (years, months) => {
+  const parts = [];
+
+  if (years > 0) {
+    parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  }
+  if (months > 0) {
+    parts.push(`${months} month${months === 1 ? '' : 's'}`);
+  }
+
+  return parts.join(' ') || '0 months';
+};
+
 export const formatSeaServiceDuration = (years, months) => {
   const parts = [];
 
@@ -62,6 +103,20 @@ export const formatSeaServiceDuration = (years, months) => {
   }
 
   return parts.join(', ') || '0 months';
+};
+
+export const pluralizeVesselTypeDisplay = (label) => {
+  const trimmed = displayVesselType(label);
+  if (!trimmed) return '';
+
+  const lower = trimmed.toLowerCase();
+  if (lower.endsWith('s')) return trimmed;
+
+  if (lower.endsWith('y') && !/[aeiou]y$/i.test(trimmed)) {
+    return `${trimmed.slice(0, -1)}ies`;
+  }
+
+  return `${trimmed}s`;
 };
 
 export const calculateTotalSeaTime = (logs = []) => {
@@ -89,6 +144,9 @@ export const getVesselTypeBreakdown = (logs = []) => {
     const existing = vesselMonths.get(key);
     if (existing) {
       existing.months += months;
+      if (label.length > existing.label.length) {
+        existing.label = label;
+      }
       return;
     }
 
@@ -101,7 +159,7 @@ export const getVesselTypeBreakdown = (logs = []) => {
       return {
         vesselType: label,
         ...duration,
-        label: formatSeaServiceDuration(duration.years, duration.months),
+        label: formatSeaServiceDurationCompact(duration.years, duration.months),
       };
     })
     .sort((a, b) => b.totalMonths - a.totalMonths);
@@ -112,15 +170,16 @@ export const buildSeaServiceExperience = (logs = []) => {
   const total = calculateTotalSeaTime(normalized);
   const byVesselType = getVesselTypeBreakdown(normalized);
   const experienceLines = [];
+  const totalCompact = formatSeaServiceDurationCompact(total.years, total.months);
 
   if (total.totalMonths > 0) {
-    experienceLines.push(
-      `Total Sea Time: ${formatSeaServiceDuration(total.years, total.months)}`,
-    );
+    experienceLines.push(`${totalCompact} total sea service`);
   }
 
   byVesselType.forEach((entry) => {
-    experienceLines.push(`${entry.vesselType}: ${entry.label}`);
+    experienceLines.push(
+      `${entry.label} on ${pluralizeVesselTypeDisplay(entry.vesselType)}`,
+    );
   });
 
   if (normalized.length > 0) {
@@ -140,7 +199,7 @@ export const buildSeaServiceExperience = (logs = []) => {
   return {
     total: {
       ...total,
-      label: formatSeaServiceDuration(total.years, total.months),
+      label: totalCompact,
     },
     byVesselType,
     experienceLines,
@@ -151,5 +210,5 @@ export const buildSeaServiceExperience = (logs = []) => {
 export const formatTotalSeaTimeLabel = (logs = []) => {
   const { total } = buildSeaServiceExperience(logs);
   if (total.totalMonths <= 0) return 'No sea service recorded';
-  return `Total Sea Time: ${total.label}`;
+  return `${total.label} sea time`;
 };

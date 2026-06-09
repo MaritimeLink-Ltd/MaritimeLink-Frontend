@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Anchor, Clock, Star } from 'lucide-react';
+import { ArrowLeft, CheckCircle, FileText, Folder, MessageCircle, Anchor, Clock, Ship, Star } from 'lucide-react';
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import {
@@ -84,6 +84,7 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                     profileImage: professional?.profilePhotoUrl || professional?.avatarUrl || '',
                     isCompliant: professional?.isVerified || false,
                     seaTime: formatTotalSeaTimeLabel(seaService),
+                    vesselTypes: seaExperience.uniqueVesselTypes,
                     experience: seaExperience.experienceLines.length > 0
                         ? seaExperience.experienceLines
                         : ['No experience summary available'],
@@ -170,8 +171,16 @@ const CandidateProfile = ({ candidate, onBack, onViewResume, onViewDocuments, on
                                 )}
                             </div>
 
-                            {/* Sea Time */}
+                            {/* Vessel types & sea time */}
                             <div className="space-y-3 mb-6">
+                                {candidateData.vesselTypes?.length > 0
+                                    ? candidateData.vesselTypes.map((vesselType) => (
+                                        <div key={vesselType} className="flex items-center gap-2 text-gray-700">
+                                            <Ship size={18} className="text-[#003971]" />
+                                            <span>{vesselType}</span>
+                                        </div>
+                                    ))
+                                    : null}
                                 <div className="flex items-center gap-2 text-gray-700">
                                     <Clock size={18} className="text-[#003971]" />
                                     <span>{candidateData.seaTime}</span>

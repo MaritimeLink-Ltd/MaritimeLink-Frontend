@@ -24,6 +24,7 @@ import {
     Sparkles,
     Star,
     ShieldCheck,
+    Ship,
     Wallet,
     X,
 } from 'lucide-react';
@@ -1239,6 +1240,14 @@ function CandidateSummary({
                                 <h1 className="text-2xl font-bold text-gray-900 mb-1">{candidate.name}</h1>
                                 <p className="text-lg text-gray-600 font-medium mb-3">{candidate.rank}</p>
                                 <div className="space-y-2">
+                                    {candidate.vesselTypes?.length > 0
+                                        ? candidate.vesselTypes.map((vesselType) => (
+                                            <div key={vesselType} className="flex items-center gap-2 text-gray-700">
+                                                <Ship className="h-4 w-4 text-[#003971]" />
+                                                <span className="font-medium">{vesselType}</span>
+                                            </div>
+                                        ))
+                                        : null}
                                     <div className="flex items-center gap-2 text-gray-700">
                                         <Clock className="h-4 w-4 text-[#003971]" />
                                         <span className="font-medium">{candidate.seaTime}</span>
