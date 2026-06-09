@@ -53,6 +53,7 @@ export function useKycWizard({ userType, storagePrefix }) {
   const initialKycStatus = getEffectiveKycStatus(userProfile, backendKycStatus || 'pending');
 
   const [sessionSkipped, setSessionSkipped] = useState(false);
+  const [kycFlowInProgress, setKycFlowInProgress] = useState(false);
   const [kycStatus, setKycStatus] = useState(initialKycStatus);
 
   useEffect(() => {
@@ -75,6 +76,10 @@ export function useKycWizard({ userType, storagePrefix }) {
 
   useEffect(() => {
     if (!profileHydrated) return;
+    if (sessionSkipped || kycFlowInProgress || hasKycSubmitted) {
+      setShowVerifyIdentityModal(false);
+      return;
+    }
 
     const shouldShow = shouldPromptVerifyIdentity({
       isAdminVerified: hasStage2Access,
@@ -84,7 +89,15 @@ export function useKycWizard({ userType, storagePrefix }) {
     });
 
     setShowVerifyIdentityModal(shouldShow);
-  }, [profileHydrated, hasStage2Access, sessionSkipped, userProfile, kycStatus]);
+  }, [
+    profileHydrated,
+    hasStage2Access,
+    sessionSkipped,
+    kycFlowInProgress,
+    hasKycSubmitted,
+    userProfile,
+    kycStatus,
+  ]);
 
   useEffect(() => {
     syncStage2KycFlags(userProfile);
@@ -127,6 +140,7 @@ export function useKycWizard({ userType, storagePrefix }) {
   const resolveEntityId = () => resolveKycEntityId(userType);
 
   const handleStartVerification = () => {
+    setKycFlowInProgress(true);
     setShowVerifyIdentityModal(false);
     setShowSelectDocumentModal(true);
   };
@@ -271,11 +285,13 @@ export function useKycWizard({ userType, storagePrefix }) {
     refreshUserProfile();
     setShowVerificationSubmittedModal(false);
     setShowVerifyIdentityModal(false);
+    setKycFlowInProgress(false);
   };
 
   const handleSkipVerification = () => {
     setSessionSkipped(true);
     setShowVerifyIdentityModal(false);
+    setKycFlowInProgress(false);
   };
 
   const guardRestrictedAction = useCallback(

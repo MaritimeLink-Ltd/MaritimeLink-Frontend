@@ -19,7 +19,7 @@ import { useKyc } from '../../../context/KycContext';
 import trainerDashboardService from '../../../services/trainerDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
-import { isAccountPendingReview } from '../../../utils/accountStatus';
+import { shouldShowAccountPendingWelcome } from '../../../utils/accountStatus';
 import { readUserProfile } from '../../../utils/kycStatus';
 
 function initialsFromDisplayName(name) {
@@ -466,7 +466,7 @@ function TrainingProviderDashboard() {
         [dashboardCoursesList]
     );
 
-    if (isAccountPendingReview(readUserProfile())) {
+    if (shouldShowAccountPendingWelcome(readUserProfile())) {
         return (
             <div className="h-full pb-6">
                 <AccountPendingWelcome />

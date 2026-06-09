@@ -1,4 +1,4 @@
-import { readUserProfile } from './kycStatus';
+import { readUserProfile, hasSubmittedKyc } from './kycStatus';
 
 const APPROVED_ACCOUNT_STATUSES = new Set(['VERIFIED', 'APPROVED', 'ACTIVE']);
 
@@ -14,6 +14,14 @@ export function isAccountPendingReview(profile = readUserProfile()) {
   const status = normalizeAccountStatus(profile?.status);
   if (!status) return false;
   return status === 'PENDING';
+}
+
+/**
+ * Locked welcome screen: account still under Stage 1 review and KYC not yet submitted.
+ * Once KYC is submitted, the user can browse the full UI while awaiting approval.
+ */
+export function shouldShowAccountPendingWelcome(profile = readUserProfile()) {
+  return isAccountPendingReview(profile) && !hasSubmittedKyc(profile);
 }
 
 /**

@@ -16,7 +16,7 @@ import recruiterDashboardService from '../../../services/recruiterDashboardServi
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 import { resolveRecruiterDisplayName } from '../../../utils/profilePhoto';
 import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
-import { isAccountPendingReview } from '../../../utils/accountStatus';
+import { shouldShowAccountPendingWelcome } from '../../../utils/accountStatus';
 import { readUserProfile } from '../../../utils/kycStatus';
 
 function toDateInputValue(d) {
@@ -425,7 +425,7 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    if (isAccountPendingReview(readUserProfile())) {
+    if (shouldShowAccountPendingWelcome(readUserProfile())) {
         return (
             <div className="h-full overflow-y-auto px-8 py-6">
                 <AccountPendingWelcome />

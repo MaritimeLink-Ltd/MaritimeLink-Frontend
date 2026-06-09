@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { isAccountPendingReview } from '../utils/accountStatus';
+import { shouldShowAccountPendingWelcome } from '../utils/accountStatus';
 import { readUserProfile } from '../utils/kycStatus';
 
 /**
- * When the account is pending Stage 1 review, keep the user on the dashboard
- * welcome screen and expose a flag for disabling sidebar navigation.
+ * When the account is pending Stage 1 review and KYC is not submitted yet, keep the
+ * user on the dashboard welcome screen and expose a flag for disabling sidebar navigation.
  */
 export function useAccountReviewGate(dashboardPath) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountPending, setIsAccountPending] = useState(() =>
-    isAccountPendingReview(readUserProfile()),
+    shouldShowAccountPendingWelcome(readUserProfile()),
   );
 
   useEffect(() => {
-    const refresh = () => setIsAccountPending(isAccountPendingReview(readUserProfile()));
+    const refresh = () =>
+      setIsAccountPending(shouldShowAccountPendingWelcome(readUserProfile()));
 
     refresh();
     window.addEventListener('storage', refresh);

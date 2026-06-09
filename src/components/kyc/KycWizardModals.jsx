@@ -42,10 +42,18 @@ export default function KycWizardModals({ wizard }) {
     userType,
   } = wizard;
 
+  const isLaterWizardStepOpen =
+    showSelectDocumentModal ||
+    showUploadDocumentModal ||
+    showVerifyDetailsModal ||
+    showTakeSelfieModal ||
+    showProcessingModal ||
+    showVerificationSubmittedModal;
+
   return (
     <>
       <VerifyIdentityModal
-        isOpen={showVerifyIdentityModal}
+        isOpen={showVerifyIdentityModal && !isLaterWizardStepOpen}
         onClose={handleSkipVerification}
         onStartVerification={handleStartVerification}
       />
