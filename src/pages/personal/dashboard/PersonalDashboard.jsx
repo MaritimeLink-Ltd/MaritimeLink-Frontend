@@ -1,6 +1,9 @@
 import Dashboard from './dashboard-sections/Dashboard';
 import { useKyc } from '../../../context/KycContext';
 import { AlertTriangle } from 'lucide-react';
+import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import { isAccountPendingReview } from '../../../utils/accountStatus';
+import { readUserProfile } from '../../../utils/kycStatus';
 
 const PersonalDashboard = () => {
   const kyc = useKyc();
@@ -10,6 +13,14 @@ const PersonalDashboard = () => {
     hasKycSubmitted,
     actions: { handleStartVerification },
   } = kyc || {};
+
+  if (isAccountPendingReview(readUserProfile())) {
+    return (
+      <div className="min-h-screen bg-white">
+        <AccountPendingWelcome />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

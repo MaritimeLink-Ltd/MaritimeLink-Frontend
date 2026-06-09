@@ -41,24 +41,9 @@ function TrainingProviderLogin() {
             localStorage.setItem('adminUserType', 'training-provider');
             localStorage.setItem('userEmail', formData.email);
 
-            // Check if training provider is approved by admin
             const profile = response.data?.recruiter || response.data;
-            const status = profile?.status;
-            const isApproved = profile?.isApproved;
-
-            const approved =
-                isApproved === true ||
-                status === 'APPROVED' ||
-                status === 'ACTIVE' ||
-                status === 'active' ||
-                status === 'approved';
 
             syncTermsAcceptedFromProfile(profile);
-
-            if (approved) {
-                localStorage.setItem('trainingProviderAdminVerified', 'true');
-            }
-
             navigate('/trainingprovider-dashboard');
         } catch (err) {
             console.error('Login error:', err);

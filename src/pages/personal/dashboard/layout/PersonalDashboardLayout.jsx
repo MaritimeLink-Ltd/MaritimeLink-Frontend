@@ -21,10 +21,13 @@ import authService from '../../../../services/authService';
 import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
 import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
+import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
+import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAccountPending, dashboardPath } = useAccountReviewGate('/personal/dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -188,19 +191,15 @@ function PersonalDashboardLayout() {
                         <div className="flex-1 px-4 py-2">
                             <nav className="space-y-1">
                                 {navItems.map((item) => (
-                                    <Link
+                                    <DashboardNavItem
                                         key={item.name}
-                                        to={item.path}
-                                        className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(item.path)
-                                            ? 'bg-[#003971]/10 text-[#003971]'
-                                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                                            }`}
-                                        onClick={() => setSidebarOpen(false)}
-                                    >
-                                        <item.icon className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
-                                            }`} />
-                                        {item.name}
-                                    </Link>
+                                        item={item}
+                                        isActive={isActive(item.path)}
+                                        disabled={
+                                            isAccountPending && item.path !== dashboardPath
+                                        }
+                                        onNavigate={() => setSidebarOpen(false)}
+                                    />
                                 ))}
                             </nav>
                         </div>
@@ -268,14 +267,16 @@ function PersonalDashboardLayout() {
                                             onClick={() => setDropdownOpen(false)}
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
-                                            <Link
-                                                to="/personal/profile"
-                                                onClick={() => setDropdownOpen(false)}
-                                                className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                            >
-                                                <User className="h-4 w-4 mr-3" />
-                                                Profile
-                                            </Link>
+                                            {!isAccountPending ? (
+                                                <Link
+                                                    to="/personal/profile"
+                                                    onClick={() => setDropdownOpen(false)}
+                                                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <User className="h-4 w-4 mr-3" />
+                                                    Profile
+                                                </Link>
+                                            ) : null}
                                             <button
                                                 onClick={() => {
                                                     setDropdownOpen(false);

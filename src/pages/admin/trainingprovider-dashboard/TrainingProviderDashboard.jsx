@@ -18,6 +18,9 @@ import { useNavigate } from 'react-router-dom';
 import { useKyc } from '../../../context/KycContext';
 import trainerDashboardService from '../../../services/trainerDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
+import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import { isAccountPendingReview } from '../../../utils/accountStatus';
+import { readUserProfile } from '../../../utils/kycStatus';
 
 function initialsFromDisplayName(name) {
     const parts = String(name || '')
@@ -462,6 +465,14 @@ function TrainingProviderDashboard() {
         () => dashboardCoursesList.map((c, i) => mapTrainerDashboardCourse(c, i)),
         [dashboardCoursesList]
     );
+
+    if (isAccountPendingReview(readUserProfile())) {
+        return (
+            <div className="h-full pb-6">
+                <AccountPendingWelcome />
+            </div>
+        );
+    }
 
     return (
         <div className="h-full pb-6">

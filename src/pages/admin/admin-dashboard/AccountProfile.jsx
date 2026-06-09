@@ -187,6 +187,14 @@ function canReviewProfessionalKyc(kyc) {
     );
 }
 
+function canReviewProfessionalAccount(status) {
+    return String(status || '').toUpperCase() === 'PENDING';
+}
+
+function isProfessionalAccountComplete(status) {
+    return String(status || '').toUpperCase() === 'VERIFIED';
+}
+
 function formatDocumentTypeLabel(raw) {
     if (!raw) return '—';
     return String(raw)
@@ -776,9 +784,11 @@ function AccountProfile() {
     const riskAnalysis = buildRiskAnalysisDisplay(profileData);
     const currentAdminAuthor = getCurrentAdminAuthor();
     const kycDecisionComplete = isKycDecisionComplete(profileData.kyc);
+    const showProfessionalAccountActions =
+        isProfessionalAccount && canReviewProfessionalAccount(profileData.status);
     const showProfessionalKycActions =
-        isProfessionalAccount && canReviewProfessionalKyc(profileData.kyc);
-    const isKycReviewPopup = isProfessionalAccount || reviewActionTarget === 'kyc';
+        isProfessionalAccount && !showProfessionalAccountActions && canReviewProfessionalKyc(profileData.kyc);
+    const isKycReviewPopup = reviewActionTarget === 'kyc';
 
     // Use API documents if available, otherwise empty array (no mock data)
     const documents = Array.isArray(apiDocuments) ? apiDocuments : [];
@@ -918,6 +928,17 @@ function AccountProfile() {
         });
     };
 
+    const applyLocalProfessionalAccountStatus = (status) => {
+        setRecruiterData((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                status,
+                stage1Status: status === 'VERIFIED' ? 'COMPLETED' : prev.stage1Status,
+            };
+        });
+    };
+
     const confirmRejectAccount = async () => {
         if (!rejectReason.trim()) return;
 
@@ -925,11 +946,19 @@ function AccountProfile() {
             setIsSubmittingAction(true);
             try {
                 if (isProfessionalAccount) {
-                    await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
-                        status: 'REJECTED',
-                        rejectionReason: rejectReason.trim(),
-                    });
-                    applyLocalKycStatus('REJECTED');
+                    if (reviewActionTarget === 'kyc') {
+                        await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
+                            status: 'REJECTED',
+                            rejectionReason: rejectReason.trim(),
+                        });
+                        applyLocalKycStatus('REJECTED');
+                    } else {
+                        await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_PROFESSIONAL_STATUS(id), {
+                            status: 'BLOCKED',
+                            rejectionReason: rejectReason.trim(),
+                        });
+                        applyLocalProfessionalAccountStatus('BLOCKED');
+                    }
                 } else {
                     const statusEndpoint = isTrainer
                         ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
@@ -940,7 +969,9 @@ function AccountProfile() {
                 }
                 setActionNotificationMessage(
                     isProfessionalAccount
-                        ? 'Professional KYC rejected successfully!'
+                        ? reviewActionTarget === 'kyc'
+                            ? 'Professional KYC rejected successfully!'
+                            : 'Professional account rejected successfully!'
                         : 'Account rejected successfully!',
                 );
                 setShowActionNotification(true);
@@ -950,7 +981,9 @@ function AccountProfile() {
                 const navMsg = isTrainer
                     ? 'Training provider account rejected successfully!'
                     : isProfessionalAccount
-                        ? 'Professional KYC rejected successfully!'
+                        ? reviewActionTarget === 'kyc'
+                            ? 'Professional KYC rejected successfully!'
+                            : 'Professional account rejected successfully!'
                         : 'Recruiter account rejected successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
@@ -992,10 +1025,17 @@ function AccountProfile() {
             setIsSubmittingAction(true);
             try {
                 if (isProfessionalAccount) {
-                    await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
-                        status: 'APPROVED',
-                    });
-                    applyLocalKycStatus('APPROVED');
+                    if (reviewActionTarget === 'kyc') {
+                        await httpClient.patch(API_ENDPOINTS.ADMIN.PROFESSIONAL_KYC_UPDATE_STATUS(id), {
+                            status: 'APPROVED',
+                        });
+                        applyLocalKycStatus('APPROVED');
+                    } else {
+                        await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_PROFESSIONAL_STATUS(id), {
+                            status: 'VERIFIED',
+                        });
+                        applyLocalProfessionalAccountStatus('VERIFIED');
+                    }
                 } else {
                     const statusEndpoint = isTrainer
                         ? API_ENDPOINTS.ADMIN.UPDATE_TRAINER_STATUS(id)
@@ -1006,7 +1046,9 @@ function AccountProfile() {
                 }
                 setActionNotificationMessage(
                     isProfessionalAccount
-                        ? 'Professional KYC approved successfully!'
+                        ? reviewActionTarget === 'kyc'
+                            ? 'Professional KYC approved successfully!'
+                            : 'Professional account approved successfully!'
                         : 'Account approved successfully!',
                 );
                 setShowActionNotification(true);
@@ -1015,7 +1057,9 @@ function AccountProfile() {
                 const navMsg = isTrainer
                     ? 'Training provider account approved successfully!'
                     : isProfessionalAccount
-                        ? 'Professional KYC approved successfully!'
+                        ? reviewActionTarget === 'kyc'
+                            ? 'Professional KYC approved successfully!'
+                            : 'Professional account approved successfully!'
                         : 'Recruiter account approved successfully!';
                 setTimeout(() => {
                     setShowActionNotification(false);
@@ -1679,7 +1723,7 @@ function AccountProfile() {
                                         </div>
                                         <h3 className="text-base font-bold text-gray-900">Stage 1: Account Approval</h3>
                                     </div>
-                                    {profileData.status !== 'APPROVED' && !isProfessionalAccount && (
+                                    {showProfessionalAccountActions || (!isProfessionalAccount && profileData.status !== 'APPROVED') ? (
                                         <button
                                             onClick={() => handleApproveAccount('account')}
                                             className="flex items-center gap-2 px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164773] transition-colors"
@@ -1687,8 +1731,8 @@ function AccountProfile() {
                                             <CheckCircle className="h-4 w-4" />
                                             Approve
                                         </button>
-                                    )}
-                                    {profileData.status === 'APPROVED' && (
+                                    ) : null}
+                                    {(profileData.status === 'APPROVED' || (isProfessionalAccount && isProfessionalAccountComplete(profileData.status))) && (
                                         <span className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-md">
                                             COMPLETED
                                         </span>
@@ -1795,9 +1839,11 @@ function AccountProfile() {
                                         <div>
                                             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Account Status</label>
                                             <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
-                                                profileData.status === 'APPROVED' ? 'bg-green-50 text-green-700'
-                                                : profileData.status === 'REJECTED' ? 'bg-red-50 text-red-700'
-                                                : 'bg-orange-50 text-orange-700'
+                                                profileData.status === 'APPROVED' || profileData.status === 'VERIFIED'
+                                                    ? 'bg-green-50 text-green-700'
+                                                    : profileData.status === 'REJECTED' || profileData.status === 'BLOCKED'
+                                                        ? 'bg-red-50 text-red-700'
+                                                        : 'bg-orange-50 text-orange-700'
                                             }`}>{profileData.status || 'PENDING'}</span>
                                         </div>
                                     )}
@@ -1956,26 +2002,26 @@ function AccountProfile() {
                                     Cancel review
                                 </button>
                                 {isProfessionalAccount ? (
-                                    kycDecisionComplete ? (
-                                        <span className={`px-4 py-2.5 rounded-lg text-sm font-semibold border ${kycStatusBadgeClass(profileData.kyc?.status)}`}>
-                                            KYC {String(profileData.kyc?.status || '').toUpperCase()}
-                                        </span>
-                                    ) : showProfessionalKycActions ? (
+                                    showProfessionalAccountActions ? (
                                         <div className="flex items-center gap-3">
                                             <button
-                                                onClick={() => handleRejectAccount('kyc')}
+                                                onClick={() => handleRejectAccount('account')}
                                                 className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
                                             >
-                                                Reject KYC
+                                                Reject Account
                                             </button>
                                             <button
-                                                onClick={() => handleApproveAccount('kyc')}
+                                                onClick={() => handleApproveAccount('account')}
                                                 className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
                                             >
                                                 <CheckCircle className="h-4 w-4" />
-                                                Approve KYC
+                                                Approve Account
                                             </button>
                                         </div>
+                                    ) : isProfessionalAccountComplete(profileData.status) ? (
+                                        <span className="px-4 py-2.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
+                                            ✓ VERIFIED
+                                        </span>
                                     ) : null
                                 ) : profileData.status === 'APPROVED' ? (
                                     <span className="px-4 py-2.5 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">

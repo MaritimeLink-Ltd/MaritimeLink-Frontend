@@ -284,6 +284,7 @@ export const API_ENDPOINTS = {
     BOOKING_DETAIL: (bookingId) => `/api/admin/bookings/${bookingId}`,
     APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
+    UPDATE_PROFESSIONAL_STATUS: (id) => `/api/admin/professionals/${id}/status`,
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
     /** All organizations (recruitment & training agents) — SUPER_ADMIN */
     COMPANIES: '/api/admin/companies',

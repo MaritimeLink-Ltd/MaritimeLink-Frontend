@@ -15,6 +15,9 @@ import { useKyc } from '../../../context/KycContext';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 import { resolveRecruiterDisplayName } from '../../../utils/profilePhoto';
+import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import { isAccountPendingReview } from '../../../utils/accountStatus';
+import { readUserProfile } from '../../../utils/kycStatus';
 
 function toDateInputValue(d) {
     const x = new Date(d);
@@ -421,6 +424,14 @@ function RecruiterDashboard({ onNavigate }) {
         ],
         [dashStats, periodLabel]
     );
+
+    if (isAccountPendingReview(readUserProfile())) {
+        return (
+            <div className="h-full overflow-y-auto px-8 py-6">
+                <AccountPendingWelcome />
+            </div>
+        );
+    }
 
     return (
         <div className="h-full overflow-y-auto px-8 py-6 space-y-8">

@@ -81,9 +81,8 @@ function RecruiterCompliance() {
                 howDidYouHear: formData.hearAboutUs === 'Other' ? formData.otherHearAboutUs : formData.hearAboutUs
             });
 
-            navigate('/accept-terms', {
-                state: { returnTo: '/upload-profile-photo', userType },
-            });
+            await authService.acceptTerms(userType);
+            navigate('/upload-profile-photo', { replace: true, state: { userType } });
         } catch (err) {
             console.error('Compliance submission error:', err);
             setError(err.data?.message || err.message || 'Failed to submit compliance. Please try again.');

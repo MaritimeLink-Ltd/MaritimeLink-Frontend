@@ -22,6 +22,8 @@ import {
     syncRecruiterNotificationPreferences,
 } from '../../../../utils/recruiterNotificationPreferences';
 import { KycProvider } from '../../../../context/KycContext';
+import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
+import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 import {
     isPlaceholderProfilePhoto,
     resolveProfilePhotoUrl,
@@ -30,6 +32,7 @@ import {
 function TrainingProviderLayout() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAccountPending, dashboardPath } = useAccountReviewGate('/trainingprovider-dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -196,18 +199,14 @@ function TrainingProviderLayout() {
                         </p>
                         <nav className="space-y-2">
                             {navItems.map((item) => (
-                                <Link
+                                <DashboardNavItem
                                     key={item.name}
-                                    to={item.path}
-                                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-150 ${isActive(item.path)
-                                        ? 'bg-[#EBF3FF] text-[#003971]'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                        }`}
-                                >
-                                    <item.icon className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
-                                        }`} />
-                                    {item.name}
-                                </Link>
+                                    item={item}
+                                    isActive={isActive(item.path)}
+                                    disabled={isAccountPending && item.path !== dashboardPath}
+                                    activeClassName="bg-[#EBF3FF] text-[#003971]"
+                                    inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                />
                             ))}
                         </nav>
                     </div>
@@ -233,8 +232,16 @@ function TrainingProviderLayout() {
                         <div className="flex items-center space-x-6 ml-auto">
                             {/* Notification */}
                             <button
-                                onClick={() => navigate('/trainingprovider/notifications')}
-                                className="p-2.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 relative border border-gray-100 transition-colors"
+                                type="button"
+                                disabled={isAccountPending}
+                                onClick={() => {
+                                    if (!isAccountPending) navigate('/trainingprovider/notifications');
+                                }}
+                                className={`p-2.5 rounded-full relative border border-gray-100 transition-colors ${
+                                    isAccountPending
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                }`}
                             >
                                 <Bell className="h-5 w-5" />
                                 <span className="absolute top-2.5 right-2.5 block h-2 w-2 rounded-full bg-blue-500 ring-2 ring-white" />

@@ -36,33 +36,12 @@ function RecruiterLogin() {
         try {
             const response = await authService.loginRecruiter(formData);
 
-            // Check if recruiter is approved by admin
             const profile = response.data?.recruiter || response.data;
-            const status = profile?.status;
-            const isApproved = profile?.isApproved;
-
-            // Determine if recruiter has been approved
-            // The API may use: status='APPROVED', isApproved=true, or registrationStep indicating completion
-            const approved =
-                isApproved === true ||
-                status === 'APPROVED' ||
-                status === 'ACTIVE' ||
-                status === 'active' ||
-                status === 'approved';
-
             localStorage.setItem('userType', 'recruiter');
             localStorage.setItem('adminUserType', 'recruiter');
 
             syncTermsAcceptedFromProfile(profile);
-
-            if (approved) {
-                localStorage.setItem('recruiterAdminVerified', 'true');
-                navigate('/recruiter-dashboard');
-            } else {
-                // Recruiter is pending review — go to under review page
-                localStorage.setItem('adminUserType', 'recruiter');
-                navigate('/agent/under-review');
-            }
+            navigate('/recruiter-dashboard');
         } catch (err) {
             console.error('Login error:', err);
             setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

@@ -359,11 +359,15 @@ function Accounts() {
             startOfToday.setHours(0, 0, 0, 0);
 
             const mappedProfessionals = professionalsList.map((item) => {
-                let statusLabel = item.status === 'VERIFIED' || item.isVerified ? 'Verified' : 'Pending Verification';
-                if (item.status === 'FLAGGED') statusLabel = 'Flagged';
-                let statusColor = 'text-green-500';
-                if (statusLabel === 'Pending Verification') statusColor = 'text-orange-500';
-                if (statusLabel === 'Flagged') statusColor = 'text-red-500';
+                const accountStatus = item.status || 'PENDING';
+                let statusLabel = 'Pending Verification';
+                if (accountStatus === 'VERIFIED') statusLabel = 'Verified';
+                else if (accountStatus === 'FLAGGED') statusLabel = 'Flagged';
+                else if (accountStatus === 'BLOCKED') statusLabel = 'Blocked';
+
+                let statusColor = 'text-orange-500';
+                if (statusLabel === 'Verified') statusColor = 'text-green-500';
+                if (statusLabel === 'Flagged' || statusLabel === 'Blocked') statusColor = 'text-red-500';
 
                 const exp = item.nearestComplianceExpiry ? new Date(item.nearestComplianceExpiry) : null;
                 let complianceRowStatus = null;

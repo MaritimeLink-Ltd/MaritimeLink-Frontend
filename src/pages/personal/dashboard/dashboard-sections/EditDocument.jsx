@@ -124,14 +124,17 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                     if (formData.certificateNumber) payload.append('number', formData.certificateNumber);
                     if (formData.issuingCountry) payload.append('issuingCountry', formData.issuingCountry);
                     if (formData.dateOfIssue) payload.append('issueDate', toISODate(formData.dateOfIssue));
-                    if (formData.validTill) payload.append('expiryDate', toISODate(formData.validTill));
+                    payload.append(
+                        'expiryDate',
+                        formData.validTill ? toISODate(formData.validTill) : '',
+                    );
                 } else {
                     payload = {
                         name: formData.certificateName,
                         number: formData.certificateNumber,
                         issuingCountry: formData.issuingCountry,
                         issueDate: toISODate(formData.dateOfIssue),
-                        expiryDate: toISODate(formData.validTill)
+                        expiryDate: formData.validTill ? toISODate(formData.validTill) : null,
                     };
                 }
 
@@ -252,7 +255,9 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                             )}
                         </div>
                         <div className="flex-1 space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">Valid Till</label>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Valid Till <span className="text-gray-400 font-normal">(Optional)</span>
+                            </label>
                             <input
                                 type="date"
                                 name="validTill"

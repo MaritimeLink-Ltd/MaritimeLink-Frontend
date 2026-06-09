@@ -28,10 +28,13 @@ import {
     resolveRecruiterDisplayName,
 } from '../../../../utils/profilePhoto';
 import { KycProvider } from '../../../../context/KycContext';
+import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
+import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 
 function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAccountPending, dashboardPath } = useAccountReviewGate('/recruiter-dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -229,18 +232,14 @@ function AdminLayout() {
                         </p>
                         <nav className="space-y-1">
                             {navItems.map((item) => (
-                                <Link
+                                <DashboardNavItem
                                     key={item.name}
-                                    to={item.path}
-                                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(item.path)
-                                        ? 'bg-blue-50 text-[#003971]'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                        }`}
-                                >
-                                    <item.icon className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
-                                        }`} />
-                                    {item.name}
-                                </Link>
+                                    item={item}
+                                    isActive={isActive(item.path)}
+                                    disabled={isAccountPending && item.path !== dashboardPath}
+                                    activeClassName="bg-blue-50 text-[#003971]"
+                                    inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                />
                             ))}
                         </nav>
                     </div>
@@ -250,17 +249,19 @@ function AdminLayout() {
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2">
                             SETTINGS
                         </p>
-                        <Link
-                            to="/recruiter/settings"
-                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${(isActive('/admin/settings') || isActive('/recruiter/settings'))
-                                ? 'bg-blue-50 text-[#003971]'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                        >
-                            <UserCircle className={`h-5 w-5 mr-3 ${(isActive('/admin/settings') || isActive('/recruiter/settings')) ? 'text-[#003971]' : 'text-gray-400'
-                                }`} />
-                            Profile Settings
-                        </Link>
+                        <DashboardNavItem
+                            item={{
+                                name: 'Profile Settings',
+                                path: '/recruiter/settings',
+                                icon: UserCircle,
+                            }}
+                            isActive={
+                                isActive('/admin/settings') || isActive('/recruiter/settings')
+                            }
+                            disabled={isAccountPending}
+                            activeClassName="bg-blue-50 text-[#003971]"
+                            inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        />
                     </div>
                 </div>
             </aside>
@@ -285,8 +286,16 @@ function AdminLayout() {
 
                             {/* Notification */}
                             <button
-                                onClick={() => navigate('/recruiter/notifications')}
-                                className="p-2.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 relative border border-gray-100 transition-colors"
+                                type="button"
+                                disabled={isAccountPending}
+                                onClick={() => {
+                                    if (!isAccountPending) navigate('/recruiter/notifications');
+                                }}
+                                className={`p-2.5 rounded-full relative border border-gray-100 transition-colors ${
+                                    isAccountPending
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                }`}
                             >
                                 <Bell className="h-5 w-5" />
                                 <span className="absolute top-2.5 right-2.5 block h-2 w-2 rounded-full bg-blue-500 ring-2 ring-white" />

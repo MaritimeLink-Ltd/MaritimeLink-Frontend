@@ -287,7 +287,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                     number: formData.certificateNumber || '',
                     issuingCountry: formData.issuingCountry || '',
                     issueDate: toISODate(formData.dateOfIssue),
-                    expiryDate: toISODate(formData.validTill),
+                    expiryDate: formData.validTill ? toISODate(formData.validTill) : null,
                     category: getCategoryEnum(activeTab),
                 };
 
@@ -306,7 +306,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                     number: formData.certificateNumber || '',
                     issuingCountry: formData.issuingCountry || '',
                     issueDate: toISODate(formData.dateOfIssue),
-                    expiryDate: toISODate(formData.validTill),
+                    expiryDate: formData.validTill ? toISODate(formData.validTill) : '',
                 };
 
                 const response = await documentService.uploadDocument(uploadData);
