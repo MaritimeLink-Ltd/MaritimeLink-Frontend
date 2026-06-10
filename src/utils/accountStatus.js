@@ -17,11 +17,30 @@ export function isAccountPendingReview(profile = readUserProfile()) {
 }
 
 /**
- * Locked welcome screen: account still under Stage 1 review and KYC not yet submitted.
- * Once KYC is submitted, the user can browse the full UI while awaiting approval.
+ * Locked welcome screen on the dashboard home while Stage 1 review is pending and
+ * identity verification (KYC) has not been submitted yet.
  */
 export function shouldShowAccountPendingWelcome(profile = readUserProfile()) {
   return isAccountPendingReview(profile) && !hasSubmittedKyc(profile);
+}
+
+/**
+ * Routes reachable while Stage 1 account review is pending (`status` !== VERIFIED).
+ * Lets professionals prepare resume, documents, and profile settings during review.
+ */
+export const STAGE1_PENDING_ALLOWED_PATH_PREFIXES = [
+  '/personal/dashboard',
+  '/personal/resume',
+  '/personal/documents',
+  '/personal/profile',
+];
+
+export function isPathAllowedDuringStage1Pending(pathname) {
+  if (!pathname) return false;
+  const path = pathname.split('?')[0].replace(/\/$/, '') || '/';
+  return STAGE1_PENDING_ALLOWED_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
 }
 
 /**

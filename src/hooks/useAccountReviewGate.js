@@ -3,20 +3,32 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { shouldShowAccountPendingWelcome } from '../utils/accountStatus';
 import { readUserProfile } from '../utils/kycStatus';
 
+function isPathAllowed(pathname, dashboardPath, allowedPathPrefixes) {
+  const path = pathname.split('?')[0].replace(/\/$/, '') || '/';
+  if (path === dashboardPath) return true;
+  return allowedPathPrefixes.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
 /**
- * When the account is pending Stage 1 review and KYC is not submitted yet, keep the
- * user on the dashboard welcome screen and expose a flag for disabling sidebar navigation.
+ * Restrict navigation while account review is pending. Pass `isPendingCheck` to customize
+ * the pending condition (professionals: Stage 1 `status` !== VERIFIED; recruiters/trainers:
+ * pending welcome until KYC is submitted).
  */
-export function useAccountReviewGate(dashboardPath) {
+export function useAccountReviewGate(dashboardPath, options = {}) {
+  const {
+    allowedPathPrefixes = [],
+    isPendingCheck = shouldShowAccountPendingWelcome,
+  } = options;
   const location = useLocation();
   const navigate = useNavigate();
   const [isAccountPending, setIsAccountPending] = useState(() =>
-    shouldShowAccountPendingWelcome(readUserProfile()),
+    isPendingCheck(readUserProfile()),
   );
 
   useEffect(() => {
-    const refresh = () =>
-      setIsAccountPending(shouldShowAccountPendingWelcome(readUserProfile()));
+    const refresh = () => setIsAccountPending(isPendingCheck(readUserProfile()));
 
     refresh();
     window.addEventListener('storage', refresh);
@@ -26,14 +38,14 @@ export function useAccountReviewGate(dashboardPath) {
       window.removeEventListener('storage', refresh);
       window.removeEventListener('kycProfileUpdated', refresh);
     };
-  }, []);
+  }, [isPendingCheck]);
 
   useEffect(() => {
     if (!isAccountPending) return;
-    if (location.pathname === dashboardPath) return;
+    if (isPathAllowed(location.pathname, dashboardPath, allowedPathPrefixes)) return;
 
     navigate(dashboardPath, { replace: true });
-  }, [isAccountPending, location.pathname, dashboardPath, navigate]);
+  }, [isAccountPending, location.pathname, dashboardPath, navigate, allowedPathPrefixes]);
 
   return { isAccountPending, dashboardPath };
 }

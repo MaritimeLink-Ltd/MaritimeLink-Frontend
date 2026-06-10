@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isAccountPendingReview,
   isAccountStage1Approved,
+  isPathAllowedDuringStage1Pending,
   normalizeAccountStatus,
   shouldShowAccountPendingWelcome,
 } from '../utils/accountStatus';
@@ -39,5 +40,16 @@ describe('accountStatus', () => {
     expect(isAccountStage1Approved({ status: 'VERIFIED' })).toBe(true);
     expect(isAccountStage1Approved({ status: 'APPROVED' })).toBe(true);
     expect(isAccountStage1Approved({ status: 'PENDING' })).toBe(false);
+  });
+
+  it('allows resume, documents, and profile routes during Stage 1 pending review', () => {
+    expect(isPathAllowedDuringStage1Pending('/personal/dashboard')).toBe(true);
+    expect(isPathAllowedDuringStage1Pending('/personal/resume')).toBe(true);
+    expect(isPathAllowedDuringStage1Pending('/personal/documents')).toBe(true);
+    expect(isPathAllowedDuringStage1Pending('/personal/profile')).toBe(true);
+    expect(isPathAllowedDuringStage1Pending('/personal/profile/change-password')).toBe(true);
+    expect(isPathAllowedDuringStage1Pending('/personal/jobs')).toBe(false);
+    expect(isPathAllowedDuringStage1Pending('/personal/training')).toBe(false);
+    expect(isPathAllowedDuringStage1Pending('/personal/chats')).toBe(false);
   });
 });

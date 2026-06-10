@@ -23,11 +23,19 @@ import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
 import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
 import DashboardNavItem from '../../../../components/account/DashboardNavItem';
+import {
+    STAGE1_PENDING_ALLOWED_PATH_PREFIXES,
+    isAccountPendingReview,
+    isPathAllowedDuringStage1Pending,
+} from '../../../../utils/accountStatus';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAccountPending, dashboardPath } = useAccountReviewGate('/personal/dashboard');
+    const { isAccountPending, dashboardPath } = useAccountReviewGate('/personal/dashboard', {
+        allowedPathPrefixes: STAGE1_PENDING_ALLOWED_PATH_PREFIXES,
+        isPendingCheck: isAccountPendingReview,
+    });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -196,7 +204,8 @@ function PersonalDashboardLayout() {
                                         item={item}
                                         isActive={isActive(item.path)}
                                         disabled={
-                                            isAccountPending && item.path !== dashboardPath
+                                            isAccountPending &&
+                                            !isPathAllowedDuringStage1Pending(item.path)
                                         }
                                         onNavigate={() => setSidebarOpen(false)}
                                     />
@@ -267,7 +276,7 @@ function PersonalDashboardLayout() {
                                             onClick={() => setDropdownOpen(false)}
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
-                                            {!isAccountPending ? (
+                                            {(!isAccountPending || isPathAllowedDuringStage1Pending('/personal/profile')) ? (
                                                 <Link
                                                     to="/personal/profile"
                                                     onClick={() => setDropdownOpen(false)}

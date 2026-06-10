@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { FiEdit, FiBriefcase, FiTool, FiPhone, FiMail, FiMapPin, FiUser } from 'react-icons/fi';
+import { Crown, Star } from 'lucide-react';
 import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
 import ResumeExportMenu from '../../../../components/resume/ResumeExportMenu';
 import { FaStar } from 'react-icons/fa';
@@ -20,6 +21,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
     const { guardRestrictedAction } = useKycGuard();
     const navigate = useNavigate();
     const [membershipTier, setMembershipTier] = useState('FREE');
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
     const [userData, setUserData] = useState({
         name: '',
         category: '',
@@ -466,12 +468,20 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
     const handleDownloadPDF = () => {
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            if (!isPremiumTier(membershipTier)) {
+                setShowPremiumModal(true);
+                return;
+            }
             void downloadResumePdf();
         });
     };
 
     const handleShareResume = () => {
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
+            if (!isPremiumTier(membershipTier)) {
+                setShowPremiumModal(true);
+                return;
+            }
             void shareResumePdf();
         });
     };
@@ -517,12 +527,10 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                             <FiEdit size={18} />
                         </button>
 
-                        {(!isReviewMode || isPremiumTier(membershipTier)) && (
-                            <ResumeExportMenu
-                                onShare={handleShareResume}
-                                onDownload={handleDownloadPDF}
-                            />
-                        )}
+                        <ResumeExportMenu
+                            onShare={handleShareResume}
+                            onDownload={handleDownloadPDF}
+                        />
                     </div>
                 </div>
             </div>
@@ -984,6 +992,43 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                     )}
                 </div>
             </div>
+
+            {showPremiumModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center">
+                        <div className="mb-6 flex justify-center">
+                            <div className="w-16 h-16 bg-[#003366] rounded-full flex items-center justify-center">
+                                <Star size={32} className="text-yellow-400 fill-yellow-400" />
+                            </div>
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                            Premium Feature
+                        </h3>
+
+                        <p className="text-gray-500 mb-8 text-sm sm:text-base">
+                            Upgrade to Premium to unlock Resume Sharing, PDF Download, and many other exclusive features to boost your maritime career.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => navigate('/personal/profile/manage-subscription')}
+                                className="w-full bg-[#003366] text-white py-3.5 px-4 rounded-xl hover:bg-blue-900 transition-colors duration-200 font-medium flex items-center justify-center gap-2"
+                            >
+                                <Crown size={20} />
+                                Yes, Upgrade Now
+                            </button>
+
+                            <button
+                                onClick={() => setShowPremiumModal(false)}
+                                className="w-full text-gray-500 hover:text-gray-700 py-3.5 px-4 rounded-xl font-medium transition-colors border border-gray-200 hover:bg-gray-50 bg-white"
+                            >
+                                Not Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

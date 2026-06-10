@@ -11,8 +11,9 @@ function AccountPendingWelcome() {
             Your information and documents are currently under review by our team.
           </p>
           <p>
-            Once the verification process is complete, you will be notified by email and
-            granted full access to your dashboard.
+            While your account is under review, you can still update your{' '}
+            <strong>Resume</strong>, <strong>Documents</strong>, and{' '}
+            <strong>Profile</strong> from the menu.
           </p>
           <p>No further action is required from you at this time.</p>
         </div>

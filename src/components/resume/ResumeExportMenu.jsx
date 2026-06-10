@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { FiShare2, FiDownload, FiChevronDown } from 'react-icons/fi';
+import { Crown } from 'lucide-react';
 
 /**
  * Combined Share / Download PDF control for resume pages.
@@ -64,6 +65,7 @@ export default function ResumeExportMenu({ onShare, onDownload }) {
                         onClick={() => runAction(onShare)}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50 transition-colors text-left"
                     >
+                        <Crown size={14} className="text-yellow-500 shrink-0" />
                         <FiShare2 size={16} className="text-[#1E3A5F] shrink-0" />
                         Share Resume
                     </button>
@@ -73,6 +75,7 @@ export default function ResumeExportMenu({ onShare, onDownload }) {
                         onClick={() => runAction(onDownload)}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50 transition-colors text-left"
                     >
+                        <Crown size={14} className="text-yellow-500 shrink-0" />
                         <FiDownload size={16} className="text-[#1E3A5F] shrink-0" />
                         Download PDF
                     </button>
