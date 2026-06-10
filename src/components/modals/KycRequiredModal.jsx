@@ -37,13 +37,13 @@ function KycRequiredModal({
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
-          {isUnderReview ? 'Wait for identity verification' : 'Identity verification required'}
+          {isUnderReview ? 'Identity verification sent for approval' : 'Identity verification required'}
         </h2>
 
         <p className="text-center text-gray-600 mb-4">
           {isUnderReview ? (
             <>
-              Your identity verification has been submitted and is awaiting approval.
+              Your ID verification has been submitted and is awaiting admin approval.
               You&apos;ll be able to{actionText} once your verified badge is issued.
             </>
           ) : (

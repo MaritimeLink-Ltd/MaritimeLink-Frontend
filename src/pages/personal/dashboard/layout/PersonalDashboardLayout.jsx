@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { KycProvider } from '../../../../context/KycContext';
-import {
-    Home,
+import { KycProvider, useKyc } from '../../../../context/KycContext';
     FileText,
     Folder,
     Briefcase,
@@ -24,17 +22,95 @@ import ModalOverlay from '../../../../components/common/ModalOverlay';
 import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
 import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 import {
-    STAGE1_PENDING_ALLOWED_PATH_PREFIXES,
-    isAccountPendingReview,
-    isPathAllowedDuringStage1Pending,
+    PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES,
+    isProfessionalNavigationRestricted,
+    isPathAllowedDuringLimitedAccess,
 } from '../../../../utils/accountStatus';
+import { isKycUnderReview } from '../../../../utils/kycStatus';
+
+import {
+    Home,
+    navItems,
+    isActive,
+    sidebarOpen,
+    onCloseSidebar,
+    onLogoutClick,
+    isNavigationRestricted,
+}) {
+    const kyc = useKyc();
+    const guardRestrictedAction = kyc?.guardRestrictedAction;
+    const setShowKycRequiredModal = kyc?.actions?.setShowKycRequiredModal;
+    const kycUnderReview = isKycUnderReview();
+
+    const handleDisabledNavClick = (itemName) => {
+        if (kycUnderReview && guardRestrictedAction) {
+            guardRestrictedAction(`access ${itemName}`);
+            return;
+        }
+        if (kycUnderReview && setShowKycRequiredModal) {
+            setShowKycRequiredModal(true);
+        }
+    };
+
+    return (
+        <aside
+            className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+        >
+            <div className="h-full flex flex-col">
+                <div className="p-6">
+                    <img
+                        src="/images/logo.png"
+                        alt="MaritimeLink"
+                        className="h-20 w-auto"
+                    />
+                </div>
+
+                <div className="flex-1 px-4 py-2">
+                    <nav className="space-y-1">
+                        {navItems.map((item) => {
+                            const disabled =
+                                isNavigationRestricted &&
+                                !isPathAllowedDuringLimitedAccess(item.path);
+
+                            return (
+                                <DashboardNavItem
+                                    key={item.name}
+                                    item={item}
+                                    isActive={isActive(item.path)}
+                                    disabled={disabled}
+                                    onDisabledClick={
+                                        disabled && kycUnderReview
+                                            ? () => handleDisabledNavClick(item.name)
+                                            : undefined
+                                    }
+                                    onNavigate={onCloseSidebar}
+                                />
+                            );
+                        })}
+                    </nav>
+                </div>
+
+                <div className="p-4 border-t border-gray-200">
+                    <button
+                        onClick={onLogoutClick}
+                        className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors duration-150"
+                    >
+                        <LogOut className="h-5 w-5 mr-3 text-gray-400" />
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </aside>
+    );
+}
 
 function PersonalDashboardLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAccountPending, dashboardPath } = useAccountReviewGate('/personal/dashboard', {
-        allowedPathPrefixes: STAGE1_PENDING_ALLOWED_PATH_PREFIXES,
-        isPendingCheck: isAccountPendingReview,
+    const { isAccountPending: isNavigationRestricted, dashboardPath } = useAccountReviewGate('/personal/dashboard', {
+        allowedPathPrefixes: PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES,
+        isPendingCheck: isProfessionalNavigationRestricted,
     });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -181,50 +257,14 @@ function PersonalDashboardLayout() {
 
             {/* Sidebar - Hidden on my-jobs page */}
             {!isFullScreenPage && (
-                <aside
-                    className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                        }`}
-                >
-                    <div className="h-full flex flex-col">
-                        {/* Logo */}
-                        <div className="p-6">
-                            <img
-                                src="/images/logo.png"
-                                alt="MaritimeLink"
-                                className="h-20 w-auto"
-                            />
-                        </div>
-
-                        {/* Navigation Menu */}
-                        <div className="flex-1 px-4 py-2">
-                            <nav className="space-y-1">
-                                {navItems.map((item) => (
-                                    <DashboardNavItem
-                                        key={item.name}
-                                        item={item}
-                                        isActive={isActive(item.path)}
-                                        disabled={
-                                            isAccountPending &&
-                                            !isPathAllowedDuringStage1Pending(item.path)
-                                        }
-                                        onNavigate={() => setSidebarOpen(false)}
-                                    />
-                                ))}
-                            </nav>
-                        </div>
-
-                        {/* Logout Button */}
-                        <div className="p-4 border-t border-gray-200">
-                            <button
-                                onClick={() => setShowLogoutModal(true)}
-                                className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors duration-150"
-                            >
-                                <LogOut className="h-5 w-5 mr-3 text-gray-400" />
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </aside>
+                <PersonalDashboardSidebar
+                    navItems={navItems}
+                    isActive={isActive}
+                    sidebarOpen={sidebarOpen}
+                    onCloseSidebar={() => setSidebarOpen(false)}
+                    onLogoutClick={() => setShowLogoutModal(true)}
+                    isNavigationRestricted={isNavigationRestricted}
+                />
             )}
 
             {/* Main Content */}
@@ -276,7 +316,7 @@ function PersonalDashboardLayout() {
                                             onClick={() => setDropdownOpen(false)}
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
-                                            {(!isAccountPending || isPathAllowedDuringStage1Pending('/personal/profile')) ? (
+                                            {(!isNavigationRestricted || isPathAllowedDuringLimitedAccess('/personal/profile')) ? (
                                                 <Link
                                                     to="/personal/profile"
                                                     onClick={() => setDropdownOpen(false)}

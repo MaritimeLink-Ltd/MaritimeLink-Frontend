@@ -6,6 +6,7 @@ import {
   hasSubmittedKyc,
   hasStage2KycAccess,
   getEffectiveKycStatus,
+  isKycUnderReview,
   persistKycSubmittedToProfile,
   shouldPromptVerifyIdentity,
   syncStage2KycFlags,
@@ -65,7 +66,10 @@ export function useKycWizard({ userType, storagePrefix }) {
     [userProfile, kycStatus]
   );
 
-  const isKycUnderReview = hasKycSubmitted && !hasStage2Access;
+  const isKycUnderReviewState = useMemo(
+    () => isKycUnderReview(userProfile),
+    [userProfile],
+  );
   const hasFullAccess = hasStage2Access;
 
   const shouldShowKycWizard = !hasStage2Access && !hasKycSubmitted && !sessionSkipped;
@@ -318,7 +322,7 @@ export function useKycWizard({ userType, storagePrefix }) {
     kycStatus,
     hasKycSubmitted,
     shouldShowKycWizard,
-    isKycUnderReview,
+    isKycUnderReview: isKycUnderReviewState,
     hasFullAccess,
     hasStage2Access,
     guardRestrictedAction,

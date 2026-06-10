@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   isAccountPendingReview,
   isAccountStage1Approved,
-  isPathAllowedDuringStage1Pending,
+  isProfessionalNavigationRestricted,
+  isPathAllowedDuringLimitedAccess,
   normalizeAccountStatus,
   shouldShowAccountPendingWelcome,
 } from '../utils/accountStatus';
+import { isKycUnderReview } from '../utils/kycStatus';
 
 describe('accountStatus', () => {
   it('normalizes account status values', () => {
@@ -42,14 +44,34 @@ describe('accountStatus', () => {
     expect(isAccountStage1Approved({ status: 'PENDING' })).toBe(false);
   });
 
-  it('allows resume, documents, and profile routes during Stage 1 pending review', () => {
-    expect(isPathAllowedDuringStage1Pending('/personal/dashboard')).toBe(true);
-    expect(isPathAllowedDuringStage1Pending('/personal/resume')).toBe(true);
-    expect(isPathAllowedDuringStage1Pending('/personal/documents')).toBe(true);
-    expect(isPathAllowedDuringStage1Pending('/personal/profile')).toBe(true);
-    expect(isPathAllowedDuringStage1Pending('/personal/profile/change-password')).toBe(true);
-    expect(isPathAllowedDuringStage1Pending('/personal/jobs')).toBe(false);
-    expect(isPathAllowedDuringStage1Pending('/personal/training')).toBe(false);
-    expect(isPathAllowedDuringStage1Pending('/personal/chats')).toBe(false);
+  it('allows resume, documents, and profile routes during limited access', () => {
+    expect(isPathAllowedDuringLimitedAccess('/personal/dashboard')).toBe(true);
+    expect(isPathAllowedDuringLimitedAccess('/personal/resume')).toBe(true);
+    expect(isPathAllowedDuringLimitedAccess('/personal/documents')).toBe(true);
+    expect(isPathAllowedDuringLimitedAccess('/personal/profile')).toBe(true);
+    expect(isPathAllowedDuringLimitedAccess('/personal/profile/change-password')).toBe(true);
+    expect(isPathAllowedDuringLimitedAccess('/personal/jobs')).toBe(false);
+    expect(isPathAllowedDuringLimitedAccess('/personal/training')).toBe(false);
+    expect(isPathAllowedDuringLimitedAccess('/personal/chats')).toBe(false);
+  });
+
+  it('restricts navigation when KYC is submitted but not yet approved', () => {
+    const profile = {
+      status: 'VERIFIED',
+      kycSubmitted: true,
+      kyc: { status: 'PENDING', documentFrontUrl: 'https://example.com/id.jpg' },
+    };
+    expect(isKycUnderReview(profile)).toBe(true);
+    expect(isProfessionalNavigationRestricted(profile)).toBe(true);
+  });
+
+  it('allows full navigation when KYC is approved', () => {
+    const profile = {
+      status: 'VERIFIED',
+      kycSubmitted: true,
+      kyc: { status: 'APPROVED' },
+    };
+    expect(isKycUnderReview(profile)).toBe(false);
+    expect(isProfessionalNavigationRestricted(profile)).toBe(false);
   });
 });

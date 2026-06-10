@@ -2,6 +2,25 @@
  * KYC submission detection for dashboard identity-verification prompts.
  */
 
+/**
+ * ProfessionalKyc.status / RecruiterKyc.status — Maritime-apis `RecruiterStatus` enum.
+ * Login/me returns these via `mapKycForLogin` as `data.user.kyc.status`;
+ * `data.user.kycSubmitted` is `true` when a KYC row exists on the server.
+ */
+export const KYC_API_STATUSES = Object.freeze({
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  FLAGGED: 'flagged',
+  BLOCKED: 'blocked',
+});
+
+/** Server statuses that mean admin has not yet approved identity verification. */
+const KYC_AWAITING_ADMIN_REVIEW = new Set([
+  KYC_API_STATUSES.PENDING,
+  KYC_API_STATUSES.FLAGGED,
+]);
+
 const PRE_KYC_STATUSES = new Set(['rejected', 'skipped', 'not_started', '']);
 
 /** Statuses that mean the user finished the submission flow (may still await admin review). */
@@ -123,6 +142,23 @@ export function hasStage2KycAccess(profile = readUserProfile()) {
   if (kycStatus === 'rejected') return false;
 
   return kycStatus === 'approved' || kycStatus === 'verified';
+}
+
+/**
+ * True when login/me reports KYC awaiting admin approval.
+ * Uses API fields from `mapKycForLogin`: `kycSubmitted` and `kyc.status` (RecruiterStatus).
+ */
+export function isKycUnderReview(profile = readUserProfile()) {
+  if (!profile || typeof profile !== 'object') return false;
+
+  const status = getStage2KycStatus(profile);
+  if (!KYC_AWAITING_ADMIN_REVIEW.has(status)) return false;
+
+  return (
+    profile.kycSubmitted === true ||
+    profile.hasSubmittedKyc === true ||
+    hasSubmittedKyc(profile)
+  );
 }
 
 /** @deprecated Use hasStage2KycAccess — kept for existing imports. */

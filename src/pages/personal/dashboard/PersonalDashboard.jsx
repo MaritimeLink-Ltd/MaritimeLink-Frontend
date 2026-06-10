@@ -39,8 +39,8 @@ const PersonalDashboard = () => {
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {isKycUnderReview || hasKycSubmitted
-                    ? 'You have full platform access. Sensitive actions unlock once your verified badge is issued.'
-                    : 'You have full platform access. Complete Stage 2 KYC to apply for jobs, book courses, and share documents.'}
+                    ? 'Your identity verification has been sent for approval. Jobs, Training, and Chats unlock once your verified badge is issued.'
+                    : 'Complete Stage 2 KYC to apply for jobs, book courses, and share documents.'}
                 </p>
               </div>
             </div>

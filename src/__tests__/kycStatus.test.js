@@ -2,10 +2,44 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   hasStage2KycAccess,
   hasSubmittedKyc,
+  isKycUnderReview,
   shouldPromptVerifyIdentity,
   mergeAuthUserProfile,
   persistKycSubmittedToProfile,
 } from '../utils/kycStatus';
+
+describe('isKycUnderReview', () => {
+  it('returns true when API reports kycSubmitted with PENDING status', () => {
+    expect(
+      isKycUnderReview({
+        kycSubmitted: true,
+        kyc: { status: 'PENDING' },
+      }),
+    ).toBe(true);
+  });
+
+  it('returns false when API reports APPROVED status', () => {
+    expect(
+      isKycUnderReview({
+        kycSubmitted: true,
+        kyc: { status: 'APPROVED' },
+      }),
+    ).toBe(false);
+  });
+
+  it('returns false when API reports REJECTED status', () => {
+    expect(
+      isKycUnderReview({
+        kycSubmitted: true,
+        kyc: { status: 'REJECTED' },
+      }),
+    ).toBe(false);
+  });
+
+  it('returns false when kycSubmitted is false and no KYC record', () => {
+    expect(isKycUnderReview({ status: 'VERIFIED' })).toBe(false);
+  });
+});
 
 describe('hasStage2KycAccess', () => {
   it('returns false for empty or missing profile', () => {
