@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { KycProvider } from '../../../../context/KycContext';
 import {
     Home,
     FileText,
@@ -8,24 +9,38 @@ import {
     Award,
     MessageCircle,
     User,
-    Bell,
     ChevronDown,
     Menu,
-    X,
     LogOut,
-    AlertTriangle
+    AlertTriangle,
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import authService from '../../../../services/authService';
+import { isPlaceholderProfilePhoto, resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
+import { subscribeProfessionalAlerts } from '../../../../services/socketClient';
+import ModalOverlay from '../../../../components/common/ModalOverlay';
+import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
+import DashboardNavItem from '../../../../components/account/DashboardNavItem';
+import {
+    PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES,
+    isProfessionalNavigationRestricted,
+    isPathAllowedDuringLimitedAccess,
+} from '../../../../utils/accountStatus';
 
 function PersonalDashboardLayout() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAccountPending: isNavigationRestricted } = useAccountReviewGate('/personal/dashboard', {
+        allowedPathPrefixes: PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES,
+        isPendingCheck: isProfessionalNavigationRestricted,
+    });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [userData, setUserData] = useState({
         name: 'User Profile',
         email: '',
-        photo: '/images/login-image.webp'
+        photo: null,
     });
 
     React.useEffect(() => {
@@ -33,100 +48,108 @@ function PersonalDashboardLayout() {
             const savedProfile = localStorage.getItem('userProfile');
             const savedPhoto = localStorage.getItem('profileImage');
             const userEmail = localStorage.getItem('userEmail');
-            
+
+            if (savedPhoto && isPlaceholderProfilePhoto(savedPhoto)) {
+                localStorage.removeItem('profileImage');
+            }
+
+            let profile = {};
             if (savedProfile) {
                 try {
-                    const profile = JSON.parse(savedProfile);
-                    const name = (profile.firstName || profile.lastName) 
-                        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
-                        : profile.fullName || profile.fullname || 'User Profile';
-                    const apiPhoto = profile.profilePhotoUrl || profile.profilePhoto || profile.photo;
-                    
-                    setUserData({
-                        name: name,
-                        email: profile.email || userEmail || '',
-                        photo: apiPhoto || savedPhoto || '/images/login-image.webp'
-                    });
+                    profile = JSON.parse(savedProfile);
                 } catch (e) {
                     console.error('Error parsing userProfile in layout:', e);
                 }
-            } else if (savedPhoto || userEmail) {
-                setUserData(prev => ({ 
-                    ...prev, 
-                    photo: savedPhoto || prev.photo,
-                    email: userEmail || prev.email
+            }
+
+            const name = (profile.firstName || profile.lastName)
+                ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+                : profile.fullName || profile.fullname || 'User Profile';
+
+            const photo = resolveProfilePhotoUrl({
+                profile,
+                savedPhoto: localStorage.getItem('profileImage') || '',
+            });
+
+            setUserData({
+                name,
+                email: profile.email || userEmail || '',
+                photo,
+            });
+        };
+
+        const loadAccountPhoto = async () => {
+            try {
+                const accountResponse = await authService.getMyAccount();
+                const professional = accountResponse?.data?.professional;
+                if (!professional) return;
+
+                const photo = resolveProfilePhotoUrl({
+                    profile: professional,
+                    savedPhoto: localStorage.getItem('profileImage') || '',
+                });
+                const name = professional.fullname
+                    || `${professional.firstName || ''} ${professional.lastName || ''}`.trim()
+                    || 'User Profile';
+
+                setUserData((prev) => ({
+                    ...prev,
+                    name: name || prev.name,
+                    email: professional.email || prev.email,
+                    photo,
                 }));
+            } catch {
+                /* non-blocking */
             }
         };
 
         updateUserData();
-        // Also listen for potential changes (if other components update it)
+        loadAccountPhoto();
         window.addEventListener('storage', updateUserData);
-        
-        // Listen for the custom event from the Profile upload
+
         const handleCustomPhotoUpdate = (e) => {
-            if (e.detail && e.detail.url) {
-                setUserData(prev => ({ ...prev, photo: e.detail.url }));
-            }
+            const url = e.detail?.url;
+            const resolved = url && !isPlaceholderProfilePhoto(url) ? url : null;
+            setUserData(prev => ({ ...prev, photo: resolved }));
         };
         window.addEventListener('profileImageUpdated', handleCustomPhotoUpdate);
-        
+
         return () => {
             window.removeEventListener('storage', updateUserData);
             window.removeEventListener('profileImageUpdated', handleCustomPhotoUpdate);
         };
     }, []);
 
-    const isActive = (path) => location.pathname === path;
+    React.useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (!token) return undefined;
 
-    // Admin verification state for professionals
-    const isVerifiedByAdmin = useMemo(() => {
-        // Check the verification status saved from login response
-        const verificationStatus = localStorage.getItem('professionalVerificationStatus');
-        if (verificationStatus && verificationStatus.toUpperCase() === 'VERIFIED') return true;
+        return subscribeProfessionalAlerts((alert) => {
+            const title = alert.title || 'Notification';
+            const message = alert.message || '';
+            const text = message ? `${title}: ${message}` : title;
 
-        // Primary flag that can be set after backoffice approval
-        const adminFlag = localStorage.getItem('adminVerified');
-        if (adminFlag === 'true') return true;
+            toast(text, {
+                duration: 8000,
+                icon: title.toLowerCase().includes('refund') ? '💳' : '🔔',
+            });
 
-        // Backwards compatibility: if you already use kycStatus === 'approved' we also treat as verified
-        const kycStatus = localStorage.getItem('kycStatus');
-        if (kycStatus && (kycStatus.toLowerCase() === 'approved' || kycStatus.toLowerCase() === 'verified')) {
-            return true;
-        }
-
-        return false;
+            window.dispatchEvent(
+                new CustomEvent('professionalAlertReceived', { detail: alert })
+            );
+        });
     }, []);
 
-    // Full-width pages without sidebar (e.g. focused job lists)
+    const isActive = (path) => location.pathname === path;
     const isFullScreenPage = location.pathname === '/personal/my-jobs';
 
-    // Pages that are always allowed even before admin verification
-    const isAlwaysAllowedPath = useMemo(() => {
-        const path = location.pathname;
-        // KYC dashboard (shows verification dialogs)
-        if (path === '/personal/dashboard') return true;
-        // Resume view
-        if (path === '/personal/resume') return true;
-        // Document wallet and nested document views
-        if (path === '/personal/documents') return true;
-        if (path.startsWith('/personal/documents/')) return true;
-        return false;
-    }, [location.pathname]);
-
-    // Whether the current route is restricted (not allowed before verification)
-    const isRestrictedRoute = !isVerifiedByAdmin && !isAlwaysAllowedPath;
-
     const handleLogout = () => {
-        // Clear any stored user data
-        localStorage.removeItem('userType');
-        localStorage.removeItem('userEmail');
-        // Navigate to landing page
+        authService.logout();
         navigate('/');
         setShowLogoutModal(false);
     };
 
-    const allNavItems = [
+    const navItems = [
         { name: 'Dashboard', path: '/personal/dashboard', icon: Home },
         { name: 'Resume', path: '/personal/resume', icon: FileText },
         { name: 'Documents', path: '/personal/documents', icon: Folder },
@@ -136,18 +159,10 @@ function PersonalDashboardLayout() {
         { name: 'Profile', path: '/personal/profile', icon: User },
     ];
 
-    // If not verified, only show Dashboard, Resume, Documents in sidebar
-    const navItems = isVerifiedByAdmin
-        ? allNavItems
-        : allNavItems.filter(item =>
-            ['/personal/dashboard', '/personal/resume', '/personal/documents'].includes(item.path)
-        );
-
-    const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-
     return (
+        <KycProvider userType="professional" storagePrefix="professional">
         <div className="h-screen bg-white flex overflow-hidden">
-            {/* Mobile Sidebar Overlay */}
+            <Toaster position="top-right" />
             {!isFullScreenPage && sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
@@ -155,14 +170,12 @@ function PersonalDashboardLayout() {
                 />
             )}
 
-            {/* Sidebar - Hidden on my-jobs page */}
             {!isFullScreenPage && (
                 <aside
                     className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none overflow-y-auto scrollbar-hide ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                         }`}
                 >
                     <div className="h-full flex flex-col">
-                        {/* Logo */}
                         <div className="p-6">
                             <img
                                 src="/images/logo.png"
@@ -171,28 +184,23 @@ function PersonalDashboardLayout() {
                             />
                         </div>
 
-                        {/* Navigation Menu */}
                         <div className="flex-1 px-4 py-2">
                             <nav className="space-y-1">
                                 {navItems.map((item) => (
-                                    <Link
+                                    <DashboardNavItem
                                         key={item.name}
-                                        to={item.path}
-                                        className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${isActive(item.path)
-                                            ? 'bg-[#003971]/10 text-[#003971]'
-                                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                                            }`}
-                                        onClick={() => setSidebarOpen(false)}
-                                    >
-                                        <item.icon className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-[#003971]' : 'text-gray-400'
-                                            }`} />
-                                        {item.name}
-                                    </Link>
+                                        item={item}
+                                        isActive={isActive(item.path)}
+                                        disabled={
+                                            isNavigationRestricted &&
+                                            !isPathAllowedDuringLimitedAccess(item.path)
+                                        }
+                                        onNavigate={() => setSidebarOpen(false)}
+                                    />
                                 ))}
                             </nav>
                         </div>
 
-                        {/* Logout Button */}
                         <div className="p-4 border-t border-gray-200">
                             <button
                                 onClick={() => setShowLogoutModal(true)}
@@ -206,12 +214,9 @@ function PersonalDashboardLayout() {
                 </aside>
             )}
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-                {/* Top Header */}
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-6 py-4">
                     <div className="flex items-center justify-between gap-4">
-                        {/* Mobile Menu Button */}
                         <button
                             onClick={() => setSidebarOpen(true)}
                             className="lg:hidden text-gray-600 hover:text-gray-900"
@@ -219,19 +224,23 @@ function PersonalDashboardLayout() {
                             <Menu className="h-6 w-6" />
                         </button>
 
-                        {/* Right Actions */}
                         <div className="flex items-center gap-4 ml-auto">
-                            {/* User Profile Dropdown */}
                             <div className="relative">
                                 <button
                                     onClick={() => setDropdownOpen(!dropdownOpen)}
                                     className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
                                 >
-                                    <img
-                                        src={userData.photo}
-                                        alt="Profile"
-                                        className="w-8 h-8 rounded-full object-cover"
-                                    />
+                                    {userData.photo && !isPlaceholderProfilePhoto(userData.photo) ? (
+                                        <img
+                                            src={userData.photo}
+                                            alt="Profile"
+                                            className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <User className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                    )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left">
                                         <span className="text-sm font-semibold text-gray-900 leading-none mb-1">{userData.name}</span>
                                         {userData.email && (
@@ -241,7 +250,6 @@ function PersonalDashboardLayout() {
                                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
-                                {/* Dropdown Menu */}
                                 {dropdownOpen && (
                                     <>
                                         <div
@@ -249,14 +257,16 @@ function PersonalDashboardLayout() {
                                             onClick={() => setDropdownOpen(false)}
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
-                                            <Link
-                                                to="/personal/profile"
-                                                onClick={() => setDropdownOpen(false)}
-                                                className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                            >
-                                                <User className="h-4 w-4 mr-3" />
-                                                Profile
-                                            </Link>
+                                            {(!isNavigationRestricted || isPathAllowedDuringLimitedAccess('/personal/profile')) ? (
+                                                <Link
+                                                    to="/personal/profile"
+                                                    onClick={() => setDropdownOpen(false)}
+                                                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <User className="h-4 w-4 mr-3" />
+                                                    Profile
+                                                </Link>
+                                            ) : null}
                                             <button
                                                 onClick={() => {
                                                     setDropdownOpen(false);
@@ -275,72 +285,44 @@ function PersonalDashboardLayout() {
                     </div>
                 </header>
 
-                {/* Page Content */}
                 <main className="flex-1 min-h-0 overflow-hidden bg-white">
                     <div className="h-full min-h-0 overflow-y-auto scrollbar-hide">
-                        {isRestrictedRoute ? (
-                            <div className="h-full flex items-center justify-center p-6">
-                                <div className="max-w-lg text-center space-y-4">
-                                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
-                                        <AlertTriangle size={40} className="text-amber-600" />
-                                    </div>
-                                    <h1 className="text-2xl md:text-3xl font-bold text-[#003971]">
-                                        Account Under Review
-                                    </h1>
-                                    <p className="text-gray-600">
-                                        Your account is currently being reviewed by our admin team.
-                                    </p>
-                                    <p className="text-gray-500 text-sm">
-                                        Once your KYC verification is approved, you will have full access to Jobs, Training, Chats, and Profile.
-                                        In the meantime, you can update your <strong>Resume</strong> and <strong>Documents</strong>.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate('/personal/dashboard')}
-                                        className="mt-4 px-6 py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#002855] transition-colors"
-                                    >
-                                        Go to Dashboard
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <Outlet />
-                        )}
+                        <Outlet />
                     </div>
                 </main>
             </div>
 
-            {/* Logout Confirmation Modal */}
-            {showLogoutModal && (
-                <>
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowLogoutModal(false)} />
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-                            <div className="text-center mb-6">
-                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <AlertTriangle size={32} className="text-orange-600" />
-                                </div>
-                                <h2 className="text-2xl font-semibold text-gray-800 mb-2">Logout?</h2>
-                                <p className="text-gray-600">Are you sure you want to logout from your account?</p>
-                            </div>
-                            <div className="space-y-3">
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
-                                >
-                                    Yes, Logout
-                                </button>
-                                <button
-                                    onClick={() => setShowLogoutModal(false)}
-                                    className="w-full py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+            <ModalOverlay
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                className="max-w-md"
+            >
+                <div className="bg-white rounded-2xl shadow-2xl w-full p-6">
+                    <div className="text-center mb-6">
+                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle size={32} className="text-orange-600" />
                         </div>
+                        <h2 className="text-2xl font-semibold text-gray-800 mb-2">Logout?</h2>
+                        <p className="text-gray-600">Are you sure you want to logout from your account?</p>
                     </div>
-                </>
-            )}
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full py-3 bg-[#003971] text-white rounded-lg font-medium hover:bg-[#003971]/90 transition-colors"
+                        >
+                            Yes, Logout
+                        </button>
+                        <button
+                            onClick={() => setShowLogoutModal(false)}
+                            className="w-full py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </ModalOverlay>
         </div>
+        </KycProvider>
     );
 }
 

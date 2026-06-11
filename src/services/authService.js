@@ -657,6 +657,18 @@ class AuthService {
     }
 
     /**
+     * Get the authenticated professional account profile.
+     */
+    async getMyAccount() {
+        try {
+            return await httpClient.get(API_ENDPOINTS.PROFESSIONAL.ME);
+        } catch (error) {
+            console.error('Get professional account error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Logout
      * Clears all authentication data
      */

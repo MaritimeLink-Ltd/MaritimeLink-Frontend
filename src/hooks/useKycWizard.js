@@ -1,77 +1,133 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import kycService from '../services/kycService';
+import resolveKycEntityId from '../utils/resolveKycEntityId';
+import {
+  readUserProfile,
+  hasSubmittedKyc,
+  hasStage2KycAccess,
+  getEffectiveKycStatus,
+  isKycUnderReview,
+  persistKycSubmittedToProfile,
+  shouldPromptVerifyIdentity,
+  syncStage2KycFlags,
+} from '../utils/kycStatus';
+import { refreshKycProfileFromApi } from '../utils/kycProfileRefresh';
 
-const DEFAULT_PROFESSIONAL_ID_KEYS = [
-  'professionalId',
-  'professional_id',
-  'userId',
-  'user_id',
-  'id',
-];
+const COMPANY_VERIFICATION_STORAGE_KEY = 'companyVerificationDecision';
 
-const DEFAULT_RECRUITER_ID_KEYS = [
-  'recruiterId',
-  'recruiter_id',
-  'userId',
-  'user_id',
-  'id',
-];
+function getStoredCompanyVerificationDecision() {
+  if (typeof window === 'undefined') return null;
 
-const DEFAULT_TRAINING_PROVIDER_ID_KEYS = [
-  'trainingProviderId',
-  'training_provider_id',
-  'userId',
-  'user_id',
-  'id',
-];
-
-function resolveIdFromLocalStorage(candidateKeys) {
-  for (const key of candidateKeys) {
-    const value = localStorage.getItem(key);
-    if (value) return value;
-  }
-  // Fallback: try to extract from the stored userProfile JSON
   try {
-    const profile = JSON.parse(localStorage.getItem('userProfile'));
-    if (profile) {
-      for (const key of candidateKeys) {
-        if (profile[key]) return profile[key];
-      }
-      // Last resort: common id fields
-      return profile.id || profile._id || null;
-    }
+    const raw = localStorage.getItem(COMPANY_VERIFICATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    // ignore parse errors
+    return null;
   }
-  return null;
 }
 
 export function useKycWizard({ userType, storagePrefix }) {
-  const userProfile = useMemo(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('userProfile')) || {};
-    } catch {
-      return {};
-    }
+  const [userProfile, setUserProfile] = useState(() => readUserProfile());
+  const [profileHydrated, setProfileHydrated] = useState(false);
+
+  const refreshUserProfile = useCallback(() => {
+    setUserProfile(readUserProfile());
+    setProfileHydrated(true);
   }, []);
 
-  const isAdminVerified = useMemo(() => {
-    const profileStatus = userProfile.status?.toUpperCase();
-    return profileStatus === 'APPROVED' || profileStatus === 'VERIFIED' || profileStatus === 'ACTIVE';
-  }, [userProfile]);
+  useEffect(() => {
+    refreshUserProfile();
+
+    const onStorage = () => refreshUserProfile();
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('kycProfileUpdated', onStorage);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('kycProfileUpdated', onStorage);
+    };
+  }, [refreshUserProfile]);
+
+  const hasStage2Access = useMemo(() => hasStage2KycAccess(userProfile), [userProfile]);
 
   const backendKycStatus = userProfile.kycStatus || userProfile.kyc_status;
+  const initialKycStatus = getEffectiveKycStatus(userProfile, backendKycStatus || 'pending');
 
   const [sessionSkipped, setSessionSkipped] = useState(false);
-  const [kycStatus, setKycStatus] = useState(backendKycStatus || 'pending');
+  const [kycFlowInProgress, setKycFlowInProgress] = useState(false);
+  const [kycStatus, setKycStatus] = useState(initialKycStatus);
 
-  const isKycUnderReview = kycStatus === 'completed' && !isAdminVerified;
-  const hasFullAccess = isAdminVerified;
+  useEffect(() => {
+    setKycStatus(getEffectiveKycStatus(userProfile, backendKycStatus || undefined));
+  }, [userProfile, backendKycStatus]);
 
-  const shouldShowKycWizard = !isAdminVerified && !sessionSkipped;
+  const hasKycSubmitted = useMemo(
+    () => hasSubmittedKyc(userProfile) || kycStatus === 'completed',
+    [userProfile, kycStatus]
+  );
 
-  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(!isAdminVerified);
+  const isKycUnderReviewState = useMemo(
+    () => isKycUnderReview(userProfile),
+    [userProfile],
+  );
+  const hasFullAccess = hasStage2Access;
+
+  const shouldShowKycWizard = !hasStage2Access && !hasKycSubmitted && !sessionSkipped;
+
+  const [showVerifyIdentityModal, setShowVerifyIdentityModal] = useState(false);
+  const [showKycRequiredModal, setShowKycRequiredModal] = useState(false);
+  const [kycRequiredActionLabel, setKycRequiredActionLabel] = useState('');
+
+  useEffect(() => {
+    if (!profileHydrated) return;
+    if (sessionSkipped || kycFlowInProgress || hasKycSubmitted) {
+      setShowVerifyIdentityModal(false);
+      return;
+    }
+
+    const shouldShow = shouldPromptVerifyIdentity({
+      isAdminVerified: hasStage2Access,
+      sessionSkipped,
+      profile: userProfile,
+      localKycStatus: kycStatus,
+    });
+
+    setShowVerifyIdentityModal(shouldShow);
+  }, [
+    profileHydrated,
+    hasStage2Access,
+    sessionSkipped,
+    kycFlowInProgress,
+    hasKycSubmitted,
+    userProfile,
+    kycStatus,
+  ]);
+
+  useEffect(() => {
+    syncStage2KycFlags(userProfile);
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (!profileHydrated) return undefined;
+
+    void refreshKycProfileFromApi(userType).then((updated) => {
+      if (updated) refreshUserProfile();
+    });
+  }, [profileHydrated, userType, refreshUserProfile]);
+
+  useEffect(() => {
+    if (!profileHydrated || hasStage2Access) return undefined;
+
+    const pollMs = hasKycSubmitted ? 30000 : 60000;
+    const tick = async () => {
+      const updated = await refreshKycProfileFromApi(userType);
+      if (updated) refreshUserProfile();
+    };
+
+    const interval = setInterval(tick, pollMs);
+    return () => clearInterval(interval);
+  }, [profileHydrated, hasStage2Access, hasKycSubmitted, userType, refreshUserProfile]);
+
   const [showSelectDocumentModal, setShowSelectDocumentModal] = useState(false);
   const [showUploadDocumentModal, setShowUploadDocumentModal] = useState(false);
   const [showVerifyDetailsModal, setShowVerifyDetailsModal] = useState(false);
@@ -80,20 +136,15 @@ export function useKycWizard({ userType, storagePrefix }) {
   const [showVerificationSubmittedModal, setShowVerificationSubmittedModal] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState(null);
   const [kycData, setKycData] = useState(null);
+  const [isSubmittingDetails, setIsSubmittingDetails] = useState(false);
+  const [isSubmittingSelfie, setIsSubmittingSelfie] = useState(false);
+  const detailsSubmitInFlightRef = useRef(false);
+  const selfieSubmitInFlightRef = useRef(false);
 
-  const resolveEntityId = () => {
-    switch (userType) {
-      case 'recruiter':
-        return resolveIdFromLocalStorage(DEFAULT_RECRUITER_ID_KEYS);
-      case 'training-provider':
-        return resolveIdFromLocalStorage(DEFAULT_TRAINING_PROVIDER_ID_KEYS);
-      case 'professional':
-      default:
-        return resolveIdFromLocalStorage(DEFAULT_PROFESSIONAL_ID_KEYS);
-    }
-  };
+  const resolveEntityId = () => resolveKycEntityId(userType);
 
   const handleStartVerification = () => {
+    setKycFlowInProgress(true);
     setShowVerifyIdentityModal(false);
     setShowSelectDocumentModal(true);
   };
@@ -111,12 +162,17 @@ export function useKycWizard({ userType, storagePrefix }) {
   };
 
   const handleDetailsVerified = async (verifiedData) => {
+    if (detailsSubmitInFlightRef.current) return;
+
     const entityId = resolveEntityId();
 
     if (!entityId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
       return;
     }
+
+    detailsSubmitInFlightRef.current = true;
+    setIsSubmittingDetails(true);
 
     try {
       const basePayload = {
@@ -131,16 +187,30 @@ export function useKycWizard({ userType, storagePrefix }) {
         documentFrontUrl: kycData?.documentFrontUrl || '',
         documentBackUrl: kycData?.documentBackUrl || '',
       };
+      const companyVerificationDecision = getStoredCompanyVerificationDecision();
+      const organizationVerificationPayload =
+        userType === 'recruiter' || userType === 'training-provider'
+          ? {
+              organizationVerified:
+                typeof companyVerificationDecision?.organizationVerified === 'boolean'
+                  ? companyVerificationDecision.organizationVerified
+                  : undefined,
+              organizationRiskLevel: companyVerificationDecision?.riskLevel,
+              organizationVerificationSource: companyVerificationDecision?.source,
+            }
+          : {};
 
       if (userType === 'recruiter') {
         await kycService.submitRecruiterKycDetails({
           ...basePayload,
+          ...organizationVerificationPayload,
           recruiterId: entityId,
         });
       } else if (userType === 'training-provider') {
         await kycService.submitTrainingProviderKycDetails({
           ...basePayload,
-          trainingProviderId: entityId,
+          ...organizationVerificationPayload,
+          recruiterId: entityId,
         });
       } else {
         await kycService.submitKycDetails({
@@ -153,17 +223,29 @@ export function useKycWizard({ userType, storagePrefix }) {
       setShowTakeSelfieModal(true);
     } catch (err) {
       console.error('KYC Submit failed', err);
-      alert('Failed to confirm details. Please try again.');
+      const message =
+        err?.message ||
+        err?.data?.message ||
+        'Failed to confirm details. Please try again.';
+      alert(message);
+    } finally {
+      detailsSubmitInFlightRef.current = false;
+      setIsSubmittingDetails(false);
     }
   };
 
   const handleSelfieTaken = async (selfieFile) => {
+    if (selfieSubmitInFlightRef.current) return;
+
     const entityId = resolveEntityId();
 
     if (!entityId) {
       alert('Session error: your account ID could not be found. Please log out and log back in.');
       return;
     }
+
+    selfieSubmitInFlightRef.current = true;
+    setIsSubmittingSelfie(true);
 
     setShowTakeSelfieModal(false);
     setShowProcessingModal(true);
@@ -178,10 +260,22 @@ export function useKycWizard({ userType, storagePrefix }) {
       }
     } catch (err) {
       console.error('KYC Selfie upload failed', err);
-      alert('Failed to upload selfie. Please try again.');
+      const message =
+        err?.message ||
+        err?.data?.message ||
+        'Failed to upload selfie. Please try again.';
+      alert(message);
       setShowProcessingModal(false);
+      setShowTakeSelfieModal(true);
       return;
+    } finally {
+      selfieSubmitInFlightRef.current = false;
+      setIsSubmittingSelfie(false);
     }
+
+    persistKycSubmittedToProfile();
+    setKycStatus('completed');
+    refreshUserProfile();
 
     setTimeout(() => {
       setShowProcessingModal(false);
@@ -190,20 +284,48 @@ export function useKycWizard({ userType, storagePrefix }) {
   };
 
   const handleVerificationComplete = () => {
+    persistKycSubmittedToProfile();
     setKycStatus('completed');
+    refreshUserProfile();
     setShowVerificationSubmittedModal(false);
+    setShowVerifyIdentityModal(false);
+    setKycFlowInProgress(false);
   };
 
   const handleSkipVerification = () => {
     setSessionSkipped(true);
     setShowVerifyIdentityModal(false);
+    setKycFlowInProgress(false);
+  };
+
+  const guardRestrictedAction = useCallback(
+    (actionLabel, callback) => {
+      if (hasStage2Access) {
+        callback?.();
+        return true;
+      }
+
+      setKycRequiredActionLabel(actionLabel || '');
+      setShowKycRequiredModal(true);
+      return false;
+    },
+    [hasStage2Access]
+  );
+
+  const handleKycRequiredStart = () => {
+    setShowKycRequiredModal(false);
+    handleStartVerification();
   };
 
   return {
+    userType,
     kycStatus,
+    hasKycSubmitted,
     shouldShowKycWizard,
-    isKycUnderReview,
+    isKycUnderReview: isKycUnderReviewState,
     hasFullAccess,
+    hasStage2Access,
+    guardRestrictedAction,
     ui: {
       showVerifyIdentityModal,
       showSelectDocumentModal,
@@ -212,8 +334,12 @@ export function useKycWizard({ userType, storagePrefix }) {
       showTakeSelfieModal,
       showProcessingModal,
       showVerificationSubmittedModal,
+      showKycRequiredModal,
+      kycRequiredActionLabel,
       selectedDocumentType,
       kycData,
+      isSubmittingDetails,
+      isSubmittingSelfie,
     },
     actions: {
       handleStartVerification,
@@ -223,9 +349,15 @@ export function useKycWizard({ userType, storagePrefix }) {
       handleSelfieTaken,
       handleVerificationComplete,
       handleSkipVerification,
+      handleKycRequiredStart,
       setShowVerifyIdentityModal,
+      setShowSelectDocumentModal,
+      setShowUploadDocumentModal,
+      setShowVerifyDetailsModal,
+      setShowTakeSelfieModal,
+      setShowProcessingModal,
       setShowVerificationSubmittedModal,
+      setShowKycRequiredModal,
     },
   };
 }
-

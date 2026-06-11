@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   },
   // Professional Endpoints
   PROFESSIONAL: {
+    ME: '/api/professional/me',
     UPLOAD_ID: '/api/professional/upload-id',
     UPLOAD_PHOTO: '/api/professional/upload-photo',
     UPLOAD_CV: '/api/professional/upload-cv',
