@@ -278,7 +278,7 @@ const Training = () => {
             {/* Main Content - Two Column Layout */}
             <div className="flex-1 flex lg:overflow-hidden">
                 {/* Course List - Left Sidebar - Hidden on mobile when course is selected */}
-                <div className={`${selectedCourse && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-[calc(100vh-180px)]`}>
+                <div className={`${selectedCourse && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-full`}>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />

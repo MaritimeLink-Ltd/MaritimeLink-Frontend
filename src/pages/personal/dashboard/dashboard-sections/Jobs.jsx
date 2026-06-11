@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import jobService from '../../../../services/jobService';
+import LocationAutocomplete from '../../../../components/common/LocationAutocomplete';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
@@ -47,7 +48,7 @@ const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim
 const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
     const kw = trimSearchValue(keywords).toLowerCase();
     const loc = trimSearchValue(location).toLowerCase();
-    const officer = trimSearchValue(officerType).toLowerCase();
+    const officer = trimSearchValue(officerType);
 
     return jobs.filter((job) => {
         if (kw) {
@@ -57,15 +58,14 @@ const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
                 .toLowerCase();
             if (!haystack.includes(kw)) return false;
         }
-        if (loc && !String(job.location || '').toLowerCase().includes(loc)) {
-            return false;
+        if (loc) {
+            const jobLocation = String(job.location || '').toLowerCase();
+            const isGlobal = jobLocation === 'global';
+            if (!isGlobal && !jobLocation.includes(loc)) return false;
         }
         if (officer) {
-            const haystack = [job.title, job.category, job.jobDescription]
-                .filter(Boolean)
-                .join(' ')
-                .toLowerCase();
-            if (!haystack.includes(officer)) return false;
+            const expectedCategory = API_CATEGORY_LABEL[CATEGORY_TO_API[officer]] || officer;
+            if (job.category !== expectedCategory) return false;
         }
         return true;
     });
@@ -132,7 +132,6 @@ const Jobs = () => {
 
         return {
             search: debouncedKeywords || undefined,
-            location: debouncedLocation || undefined,
             officerType: searchOfficerType || undefined,
             category: categoryApi,
             jobType: filters.jobType ? JOB_TYPE_TO_API[filters.jobType] || filters.jobType : undefined,
@@ -281,8 +280,8 @@ const Jobs = () => {
                             </select>
 
                             <div className="relative w-full sm:w-44 min-w-0">
-                                <input
-                                    type="text"
+                                <LocationAutocomplete
+                                    name="location"
                                     placeholder="Location"
                                     value={searchLocation}
                                     onChange={(e) => setSearchLocation(e.target.value)}
@@ -340,7 +339,7 @@ const Jobs = () => {
             {/* Jobs Layout */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Job List - Left Sidebar - Hidden on mobile when job detail is open */}
-                <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-[calc(100vh-180px)]`}>
+                <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-full`}>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
@@ -466,7 +465,7 @@ const Jobs = () => {
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-600">
                                         <MapPin size={18} className="text-gray-400" />
-                                        <span className="text-base">{selectedJob.location}, United Kingdom</span>
+                                        <span className="text-base">{selectedJob.location}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-600">
                                         <Banknote size={18} className="text-gray-400" />
