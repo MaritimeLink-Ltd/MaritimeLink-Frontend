@@ -12,6 +12,7 @@ import resumeService from '../../services/resumeService';
 import authService from '../../services/authService';
 import { isPremiumTier } from '../../utils/isPremiumTier';
 import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
+import CountryDisplay from '../../components/common/CountryDisplay';
 import { useKycGuard } from '../../context/KycContext';
 import { KYC_ACTIONS } from '../../constants/kycRestrictedActions';
 import KycRestrictedView from '../../components/kyc/KycRestrictedView';
@@ -587,7 +588,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.license}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{license.licenseNumber}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{license.issuingCountry}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700"><CountryDisplay name={license.issuingCountry} /></td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.dateOfIssue)}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(license.validTill)}</td>
                                                 </tr>
@@ -623,7 +624,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                             {userData.endorsements.map((endorsement, index) => (
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{endorsement.endorsement}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{endorsement.issuingCountry}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700"><CountryDisplay name={endorsement.issuingCountry} /></td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.dateOfIssue)}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(endorsement.validTill)}</td>
                                                 </tr>
@@ -733,7 +734,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.stcwQualification}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700"><CountryDisplay name={cert.issuingCountry} /></td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                                 </tr>
@@ -767,7 +768,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateName}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{cert.certificateNumber}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{cert.issuingCountry}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700"><CountryDisplay name={cert.issuingCountry} /></td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.dateOfIssue)}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(cert.validTill)}</td>
                                                 </tr>
@@ -801,7 +802,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
                                                 <tr key={index} className="border-b border-gray-200 last:border-b-0">
                                                     <td className="px-5 py-4 text-sm text-gray-700">{doc.documentName}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{doc.documentNumber}</td>
-                                                    <td className="px-5 py-4 text-sm text-gray-700">{doc.issuingCountry}</td>
+                                                    <td className="px-5 py-4 text-sm text-gray-700"><CountryDisplay name={doc.issuingCountry} /></td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.dateOfIssue)}</td>
                                                     <td className="px-5 py-4 text-sm text-gray-700">{formatDisplayDate(doc.validTill)}</td>
                                                 </tr>

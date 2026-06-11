@@ -4,6 +4,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { API_CONFIG } from '../../../../config/api.config';
 import { formatDisplayDate } from '../../../../utils/formatDate';
+import CountryDisplay from '../../../../components/common/CountryDisplay';
 
 const isInternalUrl = (url) => {
     try {
@@ -263,7 +264,7 @@ const DocumentDetail = ({ document, onBack, onDeleteSuccess }) => {
                                 Issuing Country
                             </label>
                             <div className="text-gray-900 font-medium">
-                                {document.issuingCountry || 'N/A'}
+                                <CountryDisplay name={document.issuingCountry} />
                             </div>
                         </div>
 

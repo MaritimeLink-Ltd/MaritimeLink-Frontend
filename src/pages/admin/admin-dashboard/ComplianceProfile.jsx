@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileTex
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import { mapAdminNoteFromApi } from '../../../utils/adminDisplayName';
+import CountryDisplay from '../../../components/common/CountryDisplay';
 
 function ComplianceProfile() {
     const navigate = useNavigate();
@@ -705,7 +706,9 @@ function ComplianceProfile() {
                             <div>
                                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Issuing Country</label>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-gray-900">{userData.issuingCountry || 'N/A'}</span>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                        <CountryDisplay name={userData.issuingCountry} />
+                                    </span>
                                 </div>
                             </div>
                         </div>

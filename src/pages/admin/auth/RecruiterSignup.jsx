@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../../../services/authService';
+import TermsAgreementField from '../../../components/auth/TermsAgreementField';
 
 function RecruiterSignup() {
     const navigate = useNavigate();
@@ -272,22 +273,12 @@ function RecruiterSignup() {
                         </div>
 
                         {/* Terms & Conditions */}
-                        <div className="flex items-start">
-                            <input
-                                id="terms"
-                                name="agreeToTerms"
-                                type="checkbox"
-                                checked={formData.agreeToTerms}
-                                onChange={handleChange}
-                                className="h-4 w-4 mt-1 text-[#003971] focus:ring-[#003971] border-gray-300 rounded"
-                            />
-                            <label htmlFor="terms" className="ml-2 block text-sm text-gray-600">
-                                You agree to our{' '}
-                                <Link to="/terms" className="text-[#003971] hover:underline">
-                                    Terms & Conditions
-                                </Link>
-                            </label>
-                        </div>
+                        <TermsAgreementField
+                            id="terms"
+                            name="agreeToTerms"
+                            checked={formData.agreeToTerms}
+                            onChange={handleChange}
+                        />
 
                         {/* Submit Button */}
                         <button

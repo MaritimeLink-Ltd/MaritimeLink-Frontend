@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
+import CountryDisplay from '../../../../components/common/CountryDisplay';
 
 const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
@@ -320,7 +321,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{stcw.qualificationName}</p>
-                    <p className="text-xs text-gray-600">{stcw.issuingCountry}</p>
+                    <p className="text-xs text-gray-600"><CountryDisplay name={stcw.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
                       {stcw.dateOfIssue && stcw.validTill ?
                         `${new Date(stcw.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(stcw.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`

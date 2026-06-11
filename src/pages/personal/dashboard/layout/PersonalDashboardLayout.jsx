@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { KycProvider, useKyc } from '../../../../context/KycContext';
+import {
+    Home,
     FileText,
     Folder,
     Briefcase,
@@ -28,8 +30,7 @@ import {
 } from '../../../../utils/accountStatus';
 import { isKycUnderReview } from '../../../../utils/kycStatus';
 
-import {
-    Home,
+function PersonalDashboardSidebar({
     navItems,
     isActive,
     sidebarOpen,

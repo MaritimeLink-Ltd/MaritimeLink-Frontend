@@ -287,9 +287,11 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                     number: formData.certificateNumber || '',
                     issuingCountry: formData.issuingCountry || '',
                     issueDate: toISODate(formData.dateOfIssue),
-                    expiryDate: formData.validTill ? toISODate(formData.validTill) : null,
                     category: getCategoryEnum(activeTab),
                 };
+                if (formData.validTill) {
+                    updatePayload.expiryDate = toISODate(formData.validTill);
+                }
 
                 const response = await documentService.updateDocument(uploadedDocId, updatePayload);
                 finalDoc = response?.data?.document || response?.document;

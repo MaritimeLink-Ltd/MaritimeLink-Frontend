@@ -1,8 +1,8 @@
 import countriesData from '../data/countires.json';
 
-/** @type {{ name: string, code: string, emoji: string }[]} */
+/** @type {{ name: string, code: string, emoji: string, image: string }[]} */
 export const COUNTRIES = [...countriesData]
-  .map(({ name, code, emoji }) => ({ name, code, emoji: emoji || '' }))
+  .map(({ name, code, emoji, image }) => ({ name, code, emoji: emoji || '', image: image || '' }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 export const COUNTRY_NAMES = COUNTRIES.map((c) => c.name);

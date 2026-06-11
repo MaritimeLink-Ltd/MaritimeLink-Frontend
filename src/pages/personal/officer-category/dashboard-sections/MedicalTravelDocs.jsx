@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
+import CountryDisplay from '../../../../components/common/CountryDisplay';
 
 const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
@@ -197,7 +198,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{doc.certificateName}</p>
                     <p className="text-xs text-gray-600">
-                      {doc.issuingCountry}
+                      <CountryDisplay name={doc.issuingCountry} />
                       {doc.city ? `, ${doc.city}` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -332,7 +333,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{doc.documentName}</p>
-                    <p className="text-xs text-gray-600">{doc.issuingCountry}</p>
+                    <p className="text-xs text-gray-600"><CountryDisplay name={doc.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
                       {doc.dateOfIssue && doc.validTill ?
                         `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`

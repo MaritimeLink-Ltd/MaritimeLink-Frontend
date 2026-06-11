@@ -134,8 +134,10 @@ const EditDocument = ({ onBack, onCompletion, document }) => {
                         number: formData.certificateNumber,
                         issuingCountry: formData.issuingCountry,
                         issueDate: toISODate(formData.dateOfIssue),
-                        expiryDate: formData.validTill ? toISODate(formData.validTill) : null,
                     };
+                    if (formData.validTill) {
+                        payload.expiryDate = toISODate(formData.validTill);
+                    }
                 }
 
                 // If document.id is essentially a local timestamp from earlier, the backend call will fail.

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
+import CountryDisplay from '../../../../components/common/CountryDisplay';
 
 const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -178,7 +179,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{license.licenseName}</p>
-                    <p className="text-xs text-gray-600">{license.issuingCountry}</p>
+                    <p className="text-xs text-gray-600"><CountryDisplay name={license.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
                       {license.dateOfIssue && license.validTill ?
                         `${new Date(license.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(license.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -292,7 +293,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                       </svg>
                     </button>
                     <p className="text-sm font-semibold text-gray-800">{endorsement.licenseName}</p>
-                    <p className="text-xs text-gray-600">{endorsement.issuingCountry}</p>
+                    <p className="text-xs text-gray-600"><CountryDisplay name={endorsement.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
                       {endorsement.dateOfIssue && endorsement.validTill ?
                         `${new Date(endorsement.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(endorsement.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
