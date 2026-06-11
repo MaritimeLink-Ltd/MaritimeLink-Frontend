@@ -451,9 +451,7 @@ function CandidateSummary({
             if (!isAdmin) {
                 try {
                     setIsLoading(true);
-                    const profileUrl = isTrainingProviderUser
-                        ? API_ENDPOINTS.TRAINER.PROFESSIONAL_DETAIL(candidateId)
-                        : API_ENDPOINTS.RECRUITER.PROFESSIONAL_DETAIL(candidateId);
+                    const profileUrl = API_ENDPOINTS.RECRUITER.PROFESSIONAL_DETAIL(candidateId);
                     const response = await httpClient.get(profileUrl);
                     const responseData = response?.data?.data || response?.data;
                     const obj = responseData?.professional ? responseData.professional : responseData;
@@ -1681,7 +1679,7 @@ function CandidateSummary({
                                                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-50 rounded-xl p-4 border border-gray-100"
                                                 >
                                                     <div className="min-w-0">
-                                                        <p className="font-medium text-gray-900">{doc.name}</p>
+                                                        <p className="font-medium text-gray-900 break-words">{doc.name}</p>
                                                         <p className="text-xs text-gray-500 mt-0.5">
                                                             {doc.category}
                                                             {doc.number ? ` · ${doc.number}` : ''}

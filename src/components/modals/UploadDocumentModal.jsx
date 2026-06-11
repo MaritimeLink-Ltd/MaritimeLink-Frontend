@@ -5,6 +5,7 @@ import resolveKycEntityId from '../../utils/resolveKycEntityId';
 import ModalOverlay from '../common/ModalOverlay';
 
 function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, userType }) {
+    const isPassport = documentType === 'passport';
     const [frontSide, setFrontSide] = useState(null);
     const [backSide, setBackSide] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -19,6 +20,50 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
             // Reset back side whenever a new front is selected
             setBackSide(null);
             setUploadError(null);
+        }
+    };
+
+    // Passports only have a single bio-data page, so they use a single
+    // upload (front document only) and skip the back-side step entirely.
+    const handlePassportUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setFrontSide(file);
+        setIsUploading(true);
+        setUploadError(null);
+
+        try {
+            const entityId = resolveKycEntityId(userType || 'professional');
+
+            if (!entityId) {
+                throw new Error('Session error: your account ID could not be found. Please log out and log back in.');
+            }
+
+            let frontResponse;
+            if (userType === 'recruiter') {
+                frontResponse = await kycService.uploadRecruiterFrontDocument(entityId, file);
+            } else if (userType === 'training-provider') {
+                frontResponse = await kycService.uploadTrainingProviderFrontDocument(entityId, file);
+            } else {
+                frontResponse = await kycService.uploadFrontDocument(entityId, file);
+            }
+
+            const ocrData = frontResponse.data?.ocrData || frontResponse.data || {};
+            const documentFrontUrl = frontResponse.data?.documentUrl || frontResponse.data?.url || '';
+
+            onUploadComplete({
+                ...ocrData,
+                documentFrontUrl,
+                documentBackUrl: '',
+            });
+        } catch (err) {
+            console.error('Document upload failed: ', err);
+            setUploadError(err.data?.message || err.message || 'Failed to upload document. Please try again.');
+            setFrontSide(null);
+            e.target.value = '';
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -135,50 +180,71 @@ function UploadDocumentModal({ isOpen, onClose, documentType, onUploadComplete, 
                             </div>
                         )}
 
-                        {/* Front Side */}
-                        <div>
-                            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*,.pdf"
-                                    onChange={handleFrontUpload}
-                                />
-                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                                <p className="font-medium text-gray-900 mb-1">
-                                    {frontSide ? frontSide.name : 'Click to upload front side'}
-                                </p>
-                                <p className="text-xs text-gray-500">JPG, PNG or PDF up to 5MB</p>
-                            </label>
-                        </div>
+                        {isPassport ? (
+                            /* Passports only have a single bio-data page */
+                            <div>
+                                <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*,.pdf"
+                                        onChange={handlePassportUpload}
+                                    />
+                                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                                    <p className="font-medium text-gray-900 mb-1">
+                                        {frontSide ? frontSide.name : 'Click to upload passport'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">JPG, PNG or PDF up to 5MB</p>
+                                </label>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Front Side */}
+                                <div>
+                                    <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#003971] transition-colors">
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,.pdf"
+                                            onChange={handleFrontUpload}
+                                        />
+                                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                                        <p className="font-medium text-gray-900 mb-1">
+                                            {frontSide ? frontSide.name : 'Click to upload front side'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">JPG, PNG or PDF up to 5MB</p>
+                                    </label>
+                                </div>
 
-                        {/* Back Side */}
-                        {/* FIX #6: The visual disabled state is kept for UX clarity,
-                            but the actual gate is inside handleBackUpload above.
-                            The input element has no disabled attribute so the handler
-                            controls access cross-browser consistently. */}
-                        <div>
-                            <label
-                                className={`block border-2 border-dashed rounded-xl p-8 text-center transition-colors ${frontSide
-                                        ? 'border-gray-300 hover:border-[#003971] cursor-pointer'
-                                        : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                                    }`}
-                            >
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*,.pdf"
-                                    onChange={handleBackUpload}
-                                />
-                                <Upload className={`h-8 w-8 mx-auto mb-3 ${frontSide ? 'text-gray-400' : 'text-gray-300'}`} />
-                                <p className={`font-medium mb-1 ${frontSide ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {backSide ? backSide.name : 'Click to upload back side'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    {frontSide ? 'JPG, PNG or PDF up to 5MB' : 'Upload front side first'}
-                                </p>
-                            </label>
-                        </div>
+                                {/* Back Side */}
+                                {/* FIX #6: The visual disabled state is kept for UX clarity,
+                                    but the actual gate is inside handleBackUpload above.
+                                    The input element has no disabled attribute so the handler
+                                    controls access cross-browser consistently. */}
+                                <div>
+                                    <label
+                                        className={`block border-2 border-dashed rounded-xl p-8 text-center transition-colors ${frontSide
+                                                ? 'border-gray-300 hover:border-[#003971] cursor-pointer'
+                                                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,.pdf"
+                                            onChange={handleBackUpload}
+                                        />
+                                        <Upload className={`h-8 w-8 mx-auto mb-3 ${frontSide ? 'text-gray-400' : 'text-gray-300'}`} />
+                                        <p className={`font-medium mb-1 ${frontSide ? 'text-gray-900' : 'text-gray-400'}`}>
+                                            {backSide ? backSide.name : 'Click to upload back side'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {frontSide ? 'JPG, PNG or PDF up to 5MB' : 'Upload front side first'}
+                                        </p>
+                                    </label>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Photo Quality Tips */}

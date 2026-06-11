@@ -57,6 +57,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
+        if (isReadOnly) return undefined;
         let mounted = true;
         const loadTier = async () => {
             try {
@@ -76,7 +77,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
         return () => {
             mounted = false;
         };
-    }, []);
+    }, [isReadOnly]);
 
     // Fetch resume data on mount
     useEffect(() => {
