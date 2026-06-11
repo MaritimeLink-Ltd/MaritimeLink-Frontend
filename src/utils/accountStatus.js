@@ -1,4 +1,4 @@
-import { readUserProfile, hasSubmittedKyc, isKycUnderReview } from './kycStatus';
+import { readUserProfile, hasSubmittedKyc } from './kycStatus';
 
 const APPROVED_ACCOUNT_STATUSES = new Set(['VERIFIED', 'APPROVED', 'ACTIVE']);
 
@@ -18,14 +18,22 @@ export function isAccountPendingReview(profile = readUserProfile()) {
 
 /**
  * Locked welcome screen on the dashboard home while Stage 1 review is pending and
- * identity verification (KYC) has not been submitted yet.
+ * identity verification (KYC) has not been submitted yet. Used for recruiter/trainer flows.
  */
 export function shouldShowAccountPendingWelcome(profile = readUserProfile()) {
   return isAccountPendingReview(profile) && !hasSubmittedKyc(profile);
 }
 
 /**
- * Routes reachable while navigation is limited (Stage 1 pending or KYC under review).
+ * Professional dashboard home — blocked until Stage 1 account `status` is VERIFIED,
+ * even when KYC has already been submitted.
+ */
+export function shouldShowProfessionalStage1PendingWelcome(profile = readUserProfile()) {
+  return isAccountPendingReview(profile);
+}
+
+/**
+ * Routes reachable while Stage 1 account review is pending (`status` === PENDING).
  */
 export const PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES = [
   '/personal/dashboard',
@@ -51,12 +59,11 @@ export function isPathAllowedDuringStage1Pending(pathname) {
 }
 
 /**
- * Restrict sidebar/routes for professionals during Stage 1 review or while KYC is pending approval.
+ * Restrict sidebar/routes for professionals during Stage 1 review only.
+ * After Stage 1 approval, all tabs are enabled; individual actions use KYC guards.
  */
 export function isProfessionalNavigationRestricted(profile = readUserProfile()) {
-  if (isAccountPendingReview(profile)) return true;
-  if (isAccountStage1Approved(profile) && isKycUnderReview(profile)) return true;
-  return false;
+  return isAccountPendingReview(profile);
 }
 
 /**

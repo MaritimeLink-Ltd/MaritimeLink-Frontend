@@ -2,7 +2,7 @@ import Dashboard from './dashboard-sections/Dashboard';
 import { useKyc } from '../../../context/KycContext';
 import { AlertTriangle } from 'lucide-react';
 import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
-import { shouldShowAccountPendingWelcome } from '../../../utils/accountStatus';
+import { shouldShowProfessionalStage1PendingWelcome } from '../../../utils/accountStatus';
 import { readUserProfile } from '../../../utils/kycStatus';
 
 const PersonalDashboard = () => {
@@ -14,7 +14,7 @@ const PersonalDashboard = () => {
     actions: { handleStartVerification },
   } = kyc || {};
 
-  if (shouldShowAccountPendingWelcome(readUserProfile())) {
+  if (shouldShowProfessionalStage1PendingWelcome(readUserProfile())) {
     return (
       <div className="min-h-screen bg-white">
         <AccountPendingWelcome />
@@ -39,8 +39,8 @@ const PersonalDashboard = () => {
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {isKycUnderReview || hasKycSubmitted
-                    ? 'Your identity verification has been sent for approval. Jobs, Training, and Chats unlock once your verified badge is issued.'
-                    : 'Complete Stage 2 KYC to apply for jobs, book courses, and share documents.'}
+                    ? 'You can browse all sections. Applying to jobs, booking courses, and other actions unlock once your identity verification is approved.'
+                    : 'Complete Stage 2 identity verification to unlock applying for jobs, booking courses, and sharing documents.'}
                 </p>
               </div>
             </div>

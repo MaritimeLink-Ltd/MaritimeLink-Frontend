@@ -6,6 +6,7 @@ import {
   isPathAllowedDuringLimitedAccess,
   normalizeAccountStatus,
   shouldShowAccountPendingWelcome,
+  shouldShowProfessionalStage1PendingWelcome,
 } from '../utils/accountStatus';
 import { isKycUnderReview } from '../utils/kycStatus';
 
@@ -38,6 +39,18 @@ describe('accountStatus', () => {
     expect(shouldShowAccountPendingWelcome({ status: 'VERIFIED' })).toBe(false);
   });
 
+  it('shows professional welcome while Stage 1 pending even if KYC was submitted', () => {
+    expect(shouldShowProfessionalStage1PendingWelcome({ status: 'PENDING' })).toBe(true);
+    expect(
+      shouldShowProfessionalStage1PendingWelcome({
+        status: 'PENDING',
+        kycSubmitted: true,
+        kyc: { status: 'PENDING' },
+      }),
+    ).toBe(true);
+    expect(shouldShowProfessionalStage1PendingWelcome({ status: 'VERIFIED' })).toBe(false);
+  });
+
   it('detects approved Stage 1 accounts', () => {
     expect(isAccountStage1Approved({ status: 'VERIFIED' })).toBe(true);
     expect(isAccountStage1Approved({ status: 'APPROVED' })).toBe(true);
@@ -55,14 +68,14 @@ describe('accountStatus', () => {
     expect(isPathAllowedDuringLimitedAccess('/personal/chats')).toBe(false);
   });
 
-  it('restricts navigation when KYC is submitted but not yet approved', () => {
+  it('does not restrict navigation when KYC is pending but Stage 1 is approved', () => {
     const profile = {
       status: 'VERIFIED',
       kycSubmitted: true,
       kyc: { status: 'PENDING', documentFrontUrl: 'https://example.com/id.jpg' },
     };
     expect(isKycUnderReview(profile)).toBe(true);
-    expect(isProfessionalNavigationRestricted(profile)).toBe(true);
+    expect(isProfessionalNavigationRestricted(profile)).toBe(false);
   });
 
   it('allows full navigation when KYC is approved', () => {
