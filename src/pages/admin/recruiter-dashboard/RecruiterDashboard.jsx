@@ -11,13 +11,15 @@ import {
     RefreshCw,
     Bell,
 } from 'lucide-react';
-import { useKyc } from '../../../context/KycContext';
+import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import {
+    getDashboardWelcomeMessages,
+    shouldShowDashboardWelcome,
+} from '../../../utils/accountStatus';
+import { readUserProfile } from '../../../utils/kycStatus';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 import { resolveRecruiterDisplayName } from '../../../utils/profilePhoto';
-import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
-import { shouldShowAccountPendingWelcome } from '../../../utils/accountStatus';
-import { readUserProfile } from '../../../utils/kycStatus';
 
 function toDateInputValue(d) {
     const x = new Date(d);
@@ -170,13 +172,6 @@ function RecruiterDashboard({ onNavigate }) {
         matchedPros: 0,
         jobsNeedingAttention: 0
     });
-
-    const {
-        hasStage2Access,
-        hasKycSubmitted,
-        isKycUnderReview,
-        actions: { handleStartVerification },
-    } = useKyc() || {};
 
     useEffect(() => {
         const syncHeaderUser = () => setHeaderUser(readRecruiterDashboardHeaderUser());
@@ -425,47 +420,17 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    if (shouldShowAccountPendingWelcome(readUserProfile())) {
+    if (shouldShowDashboardWelcome(readUserProfile())) {
+        const welcome = getDashboardWelcomeMessages(readUserProfile(), 'recruiter');
         return (
             <div className="h-full overflow-y-auto px-8 py-6">
-                <AccountPendingWelcome />
+                <AccountPendingWelcome {...welcome} />
             </div>
         );
     }
 
     return (
         <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
-            {!hasStage2Access && (
-                <div className="border border-amber-100 bg-amber-50/80 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                            <AlertTriangle size={20} className="text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-[#003971]">
-                                {isKycUnderReview || hasKycSubmitted
-                                    ? 'Identity verification under review'
-                                    : 'Complete identity verification'}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-0.5">
-                                {isKycUnderReview || hasKycSubmitted
-                                    ? 'You can browse the platform. Viewing resumes, publishing jobs, and messaging unlock once your verified badge is issued.'
-                                    : 'Complete Stage 2 KYC to view resumes, publish jobs, and message professionals.'}
-                            </p>
-                        </div>
-                    </div>
-                    {!hasKycSubmitted && !isKycUnderReview && handleStartVerification ? (
-                        <button
-                            type="button"
-                            onClick={handleStartVerification}
-                            className="shrink-0 inline-flex items-center px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002855] transition-colors"
-                        >
-                            Start verification
-                        </button>
-                    ) : null}
-                </div>
-            )}
-
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>

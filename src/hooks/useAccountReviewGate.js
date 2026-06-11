@@ -13,8 +13,7 @@ function isPathAllowed(pathname, dashboardPath, allowedPathPrefixes) {
 
 /**
  * Restrict navigation while account review is pending. Pass `isPendingCheck` to customize
- * the pending condition (professionals: Stage 1 `status` !== VERIFIED; recruiters/trainers:
- * pending welcome until KYC is submitted).
+ * the pending condition (Stage 1 `status` === PENDING until admin approves the account).
  */
 export function useAccountReviewGate(dashboardPath, options = {}) {
   const {

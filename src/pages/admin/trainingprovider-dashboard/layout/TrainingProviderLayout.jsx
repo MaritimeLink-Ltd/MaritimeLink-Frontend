@@ -25,6 +25,11 @@ import { KycProvider } from '../../../../context/KycContext';
 import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
 import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 import {
+    TRAINING_PROVIDER_LIMITED_ACCESS_PATH_PREFIXES,
+    isTrainingProviderNavigationRestricted,
+    isPathAllowedDuringTrainingProviderLimitedAccess,
+} from '../../../../utils/accountStatus';
+import {
     isPlaceholderProfilePhoto,
     resolveProfilePhotoUrl,
 } from '../../../../utils/profilePhoto';
@@ -32,7 +37,10 @@ import {
 function TrainingProviderLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAccountPending, dashboardPath } = useAccountReviewGate('/trainingprovider-dashboard');
+    const { isAccountPending: isNavigationRestricted } = useAccountReviewGate('/trainingprovider-dashboard', {
+        allowedPathPrefixes: TRAINING_PROVIDER_LIMITED_ACCESS_PATH_PREFIXES,
+        isPendingCheck: isTrainingProviderNavigationRestricted,
+    });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -203,7 +211,10 @@ function TrainingProviderLayout() {
                                     key={item.name}
                                     item={item}
                                     isActive={isActive(item.path)}
-                                    disabled={isAccountPending && item.path !== dashboardPath}
+                                    disabled={
+                                        isNavigationRestricted &&
+                                        !isPathAllowedDuringTrainingProviderLimitedAccess(item.path)
+                                    }
                                     activeClassName="bg-[#EBF3FF] text-[#003971]"
                                     inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                 />
@@ -233,12 +244,12 @@ function TrainingProviderLayout() {
                             {/* Notification */}
                             <button
                                 type="button"
-                                disabled={isAccountPending}
+                                disabled={isNavigationRestricted}
                                 onClick={() => {
-                                    if (!isAccountPending) navigate('/trainingprovider/notifications');
+                                    if (!isNavigationRestricted) navigate('/trainingprovider/notifications');
                                 }}
                                 className={`p-2.5 rounded-full relative border border-gray-100 transition-colors ${
-                                    isAccountPending
+                                    isNavigationRestricted
                                         ? 'text-gray-300 cursor-not-allowed'
                                         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                                 }`}

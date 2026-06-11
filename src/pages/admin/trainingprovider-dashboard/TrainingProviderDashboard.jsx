@@ -15,12 +15,14 @@ import {
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
-import { useKyc } from '../../../context/KycContext';
+import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import {
+    getDashboardWelcomeMessages,
+    shouldShowDashboardWelcome,
+} from '../../../utils/accountStatus';
+import { readUserProfile } from '../../../utils/kycStatus';
 import trainerDashboardService from '../../../services/trainerDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
-import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
-import { shouldShowAccountPendingWelcome } from '../../../utils/accountStatus';
-import { readUserProfile } from '../../../utils/kycStatus';
 
 function initialsFromDisplayName(name) {
     const parts = String(name || '')
@@ -249,13 +251,6 @@ function TrainingProviderDashboard() {
     const [stripeStatusLoading, setStripeStatusLoading] = useState(false);
     const [stripeActionLoading, setStripeActionLoading] = useState(false);
 
-    const {
-        hasStage2Access,
-        hasKycSubmitted,
-        isKycUnderReview,
-        actions: { handleStartVerification },
-    } = useKyc() || {};
-
     const timeFilters = ['Today', '7 Days', '30 Days', 'All'];
 
     const loadTrainerDashboard = useCallback(async () => {
@@ -466,10 +461,11 @@ function TrainingProviderDashboard() {
         [dashboardCoursesList]
     );
 
-    if (shouldShowAccountPendingWelcome(readUserProfile())) {
+    if (shouldShowDashboardWelcome(readUserProfile())) {
+        const welcome = getDashboardWelcomeMessages(readUserProfile(), 'trainer');
         return (
             <div className="h-full pb-6">
-                <AccountPendingWelcome />
+                <AccountPendingWelcome {...welcome} />
             </div>
         );
     }
@@ -522,37 +518,6 @@ function TrainingProviderDashboard() {
                     </div>
                 </div>
             </div>
-
-            {!hasStage2Access && (
-                <div className="mx-4 md:mx-0 mb-4 border border-amber-100 bg-amber-50/80 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                            <AlertCircle size={20} className="text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-[#003971]">
-                                {isKycUnderReview || hasKycSubmitted
-                                    ? 'Identity verification under review'
-                                    : 'Complete identity verification'}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-0.5">
-                                {isKycUnderReview || hasKycSubmitted
-                                    ? 'You can browse the platform. Publishing courses and viewing professional profiles unlock once your verified badge is issued.'
-                                    : 'Complete Stage 2 KYC to publish courses, view professional profiles, and message trainees.'}
-                            </p>
-                        </div>
-                    </div>
-                    {!hasKycSubmitted && !isKycUnderReview && handleStartVerification ? (
-                        <button
-                            type="button"
-                            onClick={handleStartVerification}
-                            className="shrink-0 inline-flex items-center px-5 py-2.5 rounded-xl bg-[#003971] text-white font-semibold text-sm hover:bg-[#002455] transition-colors"
-                        >
-                            Start verification
-                        </button>
-                    ) : null}
-                </div>
-            )}
 
             <div className="pb-8">
                 <>

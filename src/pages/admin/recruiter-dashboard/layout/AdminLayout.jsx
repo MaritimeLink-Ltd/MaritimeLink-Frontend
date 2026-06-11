@@ -30,11 +30,19 @@ import {
 import { KycProvider } from '../../../../context/KycContext';
 import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
 import DashboardNavItem from '../../../../components/account/DashboardNavItem';
+import {
+    RECRUITER_LIMITED_ACCESS_PATH_PREFIXES,
+    isRecruiterNavigationRestricted,
+    isPathAllowedDuringRecruiterLimitedAccess,
+} from '../../../../utils/accountStatus';
 
 function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAccountPending, dashboardPath } = useAccountReviewGate('/recruiter-dashboard');
+    const { isAccountPending: isNavigationRestricted } = useAccountReviewGate('/recruiter-dashboard', {
+        allowedPathPrefixes: RECRUITER_LIMITED_ACCESS_PATH_PREFIXES,
+        isPendingCheck: isRecruiterNavigationRestricted,
+    });
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -236,7 +244,10 @@ function AdminLayout() {
                                     key={item.name}
                                     item={item}
                                     isActive={isActive(item.path)}
-                                    disabled={isAccountPending && item.path !== dashboardPath}
+                                    disabled={
+                                        isNavigationRestricted &&
+                                        !isPathAllowedDuringRecruiterLimitedAccess(item.path)
+                                    }
                                     activeClassName="bg-blue-50 text-[#003971]"
                                     inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                 />
@@ -258,7 +269,11 @@ function AdminLayout() {
                             isActive={
                                 isActive('/admin/settings') || isActive('/recruiter/settings')
                             }
-                            disabled={isAccountPending}
+                            disabled={
+                                isNavigationRestricted &&
+                                !isPathAllowedDuringRecruiterLimitedAccess('/recruiter/settings') &&
+                                !isPathAllowedDuringRecruiterLimitedAccess('/admin/settings')
+                            }
                             activeClassName="bg-blue-50 text-[#003971]"
                             inactiveClassName="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                         />
@@ -287,12 +302,12 @@ function AdminLayout() {
                             {/* Notification */}
                             <button
                                 type="button"
-                                disabled={isAccountPending}
+                                disabled={isNavigationRestricted}
                                 onClick={() => {
-                                    if (!isAccountPending) navigate('/recruiter/notifications');
+                                    if (!isNavigationRestricted) navigate('/recruiter/notifications');
                                 }}
                                 className={`p-2.5 rounded-full relative border border-gray-100 transition-colors ${
-                                    isAccountPending
+                                    isNavigationRestricted
                                         ? 'text-gray-300 cursor-not-allowed'
                                         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                                 }`}
