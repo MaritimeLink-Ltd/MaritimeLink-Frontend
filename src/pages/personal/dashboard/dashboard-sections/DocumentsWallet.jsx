@@ -172,8 +172,11 @@ const DocumentsWallet = () => {
 
         signupPromptHandledRef.current = true;
         navigate(location.pathname, { replace: true, state: {} });
-        setShowSignupPrompt(true);
-    }, [isLoading, location.state, location.pathname, navigate]);
+
+        if (walletDocumentsForShare.length === 0) {
+            setShowSignupPrompt(true);
+        }
+    }, [isLoading, location.state, location.pathname, navigate, walletDocumentsForShare]);
 
     const walletFolderRows = useMemo(() => {
         const walletDocs = documents.filter((d) => d.category && !WALLET_EXCLUDED_CATEGORIES.has(d.category));

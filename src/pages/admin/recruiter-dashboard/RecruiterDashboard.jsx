@@ -12,9 +12,10 @@ import {
     Bell,
 } from 'lucide-react';
 import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import KycStage2Banner from '../../../components/kyc/KycStage2Banner';
 import {
     getDashboardWelcomeMessages,
-    shouldShowDashboardWelcome,
+    isAccountPendingReview,
 } from '../../../utils/accountStatus';
 import { readUserProfile } from '../../../utils/kycStatus';
 import recruiterDashboardService from '../../../services/recruiterDashboardService';
@@ -420,7 +421,7 @@ function RecruiterDashboard({ onNavigate }) {
         [dashStats, periodLabel]
     );
 
-    if (shouldShowDashboardWelcome(readUserProfile())) {
+    if (isAccountPendingReview(readUserProfile())) {
         const welcome = getDashboardWelcomeMessages(readUserProfile(), 'recruiter');
         return (
             <div className="h-full overflow-y-auto px-8 py-6">
@@ -431,6 +432,7 @@ function RecruiterDashboard({ onNavigate }) {
 
     return (
         <div className="h-full overflow-y-auto px-8 py-6 space-y-8">
+            <KycStage2Banner />
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>

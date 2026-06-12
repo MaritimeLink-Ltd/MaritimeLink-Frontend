@@ -674,6 +674,38 @@ class AuthService {
     }
 
     /**
+     * Delete the authenticated recruiter's account.
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async deleteRecruiterAccount() {
+        try {
+            const response = await httpClient.delete(API_ENDPOINTS.RECRUITER.DELETE_ACCOUNT);
+            clearAuthStorage();
+            emitAuthTokenChanged();
+            return response;
+        } catch (error) {
+            console.error('Recruiter account delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete the authenticated training provider's account.
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async deleteTrainerAccount() {
+        try {
+            const response = await httpClient.delete(API_ENDPOINTS.TRAINER.DELETE_ACCOUNT);
+            clearAuthStorage();
+            emitAuthTokenChanged();
+            return response;
+        } catch (error) {
+            console.error('Trainer account delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Complete professional profile
      * @param {Object} profileData - Profile completion data
      * @param {string} profileData.professionalId - Professional ID

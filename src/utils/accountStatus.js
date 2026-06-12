@@ -51,6 +51,14 @@ export function shouldShowDashboardWelcome(profile = readUserProfile()) {
   return !hasStage2KycAccess(profile);
 }
 
+/**
+ * Stage 2 KYC banner shown on the dashboard home once Stage 1 account review is
+ * approved but Stage 2 identity verification is not yet approved.
+ */
+export function shouldShowKycStage2Banner(profile = readUserProfile()) {
+  return !isAccountPendingReview(profile) && !hasStage2KycAccess(profile);
+}
+
 const DASHBOARD_WELCOME_STAGE1_HINTS = {
   professional:
     'While your account is under review, you can still update your Resume, Documents, and Profile from the menu.',

@@ -16,9 +16,10 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import AccountPendingWelcome from '../../../components/account/AccountPendingWelcome';
+import KycStage2Banner from '../../../components/kyc/KycStage2Banner';
 import {
     getDashboardWelcomeMessages,
-    shouldShowDashboardWelcome,
+    isAccountPendingReview,
 } from '../../../utils/accountStatus';
 import { readUserProfile } from '../../../utils/kycStatus';
 import trainerDashboardService from '../../../services/trainerDashboardService';
@@ -461,7 +462,7 @@ function TrainingProviderDashboard() {
         [dashboardCoursesList]
     );
 
-    if (shouldShowDashboardWelcome(readUserProfile())) {
+    if (isAccountPendingReview(readUserProfile())) {
         const welcome = getDashboardWelcomeMessages(readUserProfile(), 'trainer');
         return (
             <div className="h-full pb-6">
@@ -472,6 +473,7 @@ function TrainingProviderDashboard() {
 
     return (
         <div className="h-full pb-6">
+            <KycStage2Banner className="mb-4" />
             <div className="bg-[#F5F7FA] pb-4">
                 {/* Welcome Section */}
                 <div className="mb-6">

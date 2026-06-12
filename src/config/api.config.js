@@ -132,6 +132,7 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: '/api/recruiter/forgot-password',
     RESET_PASSWORD: '/api/recruiter/reset-password', // token will be appended
     UPDATE_PASSWORD: '/api/recruiter/update-password',
+    DELETE_ACCOUNT: '/api/recruiter/account',
     SETTINGS: '/api/recruiter/settings',
     SETTINGS_PROFILE: '/api/recruiter/settings/profile',
     SETTINGS_COMPANY: '/api/recruiter/settings/company',
@@ -175,6 +176,7 @@ export const API_ENDPOINTS = {
     DEMAND_OVERVIEW: '/api/trainer/dashboard/demand/overview',
     DEMAND_EXPIRIES: '/api/trainer/dashboard/demand/expiries',
     UPDATE_PASSWORD: '/api/trainer/update-password',
+    DELETE_ACCOUNT: '/api/trainer/account',
     SETTINGS: '/api/trainer/settings',
     SETTINGS_PROFILE: '/api/trainer/settings/profile',
     SETTINGS_COMPANY: '/api/trainer/settings/company',
