@@ -268,14 +268,21 @@ class AuthService {
         try {
             const response = await httpClient.patch(API_ENDPOINTS.RECRUITER.COMPLIANCE, complianceData, { skipAuth: true });
             
-            // On successful final step, backend optionally returns a token
+            // On successful final step, backend marks the account status as PENDING and issues a token
             const token = response?.token || response?.data?.token;
             if (token) {
                 localStorage.setItem('authToken', token);
-                const userProfile = response?.data?.userProfile || response?.data;
-                if (userProfile) {
-                    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-                }
+
+                // Backend response only includes { registrationStep }, not the profile,
+                // so persist the PENDING status it just set so dashboard gating (Stage 1
+                // review screen + restricted nav) is correct before the next login.
+                const incomingProfile = response?.data?.userProfile || {};
+                const normalizedProfile = mergeAuthUserProfile({
+                    ...incomingProfile,
+                    status: incomingProfile.status || 'PENDING',
+                });
+                localStorage.setItem('userProfile', JSON.stringify(normalizedProfile));
+
                 // Cleanup temp registration id
                 localStorage.removeItem('recruiterId');
                 emitAuthTokenChanged();
