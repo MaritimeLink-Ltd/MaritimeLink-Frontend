@@ -22,6 +22,7 @@ function SignUp() {
     email: '',
     password: '',
     confirmPassword: '',
+    agreeToTerms: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -29,9 +30,10 @@ function SignUp() {
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: type === 'checkbox' ? checked : value,
     });
     // Clear error when user starts typing
     if (error) setError('');
@@ -50,6 +52,11 @@ function SignUp() {
     // Validate strong password
     if (!isPasswordStrong(formData.password)) {
       setError('Password must be at least 8 characters with uppercase, lowercase, a number, and a special character.');
+      return;
+    }
+
+    if (!formData.agreeToTerms) {
+      setError('You must agree to the Terms & Conditions');
       return;
     }
 
@@ -292,7 +299,12 @@ function SignUp() {
             </div>
 
             {/* Terms & Conditions */}
-            <TermsAgreementField id="terms" name="terms" required />
+            <TermsAgreementField
+              id="terms"
+              name="agreeToTerms"
+              checked={formData.agreeToTerms}
+              onChange={handleChange}
+            />
 
             {/* Register Button */}
             <button
