@@ -168,11 +168,16 @@ const DocumentsWallet = () => {
 
     useEffect(() => {
         if (isLoading || signupPromptHandledRef.current) return;
-        if (!location.state?.showDocumentWalletPrompt) return;
 
         signupPromptHandledRef.current = true;
-        navigate(location.pathname, { replace: true, state: {} });
 
+        if (location.state?.showDocumentWalletPrompt) {
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+
+        // Keep nudging the user on every visit to this page until they've
+        // uploaded at least one wallet document, not just the first time
+        // they arrive here from the resume flow.
         if (walletDocumentsForShare.length === 0) {
             setShowSignupPrompt(true);
         }

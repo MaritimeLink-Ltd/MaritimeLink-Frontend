@@ -55,26 +55,26 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
   };
 
   const validateMedical = (entry) => {
-    if (!entry.certificateName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+    if (!entry.certificateName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue) {
       return 'Please fill in all mandatory Medical fields before adding.';
     }
     const issueDate = new Date(entry.dateOfIssue);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (issueDate > today) return 'Please enter valid issue date.';
-    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    if (entry.validTill && issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
     return null;
   };
 
   const validateTravel = (entry) => {
-    if (!entry.documentName || !entry.documentNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+    if (!entry.documentName || !entry.documentNumber || !entry.issuingCountry || !entry.dateOfIssue) {
       return 'Please fill in all mandatory Travel fields before adding.';
     }
     const issueDate = new Date(entry.dateOfIssue);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (issueDate > today) return 'Please enter valid issue date.';
-    if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
+    if (entry.validTill && issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
     return null;
   };
 
@@ -202,8 +202,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                       {doc.city ? `, ${doc.city}` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {doc.dateOfIssue && doc.validTill ?
-                        `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      {doc.dateOfIssue ?
+                        `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${doc.validTill ? new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Present'}`
                         : 'Dates not specified'}
                     </p>
                   </div>
@@ -294,7 +294,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
 
                 <div>
                   <label htmlFor="medicalValidTill" className="block text-gray-700 font-medium mb-1 text-sm">
-                    Valid Till
+                    Valid Till <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="date"
@@ -335,8 +335,8 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                     <p className="text-sm font-semibold text-gray-800">{doc.documentName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={doc.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
-                      {doc.dateOfIssue && doc.validTill ?
-                        `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      {doc.dateOfIssue ?
+                        `${new Date(doc.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${doc.validTill ? new Date(doc.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Present'}`
                         : 'Dates not specified'}
                     </p>
                   </div>
@@ -411,7 +411,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
 
                 <div>
                   <label htmlFor="travelValidTill" className="block text-gray-700 font-medium mb-1 text-sm">
-                    Valid Till
+                    Valid Till <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="date"

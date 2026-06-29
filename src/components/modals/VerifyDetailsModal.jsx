@@ -59,6 +59,7 @@ function VerifyDetailsModal({
                     initialData.name?.split(' ').slice(1).join(' ') ||
                     initialData.lastName ||
                     prev.lastName,
+                dateOfBirth: initialData.dateOfBirth || prev.dateOfBirth,
                 documentNumber: docNo || prev.documentNumber,
                 expiryDate: initialData.expiryDate || prev.expiryDate,
                 issuingCountry: initialData.issuingCountry || prev.issuingCountry,

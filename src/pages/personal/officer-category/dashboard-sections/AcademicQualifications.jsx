@@ -46,20 +46,20 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   };
 
   const validateAcademic = (entry) => {
-    if (!entry.qualificationName || !entry.institution || !entry.city || !entry.institutionCountry || !entry.grade || !entry.startDate || !entry.endDate) {
+    if (!entry.qualificationName || !entry.institution || !entry.city || !entry.institutionCountry || !entry.grade || !entry.startDate) {
       return 'Please fill in all mandatory Academic fields before adding.';
     }
-    if (new Date(entry.startDate) >= new Date(entry.endDate)) {
+    if (entry.endDate && new Date(entry.startDate) >= new Date(entry.endDate)) {
       return 'Start Date must be before End Date.';
     }
     return null;
   };
 
   const validateStcw = (entry) => {
-    if (!entry.qualificationName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue || !entry.validTill) {
+    if (!entry.qualificationName || !entry.certificateNumber || !entry.issuingCountry || !entry.dateOfIssue) {
       return 'Please fill in all mandatory STCW fields before adding.';
     }
-    if (new Date(entry.dateOfIssue) >= new Date(entry.validTill)) {
+    if (entry.validTill && new Date(entry.dateOfIssue) >= new Date(entry.validTill)) {
       return 'Date of Issue must be before Valid Till date.';
     }
     return null;
@@ -191,8 +191,8 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                       {academic.institutionCountry ? ` - ${academic.institutionCountry}` : ''}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {academic.startDate && academic.endDate ?
-                        `${new Date(academic.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(academic.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      {academic.startDate ?
+                        `${new Date(academic.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${academic.endDate ? new Date(academic.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Present'}`
                         : 'Dates not specified'}
                     </p>
                   </div>
@@ -283,7 +283,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
 
                 <div>
                   <label htmlFor="endDate" className="block text-gray-700 font-medium mb-1 text-sm">
-                    End Date
+                    End Date <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="date"
@@ -323,8 +323,8 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                     <p className="text-sm font-semibold text-gray-800">{stcw.qualificationName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={stcw.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
-                      {stcw.dateOfIssue && stcw.validTill ?
-                        `${new Date(stcw.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(stcw.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      {stcw.dateOfIssue ?
+                        `${new Date(stcw.dateOfIssue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${stcw.validTill ? new Date(stcw.validTill).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Present'}`
                         : 'Dates not specified'}
                     </p>
                   </div>
@@ -395,7 +395,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
 
                 <div>
                   <label htmlFor="stcwValidTill" className="block text-gray-700 font-medium mb-1 text-sm">
-                    Valid Till
+                    Valid Till <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="date"
