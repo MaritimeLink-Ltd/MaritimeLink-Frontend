@@ -1,4 +1,7 @@
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+const DAYS_PER_YEAR = 365.25;
+const DAYS_PER_MONTH = 30.44;
 
 const GENERIC_VESSEL_TYPE_KEYS = new Set([
   'vessel',
@@ -56,19 +59,31 @@ const resolveVesselTypeLabel = (log = {}) => {
   return vesselType;
 };
 
-export const diffMonthsBetween = (joiningDate, tillDate) => {
+/** Returns raw decimal days between two dates (no rounding — accumulate then round once at the end). */
+const diffDaysBetween = (joiningDate, tillDate) => {
   if (!joiningDate || !tillDate) return 0;
-
   const start = new Date(joiningDate);
   const end = new Date(tillDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
-    return 0;
-  }
-
-  const diffTime = end.getTime() - start.getTime();
-  return Math.max(0, Math.round(diffTime / MS_PER_MONTH));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
+  return Math.max(0, (end.getTime() - start.getTime()) / MS_PER_DAY);
 };
 
+/** Convert total raw days to { years, months, days, totalMonths }. */
+const totalDaysToYMD = (totalDays) => {
+  const safe = Math.max(0, totalDays);
+  const years = Math.floor(safe / DAYS_PER_YEAR);
+  const remainingDays = safe - years * DAYS_PER_YEAR;
+  const months = Math.floor(remainingDays / DAYS_PER_MONTH);
+  const days = Math.round(remainingDays - months * DAYS_PER_MONTH);
+  return { years, months, days, totalMonths: safe / DAYS_PER_MONTH };
+};
+
+/** Kept for any external callers — returns raw decimal months. */
+export const diffMonthsBetween = (joiningDate, tillDate) => {
+  return diffDaysBetween(joiningDate, tillDate) / DAYS_PER_MONTH;
+};
+
+/** Kept for backward compatibility. */
 export const monthsToYearsAndMonths = (totalMonths) => {
   const safeTotal = Math.max(0, totalMonths);
   return {
@@ -78,18 +93,13 @@ export const monthsToYearsAndMonths = (totalMonths) => {
   };
 };
 
-/** Figma-style duration: "8 years 9 months" (no comma). */
-export const formatSeaServiceDurationCompact = (years, months) => {
+/** Format as "3 years 1 month 15 days", omitting zero parts. */
+export const formatSeaServiceDurationCompact = (years, months, days = 0) => {
   const parts = [];
-
-  if (years > 0) {
-    parts.push(`${years} year${years === 1 ? '' : 's'}`);
-  }
-  if (months > 0) {
-    parts.push(`${months} month${months === 1 ? '' : 's'}`);
-  }
-
-  return parts.join(' ') || '0 months';
+  if (years > 0) parts.push(`${years} year${years === 1 ? '' : 's'}`);
+  if (months > 0) parts.push(`${months} month${months === 1 ? '' : 's'}`);
+  if (days > 0) parts.push(`${days} day${days === 1 ? '' : 's'}`);
+  return parts.join(' ') || '0 days';
 };
 
 export const formatSeaServiceDuration = (years, months) => {
@@ -121,45 +131,44 @@ export const pluralizeVesselTypeDisplay = (label) => {
 
 export const calculateTotalSeaTime = (logs = []) => {
   const normalized = logs.map(normalizeSeaServiceLog);
-  const totalMonths = normalized.reduce(
-    (sum, log) => sum + diffMonthsBetween(log.joiningDate, log.tillDate),
+  const totalRawDays = normalized.reduce(
+    (sum, log) => sum + diffDaysBetween(log.joiningDate, log.tillDate),
     0,
   );
-
-  return monthsToYearsAndMonths(totalMonths);
+  return totalDaysToYMD(totalRawDays);
 };
 
 export const getVesselTypeBreakdown = (logs = []) => {
   const normalized = logs.map(normalizeSeaServiceLog);
-  const vesselMonths = new Map();
+  const vesselDays = new Map();
 
   normalized.forEach((log) => {
     const label = resolveVesselTypeLabel(log);
     const key = normalizeVesselTypeKey(label);
     if (!key) return;
 
-    const months = diffMonthsBetween(log.joiningDate, log.tillDate);
-    if (months <= 0) return;
+    const days = diffDaysBetween(log.joiningDate, log.tillDate);
+    if (days <= 0) return;
 
-    const existing = vesselMonths.get(key);
+    const existing = vesselDays.get(key);
     if (existing) {
-      existing.months += months;
+      existing.days += days;
       if (label.length > existing.label.length) {
         existing.label = label;
       }
       return;
     }
 
-    vesselMonths.set(key, { label, months });
+    vesselDays.set(key, { label, days });
   });
 
-  return [...vesselMonths.values()]
-    .map(({ label, months }) => {
-      const duration = monthsToYearsAndMonths(months);
+  return [...vesselDays.values()]
+    .map(({ label, days }) => {
+      const duration = totalDaysToYMD(days);
       return {
         vesselType: label,
         ...duration,
-        label: formatSeaServiceDurationCompact(duration.years, duration.months),
+        label: formatSeaServiceDurationCompact(duration.years, duration.months, duration.days),
       };
     })
     .sort((a, b) => b.totalMonths - a.totalMonths);
@@ -170,7 +179,7 @@ export const buildSeaServiceExperience = (logs = []) => {
   const total = calculateTotalSeaTime(normalized);
   const byVesselType = getVesselTypeBreakdown(normalized);
   const experienceLines = [];
-  const totalCompact = formatSeaServiceDurationCompact(total.years, total.months);
+  const totalCompact = formatSeaServiceDurationCompact(total.years, total.months, total.days);
 
   if (total.totalMonths > 0) {
     experienceLines.push(`${totalCompact} total sea service`);
@@ -186,12 +195,9 @@ export const buildSeaServiceExperience = (logs = []) => {
     const sorted = [...normalized].sort(
       (a, b) => new Date(a.joiningDate || 0).getTime() - new Date(b.joiningDate || 0).getTime(),
     );
-    const firstRole = sorted[0]?.role;
     const lastRole = sorted[sorted.length - 1]?.role;
 
-    if (firstRole && lastRole && firstRole !== lastRole) {
-      experienceLines.push(`Rank Progression: ${firstRole} to ${lastRole}`);
-    } else if (lastRole) {
+    if (lastRole) {
       experienceLines.push(`Current Rank: ${lastRole}`);
     }
   }

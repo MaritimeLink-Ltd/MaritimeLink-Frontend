@@ -7,6 +7,10 @@ const DISPLAY_OPTS = { day: 'numeric', month: 'short', year: 'numeric' };
 export function formatDisplayDate(value) {
   if (value == null || value === '') return '';
 
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toLocaleDateString('en-GB', DISPLAY_OPTS);
+  }
+
   const str = String(value).trim();
   if (!str) return '';
 

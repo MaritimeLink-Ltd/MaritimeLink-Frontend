@@ -10,6 +10,7 @@ import {
 import httpClient from '../../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../../config/api.config';
 import { COUNTRIES } from '../../../../utils/countries';
+import CountrySelect from '../../../../components/common/CountrySelect';
 import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../utils/courseCurrency';
 import { canCurrentUserManageCourse } from '../../../../utils/courseManageAccess';
 
@@ -307,21 +308,13 @@ export default function EditCourse() {
                             <label className="block text-gray-900 font-medium mb-2 text-base">
                                 Issuing Authority
                             </label>
-                            <div className="relative">
-                                <select
-                                    name="issuingAuthority"
-                                    value={form.issuingAuthority}
-                                    onChange={handleChange}
-                                    className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white pr-10"
-                                >
-                                    {COUNTRIES.map((item) => (
-                                        <option key={item.code} value={item.name}>
-                                            {item.emoji ? `${item.emoji} ` : ''}{item.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            </div>
+                            <CountrySelect
+                                name="issuingAuthority"
+                                value={form.issuingAuthority}
+                                onChange={handleChange}
+                                includeEmpty={false}
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#003971]/15 focus:border-[#003971] bg-white text-sm"
+                            />
                         </div>
 
                         {/* Duration & Course Price */}

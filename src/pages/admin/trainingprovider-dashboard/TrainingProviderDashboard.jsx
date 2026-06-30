@@ -482,40 +482,20 @@ function TrainingProviderDashboard() {
                             <h1 className="text-[28px] font-bold text-gray-900 mb-1">{headerUser.welcomeLine}</h1>
                             <p className="text-gray-500 text-sm">Your training operations at a glance</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            {/* Time Filter */}
-                            <div className="bg-gray-50 p-1 rounded-xl inline-flex border border-gray-100">
-                                {timeFilters.map((filter) => (
-                                    <button
-                                        key={filter}
-                                        onClick={() => setTimeFilter(filter)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${timeFilter === filter
-                                            ? 'bg-white text-gray-900 shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                            }`}
-                                    >
-                                        {filter}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="text-right min-w-0 max-w-[200px]">
-                                <p className="text-sm font-bold text-gray-900 truncate">{headerUser.displayName}</p>
-                                <p className="text-xs text-gray-500 truncate">{headerUser.subtitle}</p>
-                            </div>
-                            {headerUser.avatarUrl ? (
-                                <img
-                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 flex-shrink-0"
-                                    src={headerUser.avatarUrl}
-                                    alt=""
-                                />
-                            ) : (
-                                <div
-                                    className="h-12 w-12 rounded-full border-2 border-gray-200 bg-[#003971]/10 text-[#003971] flex items-center justify-center text-sm font-bold flex-shrink-0"
-                                    title={headerUser.displayName}
+                        {/* Time Filter */}
+                        <div className="bg-gray-50 p-1 rounded-xl inline-flex border border-gray-100">
+                            {timeFilters.map((filter) => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setTimeFilter(filter)}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${timeFilter === filter
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                        }`}
                                 >
-                                    {initialsFromDisplayName(headerUser.displayName)}
-                                </div>
-                            )}
+                                    {filter}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>

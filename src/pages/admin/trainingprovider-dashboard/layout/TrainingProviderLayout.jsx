@@ -279,12 +279,12 @@ function TrainingProviderLayout() {
                                         </div>
                                     )}
                                     <div className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center text-left min-w-0">
-                                        <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2 truncate max-w-[160px]">
+                                        {userData.email && (
+                                            <span className="text-sm font-bold text-gray-700 leading-none mb-1 mr-2 truncate max-w-[160px]">{userData.email}</span>
+                                        )}
+                                        <span className="text-xs text-gray-500 leading-none truncate max-w-[160px]">
                                             {userData.name || 'Training provider'}
                                         </span>
-                                        {userData.email && (
-                                            <span className="text-xs text-gray-500 leading-none">{userData.email}</span>
-                                        )}
                                     </div>
                                     <div className="flex items-center">
                                         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
