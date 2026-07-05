@@ -1,7 +1,13 @@
-import { TERMS_META, TERMS_SECTIONS, TERMS_TITLE } from '../../content/termsCopy';
+import {
+    INFORMATION_SECURITY_META,
+    INFORMATION_SECURITY_SECTIONS,
+    INFORMATION_SECURITY_TITLE,
+} from '../../content/informationSecurityCopy';
 
 function linkifyText(text) {
-    const parts = text.split(/(https?:\/\/[^\s]+|privacy@maritimelink\.co|compliance@maritimelink\.co|legal@maritimelink\.co|www\.maritimelink\.co)/g);
+    const parts = text.split(
+        /(https?:\/\/[^\s]+|privacy@maritimelink\.co|compliance@maritimelink\.co|security@maritimelink\.co|www\.maritimelink\.co)/g
+    );
     return parts.map((part, index) => {
         if (part.match(/^https?:\/\//)) {
             return (
@@ -10,7 +16,11 @@ function linkifyText(text) {
                 </a>
             );
         }
-        if (part === 'privacy@maritimelink.co' || part === 'compliance@maritimelink.co' || part === 'legal@maritimelink.co') {
+        if (
+            part === 'privacy@maritimelink.co' ||
+            part === 'compliance@maritimelink.co' ||
+            part === 'security@maritimelink.co'
+        ) {
             return (
                 <a key={index} href={`mailto:${part}`} className="text-[#003971] hover:underline">
                     {part}
@@ -28,17 +38,17 @@ function linkifyText(text) {
     });
 }
 
-function TermsContent({ className = '' }) {
+function InformationSecurityContent({ className = '' }) {
     return (
         <div className={`space-y-6 ${className}`.trim()}>
             <div className="space-y-1 text-sm text-gray-600">
-                {TERMS_META.map((line) => (
+                {INFORMATION_SECURITY_META.map((line) => (
                     <p key={line}>{linkifyText(line)}</p>
                 ))}
             </div>
 
             <div className="space-y-8">
-                {TERMS_SECTIONS.map((section) => (
+                {INFORMATION_SECURITY_SECTIONS.map((section) => (
                     <section key={section.number}>
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">
                             {section.number}. {section.title}
@@ -53,5 +63,5 @@ function TermsContent({ className = '' }) {
     );
 }
 
-export { TERMS_TITLE };
-export default TermsContent;
+export { INFORMATION_SECURITY_TITLE };
+export default InformationSecurityContent;

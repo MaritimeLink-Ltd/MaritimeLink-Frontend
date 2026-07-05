@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import TermsContent from '../../../../components/auth/TermsContent';
+import TermsContent, { TERMS_TITLE } from '../../../../components/auth/TermsContent';
 
 const TermsConditions = () => {
     const navigate = useNavigate();
@@ -22,7 +22,7 @@ const TermsConditions = () => {
                 </button>
 
                 <div className="space-y-6">
-                    <h1 className="text-3xl font-bold text-gray-800">Terms & Conditions</h1>
+                    <h1 className="text-3xl font-bold text-gray-800">{TERMS_TITLE}</h1>
                     <TermsContent />
                 </div>
 

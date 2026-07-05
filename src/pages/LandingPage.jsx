@@ -354,9 +354,18 @@ const FOOTER_COLUMNS = [
     {
         heading: 'Legal',
         links: [
-            { label: 'Terms of Service', to: '/terms' },
-            { label: 'Privacy Policy', soon: true },
-            { label: 'Cookies Policy', soon: true },
+            { label: 'Privacy Policy', to: '/privacy' },
+            { label: 'Terms & Conditions', to: '/terms' },
+            { label: 'Cookie Policy', to: '/cookie-policy' },
+            { label: 'Acceptable Use Policy', to: '/acceptable-use-policy' },
+            { label: 'Recruiter Terms of Service', to: '/recruiter-terms-of-service' },
+            { label: 'Training Provider Terms of Service', to: '/training-provider-terms-of-service' },
+            { label: 'Professional User Terms of Service', to: '/professional-user-terms-of-service' },
+            { label: 'Data Retention & Secure Deletion Policy', to: '/data-retention-secure-deletion-policy' },
+            {
+                label: 'Information Security & Responsible Vulnerability Disclosure Policy',
+                to: '/information-security-vulnerability-disclosure-policy',
+            },
         ],
     },
 ];

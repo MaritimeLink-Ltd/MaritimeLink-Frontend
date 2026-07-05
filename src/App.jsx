@@ -6,6 +6,14 @@ import SignUp from './pages/personal/auth/SignUp';
 import OTPVerification from './pages/personal/auth/OTPVerification';
 import AcceptTerms from './pages/auth/AcceptTerms';
 import PublicTerms from './pages/auth/PublicTerms';
+import PublicPrivacy from './pages/auth/PublicPrivacy';
+import PublicCookie from './pages/auth/PublicCookie';
+import PublicAcceptableUse from './pages/auth/PublicAcceptableUse';
+import PublicRecruiterTerms from './pages/auth/PublicRecruiterTerms';
+import PublicTrainingProviderTerms from './pages/auth/PublicTrainingProviderTerms';
+import PublicProfessionalUserTerms from './pages/auth/PublicProfessionalUserTerms';
+import PublicDataRetention from './pages/auth/PublicDataRetention';
+import PublicInformationSecurity from './pages/auth/PublicInformationSecurity';
 import SelectProfession from './pages/personal/auth/SelectProfession';
 import UploadProfilePhoto from './pages/personal/auth/UploadProfilePhoto';
 // ...existing code...
@@ -186,6 +194,17 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/otp-verification" element={<OTPVerification />} />
           <Route path="/terms" element={<PublicTerms />} />
+          <Route path="/privacy" element={<PublicPrivacy />} />
+          <Route path="/cookie-policy" element={<PublicCookie />} />
+          <Route path="/acceptable-use-policy" element={<PublicAcceptableUse />} />
+          <Route path="/recruiter-terms-of-service" element={<PublicRecruiterTerms />} />
+          <Route path="/training-provider-terms-of-service" element={<PublicTrainingProviderTerms />} />
+          <Route path="/professional-user-terms-of-service" element={<PublicProfessionalUserTerms />} />
+          <Route path="/data-retention-secure-deletion-policy" element={<PublicDataRetention />} />
+          <Route
+              path="/information-security-vulnerability-disclosure-policy"
+              element={<PublicInformationSecurity />}
+          />
           <Route path="/accept-terms" element={<AcceptTerms />} />
           <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />
           <Route path="/id-upload" element={<Navigate to="/upload-profile-photo" replace />} />

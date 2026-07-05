@@ -1,7 +1,7 @@
-import { TERMS_META, TERMS_SECTIONS, TERMS_TITLE } from '../../content/termsCopy';
+import { PRIVACY_META, PRIVACY_SECTIONS, PRIVACY_TITLE } from '../../content/privacyCopy';
 
 function linkifyText(text) {
-    const parts = text.split(/(https?:\/\/[^\s]+|privacy@maritimelink\.co|compliance@maritimelink\.co|legal@maritimelink\.co|www\.maritimelink\.co)/g);
+    const parts = text.split(/(https?:\/\/[^\s]+|privacy@maritimelink\.co|compliance@maritimelink\.co|www\.maritimelink\.co)/g);
     return parts.map((part, index) => {
         if (part.match(/^https?:\/\//)) {
             return (
@@ -10,7 +10,7 @@ function linkifyText(text) {
                 </a>
             );
         }
-        if (part === 'privacy@maritimelink.co' || part === 'compliance@maritimelink.co' || part === 'legal@maritimelink.co') {
+        if (part === 'privacy@maritimelink.co' || part === 'compliance@maritimelink.co') {
             return (
                 <a key={index} href={`mailto:${part}`} className="text-[#003971] hover:underline">
                     {part}
@@ -28,17 +28,17 @@ function linkifyText(text) {
     });
 }
 
-function TermsContent({ className = '' }) {
+function PrivacyContent({ className = '' }) {
     return (
         <div className={`space-y-6 ${className}`.trim()}>
             <div className="space-y-1 text-sm text-gray-600">
-                {TERMS_META.map((line) => (
+                {PRIVACY_META.map((line) => (
                     <p key={line}>{linkifyText(line)}</p>
                 ))}
             </div>
 
             <div className="space-y-8">
-                {TERMS_SECTIONS.map((section) => (
+                {PRIVACY_SECTIONS.map((section) => (
                     <section key={section.number}>
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">
                             {section.number}. {section.title}
@@ -53,5 +53,5 @@ function TermsContent({ className = '' }) {
     );
 }
 
-export { TERMS_TITLE };
-export default TermsContent;
+export { PRIVACY_TITLE };
+export default PrivacyContent;

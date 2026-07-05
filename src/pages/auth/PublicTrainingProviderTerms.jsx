@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import TermsContent, { TERMS_TITLE } from '../../components/auth/TermsContent';
+import TrainingProviderTermsContent, {
+    TRAINING_PROVIDER_TERMS_TITLE,
+} from '../../components/auth/TrainingProviderTermsContent';
 
-function PublicTerms() {
+function PublicTrainingProviderTerms() {
     return (
         <div className="h-screen flex flex-col lg:flex-row overflow-hidden bg-white">
             <div className="w-full lg:w-2/5 flex flex-col flex-1 min-h-0 px-6 sm:px-12 lg:px-16 xl:px-24 py-8 overflow-hidden">
@@ -12,19 +14,19 @@ function PublicTerms() {
                     </div>
 
                     <Link
-                        to="/signup"
+                        to="/"
                         className="inline-flex items-center gap-2 text-sm text-[#003971] hover:underline mb-4 shrink-0"
                     >
                         <ArrowLeft size={16} />
-                        Back to Sign Up
+                        Back to Home
                     </Link>
 
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 shrink-0">
-                        {TERMS_TITLE}
+                        {TRAINING_PROVIDER_TERMS_TITLE}
                     </h1>
 
                     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
-                        <TermsContent />
+                        <TrainingProviderTermsContent />
                     </div>
                 </div>
             </div>
@@ -40,4 +42,4 @@ function PublicTerms() {
     );
 }
 
-export default PublicTerms;
+export default PublicTrainingProviderTerms;
