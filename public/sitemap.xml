@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://maritimelink.co/</loc>
+    <loc>https://www.maritimelink.co/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/signin</loc>
+    <loc>https://www.maritimelink.co/signin</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/signup</loc>
+    <loc>https://www.maritimelink.co/signup</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/terms</loc>
+    <loc>https://www.maritimelink.co/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/privacy</loc>
+    <loc>https://www.maritimelink.co/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/cookie-policy</loc>
+    <loc>https://www.maritimelink.co/cookie-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/acceptable-use-policy</loc>
+    <loc>https://www.maritimelink.co/acceptable-use-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/recruiter-terms-of-service</loc>
+    <loc>https://www.maritimelink.co/recruiter-terms-of-service</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/training-provider-terms-of-service</loc>
+    <loc>https://www.maritimelink.co/training-provider-terms-of-service</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/professional-user-terms-of-service</loc>
+    <loc>https://www.maritimelink.co/professional-user-terms-of-service</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://maritimelink.co/data-retention-secure-deletion-policy</loc>
+    <loc>https://www.maritimelink.co/data-retention-secure-deletion-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
