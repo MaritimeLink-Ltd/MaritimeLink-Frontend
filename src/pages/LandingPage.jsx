@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Anchor,
+    UserRound,
     Ship,
     Compass,
     ShieldCheck,
@@ -9,6 +9,7 @@ import {
     Briefcase,
     GraduationCap,
     CreditCard,
+    Calendar,
     ArrowRight,
     CheckCircle2,
     Sparkles,
@@ -30,13 +31,16 @@ import {
     BarChart3,
     TrendingUp,
     ArrowLeft,
-    LayoutDashboard,
     UserPlus,
     MessageCircle,
     ClipboardCheck,
     EyeOff,
     Server,
-    Smartphone,
+    RefreshCw,
+    Download,
+    BookOpen,
+    DollarSign,
+    AlertCircle,
     Linkedin,
     Facebook,
     Instagram,
@@ -53,7 +57,7 @@ const ROLES = [
         description:
             'Build a verified maritime resume, manage your certificates in one secure wallet, and get matched with the right vessels and roles.',
         bullets: ['Digital Document Wallet', 'AI-verified certificates', 'Smart job matching'],
-        icon: Anchor,
+        icon: UserRound,
         accent: 'from-blue-500 to-blue-700',
         ring: 'group-hover:ring-blue-200',
         chip: 'bg-blue-50 text-blue-700',
@@ -93,11 +97,11 @@ const ROLES = [
 const KEY_PLAYERS = [
     {
         id: 'professional',
-        icon: Anchor,
+        icon: UserRound,
         name: 'For Maritime Professionals',
         tagline: 'Manage your career. Stay compliant. Get discovered by the right opportunities.',
-        image: '/images/profession-image.webp',
-        imageAlt: 'Maritime professionals on deck',
+        image: '/images/professional.png',
+        imageAlt: 'Maritime professional at the port',
         accent: 'from-blue-500 to-blue-700',
         checkColor: 'text-blue-600',
         points: [
@@ -116,8 +120,8 @@ const KEY_PLAYERS = [
         icon: Briefcase,
         name: 'For Recruiters & Manning Agents',
         tagline: 'Find verified talent faster. Reduce admin. Make smarter hiring decisions.',
-        image: '/images/premium-image.webp',
-        imageAlt: 'Maritime officer reviewing candidates',
+        image: '/images/recruiter.png',
+        imageAlt: 'Recruiter reviewing maritime candidates',
         accent: 'from-teal-500 to-teal-700',
         checkColor: 'text-teal-600',
         points: [
@@ -136,8 +140,8 @@ const KEY_PLAYERS = [
         icon: GraduationCap,
         name: 'For Training Providers',
         tagline: 'Grow your training business with data-driven insights and smarter planning.',
-        image: '/images/login-image.webp',
-        imageAlt: 'Maritime training instructor',
+        image: '/images/training_provider.png',
+        imageAlt: 'Maritime training instructor presenting STCW course',
         accent: 'from-purple-500 to-purple-700',
         checkColor: 'text-purple-600',
         points: [
@@ -171,7 +175,7 @@ const AUDIENCE_BENEFITS = [
 const PREVIEWS = [
     {
         id: 'professional',
-        icon: Anchor,
+        icon: UserRound,
         tab: 'For Professionals',
         tabSub: 'Manage your career',
         activeTab: 'bg-[#003971] text-white shadow-lg',
@@ -188,9 +192,7 @@ const PREVIEWS = [
             'Job and training recommendations',
             'Secure messaging',
             'Track applications and bookings',
-        ],
-        screenshots: [],
-    },
+        ],    },
     {
         id: 'recruiter',
         icon: Briefcase,
@@ -211,9 +213,7 @@ const PREVIEWS = [
             'Shortlist and manage candidates',
             'Secure in-app messaging',
             'Manage placements and reports',
-        ],
-        screenshots: [],
-    },
+        ],    },
     {
         id: 'training-provider',
         icon: GraduationCap,
@@ -233,10 +233,293 @@ const PREVIEWS = [
             'Track attendance and performance',
             'Understand demand with insights',
             'Communicate with attendees instantly',
-        ],
-        screenshots: [],
-    },
+        ],    },
 ];
+
+// Platform Preview mockups modelled on the REAL app screens (layouts, nav labels, page
+// titles, card styles all mirror the actual dashboards) — shown until live screenshots
+// replace them. Badge tone: 4th row element. Sources:
+//   professional → PersonalDashboardLayout / Dashboard / DocumentsWallet / Jobs
+//   recruiter    → RecruiterDashboardMain / RecruiterDashboard / AdminSearch / AdminJobs
+//   training     → TrainingProviderLayout / TrainingProviderDashboard / Courses / Demand
+const BADGE_TEAL = 'bg-teal-50 text-teal-700';
+const BADGE_AMBER = 'bg-amber-50 text-amber-700';
+const BADGE_BLUE = 'bg-blue-50 text-blue-700';
+
+const PREVIEW_MOCKS = {
+    professional: {
+        content: 'bg-white',
+        nav: ['Dashboard', 'Resume', 'Documents', 'Jobs', 'Training', 'Chats', 'Profile'],
+        user: 'Alex Johnson',
+        slides: [
+            {
+                path: 'personal/dashboard',
+                navActive: 0,
+                pageTitle: 'Dashboard',
+                pageSub: 'View everything at a glance',
+                widgets: [
+                    { type: 'banner', text: 'No certificates expiring in the next 90 days', pill: 'Fully Compliant' },
+                    {
+                        type: 'quickCards',
+                        cards: [
+                            ['Resume', '50% complete', 'Go To Resume', 50],
+                            ['Document Wallet', 'Fully Compliant', 'Go To Documents'],
+                            ['Jobs', '23 available jobs', 'Go To Jobs'],
+                            ['Courses', '4 available courses', 'Go To Training'],
+                        ],
+                    },
+                    {
+                        type: 'panels',
+                        items: [
+                            {
+                                title: 'Alerts',
+                                rows: [
+                                    ['KYC verification approved', 'Your identity verification has been approved · Just now'],
+                                    ['KYC verification approved', 'You now have full access to platform features · Just now'],
+                                ],
+                            },
+                            {
+                                title: 'Recent Activity',
+                                rows: [
+                                    ['Signed in to MaritimeLink', 'Just now'],
+                                    ['Signed in to MaritimeLink', '4m ago'],
+                                    ['Register', '1d ago'],
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                path: 'personal/documents',
+                navActive: 2,
+                pageTitle: 'Documents Wallet',
+                pageSub: 'Manage your uploaded documents',
+                widgets: [
+                    {
+                        type: 'toolbar',
+                        search: 'Search docs...',
+                        buttons: ['Export Document Pack', 'Share Secure Link'],
+                    },
+                    {
+                        type: 'docGrid',
+                        items: [
+                            ['Licenses & Endorsements', '1 Documents', BADGE_BLUE],
+                            ['STCW Certificates', '0 Documents', BADGE_TEAL],
+                            ['Medical Certificates', '0 Documents', 'bg-red-50 text-red-700'],
+                            ['Seaman Book data/Stamp pages', '0 Documents', BADGE_BLUE],
+                            ['Travel Documents', '0 Documents', 'bg-cyan-50 text-cyan-700'],
+                            ['Academic Qualifications', '0 Documents', 'bg-indigo-50 text-indigo-700'],
+                            ['Company Letters / Misc', '0 Documents', BADGE_BLUE],
+                            ['Recent Appraisals', '0 Documents', BADGE_AMBER],
+                        ],
+                    },
+                ],
+            },
+            {
+                path: 'personal/training',
+                navActive: 4,
+                pageTitle: 'Training Courses',
+                pageSub: 'Find and book maritime training',
+                widgets: [
+                    {
+                        type: 'toolbar',
+                        search: 'Search courses or providers...',
+                        buttons: ['Saved Courses', 'Filter'],
+                    },
+                    {
+                        type: 'courseList',
+                        emptyText: 'Select a course to view details',
+                        courses: [
+                            ['Bridge Resource Management', 'Meta Training Center', 'GBP 234'],
+                            ['STCW Basic Safety Training', 'Meta Training Center', 'GBP 500'],
+                            ['Medical First Aid', 'Maritime Academy', 'GBP 7,500'],
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    recruiter: {
+        content: 'bg-gray-50',
+        nav: ['Dashboard', 'Search Candidates', 'Jobs', 'Chats'],
+        user: 'Sarah Mitchell',
+        slides: [
+            {
+                path: 'recruiter-dashboard',
+                navActive: 0,
+                pageTitle: 'Dashboard',
+                pageSub: 'Welcome back, Sarah Mitchell · Meridian Shipping',
+                widgets: [
+                    { type: 'dateTabs', active: 'Today', tabs: ['Today', '7 Days', '1 Month', 'Custom'] },
+                    {
+                        type: 'gradientStats',
+                        items: [
+                            ['Active Jobs', '8', 'from-[#1e4c7a] via-[#2563a8] to-[#4a7ab8]', Briefcase],
+                            ['Applications', '126', 'from-[#059669] via-[#10b981] to-[#34d399]', CheckCircle2],
+                            ['Matched Professionals', '54', 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]', BadgeCheck],
+                            ['Jobs Needing Attention', '2', 'from-[#dc2626] via-[#ef4444] to-[#f87171]', Calendar],
+                        ],
+                    },
+                    { type: 'noticePanel', title: 'Action Required', text: '2 jobs closing this week — review applicants before Friday.' },
+                    {
+                        type: 'tableGlance',
+                        title: 'Your Jobs at a Glance',
+                        link: 'View All Jobs',
+                        columns: ['Job Title', 'Status / Applicants', 'Matches'],
+                        rows: [
+                            ['Chief Officer — LNG Carrier', '42 applicants · Open', '6 new'],
+                            ['Marine Engineer — Offshore', '28 applicants · Open', '3 new'],
+                        ],
+                    },
+                ],
+            },
+            {
+                path: 'recruiter/search',
+                navActive: 1,
+                pageTitle: 'Search Candidates',
+                pageSub: 'Find qualified maritime professionals for your vessels',
+                widgets: [
+                    { type: 'search', placeholder: 'Search by rank, name, certification...' },
+                    {
+                        type: 'candidateSearch',
+                        resultsLabel: 'Showing 6 candidates',
+                        sort: 'Experience (High to Low)',
+                        candidates: [
+                            ['Daniel Kim', 'Master Mariner', '12 yrs · United Kingdom', '98% match'],
+                            ['Elena Petrova', 'Chief Officer', '9 yrs · Poland', '95% match'],
+                            ['Ahmed Hassan', '2nd Engineer', '7 yrs · Pakistan', '91% match'],
+                        ],
+                        filters: ['Master', 'Chief Officer', 'Chief Engineer', '2nd Engineer'],
+                    },
+                ],
+            },
+            {
+                path: 'recruiter/jobs',
+                navActive: 2,
+                pageTitle: 'Jobs',
+                pageSub: 'Manage your job listings and applications',
+                widgets: [
+                    { type: 'dateTabs', active: '7 Days', tabs: ['Today', '7 Days', '30 Days'], action: 'Create Job' },
+                    {
+                        type: 'miniStats',
+                        items: [
+                            ['Active Jobs', '8', 'Currently open', 'bg-blue-50', 'text-blue-600', Briefcase],
+                            ['Closed Jobs', '3', 'Closed jobs', 'bg-red-50', 'text-red-600', CheckCircle2],
+                            ['Total Applications', '126', 'Total applications', 'bg-green-50', 'text-green-600', Users],
+                        ],
+                    },
+                    { type: 'filtersToolbar', search: 'Search jobs...', chips: ['Status', 'Job Type', 'Vessel'], action: 'Export CSV' },
+                    {
+                        type: 'jobsTable',
+                        columns: ['Job Title', 'Applicants', 'Status'],
+                        rows: [
+                            ['Chief Officer — LNG Carrier', '42', 'Open', BADGE_TEAL],
+                            ['Marine Engineer — Offshore', '28', 'Open', BADGE_TEAL],
+                            ['Master — Container Fleet', '12', 'Closing soon', BADGE_AMBER],
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    'training-provider': {
+        content: 'bg-[#F5F7FA]',
+        nav: ['Home', 'Demand & Planning', 'Course Management', 'Session Management', 'Chats', 'Profile'],
+        user: 'Ocean Maritime Academy',
+        slides: [
+            {
+                path: 'trainingprovider-dashboard',
+                navActive: 0,
+                pageTitle: 'Welcome back, Ocean Maritime Academy',
+                pageSub: 'Your training operations at a glance',
+                widgets: [
+                    { type: 'dateTabs', active: '30 Days', tabs: ['Today', '7 Days', '30 Days', 'All'] },
+                    {
+                        type: 'gradientStats',
+                        items: [
+                            ['Active Courses', '12', 'from-[#1E4976] to-[#2E6BA8]', BookOpen],
+                            ['New Bookings', '48', 'from-[#0FA968] to-[#1BC47D]', Calendar],
+                            ['Demand Signals', '7', 'from-[#E86C5F] to-[#F28B7D]', TrendingUp],
+                        ],
+                    },
+                    { type: 'noticePanel', title: 'Action Required', text: 'Session nearly full — STCW Basic Safety Training 18 / 20 booked.' },
+                    {
+                        type: 'tableGlance',
+                        title: 'Quick Overview',
+                        link: 'View All Courses',
+                        columns: ['Course', 'Status', 'Bookings'],
+                        rows: [
+                            ['STCW Basic Safety Training', 'Published', '96'],
+                            ['GMDSS General Operator', 'Published', '54'],
+                        ],
+                    },
+                ],
+            },
+            {
+                path: 'trainingprovider/courses',
+                navActive: 2,
+                pageTitle: 'Course Management',
+                pageSub: 'Manage your maritime training offerings at a glance',
+                widgets: [
+                    { type: 'dateTabs', tabs: [], secondaryAction: 'Export CSV', action: 'Create Course' },
+                    {
+                        type: 'miniStats',
+                        items: [
+                            ['Course Management', '12', 'Active courses', 'bg-blue-50', 'text-blue-600', BookOpen],
+                            ['Total Sessions', '34', 'This term', 'bg-amber-50', 'text-amber-600', Calendar],
+                            ['Bookings', '312', 'This quarter', 'bg-emerald-50', 'text-emerald-600', Users],
+                            ['Revenue', '£18,240', 'This quarter', 'bg-emerald-50', 'text-emerald-600', DollarSign],
+                        ],
+                    },
+                    { type: 'search', placeholder: 'Search courses...' },
+                    {
+                        type: 'jobsTable',
+                        columns: ['Course Name', 'Bookings', 'Status'],
+                        rows: [
+                            ['STCW Basic Safety Training', '96 bookings', 'Published', BADGE_TEAL],
+                            ['GMDSS General Operator', '54 bookings', 'Published', BADGE_TEAL],
+                            ['Medical First Aid', '12 bookings', 'Draft', BADGE_AMBER],
+                        ],
+                    },
+                ],
+            },
+            {
+                path: 'trainingprovider/demand',
+                navActive: 1,
+                pageTitle: 'Demand & Planning',
+                pageSub: 'Monitor training demand, watch capacity, and plan renewal demand.',
+                widgets: [
+                    { type: 'search', placeholder: 'Search courses, enquiries...' },
+                    {
+                        type: 'miniStats',
+                        items: [
+                            ['Certs Expiring', '128', 'Next 12 months', 'bg-rose-50', 'text-rose-600', AlertCircle],
+                            ['Search Demand', '342', 'Unique professionals', 'bg-blue-50', 'text-blue-600', TrendingUp],
+                            ['Active Enquiries', '27', 'Pending bookings', 'bg-emerald-50', 'text-emerald-600', MessageCircle],
+                        ],
+                    },
+                    {
+                        type: 'areaChart',
+                        title: 'Demand Forecast — Expires by Course',
+                        series: [
+                            { name: 'STCW', color: '#1e40af', values: [20, 35, 30, 45, 40, 55, 50] },
+                            { name: 'Firefighting', color: '#fb923c', values: [10, 15, 20, 18, 25, 22, 28] },
+                        ],
+                    },
+                    {
+                        type: 'capacity',
+                        title: 'Capacity',
+                        sub: 'Total seats available on your posted courses',
+                        pct: 74,
+                        filled: 312,
+                        total: 420,
+                    },
+                ],
+            },
+        ],
+    },
+};
 
 const STEPS = [
     {
@@ -344,30 +627,26 @@ const FOOTER_COLUMNS = [
     {
         heading: 'Company',
         links: [
-            { label: 'About Us', anchor: 'why' },
+            { label: 'About Us', anchor: 'about' },
             { label: 'How It Works', anchor: 'how-it-works' },
             { label: 'Blog', soon: true },
             { label: 'Careers', soon: true },
             { label: 'Contact Us', soon: true },
         ],
     },
-    {
-        heading: 'Legal',
-        links: [
-            { label: 'Privacy Policy', to: '/privacy' },
-            { label: 'Terms & Conditions', to: '/terms' },
-            { label: 'Cookie Policy', to: '/cookie-policy' },
-            { label: 'Acceptable Use Policy', to: '/acceptable-use-policy' },
-            { label: 'Recruiter Terms of Service', to: '/recruiter-terms-of-service' },
-            { label: 'Training Provider Terms of Service', to: '/training-provider-terms-of-service' },
-            { label: 'Professional User Terms of Service', to: '/professional-user-terms-of-service' },
-            { label: 'Data Retention & Secure Deletion Policy', to: '/data-retention-secure-deletion-policy' },
-            {
-                label: 'Information Security & Responsible Vulnerability Disclosure Policy',
-                to: '/information-security-vulnerability-disclosure-policy',
-            },
-        ],
-    },
+];
+
+// Rendered as a single horizontal strip above the copyright bar so all legal links sit on one line.
+const LEGAL_LINKS = [
+    { label: 'Privacy Policy', to: '/privacy' },
+    { label: 'Terms & Conditions', to: '/terms' },
+    { label: 'Cookie Policy', to: '/cookie-policy' },
+    { label: 'Acceptable Use Policy', to: '/acceptable-use-policy' },
+    { label: 'Recruiter Terms', to: '/recruiter-terms-of-service' },
+    { label: 'Training Provider Terms', to: '/training-provider-terms-of-service' },
+    { label: 'Professional User Terms', to: '/professional-user-terms-of-service' },
+    { label: 'Data Retention & Deletion', to: '/data-retention-secure-deletion-policy' },
+    { label: 'Security & Vulnerability Disclosure', to: '/information-security-vulnerability-disclosure-policy' },
 ];
 
 // Fill in the hrefs once the official pages exist; empty ones render as "coming soon".
@@ -378,11 +657,17 @@ const SOCIAL_LINKS = [
     { icon: Youtube, label: 'YouTube', href: '' },
 ];
 
+// Ordered per client priority: professional-focused points first, platform-wide points after.
 const WHY_POINTS = [
     {
         icon: BadgeCheck,
         title: 'One verified professional identity',
         description: 'Build a trusted profile with verified qualifications, certificates and sea service.',
+    },
+    {
+        icon: Timer,
+        title: 'Less admin. More time at sea.',
+        description: 'Automated verification, expiry tracking and smart workflows reduce manual work and errors.',
     },
     {
         icon: Wallet,
@@ -399,16 +684,11 @@ const WHY_POINTS = [
         title: 'One connected maritime ecosystem',
         description: 'Streamlined communication and collaboration between professionals, recruiters and training providers.',
     },
-    {
-        icon: Timer,
-        title: 'Less admin. More time at sea.',
-        description: 'Automated verification, expiry tracking and smart workflows reduce manual work and errors.',
-    },
 ];
 
 const WHY_AUDIENCES = [
     {
-        icon: Anchor,
+        icon: UserRound,
         accent: 'from-blue-500 to-blue-700',
         name: 'For Professionals',
         description: 'Showcase your verified profile, get discovered by recruiters and access the best career and training opportunities.',
@@ -427,6 +707,10 @@ const WHY_AUDIENCES = [
     },
 ];
 
+// Stats stay designed but hidden until real platform numbers are wired from the backend —
+// flip to true once live figures exist (client wants no placeholder numbers in production).
+const SHOW_STATS = false;
+
 const STATS = [
     { icon: Users, value: '1.9M+', label: 'Seafarers globally' },
     { icon: Building2, value: '10K+', label: 'Maritime organisations' },
@@ -435,7 +719,43 @@ const STATS = [
     { icon: Globe, value: 'Global', label: 'Accessible anywhere' },
 ];
 
-const WALLET_DOCS = ['COC (Unlimited)', 'STCW Certificates', 'Medical Certificate', 'Sea Service Letter'];
+// Mini dashboards rendered side-by-side inside the hero laptop — one panel per user type,
+// so the hero visual represents all three audiences instead of professionals only.
+const HERO_PANELS = [
+    {
+        id: 'professional',
+        icon: UserRound,
+        label: 'Professional',
+        header: 'bg-[#003971]',
+        stats: [
+            ['Profile Completion', '92%'],
+            ['Documents Valid', '4 / 4'],
+            ['Job Matches', '6 new'],
+        ],
+    },
+    {
+        id: 'recruiter',
+        icon: Briefcase,
+        label: 'Recruiter',
+        header: 'bg-teal-600',
+        stats: [
+            ['Active Job Posts', '8'],
+            ['Applicants', '126'],
+            ['Shortlisted', '12'],
+        ],
+    },
+    {
+        id: 'training-provider',
+        icon: GraduationCap,
+        label: 'Training Provider',
+        header: 'bg-purple-600',
+        stats: [
+            ['Live Courses', '12'],
+            ['Bookings', '48'],
+            ['Sessions This Week', '5'],
+        ],
+    },
+];
 
 const PHONE_DOCS = [
     ['COC (Unlimited)', 'Valid until 09 Feb 2027'],
@@ -456,6 +776,426 @@ function UnionJackFlag() {
     );
 }
 
+// Renders one Platform Preview slide as an in-browser mockup that mirrors the real app UI:
+// white sidebar with logo + MAIN MENU, #EBF3FF active nav, top bar with bell/avatar, and
+// page bodies copied from the actual dashboard screens.
+function DashboardMockup({ mock, slide }) {
+    return (
+        <div className="w-full h-full flex flex-col bg-white text-left">
+            {/* Browser chrome */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 border-b border-gray-200 shrink-0">
+                <span className="flex gap-1.5 shrink-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                </span>
+                <span className="flex-1 max-w-xs mx-auto bg-white rounded-md px-3 py-1 text-[10px] text-gray-400 truncate text-center">
+                    app.maritimelink.com/{slide.path}
+                </span>
+                <span className="w-11 shrink-0" />
+            </div>
+
+            <div className="flex flex-1 min-h-0">
+                {/* Sidebar — white with MAIN MENU caption, like the real layouts */}
+                <div className="hidden sm:flex w-40 shrink-0 flex-col bg-white border-r border-gray-200 px-2.5 py-3">
+                    <img src="/images/logo.png" alt="" className="h-10 w-auto object-contain self-start ml-1 mb-2" />
+                    <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-wider px-2 mb-1.5">Main Menu</p>
+                    <div className="space-y-0.5">
+                        {mock.nav.map((item, i) => (
+                            <div
+                                key={item}
+                                className={`text-[10px] px-2.5 py-1.5 rounded-lg ${i === slide.navActive ? 'bg-[#EBF3FF] text-[#003971] font-semibold' : 'text-gray-600'}`}
+                            >
+                                {item}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className={`flex-1 min-w-0 flex flex-col ${mock.content}`}>
+                    {/* Top header bar */}
+                    <div className="flex items-center justify-end gap-2.5 px-4 py-2 bg-white border-b border-gray-100 shrink-0">
+                        <span className="relative">
+                            <Bell className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[#003971]" />
+                        </span>
+                        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-teal-500" />
+                        <span className="text-[9px] font-bold text-gray-700">{mock.user}</span>
+                        <ChevronDown className="h-2.5 w-2.5 text-gray-400" />
+                    </div>
+
+                    {/* Page content */}
+                    <div className="flex-1 min-h-0 p-3 sm:p-4 space-y-2.5 overflow-hidden">
+                        <div>
+                            <p className="text-sm font-bold text-gray-900">{slide.pageTitle}</p>
+                            {slide.pageSub && <p className="text-[9px] text-gray-500">{slide.pageSub}</p>}
+                        </div>
+
+                        {slide.widgets.map((widget, wIdx) => {
+                            if (widget.type === 'banner') {
+                                return (
+                                    <div key={wIdx} className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-2.5 py-2">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                                                <Calendar className="h-3 w-3 text-slate-600" />
+                                            </span>
+                                            <p className="text-[9px] font-medium text-gray-800 truncate">{widget.text}</p>
+                                        </div>
+                                        <span className="flex items-center gap-1 text-[8px] font-semibold text-white bg-[#587B42] px-2 py-1 rounded-full shrink-0">
+                                            <CheckCircle2 className="h-2.5 w-2.5" />
+                                            {widget.pill}
+                                        </span>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'quickCards') {
+                                return (
+                                    <div key={wIdx} className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                                        {widget.cards.map(([title, status, button, pct]) => (
+                                            <div key={title} className="bg-[#F3FAFF] rounded-xl p-2 flex flex-col">
+                                                <p className="text-[9px] font-semibold text-gray-800 mb-1.5 truncate">{title}</p>
+                                                {pct != null && (
+                                                    <div className="h-1 rounded-full bg-gray-200 overflow-hidden mb-1">
+                                                        <div className="h-full rounded-full bg-[#003971]" style={{ width: `${pct}%` }} />
+                                                    </div>
+                                                )}
+                                                <p className="text-[8px] text-gray-600 mb-2 truncate">{status}</p>
+                                                <div className="mt-auto bg-[#003971] text-white text-[8px] font-medium rounded-full py-1 text-center truncate">
+                                                    {button}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'gradientStats') {
+                                return (
+                                    <div key={wIdx} className={`grid gap-2 ${widget.items.length === 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
+                                        {widget.items.map(([title, value, gradient, Icon]) => (
+                                            <div key={title} className={`bg-gradient-to-br ${gradient} rounded-xl p-2.5 text-white`}>
+                                                {Icon && (
+                                                    <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center mb-1.5">
+                                                        <Icon className="h-2.5 w-2.5 text-white" />
+                                                    </span>
+                                                )}
+                                                <p className="text-lg font-bold leading-none mb-1">{value}</p>
+                                                <p className="text-[8px] font-medium text-white/95 leading-tight">{title}</p>
+                                                <p className="text-[7px] text-white/70">Today</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'search') {
+                                return (
+                                    <div key={wIdx} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 max-w-[220px]">
+                                        <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                        <span className="text-[9px] text-gray-400 truncate">{widget.placeholder}</span>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'dateTabs') {
+                                const hasTabs = widget.tabs && widget.tabs.length > 0;
+                                return (
+                                    <div key={wIdx} className="flex items-center justify-end gap-1.5">
+                                        {hasTabs && (
+                                            <div className="flex items-center gap-0.5 bg-white border border-gray-100 rounded-full p-0.5 shadow-sm">
+                                                {widget.tabs.map((tab) => (
+                                                    <span
+                                                        key={tab}
+                                                        className={`text-[7.5px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${tab === widget.active ? 'bg-[#003971] text-white' : 'text-gray-500'}`}
+                                                    >
+                                                        {tab}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {widget.secondaryAction && (
+                                            <span className="text-[7.5px] font-semibold px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 whitespace-nowrap">
+                                                {widget.secondaryAction}
+                                            </span>
+                                        )}
+                                        {widget.action ? (
+                                            <span className="text-[7.5px] font-semibold px-2.5 py-1.5 rounded-full bg-[#003971] text-white whitespace-nowrap">
+                                                + {widget.action}
+                                            </span>
+                                        ) : hasTabs ? (
+                                            <RefreshCw className="h-3 w-3 text-gray-400 shrink-0" />
+                                        ) : null}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'noticePanel') {
+                                return (
+                                    <div key={wIdx}>
+                                        <p className="text-[10px] font-bold text-gray-900 mb-1.5">{widget.title}</p>
+                                        <div className="bg-white border border-gray-100 rounded-xl shadow-sm px-2.5 py-3 text-center">
+                                            <p className="text-[9px] text-gray-500">{widget.text}</p>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'tableGlance') {
+                                return (
+                                    <div key={wIdx} className="bg-white border border-gray-100 rounded-xl shadow-sm p-2.5">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-[10px] font-bold text-gray-900">{widget.title}</p>
+                                            <p className="text-[8px] font-semibold text-blue-600">{widget.link} &gt;</p>
+                                        </div>
+                                        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-gray-100">
+                                            {widget.columns.map((col) => (
+                                                <p key={col} className="text-[7px] font-bold text-gray-400 uppercase tracking-wide">{col}</p>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {widget.rows.map(([title, sub, matches]) => (
+                                                <div key={title} className="flex items-center justify-between gap-2">
+                                                    <p className="text-[9px] font-semibold text-gray-800 truncate">{title}</p>
+                                                    <p className="text-[8px] text-gray-400 truncate shrink-0">{sub}</p>
+                                                    <p className="text-[8px] font-semibold text-teal-600 shrink-0">{matches}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'miniStats') {
+                                return (
+                                    <div key={wIdx} className={`grid gap-2 ${widget.items.length === 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}>
+                                        {widget.items.map(([title, value, sub, bg, textColor, Icon]) => (
+                                            <div key={title} className={`rounded-xl p-2.5 ${bg}`}>
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <Icon className={`h-2.5 w-2.5 ${textColor}`} />
+                                                    <p className={`text-[8px] font-bold ${textColor}`}>{title}</p>
+                                                </div>
+                                                <p className="text-sm font-extrabold text-gray-900 leading-none mb-0.5">{value}</p>
+                                                <p className="text-[7px] text-gray-400">{sub}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'filtersToolbar') {
+                                return (
+                                    <div key={wIdx} className="flex flex-wrap items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[80px]">
+                                            <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                            <span className="text-[9px] text-gray-400 truncate">{widget.search}</span>
+                                        </div>
+                                        {widget.chips.map((chip) => (
+                                            <span key={chip} className="flex items-center gap-0.5 text-[7.5px] font-medium text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-1.5 whitespace-nowrap">
+                                                {chip}
+                                                <ChevronDown className="h-2 w-2 text-gray-400" />
+                                            </span>
+                                        ))}
+                                        <span className="flex items-center gap-1 text-[7.5px] font-semibold text-white bg-[#003971] rounded-lg px-2 py-1.5 whitespace-nowrap">
+                                            <Download className="h-2.5 w-2.5" />
+                                            {widget.action}
+                                        </span>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'areaChart') {
+                                const w = 140;
+                                const h = 44;
+                                const maxVal = Math.max(...widget.series.flatMap((s) => s.values));
+                                const toPoints = (values) =>
+                                    values.map((v, i) => `${(i / (values.length - 1)) * w},${h - (v / maxVal) * h}`).join(' ');
+                                return (
+                                    <div key={wIdx} className="bg-white border border-gray-100 rounded-xl shadow-sm p-2.5">
+                                        <div className="flex items-center justify-between mb-1.5 gap-2">
+                                            <p className="text-[9px] font-bold text-gray-800 truncate">{widget.title}</p>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                {widget.series.map((s) => (
+                                                    <span key={s.name} className="flex items-center gap-1 text-[7px] text-gray-500 whitespace-nowrap">
+                                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                                                        {s.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16" preserveAspectRatio="none">
+                                            {widget.series.map((s) => (
+                                                <polyline key={s.name} fill="none" stroke={s.color} strokeWidth="1.5" points={toPoints(s.values)} />
+                                            ))}
+                                        </svg>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'capacity') {
+                                return (
+                                    <div key={wIdx} className="bg-white border border-gray-100 rounded-xl shadow-sm p-2.5">
+                                        <p className="text-[9px] font-bold text-gray-800">{widget.title}</p>
+                                        <p className="text-[7.5px] text-gray-400 mb-2">{widget.sub}</p>
+                                        <div className="flex items-baseline justify-between mb-1">
+                                            <span className="text-sm font-extrabold text-gray-900">{widget.pct}%</span>
+                                            <span className="text-[7.5px] text-gray-500">{widget.filled} / {widget.total} seats filled</span>
+                                        </div>
+                                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                                            <div className="h-full rounded-full bg-gradient-to-r from-[#003971] to-[#0EA5E9]" style={{ width: `${widget.pct}%` }} />
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'jobsTable') {
+                                return (
+                                    <div key={wIdx} className="bg-white border border-gray-100 rounded-xl shadow-sm p-2.5">
+                                        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-gray-100">
+                                            {widget.columns.map((col) => (
+                                                <p key={col} className="text-[7px] font-bold text-gray-400 uppercase tracking-wide">{col}</p>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {widget.rows.map(([title, applicants, status, badgeClass]) => (
+                                                <div key={title} className="flex items-center justify-between gap-2">
+                                                    <p className="text-[9px] font-semibold text-gray-800 truncate">{title}</p>
+                                                    <p className="text-[8px] text-gray-500 shrink-0">{applicants}</p>
+                                                    <span className={`text-[7.5px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${badgeClass}`}>
+                                                        {status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'candidateSearch') {
+                                return (
+                                    <div key={wIdx} className="grid grid-cols-[1.3fr_1fr] gap-2">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <p className="text-[8px] font-semibold text-gray-700">{widget.resultsLabel}</p>
+                                                <p className="text-[7.5px] text-gray-400">Sort: {widget.sort}</p>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {widget.candidates.map(([name, rank, meta, match]) => (
+                                                    <div key={name} className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-lg shadow-sm px-2 py-1.5">
+                                                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-teal-400 shrink-0" />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1">
+                                                                <p className="text-[8.5px] font-bold text-gray-800 truncate">{name}</p>
+                                                                <span className="text-[6px] font-semibold text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full shrink-0">Verified</span>
+                                                            </div>
+                                                            <p className="text-[7.5px] text-gray-400 truncate">{rank} · {meta}</p>
+                                                        </div>
+                                                        <span className="text-[7px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full shrink-0">{match}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="hidden sm:block bg-white border border-gray-100 rounded-lg shadow-sm p-2">
+                                            <p className="text-[8px] font-bold text-gray-800 mb-1.5">Filters</p>
+                                            <div className="space-y-1">
+                                                {widget.filters.map((f) => (
+                                                    <div key={f} className="flex items-center gap-1">
+                                                        <span className="w-2 h-2 rounded-sm border border-gray-300 shrink-0" />
+                                                        <p className="text-[7.5px] text-gray-500 truncate">{f}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'toolbar') {
+                                return (
+                                    <div key={wIdx} className="flex flex-wrap items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[100px]">
+                                            <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                            <span className="text-[9px] text-gray-400 truncate">{widget.search}</span>
+                                        </div>
+                                        {widget.buttons.map((label, i) => (
+                                            <span
+                                                key={label}
+                                                className={`text-[8px] font-semibold px-2 py-1.5 rounded-full whitespace-nowrap ${i === 0 ? 'bg-[#003971] text-white' : 'bg-[#EBF3FF] text-[#003971]'}`}
+                                            >
+                                                {label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'docGrid') {
+                                return (
+                                    <div key={wIdx} className="grid grid-cols-2 gap-1.5">
+                                        {widget.items.map(([title, count, badgeClass]) => (
+                                            <div key={title} className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-lg shadow-sm px-2 py-1.5 min-w-0">
+                                                <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${badgeClass}`}>
+                                                    <FileCheck2 className="h-2.5 w-2.5" />
+                                                </span>
+                                                <div className="min-w-0">
+                                                    <p className="text-[8.5px] font-semibold text-gray-800 truncate leading-tight">{title}</p>
+                                                    <p className="text-[7.5px] text-gray-400 truncate">{count}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'courseList') {
+                                return (
+                                    <div key={wIdx} className="grid grid-cols-[1.1fr_1fr] gap-2">
+                                        <div className="space-y-1.5">
+                                            {widget.courses.map(([title, provider, price]) => (
+                                                <div key={title} className="bg-white border border-gray-100 rounded-lg shadow-sm px-2 py-1.5 min-w-0">
+                                                    <p className="text-[9px] font-bold text-gray-800 truncate">{title}</p>
+                                                    <p className="text-[8px] text-gray-400 truncate">{provider}</p>
+                                                    <p className="text-[8px] font-semibold text-gray-600">{price}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden sm:flex flex-col items-center justify-center bg-white border border-gray-100 rounded-lg shadow-sm px-2 py-4 text-center">
+                                            <span className="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center mb-1.5">
+                                                <GraduationCap className="h-3.5 w-3.5 text-gray-300" />
+                                            </span>
+                                            <p className="text-[8px] text-gray-400">{widget.emptyText}</p>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (widget.type === 'panels') {
+                                return (
+                                    <div key={wIdx} className="grid grid-cols-2 gap-2">
+                                        {widget.items.map((panel) => (
+                                            <div key={panel.title} className="bg-white border border-gray-100 rounded-xl p-2.5 shadow-sm min-w-0">
+                                                <p className="text-[9px] font-bold text-gray-900 mb-1.5">{panel.title}</p>
+                                                <div className="space-y-1.5">
+                                                    {panel.rows.map(([title, sub]) => (
+                                                        <div key={title} className="min-w-0">
+                                                            <p className="text-[9px] font-semibold text-gray-800 truncate">{title}</p>
+                                                            <p className="text-[8px] text-gray-400 truncate">{sub}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
+                            // list
+                            return (
+                                <div key={wIdx} className="space-y-1.5">
+                                    {widget.rows.map(([title, sub, badge, badgeClass]) => (
+                                        <div key={title} className="flex items-center justify-between gap-2 bg-white rounded-xl border border-gray-100 shadow-sm px-2.5 py-2">
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-semibold text-gray-800 truncate">{title}</p>
+                                                <p className="text-[9px] text-gray-400 truncate">{sub}</p>
+                                            </div>
+                                            <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${badgeClass}`}>
+                                                {badge}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function LandingPage() {
     const navigate = useNavigate();
     const [scrolled, setScrolled] = useState(false);
@@ -465,7 +1205,8 @@ function LandingPage() {
     const [previewSlide, setPreviewSlide] = useState(0);
 
     const activePreview = PREVIEWS[previewTab];
-    const previewShots = activePreview.screenshots;
+    const activeMock = PREVIEW_MOCKS[activePreview.id];
+    const previewShots = activeMock.slides;
 
     const selectPreviewTab = (idx) => {
         setPreviewTab(idx);
@@ -485,11 +1226,14 @@ function LandingPage() {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // Order mirrors the page flow: About → Why → Who It's For → How It Works → Platform Preview.
+    // Pricing gets added here once the pricing section is ready.
     const navLinks = [
+        { label: 'About MaritimeLink', id: 'about' },
         { label: 'Why MaritimeLink', id: 'why' },
         { label: 'Who It’s For', id: 'audience' },
-        { label: 'Platform Preview', id: 'preview' },
         { label: 'How It Works', id: 'how-it-works' },
+        { label: 'Platform Preview', id: 'preview' },
     ];
 
     return (
@@ -508,7 +1252,7 @@ function LandingPage() {
                         <img
                             src="/images/logo.png"
                             alt="MaritimeLink"
-                            className={`w-auto object-contain transition-all duration-300 ${scrolled ? 'h-12' : 'h-16'}`}
+                            className={`w-auto object-contain transition-all duration-300 ${scrolled ? 'h-14' : 'h-20'}`}
                         />
                         <span className="font-bold text-xl text-gray-900">
                             Maritime<span className="text-blue-600">Link</span>
@@ -604,7 +1348,7 @@ function LandingPage() {
             </header>
 
             {/* ───────────────────────── Hero ───────────────────────── */}
-            <section className="relative pt-32 lg:pt-40 pb-24 lg:pb-32 px-6 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+            <section className="relative pt-32 lg:pt-40 pb-16 lg:pb-20 px-6 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
                 {/* Decorative animated blobs */}
                 <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl animate-[blob-drift_14s_ease-in-out_infinite]" />
                 <div className="pointer-events-none absolute top-1/3 -right-24 w-[28rem] h-[28rem] bg-cyan-300/30 rounded-full blur-3xl animate-[blob-drift_18s_ease-in-out_infinite_reverse]" />
@@ -642,7 +1386,7 @@ function LandingPage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => scrollToId('why')}
+                                onClick={() => scrollToId('about')}
                                 className="group inline-flex items-center gap-2.5 bg-white text-gray-800 px-7 py-3.5 rounded-full font-semibold border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300"
                             >
                                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 group-hover:bg-blue-100 transition-colors">
@@ -652,10 +1396,10 @@ function LandingPage() {
                             </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-x-8 gap-y-3">
+                        <div className="flex flex-wrap lg:flex-nowrap gap-x-6 gap-y-3">
                             {['Verified Identities', 'Secure & Compliant', 'Recruitment Made Easy', 'Training in One Place'].map((item) => (
-                                <div key={item} className="flex items-center gap-2 text-sm text-gray-600">
-                                    <CheckCircle2 className="h-4 w-4 text-teal-600" />
+                                <div key={item} className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap">
+                                    <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
                                     {item}
                                 </div>
                             ))}
@@ -663,8 +1407,8 @@ function LandingPage() {
                     </Reveal>
 
                     <Reveal direction="left" delay={150}>
-                        <div className="relative mx-auto max-w-lg pb-14 pt-8">
-                            {/* Laptop — professional dashboard mockup */}
+                        <div className="relative mx-auto max-w-xl pb-14 pt-8">
+                            {/* Laptop — screen split into the three user dashboards */}
                             <div className="relative animate-[float-y_7s_ease-in-out_infinite]">
                                 <div className="rounded-2xl bg-slate-800 p-2.5 shadow-2xl ring-1 ring-black/10">
                                     <div className="rounded-lg bg-white overflow-hidden">
@@ -682,67 +1426,31 @@ function LandingPage() {
                                                 <div className="h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-teal-500" />
                                             </div>
                                         </div>
-                                        <div className="flex">
-                                            {/* Sidebar */}
-                                            <div className="hidden sm:block w-24 shrink-0 bg-[#003971] px-1.5 py-2.5 space-y-0.5">
-                                                {['Dashboard', 'Profile', 'Document Wallet', 'Jobs', 'Training', 'Messages', 'Compliance', 'Settings'].map((item, i) => (
-                                                    <div
-                                                        key={item}
-                                                        className={`text-[7px] px-2 py-[5px] rounded ${i === 0 ? 'bg-white/15 text-white font-semibold' : 'text-blue-200/80'}`}
-                                                    >
-                                                        {item}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {/* Main panel */}
-                                            <div className="flex-1 bg-slate-50 p-2.5 space-y-2">
-                                                <p className="text-[9px] font-bold text-gray-900">Dashboard</p>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div className="bg-white rounded-md p-2 shadow-sm">
-                                                        <p className="text-[7px] text-gray-500 mb-1">Profile Completion</p>
-                                                        <p className="text-[11px] font-bold text-gray-900 mb-1">92%</p>
-                                                        <div className="h-1 rounded-full bg-gray-100 overflow-hidden">
-                                                            <div className="h-full w-[92%] rounded-full bg-gradient-to-r from-blue-500 to-teal-500" />
+                                        {/* One panel per user type — professional, recruiter, training provider */}
+                                        <div className="grid grid-cols-3 divide-x divide-gray-100">
+                                            {HERO_PANELS.map((panel) => {
+                                                const Icon = panel.icon;
+                                                return (
+                                                    <div key={panel.id} className="bg-slate-50">
+                                                        <div className={`${panel.header} px-2 py-1.5 flex items-center gap-1`}>
+                                                            <Icon className="h-2.5 w-2.5 text-white shrink-0" />
+                                                            <p className="text-[7.5px] font-bold text-white truncate">{panel.label}</p>
                                                         </div>
-                                                    </div>
-                                                    <div className="bg-white rounded-md p-2 shadow-sm">
-                                                        <p className="text-[7px] text-gray-500 mb-1">Identity Verified</p>
-                                                        <div className="flex items-center gap-1">
-                                                            <ShieldCheck className="h-3 w-3 text-teal-600" />
-                                                            <p className="text-[8px] font-semibold text-gray-800">KYC Complete</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="bg-white rounded-md p-2 shadow-sm">
-                                                    <div className="flex items-center justify-between mb-1.5">
-                                                        <p className="text-[8px] font-semibold text-gray-800">Document Wallet</p>
-                                                        <p className="text-[7px] text-blue-600 font-medium">View all</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        {WALLET_DOCS.map((doc) => (
-                                                            <div key={doc} className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-1">
-                                                                    <FileCheck2 className="h-2.5 w-2.5 text-blue-500" />
-                                                                    <p className="text-[7px] text-gray-600">{doc}</p>
+                                                        <div className="p-1.5 space-y-1.5">
+                                                            {panel.stats.map(([label, value]) => (
+                                                                <div key={label} className="bg-white rounded-md p-1.5 shadow-sm">
+                                                                    <p className="text-[6.5px] text-gray-500 mb-0.5">{label}</p>
+                                                                    <p className="text-[9px] font-bold text-gray-900">{value}</p>
                                                                 </div>
-                                                                <span className="text-[6px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full">
-                                                                    Valid
-                                                                </span>
+                                                            ))}
+                                                            <div className="flex items-center gap-1 pt-0.5 pl-0.5">
+                                                                <ShieldCheck className="h-2.5 w-2.5 text-teal-600 shrink-0" />
+                                                                <p className="text-[6px] font-semibold text-gray-600">Verified &amp; Secure</p>
                                                             </div>
-                                                        ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div className="bg-white rounded-md p-2 shadow-sm">
-                                                        <p className="text-[7px] text-gray-500">Job Matches</p>
-                                                        <p className="text-[9px] font-bold text-gray-900">6 new opportunities</p>
-                                                    </div>
-                                                    <div className="bg-white rounded-md p-2 shadow-sm">
-                                                        <p className="text-[7px] text-gray-500">Training Recommendations</p>
-                                                        <p className="text-[9px] font-bold text-gray-900">3 courses for you</p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
@@ -792,7 +1500,7 @@ function LandingPage() {
 
                             <div className="absolute -bottom-2 left-2 sm:left-8 bg-white rounded-2xl shadow-xl px-3.5 py-2.5 flex items-center gap-2.5 animate-[float-y_6s_ease-in-out_infinite] [animation-delay:1s]">
                                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                                    <Anchor className="h-4 w-4 text-blue-600" />
+                                    <UserRound className="h-4 w-4 text-blue-600" />
                                 </div>
                                 <div>
                                     <p className="text-xs font-semibold text-gray-800">Maritime Professionals</p>
@@ -804,7 +1512,7 @@ function LandingPage() {
                 </div>
 
                 {/* Trust & compliance bar */}
-                <Reveal delay={250} className="relative max-w-7xl mx-auto mt-16 lg:mt-20">
+                <Reveal delay={250} className="relative max-w-7xl mx-auto mt-10 lg:mt-12">
                     <div className="bg-white/90 backdrop-blur rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-blue-100/70 px-6 py-5 flex flex-wrap items-center justify-center xl:justify-between gap-x-8 gap-y-5">
                         <div className="flex items-center gap-3">
                             <UnionJackFlag />
@@ -885,13 +1593,51 @@ function LandingPage() {
                 </div>
             </section>
 
+            {/* ───────────────────────── About MaritimeLink ───────────────────────── */}
+            <section id="about" className="relative py-14 px-6 bg-white overflow-hidden">
+                <div className="pointer-events-none absolute -top-20 -left-24 w-80 h-80 bg-blue-100/50 rounded-full blur-3xl" />
+                <div className="relative max-w-4xl mx-auto text-center">
+                    <Reveal direction="up">
+                        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5">
+                            <Compass className="h-3.5 w-3.5" />
+                            About MaritimeLink
+                        </div>
+                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-5">
+                            The Digital Home of the{' '}
+                            <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent bg-size-200 animate-[gradient-pan_6s_ease_infinite]">
+                                Maritime Industry
+                            </span>
+                        </h2>
+                        <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto mb-10">
+                            MaritimeLink is a UK-built platform where verified maritime professionals showcase
+                            their careers, recruiters hire with confidence, and training providers grow their
+                            reach &mdash; all in one secure, connected place.
+                        </p>
+                    </Reveal>
+
+                    {/* Demo video placeholder — swap for the real video embed once the client provides it */}
+                    <Reveal delay={100}>
+                        <div className="relative mx-auto max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-gradient-to-br from-[#003971] via-[#0a4a8f] to-[#0d6e8f] aspect-video flex flex-col items-center justify-center">
+                            <div className="pointer-events-none absolute -top-16 -left-16 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-[blob-drift_12s_ease-in-out_infinite]" />
+                            <div className="pointer-events-none absolute -bottom-16 -right-16 w-72 h-72 bg-cyan-300/10 rounded-full blur-3xl animate-[blob-drift_15s_ease-in-out_infinite_reverse]" />
+                            <Ship className="pointer-events-none absolute right-8 bottom-6 h-24 w-24 text-white/10 hidden sm:block" />
+                            <div className="relative w-20 h-20 rounded-full bg-white/15 backdrop-blur flex items-center justify-center mb-5 ring-1 ring-white/30">
+                                <Play className="h-8 w-8 text-white fill-white ml-1" />
+                            </div>
+                            <p className="relative text-white font-bold text-lg mb-1">See MaritimeLink in 90 seconds</p>
+                            <p className="relative text-blue-100 text-sm">Demo video coming soon</p>
+                        </div>
+                    </Reveal>
+                </div>
+            </section>
+
             {/* ───────────────────────── Why MaritimeLink ───────────────────────── */}
-            <section id="why" className="relative py-24 px-6 bg-white overflow-hidden">
+            <section id="why" className="relative py-14 px-6 bg-white overflow-hidden">
                 <div className="pointer-events-none absolute -top-24 right-0 w-96 h-96 bg-cyan-100/50 rounded-full blur-3xl" />
                 <div className="pointer-events-none absolute bottom-0 -left-24 w-80 h-80 bg-blue-100/50 rounded-full blur-3xl" />
 
                 <div className="relative max-w-7xl mx-auto">
-                    <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
+                    <div className="grid lg:grid-cols-2 gap-16 items-center mb-14">
                         <Reveal direction="up">
                             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5">
                                 <Sparkles className="h-3.5 w-3.5" />
@@ -906,8 +1652,7 @@ function LandingPage() {
                             </h2>
 
                             <p className="text-lg text-gray-600 leading-relaxed mb-8">
-                                MaritimeLink brings maritime professionals, recruiters and training providers
-                                together on one secure platform designed specifically for the maritime industry.
+                                One secure platform designed specifically for the maritime industry.
                             </p>
 
                             <ul className="space-y-5">
@@ -915,8 +1660,8 @@ function LandingPage() {
                                     const Icon = point.icon;
                                     return (
                                         <li key={point.title} className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center shrink-0 mt-0.5">
-                                                <Icon className="h-5 w-5 text-teal-600" />
+                                            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0 mt-0.5">
+                                                <Icon className="h-6 w-6 text-teal-700" />
                                             </div>
                                             <div>
                                                 <p className="font-bold text-gray-900 mb-0.5">{point.title}</p>
@@ -929,17 +1674,68 @@ function LandingPage() {
                         </Reveal>
 
                         <Reveal direction="left" delay={150}>
-                            <div className="relative mx-auto max-w-md">
-                                <div className="relative rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-black/5">
-                                    <img
-                                        src="/images/crew-image.webp"
-                                        alt="Verified maritime professional on deck"
-                                        className="w-full h-[480px] object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#003971]/60 via-transparent to-transparent" />
+                            {/* Connection visual — MaritimeLink hub linking all three user types */}
+                            <div className="relative mx-auto max-w-md h-[540px]">
+                                {/* Connector lines from the hub to each user card */}
+                                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 448 540" fill="none" aria-hidden="true">
+                                    <line x1="224" y1="270" x2="96" y2="120" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
+                                    <line x1="224" y1="270" x2="352" y2="120" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
+                                    <line x1="224" y1="270" x2="224" y2="440" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
+                                </svg>
+
+                                {/* Hub */}
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-2xl ring-4 ring-blue-100 p-3 animate-[float-y_6s_ease-in-out_infinite]">
+                                    <img src="/images/logo.png" alt="MaritimeLink" className="h-16 w-16 object-contain" />
                                 </div>
 
-                                <div className="absolute -right-5 top-8 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5s_ease-in-out_infinite]">
+                                {[
+                                    {
+                                        label: 'Professionals',
+                                        icon: UserRound,
+                                        image: '/images/professional.png',
+                                        alt: 'Maritime professional at the port',
+                                        chip: 'bg-blue-600',
+                                        pos: 'top-0 left-0',
+                                    },
+                                    {
+                                        label: 'Recruiters',
+                                        icon: Briefcase,
+                                        image: '/images/recruiter.png',
+                                        alt: 'Recruiter reviewing maritime candidates',
+                                        chip: 'bg-teal-600',
+                                        pos: 'top-0 right-0',
+                                    },
+                                    {
+                                        label: 'Training Providers',
+                                        icon: GraduationCap,
+                                        image: '/images/training_provider.png',
+                                        alt: 'Maritime training instructor presenting STCW course',
+                                        chip: 'bg-purple-600',
+                                        pos: 'bottom-0 left-1/2 -translate-x-1/2',
+                                    },
+                                ].map((card, idx) => {
+                                    const Icon = card.icon;
+                                    return (
+                                        <div
+                                            key={card.label}
+                                            className={`absolute ${card.pos} w-40 rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 bg-white animate-[float-y_5.5s_ease-in-out_infinite]`}
+                                            style={{ animationDelay: `${idx * 0.5}s` }}
+                                        >
+                                            <div className="relative h-32">
+                                                <img src={card.image} alt={card.alt} className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                                            </div>
+                                            <div className="flex items-center gap-1.5 px-3 py-2">
+                                                <span className={`w-6 h-6 rounded-full ${card.chip} flex items-center justify-center shrink-0`}>
+                                                    <Icon className="h-3.5 w-3.5 text-white" />
+                                                </span>
+                                                <p className="text-xs font-bold text-gray-800 leading-tight">{card.label}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                <div className="absolute -right-2 bottom-16 z-10 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5s_ease-in-out_infinite]">
                                     <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center">
                                         <BadgeCheck className="h-5 w-5 text-teal-600" />
                                     </div>
@@ -949,7 +1745,7 @@ function LandingPage() {
                                     </div>
                                 </div>
 
-                                <div className="absolute -left-5 bottom-10 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5.5s_ease-in-out_infinite] [animation-delay:0.6s]">
+                                <div className="absolute -left-2 bottom-16 z-10 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5.5s_ease-in-out_infinite] [animation-delay:0.6s]">
                                     <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
                                         <ShieldCheck className="h-5 w-5 text-blue-600" />
                                     </div>
@@ -988,25 +1784,27 @@ function LandingPage() {
                         })}
                     </div>
 
-                    {/* Stats */}
-                    <Reveal delay={100}>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
-                            {STATS.map((stat) => {
-                                const Icon = stat.icon;
-                                return (
-                                    <div key={stat.label} className="bg-slate-50 rounded-2xl border border-gray-100 px-4 py-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-1 hover:bg-white transition-all duration-300">
-                                        <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">
-                                            <Icon className="h-4 w-4 text-[#003971]" />
+                    {/* Stats — hidden until real platform figures are connected (see SHOW_STATS) */}
+                    {SHOW_STATS && (
+                        <Reveal delay={100}>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+                                {STATS.map((stat) => {
+                                    const Icon = stat.icon;
+                                    return (
+                                        <div key={stat.label} className="bg-slate-50 rounded-2xl border border-gray-100 px-4 py-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-1 hover:bg-white transition-all duration-300">
+                                            <div className="w-11 h-11 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">
+                                                <Icon className="h-[22px] w-[22px] text-[#003971]" />
+                                            </div>
+                                            <div>
+                                                <p className="text-base font-extrabold text-gray-900 leading-tight">{stat.value}</p>
+                                                <p className="text-[11px] text-gray-500">{stat.label}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-base font-extrabold text-gray-900 leading-tight">{stat.value}</p>
-                                            <p className="text-[11px] text-gray-500">{stat.label}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Reveal>
+                                    );
+                                })}
+                            </div>
+                        </Reveal>
+                    )}
 
                     {/* Ecosystem banner */}
                     <Reveal delay={150}>
@@ -1027,7 +1825,7 @@ function LandingPage() {
             </section>
 
             {/* ───────────────────────── Audience — Built for Every Key Player ───────────────────────── */}
-            <section id="audience" className="relative py-24 px-6 bg-gradient-to-b from-blue-50/60 via-white to-white overflow-hidden">
+            <section id="audience" className="relative py-14 px-6 bg-gradient-to-b from-blue-50/60 via-white to-white overflow-hidden">
                 <div className="pointer-events-none absolute -top-20 -right-24 w-96 h-96 bg-cyan-100/50 rounded-full blur-3xl" />
                 <div className="relative max-w-7xl mx-auto">
                     <Reveal className="text-center max-w-2xl mx-auto mb-10">
@@ -1039,8 +1837,7 @@ function LandingPage() {
                             </span>
                         </h2>
                         <p className="text-gray-600 text-lg">
-                            MaritimeLink brings professionals, recruiters and training providers together on one
-                            platform &mdash; each with the right tools to achieve more.
+                            Helping each sector achieve more with the right tools.
                         </p>
                     </Reveal>
 
@@ -1050,8 +1847,8 @@ function LandingPage() {
                             {AUDIENCE_TRUST.map((item) => {
                                 const Icon = item.icon;
                                 return (
-                                    <div key={item.label} className="flex items-center gap-2 text-sm text-gray-700">
-                                        <Icon className="h-4 w-4 text-teal-600" />
+                                    <div key={item.label} className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+                                        <Icon className="h-5 w-5 text-teal-700 shrink-0" />
                                         <span className="font-medium">{item.label}</span>
                                     </div>
                                 );
@@ -1122,8 +1919,8 @@ function LandingPage() {
                                 const Icon = benefit.icon;
                                 return (
                                     <div key={benefit.title} className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                                            <Icon className="h-[18px] w-[18px] text-[#003971]" />
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                                            <Icon className="h-6 w-6 text-[#003971]" />
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-gray-900 leading-tight mb-0.5">{benefit.title}</p>
@@ -1137,8 +1934,44 @@ function LandingPage() {
                 </div>
             </section>
 
+            {/* ───────────────────────── How it works ───────────────────────── */}
+            <section id="how-it-works" className="relative py-14 px-6 bg-white">
+                <div className="max-w-7xl mx-auto">
+                    <Reveal className="text-center max-w-2xl mx-auto mb-16">
+                        <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">How It Works</p>
+                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">Simple steps. Powerful results.</h2>
+                        <p className="text-gray-600 text-lg">
+                            Six simple steps to get set up, get verified and start achieving more.
+                        </p>
+                    </Reveal>
+
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
+                        {STEPS.map((step, idx) => {
+                            const Icon = step.icon;
+                            return (
+                                <Reveal key={step.title} delay={idx * 90} direction="up" className="relative h-full">
+                                    <div className="relative h-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 p-5 pt-7 text-center">
+                                        <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full ${step.badge} text-white text-xs font-bold flex items-center justify-center shadow-md`}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className={`w-12 h-12 mx-auto rounded-xl ${step.iconStyle} flex items-center justify-center mb-3`}>
+                                            <Icon className="h-6 w-6" />
+                                        </div>
+                                        <h3 className="text-sm font-bold text-gray-900 mb-2 leading-snug">{step.title}</h3>
+                                        <p className="text-xs text-gray-500 leading-relaxed">{step.description}</p>
+                                    </div>
+                                    {idx < STEPS.length - 1 && (
+                                        <ArrowRight className="hidden xl:block absolute top-1/2 -right-[15px] -translate-y-1/2 h-4 w-4 text-gray-300 z-10 animate-pulse" />
+                                    )}
+                                </Reveal>
+                            );
+                        })}
+                    </div>
+                </div>
+            </section>
+
             {/* ───────────────────────── Platform Preview ───────────────────────── */}
-            <section id="preview" className="relative py-24 px-6 bg-slate-50 overflow-hidden">
+            <section id="preview" className="relative py-14 px-6 bg-slate-50 overflow-hidden">
                 <div className="pointer-events-none absolute top-0 right-0 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl" />
                 <div className="relative max-w-7xl mx-auto">
                     <Reveal className="text-center max-w-2xl mx-auto mb-12">
@@ -1182,24 +2015,14 @@ function LandingPage() {
                     {/* Preview panel */}
                     <Reveal delay={150}>
                         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-4 sm:p-6 lg:p-8 grid lg:grid-cols-[1fr_320px] gap-8 items-center">
-                            {/* Screenshot area */}
-                            <div className="relative rounded-2xl bg-slate-100 overflow-hidden min-h-[320px] lg:min-h-[420px] flex items-center justify-center">
-                                {previewShots.length > 0 ? (
-                                    <img
-                                        key={`${activePreview.id}-${previewSlide}`}
-                                        src={previewShots[previewSlide]}
-                                        alt={`${activePreview.badge} screenshot ${previewSlide + 1}`}
-                                        className="w-full h-full object-contain animate-[fade-in-up_0.45s_ease-out]"
-                                    />
-                                ) : (
-                                    <div key={activePreview.id} className="text-center px-8 py-16 animate-[fade-in-up_0.45s_ease-out]">
-                                        <div className="w-16 h-16 mx-auto rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-4">
-                                            <LayoutDashboard className="h-7 w-7 text-gray-300" />
-                                        </div>
-                                        <p className="font-semibold text-gray-500 mb-1">{activePreview.badge} preview</p>
-                                        <p className="text-sm text-gray-400">Dashboard screenshots coming soon</p>
-                                    </div>
-                                )}
+                            {/* Dashboard mockup area — swap DashboardMockup for real screenshots once live data exists */}
+                            <div className="relative rounded-2xl bg-slate-100 overflow-hidden min-h-[380px] lg:min-h-[460px] ring-1 ring-black/5">
+                                <div
+                                    key={`${activePreview.id}-${previewSlide}`}
+                                    className="absolute inset-0 animate-[fade-in-up_0.45s_ease-out]"
+                                >
+                                    <DashboardMockup mock={activeMock} slide={previewShots[previewSlide]} />
+                                </div>
                             </div>
 
                             {/* Info panel */}
@@ -1262,73 +2085,36 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* ───────────────────────── How it works ───────────────────────── */}
-            <section id="how-it-works" className="relative py-24 px-6 bg-white">
-                <div className="max-w-7xl mx-auto">
-                    <Reveal className="text-center max-w-2xl mx-auto mb-16">
-                        <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">How It Works</p>
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">Simple steps. Powerful results.</h2>
-                        <p className="text-gray-600 text-lg">
-                            MaritimeLink connects maritime professionals, recruiters and training providers
-                            through one secure platform.
+            {/* ───────────────────────── Security & Trust ───────────────────────── */}
+            <section id="security" className="relative py-14 px-6 bg-white overflow-hidden">
+                <div className="pointer-events-none absolute -bottom-20 -left-20 w-80 h-80 bg-blue-100/60 rounded-full blur-3xl" />
+                <div className="relative max-w-7xl mx-auto">
+                    <Reveal className="text-center max-w-2xl mx-auto mb-14">
+                        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Security &amp; Trust
+                        </div>
+                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+                            Your data. Your trust.{' '}
+                            <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent bg-size-200 animate-[gradient-pan_6s_ease_infinite]">
+                                Our responsibility.
+                            </span>
+                        </h2>
+                        <p className="text-gray-600 text-lg leading-relaxed">
+                            We use enterprise-grade security and strict verification processes to protect
+                            your identity and information.
                         </p>
                     </Reveal>
 
-                    <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
-                        {STEPS.map((step, idx) => {
-                            const Icon = step.icon;
-                            return (
-                                <Reveal key={step.title} delay={idx * 90} direction="up" className="relative h-full">
-                                    <div className="relative h-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 p-5 pt-7 text-center">
-                                        <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full ${step.badge} text-white text-xs font-bold flex items-center justify-center shadow-md`}>
-                                            {idx + 1}
-                                        </div>
-                                        <div className={`w-12 h-12 mx-auto rounded-xl ${step.iconStyle} flex items-center justify-center mb-3`}>
-                                            <Icon className="h-6 w-6" />
-                                        </div>
-                                        <h3 className="text-sm font-bold text-gray-900 mb-2 leading-snug">{step.title}</h3>
-                                        <p className="text-xs text-gray-500 leading-relaxed">{step.description}</p>
-                                    </div>
-                                    {idx < STEPS.length - 1 && (
-                                        <ArrowRight className="hidden xl:block absolute top-1/2 -right-[15px] -translate-y-1/2 h-4 w-4 text-gray-300 z-10 animate-pulse" />
-                                    )}
-                                </Reveal>
-                            );
-                        })}
-                    </div>
-                </div>
-            </section>
-
-            {/* ───────────────────────── Security & Trust ───────────────────────── */}
-            <section id="security" className="relative py-24 px-6 bg-slate-50 overflow-hidden">
-                <div className="pointer-events-none absolute -bottom-20 -left-20 w-80 h-80 bg-blue-100/60 rounded-full blur-3xl" />
-                <div className="relative max-w-7xl mx-auto">
-                    <div className="grid lg:grid-cols-[1fr_2fr] gap-12 items-start mb-12">
-                        <Reveal direction="up">
-                            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5">
-                                <ShieldCheck className="h-3.5 w-3.5" />
-                                Security &amp; Trust
-                            </div>
-                            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
-                                Your data. Your trust.{' '}
-                                <span className="block bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent bg-size-200 animate-[gradient-pan_6s_ease_infinite]">
-                                    Our responsibility.
-                                </span>
-                            </h2>
-                            <p className="text-gray-600 leading-relaxed">
-                                We use enterprise-grade security and strict verification processes to protect
-                                your identity and information.
-                            </p>
-                        </Reveal>
-
-                        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {/* All five cards on a single row on large screens */}
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 mb-12">
                             {SECURITY_ITEMS.map((item, idx) => {
                                 const Icon = item.icon;
                                 return (
                                     <Reveal key={item.title} delay={idx * 80} direction="up" className="h-full">
                                         <div className="group h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
-                                            <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#003971] flex items-center justify-center mb-3 transition-colors duration-300">
-                                                <Icon className="h-5 w-5 text-[#003971] group-hover:text-white transition-colors duration-300" />
+                                            <div className="w-12 h-12 rounded-xl bg-blue-50 group-hover:bg-[#003971] flex items-center justify-center mb-3 transition-colors duration-300">
+                                                <Icon className="h-6 w-6 text-[#003971] group-hover:text-white transition-colors duration-300" />
                                             </div>
                                             <h3 className="text-sm font-bold text-gray-900 mb-1.5">{item.title}</h3>
                                             <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
@@ -1336,7 +2122,6 @@ function LandingPage() {
                                     </Reveal>
                                 );
                             })}
-                        </div>
                     </div>
 
                     <Reveal delay={150} className="text-center">
@@ -1350,83 +2135,11 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* ───────────────────────── Download the App ───────────────────────── */}
-            <section id="download" className="relative py-24 px-6 bg-white overflow-hidden">
-                <div className="pointer-events-none absolute -top-20 right-0 w-96 h-96 bg-cyan-100/50 rounded-full blur-3xl" />
-                <div className="relative max-w-7xl mx-auto grid lg:grid-cols-[1.2fr_auto] gap-12 items-center">
-                    <Reveal direction="up">
-                        <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5">
-                            <Smartphone className="h-3.5 w-3.5" />
-                            Download the App
-                        </div>
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
-                            Access your maritime world{' '}
-                            <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent bg-size-200 animate-[gradient-pan_6s_ease_infinite]">
-                                anytime, anywhere.
-                            </span>
-                        </h2>
-                        <p className="text-gray-600 text-lg mb-8">Available on Android and iOS. One account. All devices.</p>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2.5 bg-gray-900 text-white rounded-xl px-4 py-2.5 hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-default">
-                                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
-                                    <path d="M4 2.7v18.6c0 .6.7 1 1.2.7l16-9.3c.5-.3.5-1.1 0-1.4l-16-9.3c-.5-.3-1.2.1-1.2.7z" />
-                                </svg>
-                                <div>
-                                    <p className="text-[9px] leading-none text-gray-300">Coming soon on</p>
-                                    <p className="text-sm font-semibold leading-tight">Google Play</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2.5 bg-gray-900 text-white rounded-xl px-4 py-2.5 hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-default">
-                                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
-                                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                                </svg>
-                                <div>
-                                    <p className="text-[9px] leading-none text-gray-300">Coming soon on</p>
-                                    <p className="text-sm font-semibold leading-tight">App Store</p>
-                                </div>
-                            </div>
-                        </div>
-                    </Reveal>
-
-                    <Reveal direction="up" delay={100}>
-                        {/* Phone mockup */}
-                        <div className="mx-auto w-48 rounded-[2rem] bg-slate-800 p-2 shadow-2xl ring-1 ring-black/10 animate-[float-y_6s_ease-in-out_infinite]">
-                            <div className="rounded-[1.6rem] bg-white overflow-hidden">
-                                <div className="bg-[#003971] px-3 py-3">
-                                    <p className="text-[9px] text-blue-200">Good morning,</p>
-                                    <p className="text-xs font-bold text-white">Alex Johnson</p>
-                                    <p className="text-[9px] text-blue-200">Chief Officer</p>
-                                </div>
-                                <div className="p-2.5 space-y-2">
-                                    <div className="rounded-lg border border-gray-100 p-2">
-                                        <p className="text-[8px] text-gray-500 mb-1">Profile Completion</p>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
-                                                <div className="h-full w-[85%] rounded-full bg-gradient-to-r from-blue-500 to-teal-500" />
-                                            </div>
-                                            <span className="text-[9px] font-bold text-gray-800">85%</span>
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-100 p-2">
-                                        <p className="text-[8px] text-gray-500 mb-0.5">Compliance Status</p>
-                                        <div className="flex items-center gap-1">
-                                            <ShieldCheck className="h-3 w-3 text-teal-600" />
-                                            <p className="text-[9px] font-semibold text-gray-800">Good Standing</p>
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-100 p-2">
-                                        <p className="text-[8px] text-gray-500 mb-0.5">Upcoming Expiry</p>
-                                        <p className="text-[9px] font-semibold text-gray-800">Medical Certificate</p>
-                                        <p className="text-[8px] text-amber-600">Renew within 60 days</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Reveal>
-
-                </div>
-            </section>
+            {/*
+              Download-the-App section removed per client feedback — the hero trust bar already
+              shows Google Play / App Store availability. The Pricing section will live here
+              once pricing is finalised.
+            */}
 
             {/* ───────────────────────── Final CTA ───────────────────────── */}
             <section className="relative py-16 px-6 bg-white">
@@ -1472,7 +2185,7 @@ function LandingPage() {
 
             {/* ───────────────────────── Footer ───────────────────────── */}
             <footer className="bg-[#02152e] text-slate-300 pt-16 pb-8 px-6">
-                <div className="max-w-7xl mx-auto grid gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr] mb-12">
+                <div className="max-w-7xl mx-auto grid gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.6fr_1fr_1fr_1fr_1fr] mb-12">
                     <div className="sm:col-span-2 lg:col-span-3 xl:col-span-1">
                         <div className="flex items-center gap-2.5 mb-4">
                             <span className="inline-flex items-center justify-center bg-white rounded-2xl p-1 shadow-md">
@@ -1539,6 +2252,20 @@ function LandingPage() {
                                 ))}
                             </ul>
                         </div>
+                    ))}
+                </div>
+
+                {/* Legal strip — all legal links on one line, wrapping only when the screen is too narrow */}
+                <div className="max-w-7xl mx-auto border-t border-white/10 pt-6 pb-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5">
+                    {LEGAL_LINKS.map((link) => (
+                        <button
+                            key={link.label}
+                            type="button"
+                            onClick={() => navigate(link.to)}
+                            className="text-[13px] text-slate-400 hover:text-teal-300 whitespace-nowrap transition-colors"
+                        >
+                            {link.label}
+                        </button>
                     ))}
                 </div>
 
