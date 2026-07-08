@@ -56,6 +56,7 @@ import JobDetail from './pages/admin/recruiter-dashboard/jobs/JobDetail';
 import CandidateSummary from './pages/admin/recruiter-dashboard/candidate/CandidateSummary';
 import AdminChats from './pages/admin/recruiter-dashboard/chats/AdminChats';
 import AdminSettings from './pages/admin/recruiter-dashboard/settings/AdminSettings';
+import ManageRecruiterSubscription from './pages/admin/recruiter-dashboard/settings/ManageRecruiterSubscription';
 
 import RecruiterLayout from './pages/admin/recruiter-dashboard/layout/AdminLayout';
 import TrainingProviderLayout from './pages/admin/trainingprovider-dashboard/layout/TrainingProviderLayout';
@@ -129,6 +130,7 @@ import TermsConditions from './pages/personal/dashboard/dashboard-sections/Terms
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
 import SharedDocumentPack from './pages/personal/SharedDocumentPack';
 import { expireSessionAndRedirect, parseJwtExpiryMs } from './utils/sessionManager';
+import AnalyticsTracker from './components/AnalyticsTracker';
 
 function App() {
   useEffect(() => {
@@ -186,6 +188,7 @@ function App() {
   return (
     <div className="min-w-0 w-full max-w-full overflow-x-hidden">
       <Router>
+        <AnalyticsTracker />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<SignIn />} />
@@ -261,6 +264,7 @@ function App() {
             <Route path="/admin/upload-job" element={<UploadJob />} />
             <Route path="/admin/job-created-success" element={<JobCreatedSuccess />} />
             <Route path="/recruiter/notifications" element={<RecruiterNotifications />} />
+            <Route path="/recruiter/manage-subscription" element={<ManageRecruiterSubscription />} />
             <Route path="/recruiter/candidate/:candidateId" element={<CandidateSummary />} />
           </Route>
 

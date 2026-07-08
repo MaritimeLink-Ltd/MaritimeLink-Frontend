@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import jobService from '../../../../services/jobService';
 import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
+import { useRecruiterSubscriptionGuard } from '../../../../context/RecruiterSubscriptionContext';
 import {
     Plus,
     Search,
@@ -26,6 +27,7 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     const navigate = useNavigate();
     const location = useLocation();
     const isAdminContext = getSessionRole() === 'admin';
+    const { guardFeature } = useRecruiterSubscriptionGuard();
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const recruiterIdFilter = searchParams.get('recruiterId') || '';
     const adminIdFilter = searchParams.get('adminId') || '';
@@ -69,6 +71,11 @@ function AdminJobs({ onViewApplicants, onCreateJob }) {
     };
 
     const handleExportCSV = () => {
+        if (!isAdminContext) {
+            const allowed = guardFeature('csvExport', { featureLabel: 'Exporting jobs to CSV' });
+            if (!allowed) return;
+        }
+
         // Export what the user is currently seeing (filtered rows, not full list).
         const rowsToExport = filteredJobs;
 

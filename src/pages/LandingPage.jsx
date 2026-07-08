@@ -1678,14 +1678,17 @@ function LandingPage() {
                             <div className="relative mx-auto max-w-md h-[540px]">
                                 {/* Connector lines from the hub to each user card */}
                                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 448 540" fill="none" aria-hidden="true">
-                                    <line x1="224" y1="270" x2="96" y2="120" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
-                                    <line x1="224" y1="270" x2="352" y2="120" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
+                                    <line x1="224" y1="270" x2="96" y2="100" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
+                                    <line x1="224" y1="270" x2="352" y2="100" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
                                     <line x1="224" y1="270" x2="224" y2="440" stroke="#0d9488" strokeWidth="2" strokeDasharray="6 6" className="animate-pulse" />
                                 </svg>
 
-                                {/* Hub */}
-                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-2xl ring-4 ring-blue-100 p-3 animate-[float-y_6s_ease-in-out_infinite]">
-                                    <img src="/images/logo.png" alt="MaritimeLink" className="h-16 w-16 object-contain" />
+                                {/* Hub — centered in a static wrapper; the animation lives on the inner element so it
+                                    doesn't clobber the -translate-x/y-1/2 centering transform */}
+                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                                    <div className="bg-white rounded-full shadow-2xl ring-4 ring-blue-100 p-4 animate-[float-y_6s_ease-in-out_infinite]">
+                                        <img src="/images/logo.png" alt="MaritimeLink" className="h-20 w-20 object-contain" />
+                                    </div>
                                 </div>
 
                                 {[
@@ -1716,44 +1719,25 @@ function LandingPage() {
                                 ].map((card, idx) => {
                                     const Icon = card.icon;
                                     return (
-                                        <div
-                                            key={card.label}
-                                            className={`absolute ${card.pos} w-40 rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 bg-white animate-[float-y_5.5s_ease-in-out_infinite]`}
-                                            style={{ animationDelay: `${idx * 0.5}s` }}
-                                        >
-                                            <div className="relative h-32">
-                                                <img src={card.image} alt={card.alt} className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                                            </div>
-                                            <div className="flex items-center gap-1.5 px-3 py-2">
-                                                <span className={`w-6 h-6 rounded-full ${card.chip} flex items-center justify-center shrink-0`}>
-                                                    <Icon className="h-3.5 w-3.5 text-white" />
-                                                </span>
-                                                <p className="text-xs font-bold text-gray-800 leading-tight">{card.label}</p>
+                                        <div key={card.label} className={`absolute ${card.pos}`}>
+                                            <div
+                                                className="w-48 rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 bg-white animate-[float-y_5.5s_ease-in-out_infinite]"
+                                                style={{ animationDelay: `${idx * 0.5}s` }}
+                                            >
+                                                <div className="relative h-40">
+                                                    <img src={card.image} alt={card.alt} className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                                                </div>
+                                                <div className="flex items-center gap-1.5 px-3 py-2">
+                                                    <span className={`w-6 h-6 rounded-full ${card.chip} flex items-center justify-center shrink-0`}>
+                                                        <Icon className="h-3.5 w-3.5 text-white" />
+                                                    </span>
+                                                    <p className="text-xs font-bold text-gray-800 leading-tight">{card.label}</p>
+                                                </div>
                                             </div>
                                         </div>
                                     );
                                 })}
-
-                                <div className="absolute -right-2 bottom-16 z-10 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5s_ease-in-out_infinite]">
-                                    <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center">
-                                        <BadgeCheck className="h-5 w-5 text-teal-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-800">Verified Professional</p>
-                                        <p className="text-[11px] text-gray-500">Identity verified. Trust earned.</p>
-                                    </div>
-                                </div>
-
-                                <div className="absolute -left-2 bottom-16 z-10 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 animate-[float-y_5.5s_ease-in-out_infinite] [animation-delay:0.6s]">
-                                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <ShieldCheck className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-800">Compliance Health</p>
-                                        <p className="text-[11px] text-gray-500">Excellent &mdash; all certificates valid</p>
-                                    </div>
-                                </div>
                             </div>
                         </Reveal>
                     </div>

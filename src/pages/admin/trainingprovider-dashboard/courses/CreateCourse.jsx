@@ -18,6 +18,11 @@ import { COURSE_PRICE_FIELD_LABEL, DEFAULT_COURSE_CURRENCY } from '../../../../u
 import { formatDisplayDate } from '../../../../utils/formatDate';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import CourseCommissionDisclosureModal from '../../../../components/modals/CourseCommissionDisclosureModal';
+import {
+    hasAcknowledgedCourseCommission,
+    markCourseCommissionAcknowledged,
+} from '../../../../utils/courseCommissionDisclosure';
 
 const courseTitleOptions = [
     'STCW Basic Safety Training',
@@ -57,6 +62,7 @@ export default function CreateCourse() {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successConfig, setSuccessConfig] = useState({ mode: 'published', title: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const [showCommissionModal, setShowCommissionModal] = useState(false);
 
     const [form, setForm] = useState({
         title: 'STCW Basic Safety Training',
@@ -247,8 +253,18 @@ export default function CreateCourse() {
             return;
         }
         guardRestrictedAction(KYC_ACTIONS.PUBLISH_COURSE, () => {
+            if (!hasAcknowledgedCourseCommission()) {
+                setShowCommissionModal(true);
+                return;
+            }
             void saveAndPublishCourse();
         });
+    };
+
+    const handleConfirmCommissionDisclosure = () => {
+        markCourseCommissionAcknowledged();
+        setShowCommissionModal(false);
+        void saveAndPublishCourse();
     };
 
     const handleCancel = () => {
@@ -771,6 +787,12 @@ export default function CreateCourse() {
                     </div>
                 </div>
             )}
+
+            <CourseCommissionDisclosureModal
+                isOpen={showCommissionModal}
+                onConfirm={handleConfirmCommissionDisclosure}
+                onCancel={() => setShowCommissionModal(false)}
+            />
         </div>
     );
 }

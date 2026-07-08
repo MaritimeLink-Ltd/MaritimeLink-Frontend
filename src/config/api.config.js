@@ -138,6 +138,12 @@ export const API_ENDPOINTS = {
     SETTINGS_COMPANY: '/api/recruiter/settings/company',
     SETTINGS_NOTIFICATIONS: '/api/recruiter/settings/notifications',
     SETTINGS_PROFILE_PHOTO: '/api/recruiter/settings/profile-photo',
+    SETTINGS_BILLING: '/api/recruiter/settings/billing',
+    MEMBERSHIP: '/api/recruiter/membership',
+    MEMBERSHIP_CHECKOUT: '/api/recruiter/membership/checkout',
+    MEMBERSHIP_CONFIRM: '/api/recruiter/membership/confirm',
+    FLEX_CHECKOUT: (jobId) => `/api/recruiter/jobs/${jobId}/flex-checkout`,
+    FLEX_CONFIRM: (jobId) => `/api/recruiter/jobs/${jobId}/flex-confirm`,
     SUPPORT: {
       CASES: '/api/recruiter/support/cases',
       CASE_DETAIL: (id) => `/api/recruiter/support/cases/${id}`,

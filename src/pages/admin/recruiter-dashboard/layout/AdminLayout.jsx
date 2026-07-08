@@ -28,6 +28,7 @@ import {
     resolveRecruiterDisplayName,
 } from '../../../../utils/profilePhoto';
 import { KycProvider } from '../../../../context/KycContext';
+import { RecruiterSubscriptionProvider } from '../../../../context/RecruiterSubscriptionContext';
 import { useAccountReviewGate } from '../../../../hooks/useAccountReviewGate';
 import DashboardNavItem from '../../../../components/account/DashboardNavItem';
 import {
@@ -209,6 +210,7 @@ function AdminLayout() {
 
     return (
         <KycProvider userType="recruiter" storagePrefix="recruiter">
+        <RecruiterSubscriptionProvider>
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
@@ -409,6 +411,7 @@ function AdminLayout() {
                 </div>
             </ModalOverlay>
         </div>
+        </RecruiterSubscriptionProvider>
         </KycProvider>
     );
 }

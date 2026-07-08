@@ -14,7 +14,8 @@ import {
     Linkedin,
     MapPin,
     Trash2,
-    AlertTriangle
+    AlertTriangle,
+    CreditCard
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { countryCodes } from '../../../../utils/countryCodes';
@@ -395,6 +396,7 @@ function AdminSettings() {
     const accountSections = [
         { id: 'my-profile', label: 'My Profile', icon: User },
         { id: 'company-profile', label: 'Company Profile', icon: Building2 },
+        { id: 'subscription', label: 'Subscription', icon: CreditCard, navigateTo: '/recruiter/manage-subscription' },
         { id: 'security', label: 'Security', icon: Shield },
         { id: 'support', label: 'Support', icon: Mail }
     ];
@@ -432,7 +434,7 @@ function AdminSettings() {
                                 {accountSections.map((section) => (
                                     <button
                                         key={section.id}
-                                        onClick={() => setActiveSection(section.id)}
+                                        onClick={() => section.navigateTo ? navigate(section.navigateTo) : setActiveSection(section.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeSection === section.id
                                             ? 'bg-blue-50 text-[#003971]'
                                             : 'text-gray-600 hover:bg-gray-50'

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2 } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2, Crown } from 'lucide-react';
 import jobService from '../../../../services/jobService';
 import LocationAutocomplete from '../../../../components/common/LocationAutocomplete';
 import { useKycGuard } from '../../../../context/KycContext';
@@ -205,6 +205,7 @@ const Jobs = () => {
                             id: apiJob.id,
                             title: apiJob.title,
                             company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+                            isPremiumRecruiter: Boolean(apiJob.isPremiumRecruiter),
                             location: apiJob.location || 'Global',
                             salary: apiJob.salary,
                             category: formatJobCategory(apiJob.category),
@@ -370,6 +371,12 @@ const Jobs = () => {
                                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                                         <Building2 size={14} />
                                         <span>{job.company}</span>
+                                        {job.isPremiumRecruiter && (
+                                            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                                <Crown size={10} />
+                                                Premium Recruiter
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex items-center justify-between text-sm text-gray-800 font-medium">
                                         <span>{job.salary}</span>

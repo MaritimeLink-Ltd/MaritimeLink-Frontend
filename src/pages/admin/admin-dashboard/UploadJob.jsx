@@ -5,11 +5,13 @@ import jobService from '../../../services/jobService';
 import { COUNTRY_NAMES } from '../../../utils/countries';
 import { useKycGuard } from '../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../constants/kycRestrictedActions';
+import { useRecruiterSubscription } from '../../../context/RecruiterSubscriptionContext';
 
 function UploadJob({ onBack: onBackProp }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { guardRestrictedAction } = useKycGuard();
+    const recruiterSubscription = useRecruiterSubscription();
     const editData = location.state?.jobData;
     const isEditMode = location.state?.isEdit || false;
     const dashboardType = location.state?.dashboardType || 'recruiter'; // 'admin' or 'recruiter'
@@ -288,8 +290,13 @@ function UploadJob({ onBack: onBackProp }) {
             setShowSuccessModal(true);
         } catch (error) {
             console.error('Failed to create job:', error);
-            const message = error?.data?.message || error?.message || 'Failed to create job. Please try again.';
-            setSubmitError(message);
+            const errorCode = error?.data?.code;
+            if (errorCode === 'RECRUITER_JOB_LIMIT' && recruiterSubscription) {
+                recruiterSubscription.openUpgradeModal('Publishing more than 1 active job');
+            } else {
+                const message = error?.data?.message || error?.message || 'Failed to create job. Please try again.';
+                setSubmitError(message);
+            }
         } finally {
             setIsSubmitting(false);
         }

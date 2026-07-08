@@ -20,6 +20,7 @@ import {
 } from '../../../../utils/recruiterNotificationPreferences';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import { useRecruiterSubscription } from '../../../../context/RecruiterSubscriptionContext';
 
 /** UUID v1–v8 or common 24-char hex ids (e.g. Mongo ObjectId) */
 const ACCEPTABLE_CHAT_PEER_ID_RE =
@@ -30,6 +31,7 @@ const isAcceptableChatPeerId = (value) => ACCEPTABLE_CHAT_PEER_ID_RE.test(String
 function AdminChats({ candidateId: propCandidateId }) {
     const location = useLocation();
     const { guardRestrictedAction } = useKycGuard();
+    const recruiterSubscription = useRecruiterSubscription();
     const isSupportChat =
         new URLSearchParams(location.search || '').get('supportChat') === '1';
     const searchParams = new URLSearchParams(location.search || '');
@@ -210,7 +212,10 @@ function AdminChats({ candidateId: propCandidateId }) {
                 upsertChatFromConversation(conv);
             } catch (err) {
                 if (!cancelled) {
-                    setBootstrapError(err?.message || 'Could not start conversation.');
+                    if (err?.data?.code === 'RECRUITER_UPGRADE_REQUIRED') {
+                        recruiterSubscription?.openUpgradeModal('Messaging candidates before they apply');
+                    }
+                    setBootstrapError(err?.data?.message || err?.message || 'Could not start conversation.');
                 }
             } finally {
                 if (!cancelled) setBootstrapLoading(false);

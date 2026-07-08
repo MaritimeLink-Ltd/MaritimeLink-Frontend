@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Building2, Banknote, Bookmark, Check, Loader2, Crown } from 'lucide-react';
 import jobService from '../../../../services/jobService';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
@@ -24,6 +24,7 @@ const mapJobFromApi = (apiJob, envelope = {}) => ({
     id: apiJob.id,
     title: apiJob.title,
     company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
+    isPremiumRecruiter: Boolean(apiJob.isPremiumRecruiter),
     location: apiJob.location || 'Global',
     salary: apiJob.salary,
     category: formatJobCategory(apiJob.category),
@@ -214,6 +215,12 @@ const JobDetail = ({ job: propJob, onBack, onApplyClick }) => {
                             <div className="flex items-center gap-2 text-gray-600">
                                 <Building2 size={18} className="text-gray-400" />
                                 <span className="text-base">{job.company}</span>
+                                {job.isPremiumRecruiter && (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                        <Crown size={10} />
+                                        Premium Recruiter
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2 text-gray-600">
                                 <MapPin size={18} className="text-gray-400" />

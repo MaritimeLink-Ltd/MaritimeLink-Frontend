@@ -15,20 +15,25 @@ const PLAN_DETAILS = {
         subtitle: 'Good for getting started',
         description: 'Basic profile visibility and standard support.',
         highlights: [
-            'Apply to job opportunities',
-            'Basic profile visibility',
+            'Personal dashboard',
+            'Resume builder',
+            'Document wallet — upload & manage maritime documents',
+            'Apply to jobs (up to 10 active applications)',
             'Email support',
         ],
     },
     PRO: {
         title: 'Maritime Premium',
         subtitle: 'Best for active professionals',
-        description: 'Boosted visibility, priority support, and premium badge.',
+        description: 'Unlimited applications, resume/document sharing, and priority visibility.',
         highlights: [
-            'Apply to job opportunities',
-            'Priority profile visibility',
-            'Featured in searches',
-            'Priority support',
+            'Unlimited job applications',
+            'Download your resume as a PDF',
+            'Share your resume via a secure link',
+            'Export your full document pack',
+            'Secure document share links',
+            'Priority visibility in recruiter search results',
+            'Priority customer support',
         ],
     },
 };
@@ -189,13 +194,9 @@ const ManageSubscription = () => {
                             <h3 className="text-sm text-gray-500 mb-4">What this plan gives you</h3>
                             <div className="space-y-3">
                                 {benefits.map((benefit) => (
-                                    <div key={benefit} className="border border-gray-200 rounded-lg p-4">
-                                        <h4 className="font-medium text-gray-800 mb-1">{benefit}</h4>
-                                        <p className="text-sm text-gray-500">
-                                            {activeTier === 'PRO'
-                                                ? 'Premium professionals receive higher visibility and faster responses.'
-                                                : 'Upgrade to unlock premium visibility and priority support.'}
-                                        </p>
+                                    <div key={benefit} className="flex items-start gap-2 border border-gray-200 rounded-lg p-4">
+                                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        <span className="font-medium text-gray-800">{benefit}</span>
                                     </div>
                                 ))}
                             </div>

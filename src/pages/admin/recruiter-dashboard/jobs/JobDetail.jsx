@@ -16,6 +16,7 @@ import jobService from '../../../../services/jobService';
 import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import { useRecruiterSubscriptionGuard } from '../../../../context/RecruiterSubscriptionContext';
 
 /** Real profile photo URLs only — no placeholders; blocks known dummy hosts. */
 function resolveProfessionalAvatarUrl(prof) {
@@ -92,6 +93,7 @@ function isAdminCreatedJob(job) {
 
 function JobDetail({ onBack, jobId: jobIdProp }) {
     const { guardRestrictedAction } = useKycGuard();
+    const { guardFeature } = useRecruiterSubscriptionGuard();
     const navigate = useNavigate();
     const { jobId: jobIdFromRoute } = useParams();
     const jobId = jobIdProp || jobIdFromRoute;
@@ -484,7 +486,13 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     const handleInviteToApply = (professionalId) => {
         if (suppressAdminRecruiterInviteHireFlow) return;
         guardRestrictedAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
-            void performInviteToApply(professionalId);
+            guardFeature('inviteCandidates', {
+                job,
+                featureLabel: 'Inviting candidates',
+                callback: () => {
+                    void performInviteToApply(professionalId);
+                },
+            });
         });
     };
 

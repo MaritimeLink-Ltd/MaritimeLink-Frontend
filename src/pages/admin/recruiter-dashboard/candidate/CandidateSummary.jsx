@@ -31,6 +31,7 @@ import {
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 import KycRestrictedView from '../../../../components/kyc/KycRestrictedView';
+import { useRecruiterSubscription } from '../../../../context/RecruiterSubscriptionContext';
 import {
     buildSeaServiceExperience,
     formatTotalSeaTimeLabel,
@@ -254,6 +255,8 @@ function CandidateSummary({
     const isAdmin = adminUserTypeLs === 'admin' || userTypeLs === 'admin';
 
     const { guardRestrictedAction, hasStage2Access, isKycUnderReview } = useKycGuard();
+    const recruiterSubscription = useRecruiterSubscription();
+    const [candidateAccess, setCandidateAccess] = useState(null);
 
     const requiresKycForProfileView =
         !isAdmin &&
@@ -455,6 +458,9 @@ function CandidateSummary({
                     const response = await httpClient.get(profileUrl);
                     const responseData = response?.data?.data || response?.data;
                     const obj = responseData?.professional ? responseData.professional : responseData;
+                    if (responseData?.access) {
+                        setCandidateAccess(responseData.access);
+                    }
 
                     if (obj) {
                         setFetchedCandidate(obj);
@@ -1171,10 +1177,18 @@ function CandidateSummary({
     };
 
     const handleViewResume = () => {
+        if (candidateAccess && !candidateAccess.viewResume) {
+            recruiterSubscription?.openUpgradeModal('Viewing this candidate\'s resume');
+            return;
+        }
         runProfileAction(KYC_ACTIONS.VIEW_RESUME, openResumeView);
     };
 
     const handleOpenDocumentWallet = () => {
+        if (candidateAccess && !candidateAccess.viewDocumentWallet) {
+            recruiterSubscription?.openUpgradeModal('Viewing this candidate\'s document wallet');
+            return;
+        }
         runProfileAction(KYC_ACTIONS.VIEW_DOCUMENT_WALLET, () => {
             setShowDocumentWallet(true);
         });
