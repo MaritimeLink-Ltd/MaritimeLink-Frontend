@@ -101,6 +101,7 @@ export function getDashboardWelcomeMessages(profile = readUserProfile(), role = 
  */
 export const PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES = [
   '/personal/dashboard',
+  '/personal/career-summary',
   '/personal/resume',
   '/personal/documents',
   '/personal/profile',

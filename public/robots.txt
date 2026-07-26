@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# Private, token-based share links must never be indexed.
+Disallow: /shared/profile/
+Disallow: /personal/documents/shared/
+
 Sitemap: https://www.maritimelink.co/sitemap.xml
+Sitemap: https://www.maritimelink.co/sitemap-profiles.xml

@@ -111,6 +111,7 @@ import AdminDashboardChats from './pages/admin/admin-dashboard/Chats';
 
 // Personal Dashboard Layout and Pages
 import PersonalDashboardLayout from './pages/personal/dashboard/layout/PersonalDashboardLayout';
+import CareerSummary from './pages/personal/dashboard/dashboard-sections/CareerSummary';
 import Resume from './pages/personal/dashboard/dashboard-sections/Resume';
 import DocumentsWallet from './pages/personal/dashboard/dashboard-sections/DocumentsWallet';
 import Jobs from './pages/personal/dashboard/dashboard-sections/Jobs';
@@ -129,6 +130,8 @@ import ManageSubscription from './pages/personal/dashboard/dashboard-sections/Ma
 import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
 import SharedDocumentPack from './pages/personal/SharedDocumentPack';
+import SharedProfile from './pages/personal/SharedProfile';
+import PublicProfile from './pages/public/PublicProfile';
 import { expireSessionAndRedirect, parseJwtExpiryMs } from './utils/sessionManager';
 import AnalyticsTracker from './components/AnalyticsTracker';
 
@@ -226,6 +229,8 @@ function App() {
           <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
           <Route path="/cv-resume" element={<CVResume />} />
           <Route path="/personal/documents/shared/:token" element={<SharedDocumentPack />} />
+          <Route path="/shared/profile/:token" element={<SharedProfile />} />
+          <Route path="/in/:slug" element={<PublicProfile />} />
 
           {/* Admin/Recruiter Setup Routes (No Layout) */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -340,6 +345,7 @@ function App() {
           {/* Personal Dashboard Protected Routes (With Layout) */}
           <Route element={<PersonalDashboardLayout />}>
             <Route path="/personal/dashboard" element={<PersonalDashboard />} />
+            <Route path="/personal/career-summary" element={<CareerSummary />} />
             <Route path="/personal/resume" element={<Resume />} />
             <Route path="/personal/documents" element={<DocumentsWallet />} />
             <Route path="/personal/jobs" element={<Jobs />} />

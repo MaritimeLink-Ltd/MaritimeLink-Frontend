@@ -749,6 +749,7 @@ function CandidateSummary({
             seaTime: formatTotalSeaTimeLabel(seaService),
             seaExperience,
             compliant: professional?.isVerified || professional?.kyc?.status === 'APPROVED' || false,
+            availableForWork: Boolean(professional?.availableForWork),
             experience: seaExperience.experienceLines,
             skills,
         };
@@ -1272,12 +1273,25 @@ function CandidateSummary({
                             </div>
                         </div>
 
-                        {candidate.compliant && (
-                            <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                <Check className="h-4 w-4" />
-                                Fully Compliant
-                            </div>
-                        )}
+                        <div className="flex flex-col items-end gap-2">
+                            {candidate.compliant && (
+                                <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
+                                    <Check className="h-4 w-4" />
+                                    Fully Compliant
+                                </div>
+                            )}
+                            {candidate.availableForWork ? (
+                                <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Available for Job
+                                </div>
+                            ) : (
+                                <div className="bg-gray-100 text-gray-600 border border-gray-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4" />
+                                    Currently Employed / On Contract
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">

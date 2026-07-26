@@ -101,6 +101,20 @@ export const API_ENDPOINTS = {
     REPLACE_FILE: (id) => `/api/professional/documents/${id}/file`,
     DELETE: (id) => `/api/professional/documents/${id}`,
   },
+  // Public, search-indexable profile pages (opt-in)
+  PUBLIC_PROFILE: {
+    MY_SETTINGS: '/api/professional/public-profile',
+    BY_SLUG: (slug) => `/api/public/professionals/${encodeURIComponent(slug)}`,
+    LIST: '/api/public/professionals',
+  },
+  // Public "Share Profile" link endpoints
+  PROFILE_SHARE: {
+    CREATE_LINK: '/api/professional/profile/share-link',
+    SHARED_PROFILE: (token) =>
+      `/api/professional/profile/shared/${encodeURIComponent(token)}`,
+    SHARED_FILE: (token, documentId) =>
+      `/api/professional/profile/shared/${encodeURIComponent(token)}/file/${documentId}`,
+  },
   // Resume Endpoints
   RESUME: {
     GET_RESUME: '/api/professional/resume',
