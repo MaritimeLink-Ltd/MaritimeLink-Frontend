@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye, ExternalLink } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
+import AccountModerationPanel from '../../../components/moderation/AccountModerationPanel';
 import {
     formatAdminChatDisplayName,
     formatAdminNameFromEmail,
@@ -629,6 +630,12 @@ function AccountProfile() {
     const isProfessional = isProfessionalAccount;
     // A recruiter if old mock prefix OR a real UUID that is not trainer/professional.
     const isRecruiter = id?.startsWith('REC') || (isUUID && !isTrainer && !isProfessionalAccount);
+    // Lookup hint for the moderation endpoints; they resolve by id regardless.
+    const moderationAccountKind = isProfessionalAccount
+        ? 'professional'
+        : isTrainer
+            ? 'trainer'
+            : 'recruiter';
 
     useEffect(() => {
         if (isUUID) {
@@ -937,6 +944,16 @@ function AccountProfile() {
                 stage1Status: status === 'VERIFIED' ? 'COMPLETED' : prev.stage1Status,
             };
         });
+    };
+
+    /**
+     * Mirrors a suspend/block/reinstate result onto the loaded profile so the
+     * status badges update without a refetch. Unlike the Stage 1 helper above it
+     * leaves the KYC stage flags alone — moderation does not change KYC standing.
+     */
+    const applyLocalModerationStatus = (status) => {
+        if (!status) return;
+        setRecruiterData((prev) => (prev ? { ...prev, status } : prev));
     };
 
     const confirmRejectAccount = async () => {
@@ -1674,6 +1691,18 @@ function AccountProfile() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Suspend / block / reinstate — separate from the KYC decision above */}
+                            {isUUID && (
+                                <AccountModerationPanel
+                                    accountId={id}
+                                    accountKind={moderationAccountKind}
+                                    accountName={profileData.name}
+                                    onModerationChange={(next) =>
+                                        applyLocalModerationStatus(next?.status)
+                                    }
+                                />
+                            )}
 
                             {/* Recent Documents */}
                             {!(isRecruiter || isTrainer) && (

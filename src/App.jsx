@@ -84,6 +84,8 @@ import Notifications from './pages/admin/admin-dashboard/Notifications';
 import PlatformActivityReport from './pages/admin/admin-dashboard/PlatformActivityReport';
 import TransactionHistory from './pages/admin/admin-dashboard/TransactionHistory';
 import FlaggedAccounts from './pages/admin/admin-dashboard/FlaggedAccounts';
+import Reports from './pages/admin/admin-dashboard/Reports';
+import ReportDetails from './pages/admin/admin-dashboard/ReportDetails';
 import UploadJob from './pages/admin/admin-dashboard/UploadJob';
 import JobCreatedSuccess from './pages/admin/admin-dashboard/JobCreatedSuccess';
 import Accounts from './pages/admin/admin-dashboard/Accounts';
@@ -306,6 +308,8 @@ function App() {
             <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
             <Route path="/admin/transaction-history" element={<TransactionHistory />} />
             <Route path="/admin/flagged-accounts" element={<FlaggedAccounts />} />
+            <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/reports/:id" element={<ReportDetails />} />
             <Route path="/admin/marketplace/create-job" element={<UploadJob />} />
             <Route path="/admin/create-course" element={<TrainingProviderCreateCourse />} />
             <Route path="/admin/accounts" element={<Accounts />} />

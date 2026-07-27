@@ -23,7 +23,8 @@ import {
     X,
     ChevronDown,
     LogOut,
-    MessageSquare
+    MessageSquare,
+    Flag
 } from 'lucide-react';
 
 function AdminLayout() {
@@ -136,6 +137,7 @@ function AdminLayout() {
         { name: 'Accounts', path: '/admin/accounts', icon: Users },
         { name: 'Companies', path: '/admin/companies', icon: Building },
         { name: 'Compliance', path: '/admin/compliance', icon: FileCheck },
+        { name: 'Reports', path: '/admin/reports', icon: Flag },
         { name: 'Marketplace', path: '/admin/marketplace', icon: Store },
         { name: 'Operations', path: '/admin/operations', icon: SettingsIcon },
         { name: 'Chats', path: '/admin/chats', icon: MessageSquare }

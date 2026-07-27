@@ -50,7 +50,9 @@ function buildDescription(profile) {
     const vessels = Array.isArray(profile.vesselTypes) && profile.vesselTypes.length
         ? ` Experience on ${profile.vesselTypes.slice(0, 4).join(', ')}.`
         : '';
-    const availability = profile.availableForWork ? ' Currently available for work.' : '';
+    const availability = profile.availableForWork
+        ? ' Currently available for work.'
+        : ' Currently employed / on contract.';
     return `${profile.name}${bits ? ` — ${bits}.` : '.'}${where}${vessels}${availability} View the full maritime career profile on ${SITE_NAME}.`
         .replace(/\s+/g, ' ')
         .trim();
@@ -60,6 +62,7 @@ function buildDescription(profile) {
 function buildNoScriptContent(profile, canonical) {
     const skills = Array.isArray(profile.skills) ? profile.skills : [];
     const vessels = Array.isArray(profile.vesselTypes) ? profile.vesselTypes : [];
+    const experience = Array.isArray(profile.experienceLines) ? profile.experienceLines : [];
 
     return `
     <main>
@@ -71,6 +74,18 @@ function buildNoScriptContent(profile, canonical) {
         ${vessels.length ? `<li>Vessel types: ${escapeHtml(vessels.join(', '))}</li>` : ''}
         <li>Availability: ${profile.availableForWork ? 'Available for job' : 'Currently employed / on contract'}</li>
       </ul>
+      ${
+          profile.summary
+              ? `<h3>Profile summary</h3><p>${escapeHtml(profile.summary)}</p>`
+              : ''
+      }
+      ${
+          experience.length
+              ? `<h3>Experience summary</h3><ul>${experience
+                    .map((line) => `<li>${escapeHtml(line)}</li>`)
+                    .join('')}</ul>`
+              : ''
+      }
       ${
           skills.length
               ? `<h3>Key skills &amp; competencies</h3><ul>${skills

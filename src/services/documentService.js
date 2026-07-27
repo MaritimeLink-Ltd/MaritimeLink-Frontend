@@ -124,8 +124,19 @@ class DocumentService {
         return httpClient.post(API_ENDPOINTS.DOCUMENTS.MARK_REPORT_GENERATED, {});
     }
 
-    async createShareLink() {
-        return httpClient.post(API_ENDPOINTS.DOCUMENTS.CREATE_SHARE_LINK, {});
+    /**
+     * Create a secure share link for the document wallet.
+     * @param {Object} [options]
+     * @param {string[]} [options.documentIds] - Documents to expose. Empty shares all.
+     * @param {number} [options.expiresInHours=24] - Link lifetime (1-168 hours).
+     * @param {boolean} [options.allowDownload=false] - Let recipients download files.
+     */
+    async createShareLink({ documentIds = [], expiresInHours = 24, allowDownload = false } = {}) {
+        return httpClient.post(API_ENDPOINTS.DOCUMENTS.CREATE_SHARE_LINK, {
+            documentIds,
+            expiresInHours,
+            allowDownload,
+        });
     }
 
     /**

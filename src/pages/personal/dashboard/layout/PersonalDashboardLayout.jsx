@@ -202,6 +202,11 @@ function PersonalDashboardLayout() {
         };
     }, []);
 
+    // Availability picked during sign-up is stored before a token exists; flush it here.
+    React.useEffect(() => {
+        void authService.flushPendingAvailability();
+    }, []);
+
     React.useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return undefined;
@@ -235,7 +240,7 @@ function PersonalDashboardLayout() {
 
     const navItems = [
         { name: 'Dashboard', path: '/personal/dashboard', icon: Home },
-        { name: 'Career Summary', path: '/personal/career-summary', icon: UserCheck },
+        { name: 'Profile Summary', path: '/personal/career-summary', icon: UserCheck },
         { name: 'Resume', path: '/personal/resume', icon: FileText },
         { name: 'Documents', path: '/personal/documents', icon: Folder },
         { name: 'Jobs', path: '/personal/jobs', icon: Briefcase },

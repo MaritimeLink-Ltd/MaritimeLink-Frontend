@@ -618,6 +618,27 @@ class AuthService {
         }
     }
 
+    /**
+     * Persists the availability chosen during sign-up.
+     *
+     * The choice is made on the profession step, before a JWT exists, so it is stashed
+     * in sessionStorage and flushed here at the first authenticated opportunity.
+     * Best-effort: the professional can always change it from Profile Summary.
+     */
+    async flushPendingAvailability() {
+        const pending = sessionStorage.getItem('pendingAvailableForWork');
+        if (pending === null) return;
+        if (!localStorage.getItem('authToken')) return;
+
+        try {
+            await this.updateAvailability(pending === 'true');
+            sessionStorage.removeItem('pendingAvailableForWork');
+        } catch (error) {
+            // Leave it queued so the next dashboard visit retries.
+            console.warn('Could not persist sign-up availability yet:', error?.message);
+        }
+    }
+
     async submitFeedback(message) {
         try {
             return await httpClient.post(API_ENDPOINTS.PROFESSIONAL.FEEDBACK, { message });

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import profileShareService from '../../services/profileShareService';
 import { buildSeaServiceExperience, formatTotalSeaTimeLabel } from '../../utils/seaServiceExperience';
+import VerificationBadge from '../../components/common/VerificationBadge';
 
 function formatDate(value) {
     if (!value) return '—';
@@ -207,9 +208,7 @@ export default function SharedProfile() {
             <header className="border-b border-slate-200 bg-white">
                 <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-[#003366] flex items-center justify-center">
-                            <Ship className="w-5 h-5 text-white" />
-                        </div>
+                        <img src="/images/logo.png" alt="MaritimeLink" className="h-10 w-auto" />
                         <div>
                             <h1 className="text-lg font-semibold text-slate-900">Shared profile</h1>
                             <p className="text-xs text-slate-500">MaritimeLink secure view</p>
@@ -301,12 +300,7 @@ export default function SharedProfile() {
                                 </div>
 
                                 <div className="flex flex-col items-start sm:items-end gap-2">
-                                    {profile.compliant && (
-                                        <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                            <Check className="h-4 w-4" />
-                                            Fully Compliant
-                                        </div>
-                                    )}
+                                    <VerificationBadge verified={profile.verified} />
                                     {profile.availableForWork ? (
                                         <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
                                             <CheckCircle2 className="h-4 w-4" />

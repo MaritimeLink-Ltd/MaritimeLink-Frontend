@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ship, Clock, MapPin, Check, Star, Briefcase, FileText, Wallet, CheckCircle2, Timer, Share2, Globe } from 'lucide-react';
+import { Ship, Clock, MapPin, Check, Star, Briefcase, FileText, Wallet, CheckCircle2, Timer, Share2, Globe, Crown } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
 import resumeService from '../../../../services/resumeService';
 import ShareProfileModal from '../../../../components/profile/ShareProfileModal';
 import publicProfileService from '../../../../services/publicProfileService';
+import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import VerificationBadge from '../../../../components/common/VerificationBadge';
+import { isIdentityVerified } from '../../../../utils/kycStatus';
 import { resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
 import { buildSeaServiceExperience, formatTotalSeaTimeLabel } from '../../../../utils/seaServiceExperience';
 
@@ -96,7 +99,7 @@ const CareerSummary = () => {
             location: resume?.country || 'N/A',
             vesselTypes: seaExperience.uniqueVesselTypes,
             seaTime: formatTotalSeaTimeLabel(seaService),
-            compliant: professional?.kyc?.status === 'APPROVED',
+            verified: isIdentityVerified(professional),
             experience: seaExperience.experienceLines,
             skills,
         };
@@ -153,11 +156,16 @@ const CareerSummary = () => {
         ? `${window.location.origin}/in/${publicProfile.slug}`
         : '';
 
+    /** Secure share links are Premium-only, matching the document wallet share flow. */
+    const isPremium = isPremiumTier(
+        professional?.tier || professional?.membershipTier || professional?.membership?.tier,
+    );
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
                 <div className="w-10 h-10 border-4 border-[#003971] border-t-transparent rounded-full animate-spin" />
-                <p className="text-gray-500 font-medium">Loading your career summary...</p>
+                <p className="text-gray-500 font-medium">Loading your profile summary...</p>
             </div>
         );
     }
@@ -167,7 +175,7 @@ const CareerSummary = () => {
             <Toaster position="top-right" />
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#003971]">Career Summary</h1>
+                    <h1 className="text-2xl font-bold text-[#003971]">Profile Summary</h1>
                     <p className="text-sm text-gray-500 mt-1">
                         This is how recruiters and training providers see your profile when they view your candidate summary.
                     </p>
@@ -208,21 +216,25 @@ const CareerSummary = () => {
                             </div>
                         </div>
 
-                        {candidate.compliant && (
-                            <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 whitespace-nowrap">
-                                <Check className="h-4 w-4" />
-                                Fully Compliant
-                            </div>
-                        )}
+                        {/* Shown either way here so the professional can see their own status. */}
+                        <VerificationBadge verified={candidate.verified} showWhenUnverified />
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
                         <button
-                            onClick={() => setIsShareModalOpen(true)}
+                            onClick={() => {
+                                if (!isPremium) {
+                                    navigate('/personal/profile/manage-subscription');
+                                    toast('Secure share links are a Premium feature.', { icon: '⭐' });
+                                    return;
+                                }
+                                setIsShareModalOpen(true);
+                            }}
                             className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors"
                         >
                             <Share2 className="h-5 w-5" />
                             Share Profile
+                            {!isPremium && <Crown className="h-4 w-4 text-amber-300" />}
                         </button>
                         <button
                             onClick={() => navigate('/personal/resume')}

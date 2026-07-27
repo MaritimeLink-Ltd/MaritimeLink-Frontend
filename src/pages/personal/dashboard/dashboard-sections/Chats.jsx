@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, Building2, ArrowUp, ArrowLeft, Loader2 } from 'lucide-react';
+import { MessageCircle, Building2, ArrowUp, ArrowLeft, Loader2, Flag } from 'lucide-react';
 
+import ReportAccountModal from '../../../../components/moderation/ReportAccountModal';
 import conversationService, {
     mapApiMessageToChatMessage,
     mapConversationToProfessionalChatItem,
@@ -30,6 +31,7 @@ const Chats = ({ onViewJob }) => {
     const [messagesHasMore, setMessagesHasMore] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState(null);
+    const [reportOpen, setReportOpen] = useState(false);
 
     useEffect(() => {
         const bootstrapConversation = initialConversation?.id
@@ -299,6 +301,8 @@ const Chats = ({ onViewJob }) => {
     };
 
     const selectedRow = chats.find((c) => c.id === selectedChatId);
+    // Support threads are with an admin — there is nothing to report there.
+    const reportableRecruiterId = selectedRow?.raw?.recruiterId || null;
 
     if (!listLoading && chats.length === 0 && !listError) {
         return (
@@ -409,15 +413,28 @@ const Chats = ({ onViewJob }) => {
                                         {selectedRow.company}
                                     </h2>
                                 </div>
-                                {selectedRow.raw?.job && onViewJob && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onViewJob(selectedRow.raw.job)}
-                                        className="hidden sm:flex items-center px-5 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition-colors"
-                                    >
-                                        View Job Description
-                                    </button>
-                                )}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    {selectedRow.raw?.job && onViewJob && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onViewJob(selectedRow.raw.job)}
+                                            className="hidden sm:flex items-center px-5 py-2 bg-gray-800 text-white rounded-full text-sm font-medium hover:bg-gray-700 transition-colors"
+                                        >
+                                            View Job Description
+                                        </button>
+                                    )}
+                                    {reportableRecruiterId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setReportOpen(true)}
+                                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                            title="Report this account"
+                                        >
+                                            <Flag size={16} />
+                                            <span className="hidden sm:inline">Report</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div
@@ -530,6 +547,14 @@ const Chats = ({ onViewJob }) => {
                     )}
                 </div>
             </div>
+
+            <ReportAccountModal
+                isOpen={reportOpen}
+                onClose={() => setReportOpen(false)}
+                reportedId={reportableRecruiterId}
+                reportedName={selectedRow?.company || 'this account'}
+                conversationId={selectedChatId}
+            />
         </div>
     );
 };

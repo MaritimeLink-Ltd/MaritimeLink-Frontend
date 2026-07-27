@@ -3,7 +3,21 @@ import { useNavigate } from 'react-router-dom';
 
 function SelectProfession() {
   const [selectedProfession, setSelectedProfession] = useState('officer');
+  const [availableForWork, setAvailableForWork] = useState(true);
   const navigate = useNavigate();
+
+  const availabilityOptions = [
+    {
+      value: true,
+      title: 'Available for Job',
+      subtitle: "You're actively looking and open to new offers.",
+    },
+    {
+      value: false,
+      title: 'Currently Employed / On Contract',
+      subtitle: "You're not actively looking right now.",
+    },
+  ];
 
   const professions = [
     {
@@ -27,6 +41,8 @@ function SelectProfession() {
     e.preventDefault();
     console.log('Selected Profession:', selectedProfession);
     sessionStorage.setItem('professionType', selectedProfession);
+    // Persisted once the registration token exists (see PersonalDashboardLayout).
+    sessionStorage.setItem('pendingAvailableForWork', String(availableForWork));
 
     // Navigate to ID Upload page for all professions (Changed flow)
     navigate('/upload-profile-photo');
@@ -118,6 +134,57 @@ function SelectProfession() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Availability — surfaced on the profile summary recruiters see */}
+            <div className="pt-1">
+              <h2 className="text-base font-semibold text-gray-900">Availability</h2>
+              <p className="text-sm text-gray-500 mt-1 mb-3">
+                Let recruiters know if you&apos;re open to work. You can change this any time.
+              </p>
+              <div className="space-y-3">
+                {availabilityOptions.map((option) => (
+                  <div
+                    key={String(option.value)}
+                    onClick={() => setAvailableForWork(option.value)}
+                    className={`relative flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all min-h-[44px] ${availableForWork === option.value
+                      ? 'border-[#003971] bg-blue-50'
+                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      }`}
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {option.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">{option.subtitle}</p>
+                    </div>
+                    <div className="ml-4">
+                      <div
+                        className={`w-5 h-5 rounded ${availableForWork === option.value
+                          ? 'bg-[#003971] flex items-center justify-center'
+                          : 'border-2 border-gray-300'
+                          }`}
+                      >
+                        {availableForWork === option.value && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Next Button */}

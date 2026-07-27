@@ -5,17 +5,16 @@ import {
     Folder,
     ChevronRight,
     ChevronLeft,
-    FileText,
     Link2,
     Copy,
     Clock,
     ShieldCheck,
+    Download,
     Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ModalOverlay from '../common/ModalOverlay';
 import documentService from '../../services/documentService';
-import profileShareService from '../../services/profileShareService';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { rewriteShareLinkForSharing } from '../../config/api.config';
 
@@ -25,7 +24,6 @@ const EXPIRY_OPTIONS = [
     { hours: 168, label: '7 days', hint: 'Maximum' },
 ];
 
-/** Turn a raw document category into a readable folder name. */
 function formatCategoryLabel(raw) {
     return String(raw || 'Document')
         .replace(/_/g, ' ')
@@ -35,22 +33,21 @@ function formatCategoryLabel(raw) {
 }
 
 /**
- * "Share Profile" flow: pick what the recipient may see (resume + specific document
- * wallet items), then generate a secure expiring link. Mirrors the selective-sharing
- * pattern used when applying for a job.
+ * Secure Document Wallet sharing: pick exactly which certificates the recipient may
+ * see, choose how long the link lives, and decide whether downloads are permitted.
+ * Mirrors the Share Profile flow so both share journeys behave the same way.
  */
-export default function ShareProfileModal({ isOpen, onClose }) {
+export default function ShareDocumentsModal({ isOpen, onClose }) {
     const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
     const [documents, setDocuments] = useState([]);
-    const [includeResume, setIncludeResume] = useState(true);
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [openFolder, setOpenFolder] = useState(null);
     const [expiresInHours, setExpiresInHours] = useState(24);
+    const [allowDownload, setAllowDownload] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generated, setGenerated] = useState(null);
     const [copied, setCopied] = useState(false);
 
-    // Load the wallet each time the modal opens so newly uploaded docs appear.
     useEffect(() => {
         if (!isOpen) return undefined;
 
@@ -86,15 +83,14 @@ export default function ShareProfileModal({ isOpen, onClose }) {
         };
     }, [isOpen]);
 
-    // Reset back to a clean state whenever the modal is dismissed.
     useEffect(() => {
         if (isOpen) return;
         setGenerated(null);
         setCopied(false);
         setOpenFolder(null);
         setSelectedDocuments([]);
-        setIncludeResume(true);
         setExpiresInHours(24);
+        setAllowDownload(false);
     }, [isOpen]);
 
     const folders = useMemo(() => {
@@ -122,30 +118,27 @@ export default function ShareProfileModal({ isOpen, onClose }) {
         const ids = folder.documents.map((d) => d.id);
         const allSelected = ids.every((id) => selectedDocuments.includes(id));
         setSelectedDocuments((prev) =>
-            allSelected
-                ? prev.filter((id) => !ids.includes(id))
-                : [...new Set([...prev, ...ids])],
+            allSelected ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])],
         );
     };
 
-    const nothingSelected = !includeResume && selectedDocuments.length === 0;
-
     const handleGenerate = async () => {
-        if (nothingSelected || isGenerating) return;
+        if (selectedDocuments.length === 0 || isGenerating) return;
 
         setIsGenerating(true);
         try {
-            const res = await profileShareService.createShareLink({
-                includeResume,
+            const res = await documentService.createShareLink({
                 documentIds: selectedDocuments,
                 expiresInHours,
+                allowDownload,
             });
             const data = res?.data || {};
-            if (!data.shareLink) throw new Error('No link was returned.');
-            // The API builds links from its own FRONTEND_URL; force the public domain.
+            if (!data.secureLink) throw new Error('No link was returned.');
             setGenerated({
-                shareLink: rewriteShareLinkForSharing(data.shareLink),
+                secureLink: rewriteShareLinkForSharing(data.secureLink),
                 expiresAt: data.expiresAt,
+                allowDownload: data.allowDownload === true,
+                documentCount: data.documentCount ?? selectedDocuments.length,
             });
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Could not create the share link. Please try again.'));
@@ -155,9 +148,9 @@ export default function ShareProfileModal({ isOpen, onClose }) {
     };
 
     const handleCopy = async () => {
-        if (!generated?.shareLink) return;
+        if (!generated?.secureLink) return;
         try {
-            await navigator.clipboard.writeText(generated.shareLink);
+            await navigator.clipboard.writeText(generated.secureLink);
             setCopied(true);
             toast.success('Link copied to clipboard.');
             setTimeout(() => setCopied(false), 2500);
@@ -172,11 +165,11 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                 <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-100">
                     <div>
                         <h2 className="text-lg font-bold text-[#003971] flex items-center gap-2">
-                            <Link2 className="h-5 w-5" />
-                            Share Profile
+                            <ShieldCheck className="h-5 w-5" />
+                            Share Secure Link
                         </h2>
                         <p className="text-sm text-gray-500 mt-1">
-                            Create a secure link to your profile and choose exactly what the recipient can see.
+                            Choose exactly which documents this link may reveal.
                         </p>
                     </div>
                     <button
@@ -196,21 +189,24 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                             <div className="text-sm">
                                 <p className="font-bold text-green-800">Your secure link is ready</p>
                                 <p className="text-green-700 mt-0.5">
-                                    Anyone with this link can preview the selected items until it expires. Downloading is disabled.
+                                    {generated.documentCount} document{generated.documentCount === 1 ? '' : 's'} shared.{' '}
+                                    {generated.allowDownload
+                                        ? 'Recipients can view and download these files.'
+                                        : 'Preview only — recipients cannot download these files.'}
                                 </p>
                             </div>
                         </div>
 
                         <div>
-                            <label htmlFor="share-profile-link" className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
+                            <label htmlFor="share-docs-link" className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
                                 Shareable link
                             </label>
                             <div className="flex gap-2">
                                 <input
-                                    id="share-profile-link"
+                                    id="share-docs-link"
                                     type="text"
                                     readOnly
-                                    value={generated.shareLink}
+                                    value={generated.secureLink}
                                     onFocus={(e) => e.target.select()}
                                     className="flex-1 min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 font-mono"
                                 />
@@ -259,39 +255,8 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                     <>
                         <div className="px-6 py-5 space-y-6 max-h-[60vh] overflow-y-auto">
                             <section>
-                                <h3 className="text-sm font-bold text-gray-800 mb-1">Resume</h3>
-                                <p className="text-xs text-gray-500 mb-3">
-                                    Your profile summary (rank, sea time, skills) is always included.
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => setIncludeResume((prev) => !prev)}
-                                    className={`w-full flex items-center gap-3 p-4 border-2 rounded-xl text-left transition-colors ${
-                                        includeResume ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div
-                                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border ${
-                                            includeResume ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'
-                                        }`}
-                                    >
-                                        {includeResume && <Check size={14} className="text-white" strokeWidth={3} />}
-                                    </div>
-                                    <FileText className={`h-5 w-5 flex-shrink-0 ${includeResume ? 'text-[#003971]' : 'text-gray-400'}`} />
-                                    <div>
-                                        <p className="font-bold text-sm text-gray-900">Include full resume detail</p>
-                                        <p className="text-xs text-gray-500 mt-0.5">
-                                            Licences &amp; endorsements, education and STCW certificates.
-                                        </p>
-                                    </div>
-                                </button>
-                            </section>
-
-                            <section>
                                 <div className="flex items-center justify-between mb-1">
-                                    <h3 className="text-sm font-bold text-gray-800">
-                                        Document Wallet <span className="text-gray-400 font-normal">(Optional)</span>
-                                    </h3>
+                                    <h3 className="text-sm font-bold text-gray-800">Documents to share</h3>
                                     {selectedDocuments.length > 0 && (
                                         <span className="text-xs font-bold text-[#003971]">
                                             {selectedDocuments.length} selected
@@ -299,7 +264,7 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                                     )}
                                 </div>
                                 <p className="text-xs text-gray-500 mb-3">
-                                    Choose which certificates and documents this link may reveal.
+                                    Only the documents you tick will be visible on the shared page.
                                 </p>
 
                                 {isLoadingDocuments ? (
@@ -437,12 +402,41 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                                     ))}
                                 </div>
                             </section>
+
+                            <section>
+                                <h3 className="text-sm font-bold text-gray-800 mb-1">Downloads</h3>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    By default recipients can only preview documents in the browser.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAllowDownload((prev) => !prev)}
+                                    className={`w-full flex items-center gap-3 p-4 border-2 rounded-xl text-left transition-colors ${
+                                        allowDownload ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div
+                                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border ${
+                                            allowDownload ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'
+                                        }`}
+                                    >
+                                        {allowDownload && <Check size={14} className="text-white" strokeWidth={3} />}
+                                    </div>
+                                    <Download className={`h-5 w-5 flex-shrink-0 ${allowDownload ? 'text-[#003971]' : 'text-gray-400'}`} />
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-900">Allow recipients to download</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            Files can be saved outside MaritimeLink. Only enable for people you trust.
+                                        </p>
+                                    </div>
+                                </button>
+                            </section>
                         </div>
 
                         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
                             <p className="text-xs text-gray-500 flex items-center gap-1.5">
                                 <ShieldCheck className="h-4 w-4 text-[#003971]" />
-                                Preview only — recipients cannot download your files.
+                                {allowDownload ? 'Downloads enabled for this link.' : 'Preview only — no downloads.'}
                             </p>
                             <div className="flex items-center gap-2 ml-auto">
                                 <button
@@ -455,7 +449,7 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                                 <button
                                     type="button"
                                     onClick={handleGenerate}
-                                    disabled={nothingSelected || isGenerating}
+                                    disabled={selectedDocuments.length === 0 || isGenerating}
                                     className="bg-[#003971] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-[#002855] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}

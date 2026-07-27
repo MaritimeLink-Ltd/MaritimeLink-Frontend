@@ -14,7 +14,7 @@ export const API_CONFIG = {
 };
 
 /** Deployed frontend host for copied links (share token path stays unchanged). */
-const DEFAULT_PUBLIC_APP_ORIGIN = 'https://maritme-link-web.vercel.app';
+const DEFAULT_PUBLIC_APP_ORIGIN = 'https://www.maritimelink.co';
 
 /**
  * Origin used in user-facing links (e.g. document share). The API may return
@@ -277,6 +277,17 @@ export const API_ENDPOINTS = {
     RECRUITER_DETAIL: (id) => `/api/admin/recruiters/${id}`,
     ACCOUNT_DETAIL: (id) => `/api/admin/accounts/${id}`,
     REJECTED_ACCOUNTS: '/api/admin/accounts/rejected',
+    /** Account moderation — suspend / block / reinstate (separate from KYC approval) */
+    MODERATED_ACCOUNTS: '/api/admin/accounts/moderated',
+    ACCOUNT_MODERATION: (id) => `/api/admin/accounts/${id}/moderation`,
+    SUSPEND_ACCOUNT: (id) => `/api/admin/accounts/${id}/suspend`,
+    BLOCK_ACCOUNT: (id) => `/api/admin/accounts/${id}/block`,
+    REINSTATE_ACCOUNT: (id) => `/api/admin/accounts/${id}/reinstate`,
+    /** Member-to-member report queue */
+    REPORTS: '/api/admin/reports',
+    REPORTS_STATS: '/api/admin/reports/stats',
+    REPORT_DETAIL: (id) => `/api/admin/reports/${id}`,
+    REPORT_NOTES: (id) => `/api/admin/reports/${id}/notes`,
     /** Login/account status for both recruiters and training agents (same route). */
     UPDATE_RECRUITER_STATUS: (id) => `/api/admin/recruiters/${id}/status`,
     TRAINERS: '/api/admin/trainers',
@@ -314,6 +325,12 @@ export const API_ENDPOINTS = {
     COMPANY_DETAIL: (id) => `/api/admin/companies/${id}`,
     COMPANY_MEMBER: (companyId, recruiterId) =>
       `/api/admin/companies/${companyId}/members/${recruiterId}`,
+  },
+  /** Account reports — any signed-in member reporting another account for moderation */
+  REPORTS: {
+    CREATE: '/api/reports',
+    MINE: '/api/reports/mine',
+    REASONS: '/api/reports/reasons',
   },
   /** Conversations — recruiter, training agent, super admin start/create thread with a professional */
   CONVERSATIONS: {

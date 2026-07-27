@@ -12,10 +12,12 @@ import {
     AlertCircle,
     CheckCircle2,
     MessageSquare,
+    User,
     Wallet,
 } from 'lucide-react';
 import publicProfileService from '../../services/publicProfileService';
 import authService from '../../services/authService';
+import VerificationBadge from '../../components/common/VerificationBadge';
 
 /** Keep in sync with the serverless renderer in /api/profile.js. */
 function buildMetaDescription(profile) {
@@ -27,7 +29,10 @@ function buildMetaDescription(profile) {
     const vessels = profile.vesselTypes?.length
         ? ` Experience on ${profile.vesselTypes.slice(0, 4).join(', ')}.`
         : '';
-    return `${profile.name}${bits ? ` — ${bits}.` : '.'}${where}${vessels} View the full maritime career profile on MaritimeLink.`.trim();
+    const availability = profile.availableForWork
+        ? ' Currently available for work.'
+        : ' Currently employed / on contract.';
+    return `${profile.name}${bits ? ` — ${bits}.` : '.'}${where}${vessels}${availability} View the full maritime career profile on MaritimeLink.`.trim();
 }
 
 /**
@@ -126,6 +131,11 @@ export default function PublicProfile() {
         [profile],
     );
 
+    const experienceLines = useMemo(
+        () => (Array.isArray(profile?.experienceLines) ? profile.experienceLines : []),
+        [profile],
+    );
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -218,12 +228,7 @@ export default function PublicProfile() {
                         </div>
 
                         <div className="flex flex-col items-start sm:items-end gap-2">
-                            {profile.compliant && (
-                                <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                    <Check className="h-4 w-4" />
-                                    Fully Compliant
-                                </div>
-                            )}
+                            <VerificationBadge verified={profile.verified} />
                             {profile.availableForWork ? (
                                 <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
                                     <CheckCircle2 className="h-4 w-4" />
@@ -238,6 +243,35 @@ export default function PublicProfile() {
                         </div>
                     </div>
                 </div>
+
+                {profile.summary && (
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <User className="h-5 w-5 text-[#003366]" />
+                            <h2 className="text-lg font-bold text-[#003366]">Profile Summary</h2>
+                        </div>
+                        <p className="text-slate-700 leading-relaxed whitespace-pre-line">
+                            {profile.summary}
+                        </p>
+                    </div>
+                )}
+
+                {experienceLines.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                        <div className="flex items-center gap-2 mb-5">
+                            <Briefcase className="h-5 w-5 text-[#003366]" />
+                            <h2 className="text-lg font-bold text-[#003366]">Experience Summary</h2>
+                        </div>
+                        <div className="space-y-3">
+                            {experienceLines.map((line, idx) => (
+                                <div key={idx} className="flex items-start gap-3 bg-slate-50 p-3.5 rounded-xl">
+                                    <div className="h-2 w-2 rounded-full bg-[#003366] mt-2 flex-shrink-0" />
+                                    <p className="text-slate-700 font-medium">{line}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {skills.length > 0 && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
@@ -325,9 +359,7 @@ function PublicHeader() {
         <header className="border-b border-slate-200 bg-white">
             <div className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
                 <Link to="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-[#003366] flex items-center justify-center">
-                        <Ship className="w-5 h-5 text-white" />
-                    </div>
+                    <img src="/images/logo.png" alt="MaritimeLink" className="h-10 w-auto" />
                     <div>
                         <p className="text-lg font-semibold text-slate-900">MaritimeLink</p>
                         <p className="text-xs text-slate-500">Maritime careers network</p>

@@ -21,9 +21,10 @@ import DocumentDetail from './DocumentDetail';
 import CategoryDocuments from './CategoryDocuments';
 import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
-import { API_CONFIG, rewriteShareLinkForSharing } from '../../../../config/api.config';
+import { API_CONFIG } from '../../../../config/api.config';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import ShareDocumentsModal from '../../../../components/profile/ShareDocumentsModal';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
@@ -49,10 +50,6 @@ const DocumentsWallet = () => {
     const [showSignupPrompt, setShowSignupPrompt] = useState(false);
     const [exportProgress, setExportProgress] = useState({ done: 0, total: 0, label: '' });
     const [exportError, setExportError] = useState('');
-    const [generatedLink, setGeneratedLink] = useState('');
-    const [linkCopied, setLinkCopied] = useState(false);
-    const [shareLoading, setShareLoading] = useState(false);
-    const [shareDetails, setShareDetails] = useState(null);
     const signupPromptHandledRef = useRef(false);
 
     // Real data state
@@ -394,52 +391,18 @@ const DocumentsWallet = () => {
         });
     };
 
-    const shareSecureLink = async () => {
+    const shareSecureLink = () => {
         if (!isPremiumTier(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
-
         setShowShareModal(true);
-        setShareLoading(true);
-        setGeneratedLink('');
-        setShareDetails(null);
-        setLinkCopied(false);
-
-        try {
-            const response = await documentService.createShareLink();
-            const d = response?.data ?? response ?? {};
-            const secureLink = d.secureLink || '';
-            if (!secureLink) {
-                throw new Error('Could not generate secure link.');
-            }
-            setGeneratedLink(rewriteShareLinkForSharing(secureLink));
-            setShareDetails({
-                expiresAt: d.expiresAt || null,
-                previewOnly: d.previewOnly !== false,
-                expiresInSeconds: d.expiresInSeconds ?? null,
-            });
-        } catch (error) {
-            console.error('Create share link failed', error);
-            setGeneratedLink('');
-            setShareDetails(null);
-        } finally {
-            setShareLoading(false);
-        }
     };
 
     const handleShareSecureLink = () => {
         guardRestrictedAction(KYC_ACTIONS.SHARE_DOCUMENT_LINK, () => {
             void shareSecureLink();
         });
-    };
-
-    // Copy link to clipboard
-    const handleCopyLink = () => {
-        if (!generatedLink) return;
-        navigator.clipboard.writeText(generatedLink);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
     };
 
     if (view === 'upload') {
@@ -622,147 +585,10 @@ const DocumentsWallet = () => {
                 </div>
             )}
 
-            {/* Share Secure Link Modal */}
-            {showShareModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xl font-semibold text-gray-800">Share Secure Link</h3>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowShareModal(false);
-                                    setShareLoading(false);
-                                }}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                        </div>
-
-                        <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-3 py-2.5 mb-4 text-xs text-gray-700 space-y-1">
-                            <p>
-                                <span className="font-semibold text-[#003366]">7-day access.</span>{' '}
-                                This link stops working after seven days.
-                            </p>
-                            <p>
-                                <span className="font-semibold text-[#003366]">Preview only.</span>{' '}
-                                Recipients can view documents in the browser; direct downloads are not provided on the shared page.
-                            </p>
-                            {shareDetails?.expiresAt && (
-                                <p className="text-gray-600">
-                                    Expires:{' '}
-                                    <strong>
-                                        {new Date(shareDetails.expiresAt).toLocaleString(undefined, {
-                                            dateStyle: 'medium',
-                                            timeStyle: 'short',
-                                        })}
-                                    </strong>
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="mb-4">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                                Documents included ({walletDocumentsForShare.length})
-                            </p>
-                            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100 bg-gray-50/50">
-                                {walletDocumentsForShare.length === 0 ? (
-                                    <p className="p-3 text-sm text-gray-500">No wallet documents to share yet.</p>
-                                ) : (
-                                    walletDocumentsForShare.map((doc) => (
-                                        <div key={doc.id} className="px-3 py-2 text-sm">
-                                            <p className="font-medium text-gray-900 line-clamp-2">{doc.name || 'Untitled'}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5 capitalize">
-                                                {String(getDocumentDisplayCategory(doc) || '').replace(/-/g, ' ')}
-                                            </p>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="flex items-center gap-2 mb-3">
-                                {shareLoading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#003366] border-t-transparent" />
-                                        <p className="text-sm text-gray-600">Generating secure link…</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle size={20} className={generatedLink ? 'text-green-500' : 'text-amber-500'} />
-                                        <p className="text-sm text-gray-600">
-                                            {generatedLink
-                                                ? 'Secure link generated! Copy and send it only to people you trust.'
-                                                : 'We could not generate a secure link right now.'}
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-                            <p className="text-sm text-gray-500 mb-4">
-                                The link opens a MaritimeLink page (not a raw file URL). Share it securely.
-                            </p>
-
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 break-all text-sm text-gray-700 mb-4">
-                                {shareLoading
-                                    ? '…'
-                                    : generatedLink ||
-                                      'Unable to generate secure link right now. Please try again.'}
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={handleCopyLink}
-                                disabled={!generatedLink || shareLoading}
-                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${linkCopied
-                                    ? 'bg-green-50 text-green-600 border-2 border-green-500'
-                                    : generatedLink
-                                        ? 'bg-[#003366] text-white hover:bg-blue-900'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    }`}
-                            >
-                                {linkCopied ? (
-                                    <>
-                                        <CheckCircle size={18} />
-                                        <span>Link Copied!</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy size={18} />
-                                        <span>Copy Link</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        <div className="border-t border-gray-200 pt-4">
-                            <p className="text-xs text-gray-500 mb-3">Summary by folder</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {shareModalCategorySummary.map((cat) => (
-                                    <div key={cat.id} className="flex items-center gap-2 text-xs text-gray-600">
-                                        <cat.icon size={14} className={cat.iconColor} />
-                                        <span>
-                                            {cat.count} {cat.title.split(' ')[0]}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowShareModal(false);
-                                setShareLoading(false);
-                            }}
-                            className="w-full mt-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
+            <ShareDocumentsModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
 
             <DocumentWalletSignupPromptModal
                 isOpen={showSignupPrompt}

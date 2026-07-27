@@ -295,3 +295,28 @@ export function shouldPromptVerifyIdentity({
   if (localKycStatus === 'completed') return false;
   return !hasSubmittedKyc(profile);
 }
+
+/** Stage 1 account states that count as approved. */
+const APPROVED_ACCOUNT_STATUSES = new Set(['VERIFIED', 'APPROVED', 'ACTIVE']);
+
+/**
+ * Verification badge rule — mirrors `isIdentityVerified` in the API
+ * (Maritime-apis/src/utils/verificationBadge.ts). Keep the two in sync.
+ *
+ * Requires BOTH stages:
+ *   Stage 1 — account review  (`status` === VERIFIED)
+ *   Stage 2 — KYC identity check (`kyc.status` === APPROVED)
+ *
+ * Stage 1 is included so a suspended, blocked or reverted account stops showing the
+ * badge even though its KYC record still reads APPROVED. `isVerified` is never used —
+ * that flag only means the registration email OTP was confirmed.
+ */
+export function isIdentityVerified(profile) {
+  if (!profile || typeof profile !== 'object') return false;
+
+  const stage1 = APPROVED_ACCOUNT_STATUSES.has(
+    String(profile.status || '').trim().toUpperCase(),
+  );
+
+  return stage1 && hasStage2KycAccess(profile);
+}

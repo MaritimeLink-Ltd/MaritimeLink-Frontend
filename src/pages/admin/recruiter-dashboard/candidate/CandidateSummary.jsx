@@ -18,6 +18,7 @@ import {
     Eye,
     File,
     FileText,
+    Flag,
     Folder,
     Headphones,
     MessageSquare,
@@ -31,6 +32,9 @@ import {
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 import KycRestrictedView from '../../../../components/kyc/KycRestrictedView';
+import VerificationBadge from '../../../../components/common/VerificationBadge';
+import { isIdentityVerified } from '../../../../utils/kycStatus';
+import ReportAccountModal from '../../../../components/moderation/ReportAccountModal';
 import { useRecruiterSubscription } from '../../../../context/RecruiterSubscriptionContext';
 import {
     buildSeaServiceExperience,
@@ -303,6 +307,7 @@ function CandidateSummary({
     const [isBookingActionLoading, setIsBookingActionLoading] = useState(false);
     const [showBookingRejectModal, setShowBookingRejectModal] = useState(false);
     const [bookingRejectReason, setBookingRejectReason] = useState('');
+    const [reportOpen, setReportOpen] = useState(false);
 
     const normalizedFallback = useMemo(
         () => normalizeCandidateFallback(propCandidateData || location.state?.candidateData || {}),
@@ -748,7 +753,7 @@ function CandidateSummary({
             vesselTypes: seaExperience.uniqueVesselTypes,
             seaTime: formatTotalSeaTimeLabel(seaService),
             seaExperience,
-            compliant: professional?.isVerified || professional?.kyc?.status === 'APPROVED' || false,
+            verified: isIdentityVerified(professional),
             availableForWork: Boolean(professional?.availableForWork),
             experience: seaExperience.experienceLines,
             skills,
@@ -1195,6 +1200,13 @@ function CandidateSummary({
         });
     };
 
+    // Same id the messaging flow uses — the backend only accepts reports against
+    // an account the reporter has already interacted with.
+    const reportableProfessionalId = resolveMessagingProfessionalId(
+        professional,
+        candidateId,
+    );
+
     const handleMessageProfessional = () => {
         runProfileAction(KYC_ACTIONS.MESSAGE_PROFESSIONAL, () => {
             const pid = resolveMessagingProfessionalId(professional, candidateId);
@@ -1274,12 +1286,7 @@ function CandidateSummary({
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                            {candidate.compliant && (
-                                <div className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                    <Check className="h-4 w-4" />
-                                    Fully Compliant
-                                </div>
-                            )}
+                            <VerificationBadge verified={candidate.verified} />
                             {candidate.availableForWork ? (
                                 <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
                                     <CheckCircle2 className="h-4 w-4" />
@@ -1343,8 +1350,28 @@ function CandidateSummary({
                                 Message {candidate.name}
                             </button>
                         ) : null}
+
+                        {/* Super admins moderate accounts directly, so they never report. */}
+                        {!isAdmin && reportableProfessionalId ? (
+                            <button
+                                type="button"
+                                onClick={() => setReportOpen(true)}
+                                className="text-gray-500 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Report this account"
+                            >
+                                <Flag className="h-5 w-5" />
+                                Report
+                            </button>
+                        ) : null}
                     </div>
                 </div>
+
+                <ReportAccountModal
+                    isOpen={reportOpen}
+                    onClose={() => setReportOpen(false)}
+                    reportedId={reportableProfessionalId}
+                    reportedName={candidate.name}
+                />
 
                 {fromAttendanceReview && location.state?.bookingId ? (
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
