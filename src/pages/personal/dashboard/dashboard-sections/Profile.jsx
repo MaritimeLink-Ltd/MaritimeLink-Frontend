@@ -7,6 +7,7 @@ import SupportCenterSection from '../../../../components/support/SupportCenterSe
 import toast, { Toaster } from 'react-hot-toast';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import {
+    formatMembershipPlanName,
     formatMembershipPrice,
     getPlanHighlights,
     isMembershipPlanCurrent,
@@ -539,7 +540,7 @@ const Profile = () => {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-                                <h2 className="text-2xl font-semibold text-gray-800">Maritime Premium Plans</h2>
+                                <h2 className="text-2xl font-semibold text-gray-800">Subscription Plans</h2>
                                 <button onClick={() => setShowPremiumPlans(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                                     <X size={24} className="text-gray-600" />
                                 </button>
@@ -588,18 +589,18 @@ const Profile = () => {
                                                     )}
                                                     <div className="text-center mb-6">
                                                         <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                                                            {plan.name}
+                                                            {formatMembershipPlanName(plan)}
                                                         </h3>
-                                                        <div className="mb-4">
-                                                            <span className="text-4xl font-bold text-gray-800">
-                                                                {formatMembershipPrice(plan)}
-                                                            </span>
-                                                            {plan.price > 0 && (
+                                                        {plan.price > 0 && (
+                                                            <div className="mb-4">
+                                                                <span className="text-4xl font-bold text-gray-800">
+                                                                    {formatMembershipPrice(plan)}
+                                                                </span>
                                                                 <span className="text-gray-500">
                                                                     /{plan.interval || 'month'}
                                                                 </span>
-                                                            )}
-                                                        </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <ul className="space-y-3 mb-6">
                                                         {highlights.map((item) => (

@@ -5,31 +5,53 @@
  * access today — `activateMembershipFromSession` always sets tier to `PRO`
  * regardless of which priced product was purchased — so they share one list.
  */
-const FREE_HIGHLIGHTS = [
-  'Personal dashboard',
-  'Resume builder',
-  'Document wallet — upload & manage maritime documents',
-  'Apply to jobs (up to 10 active applications)',
-  'Email support',
+export const FREE_PLAN_HIGHLIGHTS = [
+  'Personal Dashboard',
+  'Professional Profile (Public)',
+  'Resume Builder',
+  'Document Wallet',
+  'Upload and manage maritime documents',
+  'Apply for unlimited jobs',
+  'Browse and book training courses',
+  'Receive and reply to recruiter messages',
+  'Application tracking',
+  'Certificate expiry reminders',
 ];
 
-const PREMIUM_HIGHLIGHTS = [
-  'Everything in Free, plus:',
-  'Unlimited job applications',
-  'Download your resume as a PDF',
-  'Share your resume via a secure link',
-  'Export your full document pack',
-  'Secure document share links',
+export const PREMIUM_PLAN_HIGHLIGHTS = [
+  'Everything in Free Professional, plus:',
+  'Share Secure Professional Profile Link',
+  'Share resume via secure Link',
+  'Download Resume (PDF)',
+  'Share Secure Document Wallet Link',
+  'Download document Pack',
   'Priority visibility in recruiter search results',
-  'Priority customer support',
+  'Priority Smart Candidate Matching',
+  'Priority Customer Support',
 ];
 
 const PLAN_HIGHLIGHTS = {
-  FREE: FREE_HIGHLIGHTS,
-  BASIC: PREMIUM_HIGHLIGHTS,
-  PRO: PREMIUM_HIGHLIGHTS,
-  PREMIUM: PREMIUM_HIGHLIGHTS,
+  FREE: FREE_PLAN_HIGHLIGHTS,
+  BASIC: PREMIUM_PLAN_HIGHLIGHTS,
+  PRO: PREMIUM_PLAN_HIGHLIGHTS,
+  PREMIUM: PREMIUM_PLAN_HIGHLIGHTS,
 };
+
+export function isFreePlan(plan) {
+  if (!plan) return false;
+  return plan.planCode === 'FREE' || plan.id === 'FREE' || !(plan.price > 0);
+}
+
+/**
+ * Card/header label for a plan. Stripe names the zero-price product "Free",
+ * which reads as a duplicate next to the "Free" price, so free plans get a
+ * single "Free Plan" label instead. Paid products are named "Maritime …" in
+ * Stripe; the "Maritime" prefix is redundant inside the app, so it is dropped.
+ */
+export function formatMembershipPlanName(plan) {
+  if (isFreePlan(plan)) return 'Free Plan';
+  return (plan?.name || '').replace(/^Maritime\s+/i, '');
+}
 
 export function formatMembershipPrice(plan) {
   if (!plan || plan.price <= 0) return 'Free';

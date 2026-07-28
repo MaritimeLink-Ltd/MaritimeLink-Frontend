@@ -136,6 +136,33 @@ export default function PublicProfile() {
         [profile],
     );
 
+    /**
+     * This page is public, so the viewer may be anyone. Send each role somewhere that
+     * actually exists for them rather than assuming everyone is a recruiter.
+     * Recruiters/admins land on candidate search with the name pre-filled, so they
+     * arrive at this professional instead of a blank search.
+     */
+    const viewerAction = useMemo(() => {
+        if (!isLoggedIn || !profile) return null;
+
+        const userType = String(localStorage.getItem('userType') || '').toLowerCase();
+        const searchState = { state: { searchQuery: profile.name } };
+
+        switch (userType) {
+            case 'recruiter':
+                return { label: `Find ${profile.name} in MaritimeLink`, to: '/recruiter/search', ...searchState };
+            case 'admin':
+                // /admin/search redirects to /recruiter/search, preserving state.
+                return { label: `Find ${profile.name} in MaritimeLink`, to: '/admin/search', ...searchState };
+            case 'training-provider':
+                return { label: 'Open my MaritimeLink dashboard', to: '/trainingprovider-dashboard' };
+            case 'professional':
+                return { label: 'Go to my dashboard', to: '/personal/dashboard' };
+            default:
+                return { label: 'Go to MaritimeLink', to: '/' };
+        }
+    }, [isLoggedIn, profile]);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -310,7 +337,7 @@ export default function PublicProfile() {
                     </div>
                     <p className="text-sm text-slate-600 mb-5">
                         {isLoggedIn
-                            ? 'Open the full candidate profile inside MaritimeLink to view the resume, document wallet and messaging.'
+                            ? `The full resume, verified document wallet and direct messaging for ${profile.name} are available inside MaritimeLink.`
                             : `The full resume, verified document wallet and direct messaging for ${profile.name} are available to MaritimeLink members.`}
                     </p>
 
@@ -320,29 +347,38 @@ export default function PublicProfile() {
                         <LockedCard icon={MessageSquare} title="Direct Messaging" blurb="Contact this professional directly." />
                     </div>
 
-                    {isLoggedIn ? (
+                    {viewerAction ? (
                         <button
                             type="button"
-                            onClick={() => navigate('/recruiter/search')}
+                            onClick={() => navigate(viewerAction.to, { state: viewerAction.state })}
                             className="bg-[#003366] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
                         >
-                            Find this candidate in MaritimeLink
+                            {viewerAction.label}
                         </button>
                     ) : (
-                        <div className="flex flex-wrap gap-3">
-                            <Link
-                                to="/signup"
-                                className="bg-[#003366] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
-                            >
-                                Join MaritimeLink
-                            </Link>
-                            <Link
-                                to="/signin"
-                                className="border-2 border-[#003366] text-[#003366] px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#003366] hover:text-white transition-colors"
-                            >
-                                Sign in
-                            </Link>
-                        </div>
+                        <>
+                            {/* Signed-out visitors are usually recruiters arriving from search. */}
+                            <div className="flex flex-wrap gap-3">
+                                <Link
+                                    to="/recruiter/login"
+                                    className="bg-[#003366] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#002855] transition-colors"
+                                >
+                                    Sign in as recruiter
+                                </Link>
+                                <Link
+                                    to="/signin"
+                                    className="border-2 border-[#003366] text-[#003366] px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#003366] hover:text-white transition-colors"
+                                >
+                                    Sign in as professional
+                                </Link>
+                            </div>
+                            <p className="text-sm text-slate-500 mt-3">
+                                New to MaritimeLink?{' '}
+                                <Link to="/signup" className="font-semibold text-[#003366] hover:underline">
+                                    Create an account
+                                </Link>
+                            </p>
+                        </>
                     )}
                 </div>
 

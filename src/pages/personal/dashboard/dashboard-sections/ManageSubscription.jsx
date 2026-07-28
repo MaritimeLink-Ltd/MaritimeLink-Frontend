@@ -4,6 +4,9 @@ import { ArrowLeft, CheckCircle, Crown, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
 import {
+    FREE_PLAN_HIGHLIGHTS,
+    PREMIUM_PLAN_HIGHLIGHTS,
+    formatMembershipPlanName,
     formatMembershipPrice,
     getPlanHighlights,
     isMembershipPlanCurrent,
@@ -11,30 +14,16 @@ import {
 
 const PLAN_DETAILS = {
     FREE: {
-        title: 'Free',
+        title: 'Free Plan',
         subtitle: 'Good for getting started',
         description: 'Basic profile visibility and standard support.',
-        highlights: [
-            'Personal dashboard',
-            'Resume builder',
-            'Document wallet — upload & manage maritime documents',
-            'Apply to jobs (up to 10 active applications)',
-            'Email support',
-        ],
+        highlights: FREE_PLAN_HIGHLIGHTS,
     },
     PRO: {
-        title: 'Maritime Premium',
+        title: 'Premium Professional',
         subtitle: 'Best for active professionals',
-        description: 'Unlimited applications, resume/document sharing, and priority visibility.',
-        highlights: [
-            'Unlimited job applications',
-            'Download your resume as a PDF',
-            'Share your resume via a secure link',
-            'Export your full document pack',
-            'Secure document share links',
-            'Priority visibility in recruiter search results',
-            'Priority customer support',
-        ],
+        description: 'Secure sharing, resume/document downloads, and priority visibility.',
+        highlights: PREMIUM_PLAN_HIGHLIGHTS,
     },
 };
 
@@ -168,20 +157,26 @@ const ManageSubscription = () => {
                                 <div className="flex items-center gap-3">
                                     <Crown size={24} />
                                     <div>
-                                        <div className="text-lg font-medium">{activePlan?.name || PLAN_DETAILS[activeTier]?.title || 'Free'}</div>
+                                        <div className="text-lg font-medium">
+                                            {activePlan
+                                                ? formatMembershipPlanName(activePlan)
+                                                : PLAN_DETAILS[activeTier]?.title || 'Free Plan'}
+                                        </div>
                                         <div className="text-sm opacity-90">
                                             {PLAN_DETAILS[activeTier]?.subtitle || 'Your current membership plan'}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold">
-                                        {activePlan ? formatMembershipPrice(activePlan) : 'Free'}
+                                {activePlan?.price > 0 && (
+                                    <div className="text-right">
+                                        <div className="text-2xl font-bold">
+                                            {formatMembershipPrice(activePlan)}
+                                        </div>
+                                        <div className="text-sm opacity-90">
+                                            / {activePlan?.interval || 'month'}
+                                        </div>
                                     </div>
-                                    <div className="text-sm opacity-90">
-                                        / {activePlan?.interval || 'month'}
-                                    </div>
-                                </div>
+                                )}
                             </div>
                             {membership?.membershipUpdatedAt && (
                                 <div className="mt-4 text-xs opacity-80">
@@ -215,7 +210,7 @@ const ManageSubscription = () => {
                                     >
                                         <div className="flex items-center justify-between mb-3">
                                             <div>
-                                                <h4 className="text-lg font-semibold text-gray-900">{plan.name}</h4>
+                                                <h4 className="text-lg font-semibold text-gray-900">{formatMembershipPlanName(plan)}</h4>
                                                 <p className="text-sm text-gray-500">{details.description}</p>
                                             </div>
                                             {isCurrent && (
@@ -225,10 +220,12 @@ const ManageSubscription = () => {
                                             )}
                                         </div>
 
-                                        <div className="mb-4">
-                                            <div className="text-3xl font-bold text-gray-900">{formatMembershipPrice(plan)}</div>
-                                            <div className="text-sm text-gray-500">per {plan.interval || 'month'}</div>
-                                        </div>
+                                        {plan.price > 0 && (
+                                            <div className="mb-4">
+                                                <div className="text-3xl font-bold text-gray-900">{formatMembershipPrice(plan)}</div>
+                                                <div className="text-sm text-gray-500">per {plan.interval || 'month'}</div>
+                                            </div>
+                                        )}
 
                                         <ul className="space-y-2 mb-5">
                                             {highlights.map((item) => (
