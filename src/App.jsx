@@ -14,6 +14,7 @@ import PublicTrainingProviderTerms from './pages/auth/PublicTrainingProviderTerm
 import PublicProfessionalUserTerms from './pages/auth/PublicProfessionalUserTerms';
 import PublicDataRetention from './pages/auth/PublicDataRetention';
 import PublicInformationSecurity from './pages/auth/PublicInformationSecurity';
+import LegalRouteGuard from './components/auth/LegalRouteGuard';
 import SelectProfession from './pages/personal/auth/SelectProfession';
 import UploadProfilePhoto from './pages/personal/auth/UploadProfilePhoto';
 // ...existing code...
@@ -201,17 +202,18 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/otp-verification" element={<OTPVerification />} />
-          <Route path="/terms" element={<PublicTerms />} />
-          <Route path="/privacy" element={<PublicPrivacy />} />
-          <Route path="/cookie-policy" element={<PublicCookie />} />
-          <Route path="/acceptable-use-policy" element={<PublicAcceptableUse />} />
-          <Route path="/recruiter-terms-of-service" element={<PublicRecruiterTerms />} />
-          <Route path="/training-provider-terms-of-service" element={<PublicTrainingProviderTerms />} />
-          <Route path="/professional-user-terms-of-service" element={<PublicProfessionalUserTerms />} />
-          <Route path="/data-retention-secure-deletion-policy" element={<PublicDataRetention />} />
+          {/* Legal policies — members only (see LegalRouteGuard). Signup shows Terms inline instead. */}
+          <Route path="/terms" element={<LegalRouteGuard><PublicTerms /></LegalRouteGuard>} />
+          <Route path="/privacy" element={<LegalRouteGuard><PublicPrivacy /></LegalRouteGuard>} />
+          <Route path="/cookie-policy" element={<LegalRouteGuard><PublicCookie /></LegalRouteGuard>} />
+          <Route path="/acceptable-use-policy" element={<LegalRouteGuard><PublicAcceptableUse /></LegalRouteGuard>} />
+          <Route path="/recruiter-terms-of-service" element={<LegalRouteGuard><PublicRecruiterTerms /></LegalRouteGuard>} />
+          <Route path="/training-provider-terms-of-service" element={<LegalRouteGuard><PublicTrainingProviderTerms /></LegalRouteGuard>} />
+          <Route path="/professional-user-terms-of-service" element={<LegalRouteGuard><PublicProfessionalUserTerms /></LegalRouteGuard>} />
+          <Route path="/data-retention-secure-deletion-policy" element={<LegalRouteGuard><PublicDataRetention /></LegalRouteGuard>} />
           <Route
               path="/information-security-vulnerability-disclosure-policy"
-              element={<PublicInformationSecurity />}
+              element={<LegalRouteGuard><PublicInformationSecurity /></LegalRouteGuard>}
           />
           <Route path="/accept-terms" element={<AcceptTerms />} />
           <Route path="/upload-profile-photo" element={<UploadProfilePhoto />} />

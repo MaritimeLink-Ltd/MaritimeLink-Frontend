@@ -23,6 +23,7 @@ import documentService from '../../../../services/documentService';
 import authService from '../../../../services/authService';
 import { API_CONFIG } from '../../../../config/api.config';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
+import { summarizeExpiry } from '../../../../utils/documentStatus';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import ShareDocumentsModal from '../../../../components/profile/ShareDocumentsModal';
 import { useKycGuard } from '../../../../context/KycContext';
@@ -189,10 +190,14 @@ const DocumentsWallet = () => {
             if (!docsByCategoryId[catId]) docsByCategoryId[catId] = [];
             docsByCategoryId[catId].push(doc);
         });
-        return categoryDefinitions.map((def) => ({
-            ...def,
-            catDocs: docsByCategoryId[def.id] || [],
-        }));
+        return categoryDefinitions.map((def) => {
+            const catDocs = docsByCategoryId[def.id] || [];
+            return {
+                ...def,
+                catDocs,
+                expiry: summarizeExpiry(catDocs),
+            };
+        });
     }, [documents]);
 
     const shareModalCategorySummary = useMemo(
@@ -529,6 +534,25 @@ const DocumentsWallet = () => {
                                     <div>
                                         <h3 className="text-base font-bold text-gray-800 leading-tight">{cat.title}</h3>
                                         <p className="text-gray-400 text-sm mt-0.5 font-medium">{cat.count} Documents</p>
+                                        {cat.count > 0 && (
+                                            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                                {cat.expiry.expired > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-100">
+                                                        {cat.expiry.expired} expired
+                                                    </span>
+                                                )}
+                                                {cat.expiry.expiring > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                                                        {cat.expiry.expiring} expiring
+                                                    </span>
+                                                )}
+                                                {!cat.expiry.needsAttention && (
+                                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                        All valid
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

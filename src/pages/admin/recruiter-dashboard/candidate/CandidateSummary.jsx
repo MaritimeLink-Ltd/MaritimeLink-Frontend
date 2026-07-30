@@ -14,6 +14,7 @@ import {
     CheckCircle2,
     ChevronLeft,
     Clock,
+    Crown,
     Download,
     Eye,
     File,
@@ -430,6 +431,7 @@ function CandidateSummary({
                         setStatusUpdatedBy(extractUpdatedByRole(responseData));
                     } else if (rawApplicant) {
                         setFetchedCandidate(rawApplicant);
+                        if (rawApplicant.access) setCandidateAccess(rawApplicant.access);
                         if (rawApplicant.status) setApplicationStage(mapApiStatusToStage(rawApplicant.status));
                         setStatusUpdatedBy(extractUpdatedByRole(rawApplicant));
                     }
@@ -448,6 +450,9 @@ function CandidateSummary({
 
             if (!isAdmin && rawApplicant) {
                 setFetchedCandidate(rawApplicant);
+                if (rawApplicant.access) {
+                    setCandidateAccess(rawApplicant.access);
+                }
                 if (rawApplicant.status) {
                     setApplicationStage(mapApiStatusToStage(rawApplicant.status));
                 }
@@ -699,6 +704,17 @@ function CandidateSummary({
         isTrainingProviderCandidateBrowse;
 
     const showDocumentExpiryList = suppressDocumentWallet && !isAdmin;
+
+    /**
+     * Free/Flex recruiters get the document list withheld by the API, which used to
+     * render as "No documents on file" — indistinguishable from a candidate who
+     * genuinely has none. `documentCount` is always the real total, so we can show
+     * that the documents exist and prompt an upgrade instead.
+     */
+    const documentsLockedByPlan = Boolean(candidateAccess && !candidateAccess.viewDocumentWallet);
+    const lockedDocumentCount = Number(professional?.documentCount) || 0;
+    /** Only pitch an upgrade when there is genuinely something behind the gate. */
+    const showDocumentUpgradePrompt = documentsLockedByPlan && lockedDocumentCount > 0;
 
     const runProfileAction = (actionLabel, callback) => {
         guardRestrictedAction(actionLabel, callback);
@@ -1710,7 +1726,9 @@ function CandidateSummary({
                                 <div>
                                     <h3 className="text-2xl font-bold text-[#003971] mb-1">Documents</h3>
                                     <p className="text-sm text-gray-600">
-                                        Certificate names and expiry dates — files are not available to view or download.
+                                        {showDocumentUpgradePrompt
+                                            ? 'Document details require a Flex or Premium Recruiter plan.'
+                                            : 'Certificate names and expiry dates — files are not available to view or download.'}
                                     </p>
                                 </div>
                                 <button
@@ -1758,6 +1776,32 @@ function CandidateSummary({
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                ) : showDocumentUpgradePrompt ? (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
+                                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#003366]">
+                                            <Crown size={26} className="text-yellow-400 fill-yellow-400" />
+                                        </div>
+                                        <p className="text-base font-semibold text-gray-900 mb-1">
+                                            {`${lockedDocumentCount} document${lockedDocumentCount === 1 ? '' : 's'} on file`}
+                                        </p>
+                                        <p className="text-sm text-gray-600 mb-5">
+                                            Upgrade to Flex or Premium Recruiter to see this candidate&apos;s
+                                            certificates and expiry dates.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowDocumentExpiryModal(false);
+                                                recruiterSubscription?.openUpgradeModal(
+                                                    "Viewing this candidate's documents",
+                                                );
+                                            }}
+                                            className="inline-flex items-center justify-center gap-2 bg-[#003366] text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-900 transition-colors"
+                                        >
+                                            <Crown size={18} />
+                                            View Plans
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="bg-gray-50 p-5 rounded-xl text-sm text-gray-600 text-center">

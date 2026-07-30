@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { COURSE_COMMISSION_RATE_PERCENT } from '../../../constants/commission';
 import {
     User,
     Shield,
@@ -681,9 +682,9 @@ const TrainingProviderProfile = () => {
                                     Course Commission
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    MaritimeLink takes a <strong>12% commission</strong> on internal
-                                    training bookings made through the platform — you keep the
-                                    remaining <strong>88%</strong>.
+                                    Set your own course prices. MaritimeLink retains a{' '}
+                                    <strong>{COURSE_COMMISSION_RATE_PERCENT}% commission</strong> on
+                                    successful bookings.
                                 </p>
                             </div>
 

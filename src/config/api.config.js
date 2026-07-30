@@ -138,6 +138,7 @@ export const API_ENDPOINTS = {
     RESEND_OTP: '/api/recruiter/resend-otp',
     PERSONAL_INFO: '/api/recruiter/personal-info',
     VERIFY_PHONE: '/api/recruiter/verify-phone',
+    RESEND_PHONE_OTP: '/api/recruiter/resend-phone-otp',
     /** Gemini + Google Search grounding preview (registration / optional UI). */
     COMPANY_DETAILS_LOOKUP: '/api/recruiter/company-details/lookup',
     COMPANY_DETAILS: '/api/recruiter/company-details',

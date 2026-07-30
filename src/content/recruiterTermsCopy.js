@@ -154,7 +154,7 @@ export const RECRUITER_TERMS_SECTIONS = [
     {
         "number": "29",
         "title": "CONTACT DETAILS",
-        "content": "Questions regarding these Recruiter Terms should be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Recruiter Portal."
+        "content": "Questions regarding these Recruiter Terms should be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Recruiter Portal."
     },
     {
         "number": "30",

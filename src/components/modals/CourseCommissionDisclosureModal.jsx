@@ -1,5 +1,6 @@
 import { Percent } from 'lucide-react';
 import ModalOverlay from '../common/ModalOverlay';
+import { COURSE_COMMISSION_RATE_PERCENT } from '../../constants/commission';
 
 function CourseCommissionDisclosureModal({ isOpen, onConfirm, onCancel }) {
     return (
@@ -16,8 +17,9 @@ function CourseCommissionDisclosureModal({ isOpen, onConfirm, onCancel }) {
                 </h2>
 
                 <p className="text-center text-gray-600 mb-8">
-                    MaritimeLink takes a <strong>12% commission</strong> on internal training bookings
-                    made through the platform — you keep the remaining <strong>88%</strong>.
+                    Set your own course prices. MaritimeLink retains a{' '}
+                    <strong>{COURSE_COMMISSION_RATE_PERCENT}% commission</strong> on successful
+                    bookings.
                 </p>
 
                 <div className="space-y-3">

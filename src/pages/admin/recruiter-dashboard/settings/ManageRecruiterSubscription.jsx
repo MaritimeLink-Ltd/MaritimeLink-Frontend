@@ -6,37 +6,78 @@ import recruiterSettingsService from '../../../../services/recruiterSettingsServ
 import jobService from '../../../../services/jobService';
 import { isFlexJobActive } from '../../../../utils/recruiterTier';
 
+/**
+ * Plan cards, transcribed from the MaritimeLink Pricing & Subscription Conditions
+ * document. Every included feature is listed in full and in document order — these
+ * cards are what the recruiter is buying against, so nothing is summarised away.
+ *
+ * `inherits` renders as a lead-in line above the ticked list ("Everything in X, plus:").
+ * The enforced matrix lives in `utils/recruiterTier.js` (client) and
+ * `recruiterCapabilities.ts` (server); keep all three in step.
+ */
 const PLAN_DETAILS = {
     FREE: {
         title: 'Free Recruiter',
-        subtitle: 'Explore the platform',
+        subtitle: 'For recruiters who are new to MaritimeLink and want to explore the platform.',
         highlights: [
-            '1 active job listing',
-            'Up to 5 applications per job',
-            'Candidate search with filters',
-            'Message applicants',
+            'Create 1 Active Job Listing',
+            'Receive up to 5 applications for that job',
+            'Manage applications for that job',
+            'Recruiter Dashboard',
+            'Search candidates using all available filters',
+            'View candidate summary profiles',
+            'Message candidates who have applied to your vacancy',
         ],
     },
     FLEX: {
         title: 'Flex Recruiter',
-        subtitle: 'Purchased per job listing',
+        subtitle:
+            "For companies that recruit occasionally but require access to MaritimeLink's premium recruitment tools.",
+        meta: 'Listing duration: 30 days',
+        inherits: 'Everything in Free Recruiter, plus:',
         highlights: [
-            'One 30-day premium job listing',
+            'One 30-Day Premium Job Listing',
             'Unlimited applications for that listing',
-            'Smart candidate matching & invites',
-            'View resume & document wallet for applicants',
+            'Smart Candidate Matching',
+            'Invite Candidates',
+            'Manage applications',
+            'Recruiter Dashboard',
+            'Search candidates using all available filters',
+            'View candidate summary profiles',
+            'View Resume',
+            'View Document Wallet for candidates who applied to that vacancy only',
+            'Message candidates who have applied to your vacancy',
         ],
     },
     PREMIUM: {
         title: 'Premium Recruiter',
-        subtitle: 'For continuous hiring',
+        subtitle:
+            'For recruiters, shipowners, crewing companies and manning agencies recruiting continuously.',
+        inherits: 'Everything in Flex Recruiter, plus:',
         highlights: [
-            'Unlimited active & premium job listings',
-            'Unlimited candidate search & applications',
-            'Direct messaging before application',
-            'CSV export, premium badge & priority support',
+            'Unlimited Active Job Listings',
+            'Unlimited Premium Job Listings',
+            'Unlimited Applications',
+            'Unlimited Candidate Search',
+            'Smart Candidate Matching',
+            'View Resume',
+            'View Document Wallet for all professionals',
+            'Invite Candidates',
+            'Direct Messaging before application',
+            'CSV Export',
+            'Premium Recruiter Badge',
+            'Priority Company Listing',
+            'Priority Customer Support',
         ],
     },
+};
+
+/** Plan prices come from the API (`membership.plans`); always render 2 decimals. */
+const formatPlanPrice = (plan, planCode) => {
+    if (planCode === 'FREE') return 'Free';
+    const amount = Number(plan?.price);
+    if (!Number.isFinite(amount)) return '—';
+    return `£${amount.toFixed(2)}`;
 };
 
 const ManageRecruiterSubscription = () => {
@@ -159,6 +200,31 @@ const ManageRecruiterSubscription = () => {
         [myJobs],
     );
     const flexActiveJobs = useMemo(() => myJobs.filter(isFlexJobActive), [myJobs]);
+    const hasActiveFlex = flexActiveJobs.length > 0;
+
+    /** API-provided plan pricing, keyed by plan code. */
+    const planPricing = useMemo(() => {
+        const plans = Array.isArray(membership?.plans) ? membership.plans : [];
+        return Object.fromEntries(plans.map((plan) => [plan.planCode || plan.id, plan]));
+    }, [membership]);
+
+    /**
+     * The plan to present as active.
+     *
+     * Flex is bought per job listing rather than stored on `recruiter.tier`, so an
+     * account with live Flex listings still reads as FREE on the API. Showing that
+     * verbatim was the bug: a Flex purchase left "Free Recruiter" highlighted while the
+     * app behaved as if upgraded. Premium outranks Flex; Flex outranks Free.
+     */
+    const displayPlan = activeTier === 'PREMIUM' ? 'PREMIUM' : hasActiveFlex ? 'FLEX' : 'FREE';
+
+    /** Soonest Flex expiry — Flex stays active until then and can't be dropped. */
+    const flexExpiresAt = useMemo(() => {
+        if (!hasActiveFlex) return null;
+        return flexActiveJobs
+            .map((job) => new Date(job.premiumListingExpiresAt))
+            .sort((a, b) => a - b)[0];
+    }, [flexActiveJobs, hasActiveFlex]);
 
     useEffect(() => {
         if (selectedJobId) return;
@@ -234,10 +300,11 @@ const ManageRecruiterSubscription = () => {
                             <div className="flex items-center gap-3">
                                 <Crown size={24} />
                                 <div>
-                                    <div className="text-lg font-medium">{PLAN_DETAILS[activeTier]?.title || 'Free Recruiter'}</div>
+                                    <div className="text-lg font-medium">{PLAN_DETAILS[displayPlan]?.title || 'Free Recruiter'}</div>
                                     <div className="text-sm opacity-90">
-                                        Your account subscription plan
-                                        {activeTier === 'FREE' && ' (Flex upgrades are per-listing and don\'t change this)'}
+                                        {displayPlan === 'FLEX'
+                                            ? `Active until ${flexExpiresAt?.toLocaleDateString()} — upgrade to Premium at any time`
+                                            : 'Your account subscription plan'}
                                     </div>
                                 </div>
                             </div>
@@ -260,7 +327,7 @@ const ManageRecruiterSubscription = () => {
                         <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${flexActiveJobs.length === 0 ? 'mt-4' : ''}`}>
                             {['FREE', 'FLEX', 'PREMIUM'].map((planCode) => {
                                 const details = PLAN_DETAILS[planCode];
-                                const isCurrent = planCode === activeTier || (planCode === 'FREE' && activeTier === 'FREE');
+                                const isCurrent = planCode === displayPlan;
 
                                 return (
                                     <div
@@ -276,12 +343,20 @@ const ManageRecruiterSubscription = () => {
 
                                         <div className="mb-4">
                                             <div className="text-3xl font-bold text-gray-900">
-                                                {planCode === 'FREE' ? 'Free' : planCode === 'FLEX' ? '£99.90' : '£199.90'}
+                                                {formatPlanPrice(planPricing[planCode], planCode)}
                                             </div>
                                             <div className="text-sm text-gray-500">
                                                 {planCode === 'FLEX' ? 'per job listing' : planCode === 'PREMIUM' ? 'per month' : ''}
                                             </div>
                                         </div>
+
+                                        {details.meta && (
+                                            <p className="text-xs font-medium text-gray-500 -mt-3 mb-4">{details.meta}</p>
+                                        )}
+
+                                        {details.inherits && (
+                                            <p className="text-sm font-semibold text-gray-800 mb-2">{details.inherits}</p>
+                                        )}
 
                                         <ul className="space-y-2 mb-5 flex-1">
                                             {details.highlights.map((item) => (
@@ -293,13 +368,22 @@ const ManageRecruiterSubscription = () => {
                                         </ul>
 
                                         {planCode === 'FREE' && (
-                                            <button
-                                                onClick={handleDowngradeToFree}
-                                                disabled={isUpdating || activeTier === 'FREE'}
-                                                className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-gray-900 text-white"
-                                            >
-                                                {activeTier === 'FREE' ? 'Current Plan' : 'Switch to Free'}
-                                            </button>
+                                            <div className="space-y-2">
+                                                <button
+                                                    onClick={handleDowngradeToFree}
+                                                    disabled={isUpdating || displayPlan === 'FREE' || hasActiveFlex}
+                                                    className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-gray-900 text-white"
+                                                >
+                                                    {displayPlan === 'FREE' ? 'Current Plan' : 'Switch to Free'}
+                                                </button>
+                                                {hasActiveFlex && (
+                                                    <p className="text-xs text-gray-500 text-center">
+                                                        Your Flex listing runs until{' '}
+                                                        {flexExpiresAt?.toLocaleDateString()}. You can upgrade to
+                                                        Premium, but not drop to Free before then.
+                                                    </p>
+                                                )}
+                                            </div>
                                         )}
 
                                         {planCode === 'FLEX' && (

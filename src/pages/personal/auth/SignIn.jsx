@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
 import { syncTermsAcceptedFromProfile } from '../../../utils/termsAcceptance';
+import { readReturnTo } from '../../../utils/postLoginRedirect';
 
 function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Set when a guard turned the visitor away (e.g. a legal policy page); send them
+  // back there after signing in instead of dropping them on the dashboard.
+  const returnTo = readReturnTo(location.search);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -58,7 +63,7 @@ function SignIn() {
       }
 
       syncTermsAcceptedFromProfile(user);
-      navigate('/personal/dashboard');
+      navigate(returnTo || '/personal/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

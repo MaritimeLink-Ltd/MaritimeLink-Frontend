@@ -159,7 +159,7 @@ export const TRAINING_PROVIDER_TERMS_SECTIONS = [
     {
         "number": "30",
         "title": "CONTACT DETAILS",
-        "content": "Questions regarding these Training Provider Terms should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Training Provider Dashboard."
+        "content": "Questions regarding these Training Provider Terms should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Training Provider Dashboard."
     },
     {
         "number": "31",

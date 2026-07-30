@@ -12,11 +12,11 @@ function PublicTerms() {
                     </div>
 
                     <Link
-                        to="/signup"
+                        to="/"
                         className="inline-flex items-center gap-2 text-sm text-[#003971] hover:underline mb-4 shrink-0"
                     >
                         <ArrowLeft size={16} />
-                        Back to Sign Up
+                        Back to Home
                     </Link>
 
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 shrink-0">

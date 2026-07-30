@@ -7,8 +7,16 @@ export function isFlexJobActive(job) {
     return new Date(job.premiumListingExpiresAt).getTime() > Date.now();
 }
 
-/** Mirrors the backend's getRecruiterFeatureAccess matrix for optimistic UI gating. */
-export function getRecruiterFeatureAccess({ recruiterTier, job } = {}) {
+/**
+ * Mirrors the backend's getRecruiterFeatureAccess matrix for optimistic UI gating.
+ * Keep in step with `src/utils/recruiterCapabilities.ts` — the backend is the real gate.
+ *
+ * @param {object}  params
+ * @param {string}  params.recruiterTier
+ * @param {object}  [params.job] - the job in context, for per-listing Flex perks
+ * @param {boolean} [params.hasAnyActiveFlexListing] - recruiter has a live Flex listing on ANY job
+ */
+export function getRecruiterFeatureAccess({ recruiterTier, job, hasAnyActiveFlexListing } = {}) {
     const isPremium = isPremiumRecruiterTier(recruiterTier);
 
     if (isPremium) {
@@ -25,14 +33,18 @@ export function getRecruiterFeatureAccess({ recruiterTier, job } = {}) {
         };
     }
 
-    const flexActive = isFlexJobActive(job);
+    const jobFlexActive = isFlexJobActive(job);
+    // Per the pricing doc, Flex scopes the Document Wallet to "candidates who applied to
+    // that vacancy", but View Resume carries no such restriction — so it unlocks off any
+    // currently-active Flex listing, not just this job's.
+    const anyFlexActive = Boolean(hasAnyActiveFlexListing) || jobFlexActive;
 
     return {
-        unlimitedApplications: flexActive,
-        smartMatching: flexActive,
-        inviteCandidates: flexActive,
-        viewResume: flexActive,
-        viewDocumentWallet: flexActive,
+        unlimitedApplications: jobFlexActive,
+        smartMatching: jobFlexActive,
+        inviteCandidates: jobFlexActive,
+        viewResume: anyFlexActive,
+        viewDocumentWallet: jobFlexActive,
         directMessagingBeforeApplication: false,
         csvExport: false,
         premiumBadge: false,

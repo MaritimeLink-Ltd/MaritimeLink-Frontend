@@ -48,6 +48,7 @@ import {
     Heart,
 } from 'lucide-react';
 import Reveal from '../components/common/Reveal';
+import { LEGAL_ROUTES } from '../constants/legalRoutes';
 
 const ROLES = [
     {
@@ -636,25 +637,12 @@ const FOOTER_COLUMNS = [
     },
 ];
 
-// Rendered as a single horizontal strip above the copyright bar so all legal links sit on one line.
-const LEGAL_LINKS = [
-    { label: 'Privacy Policy', to: '/privacy' },
-    { label: 'Terms & Conditions', to: '/terms' },
-    { label: 'Cookie Policy', to: '/cookie-policy' },
-    { label: 'Acceptable Use Policy', to: '/acceptable-use-policy' },
-    { label: 'Recruiter Terms', to: '/recruiter-terms-of-service' },
-    { label: 'Training Provider Terms', to: '/training-provider-terms-of-service' },
-    { label: 'Professional User Terms', to: '/professional-user-terms-of-service' },
-    { label: 'Data Retention & Deletion', to: '/data-retention-secure-deletion-policy' },
-    { label: 'Security & Vulnerability Disclosure', to: '/information-security-vulnerability-disclosure-policy' },
-];
-
-// Fill in the hrefs once the official pages exist; empty ones render as "coming soon".
+// Official MaritimeLink channels. Any entry left with an empty href renders as "coming soon".
 const SOCIAL_LINKS = [
-    { icon: Linkedin, label: 'LinkedIn', href: '' },
-    { icon: Facebook, label: 'Facebook', href: '' },
-    { icon: Instagram, label: 'Instagram', href: '' },
-    { icon: Youtube, label: 'YouTube', href: '' },
+    { icon: Linkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/company/maritimelink/' },
+    { icon: Facebook, label: 'Facebook', href: 'https://www.facebook.com/MaritimeLink' },
+    { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/maritimelink_official/' },
+    { icon: Youtube, label: 'YouTube', href: 'https://www.youtube.com/channel/UCqnSuQUH-auymsWbwtcqquw' },
 ];
 
 // Ordered per client priority: professional-focused points first, platform-wide points after.
@@ -2239,9 +2227,10 @@ function LandingPage() {
                     ))}
                 </div>
 
-                {/* Legal strip — all legal links on one line, wrapping only when the screen is too narrow */}
+                {/* Legal strip — all legal links on one line, wrapping only when the screen is too narrow.
+                    Pages themselves are members-only; a signed-out visitor is sent to login and back. */}
                 <div className="max-w-7xl mx-auto border-t border-white/10 pt-6 pb-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5">
-                    {LEGAL_LINKS.map((link) => (
+                    {LEGAL_ROUTES.map((link) => (
                         <button
                             key={link.label}
                             type="button"

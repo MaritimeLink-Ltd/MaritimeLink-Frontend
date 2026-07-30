@@ -6,6 +6,7 @@ import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
 import toast, { Toaster } from 'react-hot-toast';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF } from '../../../../constants/contact';
 import {
     formatMembershipPlanName,
     formatMembershipPrice,
@@ -452,12 +453,15 @@ const Profile = () => {
                         <div className="mb-8">
                             <p className="text-xs text-gray-400 mb-3">Contact</p>
                             <div className="space-y-2">
-                                <div className="w-full flex items-center justify-between p-3 rounded-lg">
+                                <a
+                                    href={SUPPORT_EMAIL_HREF}
+                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                                >
                                     <div className="flex items-center gap-3">
                                         <Mail size={16} className="text-[#003971]" />
-                                        <span className="text-gray-800 text-sm">info@maritime.com</span>
+                                        <span className="text-gray-800 text-sm">{SUPPORT_EMAIL}</span>
                                     </div>
-                                </div>
+                                </a>
                                 <button
                                     onClick={() => setShowFeedbackModal(true)}
                                     className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"

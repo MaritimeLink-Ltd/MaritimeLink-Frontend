@@ -13,13 +13,20 @@ class ProfileShareService {
      * @param {boolean} [options.includeResume=true] - Share the full resume detail.
      * @param {string[]} [options.documentIds=[]] - Document wallet items to expose.
      * @param {number} [options.expiresInHours=24] - Link lifetime (1-168 hours).
+     * @param {boolean} [options.allowDownload=false] - Let recipients save the files.
      */
-    async createShareLink({ includeResume = true, documentIds = [], expiresInHours = 24 } = {}) {
+    async createShareLink({
+        includeResume = true,
+        documentIds = [],
+        expiresInHours = 24,
+        allowDownload = false,
+    } = {}) {
         try {
             return await httpClient.post(API_ENDPOINTS.PROFILE_SHARE.CREATE_LINK, {
                 includeResume,
                 documentIds,
                 expiresInHours,
+                allowDownload,
             });
         } catch (error) {
             console.error('Create profile share link error:', error);
@@ -45,9 +52,11 @@ class ProfileShareService {
      * API actually listens on. The API sends permissive CORS, so a direct cross-origin
      * fetch behaves identically in dev and production.
      */
-    sharedFileUrl(token, documentId) {
+    sharedFileUrl(token, documentId, { download = false } = {}) {
         const path = API_ENDPOINTS.PROFILE_SHARE.SHARED_FILE(token, documentId);
-        return `${API_CONFIG.BASE_URL.replace(/\/+$/, '')}${path}`;
+        // `?download=1` is ignored by the API unless the sharer allowed downloads.
+        const query = download ? '?download=1' : '';
+        return `${API_CONFIG.BASE_URL.replace(/\/+$/, '')}${path}${query}`;
     }
 }
 

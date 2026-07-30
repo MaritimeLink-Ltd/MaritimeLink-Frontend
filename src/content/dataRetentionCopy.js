@@ -169,7 +169,7 @@ export const DATA_RETENTION_SECTIONS = [
     {
         "number": "32",
         "title": "CONTACTING MARITIMELINK",
-        "content": "Questions regarding this Policy or requests relating to data retention or deletion should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nUsers may also contact MaritimeLink through the Support Centre available within the Platform."
+        "content": "Questions regarding this Policy or requests relating to data retention or deletion should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nUsers may also contact MaritimeLink through the Support Centre available within the Platform."
     },
     {
         "number": "33",

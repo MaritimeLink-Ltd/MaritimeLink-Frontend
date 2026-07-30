@@ -7,12 +7,13 @@ import {
     GraduationCap,
     AlertCircle,
     CheckCircle,
-    Calendar,
     RefreshCw,
     Bell,
     LogIn,
 } from 'lucide-react';
 import professionalDashboardService from '../../../../services/professionalDashboardService';
+import documentService from '../../../../services/documentService';
+import { summarizeExpiry } from '../../../../utils/documentStatus';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../../constants/dashboardPagination';
 
 const defaultOverview = {
@@ -24,22 +25,30 @@ const defaultOverview = {
     recommendedCoursesCount: 0,
 };
 
-function compliancePillStyles(status) {
-    const raw = (status || '').trim();
-    const lower = raw.toLowerCase();
-    if (lower.includes('green') || lower === 'compliant' || lower === 'fully compliant') {
-        return { className: 'bg-[#587B42] text-white', label: raw || 'Compliant', Icon: CheckCircle };
+/** Plain "all valid" vs "X expired, Y expiring" wording shared by the banner, wallet card and alert row */
+function certificateStatusStyles({ expired, expiring }) {
+    if (expired > 0) {
+        return {
+            banner: 'bg-red-50 hover:bg-red-100',
+            iconWrap: 'bg-red-100',
+            iconClass: 'text-red-600',
+            Icon: AlertCircle,
+        };
     }
-    if (lower.includes('red') || lower.includes('critical')) {
-        return { className: 'bg-red-600 text-white', label: raw || 'Needs attention', Icon: AlertCircle };
+    if (expiring > 0) {
+        return {
+            banner: 'bg-orange-50 hover:bg-orange-100',
+            iconWrap: 'bg-orange-100',
+            iconClass: 'text-orange-600',
+            Icon: AlertCircle,
+        };
     }
-    if (lower.includes('amber') || lower.includes('yellow') || lower.includes('orange')) {
-        return { className: 'bg-amber-600 text-white', label: raw || 'Review', Icon: AlertCircle };
-    }
-    if (lower.includes('action')) {
-        return { className: 'bg-[#003971] text-white', label: raw || 'Action required', Icon: AlertCircle };
-    }
-    return { className: 'bg-gray-600 text-white', label: raw || 'Compliance', Icon: AlertCircle };
+    return {
+        banner: 'bg-emerald-50 hover:bg-emerald-100',
+        iconWrap: 'bg-emerald-100',
+        iconClass: 'text-emerald-600',
+        Icon: CheckCircle,
+    };
 }
 
 function formatRelativeTime(iso) {
@@ -127,6 +136,7 @@ const Dashboard = () => {
     const [alertsError, setAlertsError] = useState(null);
     const [activityError, setActivityError] = useState(null);
     const [activityLog, setActivityLog] = useState([]);
+    const [documentSummary, setDocumentSummary] = useState(null);
     const markingReadIdsRef = useRef(new Set());
     const [alertsHasMore, setAlertsHasMore] = useState(false);
     const [activityHasMore, setActivityHasMore] = useState(false);
@@ -153,6 +163,19 @@ const Dashboard = () => {
             console.error('Professional dashboard overview:', e);
             setError(e?.message || 'Could not load dashboard metrics.');
             setOverview(null);
+        }
+
+        // Counted client-side from the same documents the wallet shows, so both
+        // screens report identical expired / expiring numbers.
+        try {
+            const res = await documentService.getDocuments();
+            const docs =
+                res?.data?.documents ||
+                (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+            setDocumentSummary(summarizeExpiry(docs));
+        } catch (e) {
+            console.error('Professional dashboard documents:', e);
+            setDocumentSummary(null);
         }
 
         try {
@@ -286,8 +309,23 @@ const Dashboard = () => {
 
     const o = overview || defaultOverview;
     const expiring = o.expiringCertificates || defaultOverview.expiringCertificates;
-    const expiringCount = typeof expiring.count === 'number' ? expiring.count : 0;
     const timeframeLabel = expiring.timeframe || '90 days';
+    // Fall back to the API count if the documents call failed
+    const expiringCount = documentSummary
+        ? documentSummary.expiring
+        : typeof expiring.count === 'number'
+          ? expiring.count
+          : 0;
+    const expiredCount = documentSummary ? documentSummary.expired : 0;
+    const needsAttention = expiredCount > 0 || expiringCount > 0;
+
+    const certificateStatusMessage = (() => {
+        if (!needsAttention) return 'All certificates valid';
+        const parts = [];
+        if (expiredCount > 0) parts.push(`${expiredCount} expired`);
+        if (expiringCount > 0) parts.push(`${expiringCount} expiring within ${timeframeLabel}`);
+        return parts.join(', ');
+    })();
 
     const quickAccessCards = useMemo(() => {
         const pct = Math.min(100, Math.max(0, Number(o.resumeCompletionPercentage) || 0));
@@ -309,7 +347,7 @@ const Dashboard = () => {
                 icon: Folder,
                 iconColor: 'text-[#003971]',
                 statusType: 'text',
-                status: o.documentWalletStatus || '—',
+                status: certificateStatusMessage,
                 buttonText: 'Go To Documents',
                 onClick: () => navigate('/personal/documents'),
             },
@@ -342,26 +380,16 @@ const Dashboard = () => {
                 onClick: () => navigate('/personal/training'),
             },
         ];
-    }, [navigate, o]);
+    }, [navigate, o, certificateStatusMessage]);
 
-    const compliancePill = useMemo(() => compliancePillStyles(o.complianceStatus), [o.complianceStatus]);
-    const ComplianceStatusIcon = compliancePill.Icon;
-
-    const expiringSummaryMessage =
-        expiringCount > 0
-            ? `${expiringCount} certificate${expiringCount === 1 ? '' : 's'} expiring in the next ${timeframeLabel}`
-            : `No certificates expiring in the next ${timeframeLabel}`;
+    const certificateTone = certificateStatusStyles({ expired: expiredCount, expiring: expiringCount });
+    const CertificateStatusIcon = certificateTone.Icon;
 
     const activitySorted = useMemo(() => {
         return [...activityLog].sort(
             (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
     }, [activityLog]);
-
-    const bannerTone =
-        expiringCount > 0 ? 'bg-orange-50 hover:bg-orange-100' : 'bg-slate-50 hover:bg-slate-100';
-    const bannerIconWrap = expiringCount > 0 ? 'bg-orange-100' : 'bg-slate-200';
-    const bannerIconClass = expiringCount > 0 ? 'text-orange-600' : 'text-slate-600';
 
     return (
         <div className="w-full flex flex-col bg-white">
@@ -397,25 +425,17 @@ const Dashboard = () => {
                 </div>
 
                 <div
-                    onClick={() => (expiringCount > 0 || o.documentWalletStatus) && navigate('/personal/documents')}
-                    className={`${bannerTone} rounded-xl p-3 sm:p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors ${
-                        expiringCount > 0 || o.documentWalletStatus ? 'cursor-pointer' : ''
-                    }`}
+                    onClick={() => navigate('/personal/documents')}
+                    className={`${certificateTone.banner} rounded-xl p-3 sm:p-4 mb-4 flex items-center gap-3 transition-colors cursor-pointer`}
                 >
-                    <div className="flex items-center gap-3 flex-1">
-                        <div
-                            className={`w-8 h-8 ${bannerIconWrap} rounded-full flex items-center justify-center shrink-0`}
-                        >
-                            <Calendar size={18} className={bannerIconClass} />
-                        </div>
-                        <span className="text-sm sm:text-base text-gray-800 font-medium">{expiringSummaryMessage}</span>
-                    </div>
                     <div
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-medium w-full sm:w-auto justify-center ${compliancePill.className}`}
+                        className={`w-8 h-8 ${certificateTone.iconWrap} rounded-full flex items-center justify-center shrink-0`}
                     >
-                        <ComplianceStatusIcon size={16} />
-                        {compliancePill.label}
+                        <CertificateStatusIcon size={18} className={certificateTone.iconClass} />
                     </div>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">
+                        {certificateStatusMessage}
+                    </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -513,7 +533,7 @@ const Dashboard = () => {
                                 ))
                             ) : (
                                 <>
-                                    {expiringCount > 0 && (
+                                    {needsAttention && (
                                         <div
                                             role="button"
                                             tabIndex={0}
@@ -527,7 +547,7 @@ const Dashboard = () => {
                                             <AlertCircle size={16} className="text-orange-500 shrink-0 mt-0.5" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-semibold text-gray-900">Certificates</p>
-                                                <p className="text-sm text-gray-800 mt-0.5">{expiringSummaryMessage}</p>
+                                                <p className="text-sm text-gray-800 mt-0.5">{certificateStatusMessage}</p>
                                             </div>
                                             <span className="text-xs text-gray-400 shrink-0">Now</span>
                                         </div>
@@ -583,7 +603,7 @@ const Dashboard = () => {
                                     })}
                                     {!alertsLoading &&
                                         apiAlerts.length === 0 &&
-                                        expiringCount === 0 && (
+                                        !needsAttention && (
                                             <p className="text-sm text-gray-500 py-2">
                                                 No notifications right now. You are all caught up.
                                             </p>

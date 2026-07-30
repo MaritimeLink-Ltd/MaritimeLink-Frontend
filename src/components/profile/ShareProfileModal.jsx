@@ -9,6 +9,7 @@ import {
     Link2,
     Copy,
     Clock,
+    Download,
     ShieldCheck,
     Loader2,
 } from 'lucide-react';
@@ -46,6 +47,8 @@ export default function ShareProfileModal({ isOpen, onClose }) {
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [openFolder, setOpenFolder] = useState(null);
     const [expiresInHours, setExpiresInHours] = useState(24);
+    // Preview-only by default; the professional opts in to downloads.
+    const [allowDownload, setAllowDownload] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generated, setGenerated] = useState(null);
     const [copied, setCopied] = useState(false);
@@ -139,6 +142,7 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                 includeResume,
                 documentIds: selectedDocuments,
                 expiresInHours,
+                allowDownload,
             });
             const data = res?.data || {};
             if (!data.shareLink) throw new Error('No link was returned.');
@@ -146,6 +150,7 @@ export default function ShareProfileModal({ isOpen, onClose }) {
             setGenerated({
                 shareLink: rewriteShareLinkForSharing(data.shareLink),
                 expiresAt: data.expiresAt,
+                allowDownload: data.allowDownload === true,
             });
         } catch (error) {
             toast.error(getApiErrorMessage(error, 'Could not create the share link. Please try again.'));
@@ -437,12 +442,44 @@ export default function ShareProfileModal({ isOpen, onClose }) {
                                     ))}
                                 </div>
                             </section>
+
+                            <section>
+                                <h3 className="text-sm font-bold text-gray-800 mb-1">Downloads</h3>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    By default recipients can only preview documents in the browser.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAllowDownload((prev) => !prev)}
+                                    className={`w-full flex items-center gap-3 p-4 border-2 rounded-xl text-left transition-colors ${
+                                        allowDownload ? 'border-[#003971] bg-[#003971]/5' : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div
+                                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border ${
+                                            allowDownload ? 'bg-[#003971] border-[#003971]' : 'border-gray-300 bg-white'
+                                        }`}
+                                    >
+                                        {allowDownload && <Check size={14} className="text-white" strokeWidth={3} />}
+                                    </div>
+                                    <Download className={`h-5 w-5 flex-shrink-0 ${allowDownload ? 'text-[#003971]' : 'text-gray-400'}`} />
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-900">Allow recipients to download</p>
+                                        <p className="text-xs text-gray-500 mt-0.5">
+                                            Files can be saved outside MaritimeLink — for example into a recruiter&apos;s
+                                            HR records. Only enable for people you trust.
+                                        </p>
+                                    </div>
+                                </button>
+                            </section>
                         </div>
 
                         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
                             <p className="text-xs text-gray-500 flex items-center gap-1.5">
                                 <ShieldCheck className="h-4 w-4 text-[#003971]" />
-                                Preview only — recipients cannot download your files.
+                                {allowDownload
+                                    ? 'Downloads enabled for this link.'
+                                    : 'Preview only — recipients cannot download your files.'}
                             </p>
                             <div className="flex items-center gap-2 ml-auto">
                                 <button

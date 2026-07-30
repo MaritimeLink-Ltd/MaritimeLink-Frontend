@@ -78,6 +78,56 @@ export const readExpiryDate = (doc = {}) =>
 /** Days from today (inclusive) within which a document counts as "Expiring Soon" for wallet filters and badges */
 export const EXPIRING_SOON_DAYS = 7;
 
+/**
+ * Days ahead a document counts as "expiring" in folder and dashboard summaries.
+ * Matches the 90-day window the dashboard API uses for expiring certificates.
+ */
+export const EXPIRY_WARNING_DAYS = 90;
+
+/** @returns {'expired'|'expiring'|'valid'|'none'} - 'none' when the document has no expiry date */
+export const getDocumentExpiryState = (doc = {}) => {
+    const expiryDate = toDate(readExpiryDate(doc));
+    if (!expiryDate) return 'none';
+
+    const daysUntilExpiry = Math.ceil(
+        (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysUntilExpiry < 0) return 'expired';
+    if (daysUntilExpiry <= EXPIRY_WARNING_DAYS) return 'expiring';
+    return 'valid';
+};
+
+/** Counts expired / expiring / valid documents so folders and the dashboard report the same numbers */
+export const summarizeExpiry = (docs = []) => {
+    const summary = {
+        total: docs.length,
+        expired: 0,
+        expiring: 0,
+        valid: 0,
+        noExpiry: 0,
+    };
+
+    docs.forEach((doc) => {
+        const state = getDocumentExpiryState(doc);
+        if (state === 'expired') summary.expired += 1;
+        else if (state === 'expiring') summary.expiring += 1;
+        else if (state === 'valid') summary.valid += 1;
+        else summary.noExpiry += 1;
+    });
+
+    summary.needsAttention = summary.expired > 0 || summary.expiring > 0;
+    return summary;
+};
+
+/** "1 expired, 2 expiring" — empty string when nothing needs attention */
+export const formatExpiryCounts = ({ expired = 0, expiring = 0 } = {}) => {
+    const parts = [];
+    if (expired > 0) parts.push(`${expired} expired`);
+    if (expiring > 0) parts.push(`${expiring} expiring`);
+    return parts.join(', ');
+};
+
 const getExpiryMeta = (expiryDate) => {
     if (!expiryDate) return null;
 

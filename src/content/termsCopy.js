@@ -284,7 +284,7 @@ export const TERMS_SECTIONS = [
     {
         "number": "55",
         "title": "CONTACT DETAILS",
-        "content": "Questions regarding these Terms and Conditions should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co \nWebsite: www.maritimelink.co\nGeneral enquiries may also be submitted through the MaritimeLink Support Centre available within the Platform."
+        "content": "Questions regarding these Terms and Conditions should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co \nWebsite: www.maritimelink.co\nGeneral enquiries may also be submitted through the MaritimeLink Support Centre available within the Platform."
     },
     {
         "number": "56",

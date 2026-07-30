@@ -10,6 +10,7 @@ import {
     FileText,
     Eye,
     AlertCircle,
+    Download,
     Loader2,
     CheckCircle2,
     Award,
@@ -242,8 +243,17 @@ export default function SharedProfile() {
                         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div className="flex flex-wrap items-center gap-3 text-sm">
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 text-[#003366] px-3 py-1 font-medium">
-                                    <Eye className="w-4 h-4" />
-                                    Preview only — downloading is disabled
+                                    {data.allowDownload ? (
+                                        <>
+                                            <Download className="w-4 h-4" />
+                                            Downloads enabled by the profile owner
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Eye className="w-4 h-4" />
+                                            Preview only — downloading is disabled
+                                        </>
+                                    )}
                                 </span>
                                 {data.expiresAt && (
                                     <span className="text-slate-600">
@@ -476,8 +486,21 @@ export default function SharedProfile() {
                                         <div className="rounded-2xl border border-slate-200 bg-white min-h-[360px] lg:min-h-[70vh] overflow-hidden shadow-sm flex flex-col">
                                             {selectedDoc ? (
                                                 <>
-                                                    <div className="px-4 py-2 border-b border-slate-100 text-xs text-slate-500">
-                                                        {selectedDoc.name}
+                                                    <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between gap-3">
+                                                        <span className="text-xs text-slate-500 truncate">
+                                                            {selectedDoc.name}
+                                                        </span>
+                                                        {data.allowDownload && selectedId && (
+                                                            <a
+                                                                href={profileShareService.sharedFileUrl(token, selectedId, {
+                                                                    download: true,
+                                                                })}
+                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#003366] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#002855] transition-colors flex-shrink-0"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" />
+                                                                Download
+                                                            </a>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 bg-slate-100 p-2 min-h-[320px] relative flex items-center justify-center">
                                                         {previewLoading && (

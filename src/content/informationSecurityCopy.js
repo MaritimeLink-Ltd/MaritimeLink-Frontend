@@ -154,7 +154,7 @@ export const INFORMATION_SECURITY_SECTIONS = [
     {
         "number": "29",
         "title": "REPORTING A SECURITY VULNERABILITY",
-        "content": "Security vulnerabilities should be reported as soon as reasonably practicable after discovery.\nReports should include, where available:\na description of the vulnerability; \naffected system or feature; \nsteps required to reproduce the issue; \npotential impact; \nsupporting screenshots where appropriate; \nproof-of-concept information sufficient for validation; \nsuggested remediation where available. \nResearchers should avoid including unnecessary personal information within vulnerability reports.\nReports should be submitted to:\nEmail: security@maritimelink.co"
+        "content": "Security vulnerabilities should be reported as soon as reasonably practicable after discovery.\nReports should include, where available:\na description of the vulnerability; \naffected system or feature; \nsteps required to reproduce the issue; \npotential impact; \nsupporting screenshots where appropriate; \nproof-of-concept information sufficient for validation; \nsuggested remediation where available. \nResearchers should avoid including unnecessary personal information within vulnerability reports.\nReports should be submitted to:\nEmail: admin@maritimelink.co"
     },
     {
         "number": "30",
@@ -179,7 +179,7 @@ export const INFORMATION_SECURITY_SECTIONS = [
     {
         "number": "34",
         "title": "CONTACTING MARITIMELINK",
-        "content": "Questions regarding this Policy or information security may be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nSecurity vulnerabilities should be reported responsibly and confidentially through the contact details above."
+        "content": "Questions regarding this Policy or information security may be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nSecurity vulnerabilities should be reported responsibly and confidentially through the contact details above."
     },
     {
         "number": "35",

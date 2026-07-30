@@ -1,7 +1,7 @@
 import { PRIVACY_META, PRIVACY_SECTIONS, PRIVACY_TITLE } from '../../content/privacyCopy';
 
 function linkifyText(text) {
-    const parts = text.split(/(https?:\/\/[^\s]+|privacy@maritimelink\.co|compliance@maritimelink\.co|www\.maritimelink\.co)/g);
+    const parts = text.split(/(https?:\/\/[^\s]+|admin@maritimelink\.co|www\.maritimelink\.co)/g);
     return parts.map((part, index) => {
         if (part.match(/^https?:\/\//)) {
             return (
@@ -10,7 +10,7 @@ function linkifyText(text) {
                 </a>
             );
         }
-        if (part === 'privacy@maritimelink.co' || part === 'compliance@maritimelink.co') {
+        if (part === 'admin@maritimelink.co') {
             return (
                 <a key={index} href={`mailto:${part}`} className="text-[#003971] hover:underline">
                     {part}

@@ -164,7 +164,7 @@ export const PROFESSIONAL_USER_TERMS_SECTIONS = [
     {
         "number": "31",
         "title": "CONTACT DETAILS",
-        "content": "Questions regarding these Professional Terms should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Professional Dashboard."
+        "content": "Questions regarding these Professional Terms should be directed to:\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nSupport requests may also be submitted through the Professional Dashboard."
     },
     {
         "number": "32",

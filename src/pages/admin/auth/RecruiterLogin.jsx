@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
 import { syncTermsAcceptedFromProfile } from '../../../utils/termsAcceptance';
+import { readReturnTo } from '../../../utils/postLoginRedirect';
 
 function RecruiterLogin() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const returnTo = readReturnTo(location.search);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -41,7 +44,7 @@ function RecruiterLogin() {
             localStorage.setItem('adminUserType', 'recruiter');
 
             syncTermsAcceptedFromProfile(profile);
-            navigate('/recruiter-dashboard');
+            navigate(returnTo || '/recruiter-dashboard');
         } catch (err) {
             console.error('Login error:', err);
             setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');

@@ -19,7 +19,7 @@ export const PRIVACY_SECTIONS = [
     {
         "number": "2",
         "title": "WHO WE ARE",
-        "content": "MaritimeLink Ltd is the data controller responsible for your personal data.\nData Controller\nMaritimeLink Ltd\nUnited Kingdom\nEmail:\nprivacy@maritimelink.co\nWebsite:\nwww.maritimelink.co\nWhere required under applicable law, MaritimeLink has appointed a Data Protection Lead responsible for overseeing compliance with UK data protection legislation.\nQuestions regarding this Privacy Policy may be directed to:\nprivacy@maritimelink.co"
+        "content": "MaritimeLink Ltd is the data controller responsible for your personal data.\nData Controller\nMaritimeLink Ltd\nUnited Kingdom\nEmail:\nadmin@maritimelink.co\nWebsite:\nwww.maritimelink.co\nWhere required under applicable law, MaritimeLink has appointed a Data Protection Lead responsible for overseeing compliance with UK data protection legislation.\nQuestions regarding this Privacy Policy may be directed to:\nadmin@maritimelink.co"
     },
     {
         "number": "3",
@@ -214,7 +214,7 @@ export const PRIVACY_SECTIONS = [
     {
         "number": "41",
         "title": "CONTACTING MARITIMELINK",
-        "content": "Questions, requests or concerns relating to this Privacy Policy or the processing of personal information should be directed to:\nCompliance Team\nMaritimeLink Ltd\nUnited Kingdom\nEmail: compliance@maritimelink.co \nWebsite: www.maritimelink.co \nWhere appropriate, correspondence may be directed to MaritimeLink's Data Protection Lead using the contact details above."
+        "content": "Questions, requests or concerns relating to this Privacy Policy or the processing of personal information should be directed to:\nCompliance Team\nMaritimeLink Ltd\nUnited Kingdom\nEmail: admin@maritimelink.co \nWebsite: www.maritimelink.co \nWhere appropriate, correspondence may be directed to MaritimeLink's Data Protection Lead using the contact details above."
     },
     {
         "number": "42",

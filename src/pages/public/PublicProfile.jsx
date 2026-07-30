@@ -251,6 +251,11 @@ export default function PublicProfile() {
                                         </div>
                                     )}
                                 </div>
+                                {profile.summary && (
+                                    <p className="text-slate-700 leading-relaxed whitespace-pre-line mt-3">
+                                        {profile.summary}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -270,18 +275,6 @@ export default function PublicProfile() {
                         </div>
                     </div>
                 </div>
-
-                {profile.summary && (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <User className="h-5 w-5 text-[#003366]" />
-                            <h2 className="text-lg font-bold text-[#003366]">Profile Summary</h2>
-                        </div>
-                        <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-                            {profile.summary}
-                        </p>
-                    </div>
-                )}
 
                 {experienceLines.length > 0 && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">

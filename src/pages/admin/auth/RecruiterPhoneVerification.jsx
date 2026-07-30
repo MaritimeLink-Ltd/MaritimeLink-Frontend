@@ -11,17 +11,9 @@ function RecruiterPhoneVerification() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Get phone number from navigation state
+    // Phone number is passed through from the profile-completion step, purely for display.
     const phoneNumber = location.state?.phoneNumber || '';
     const storedRecruiterId = localStorage.getItem('recruiterId');
-    // We also need the email for the resend OTP flow since the backend uses email to resend.
-    // However, if the backend uses email for resend, we need to pass it here. If not passed, we might need a workaround.
-    // For now, let's assume we can retrieve the email from the previous state or we might need to update the endpoint.
-    // Based on the previous Verify Email step, we don't have email in location.state here.
-    // I will try to use localStorage if necessary, or just rely on the API. Let's assume the API for resendOTP takes email.
-    // If we don't have email here, let me read it from local storage if saved before, or I'll just use the phone resend endpoint if ones exists later.
-    // Wait, the API for Step 3 "triggers a phone OTP". The resend button is likely calling a specific resend-phone-otp, but let me check authService.
-    const email = location.state?.email || localStorage.getItem('userEmail');
 
     useEffect(() => {
         if (timer > 0) {
@@ -99,21 +91,19 @@ function RecruiterPhoneVerification() {
     };
 
     const handleResend = async () => {
-        // Since step 3 triggers the OTP automatically, a resend here might 
-        // require calling the personal-info endpoint again or a dedicated phone resend endpoint.
-        // For now, if there is no dedicated endpoint provided by the user, I'll log a warning or use the existing resend OTP (which uses email).
-        console.warn('Need a dedicated Phone OTP resend API from backend. Attempting email resend as fallback if configured.');
-        
+        if (!storedRecruiterId) {
+            setError('Session expired. Please restart registration.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
-            // Wait, we probably need a dedicated endpoint for phone resend.
-            // For now, setting a dummy success to reset the timer to prevent crash.
-            // TODO: Replace with actual phone resend API when provided by backend.
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await authService.resendRecruiterPhoneOTP(storedRecruiterId);
             setTimer(60);
             setOtp(['', '', '', '', '', '']);
+            inputRefs.current[0]?.focus();
         } catch (err) {
             console.error('Resend OTP error:', err);
             setError(err.data?.message || err.message || 'Failed to resend OTP. Please try again.');
@@ -155,7 +145,7 @@ function RecruiterPhoneVerification() {
 
                     {/* Description */}
                     <p className="text-sm text-gray-700 mb-1">
-                        Enter the verification code we sent on your email
+                        Enter the verification code we sent to your phone
                     </p>
                     <p className="text-sm text-gray-400 mb-1">
                         {phoneNumber}{' '}

@@ -59,7 +59,7 @@ export const COOKIE_SECTIONS = [
     {
         "number": "10",
         "title": "CONTACTING MARITIMELINK",
-        "content": "Questions regarding this Cookie Policy or MaritimeLink's use of cookies may be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nCompliance Team\nEmail: compliance@maritimelink.co \nWebsite: www.maritimelink.co \n\nWebsite: www.maritimelink.co\nWhere appropriate, users may also contact MaritimeLink's Data Protection Lead using the contact details provided above."
+        "content": "Questions regarding this Cookie Policy or MaritimeLink's use of cookies may be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nCompliance Team\nEmail: admin@maritimelink.co \nWebsite: www.maritimelink.co \n\nWebsite: www.maritimelink.co\nWhere appropriate, users may also contact MaritimeLink's Data Protection Lead using the contact details provided above."
     },
     {
         "number": "11",

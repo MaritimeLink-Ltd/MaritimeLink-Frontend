@@ -185,6 +185,24 @@ class AuthService {
     }
 
     /**
+     * Resend the phone OTP issued at step 3. Delivered by SMS and mirrored to the
+     * account email, the same as the original send.
+     * @param {string} recruiterId
+     * @returns {Promise<Object>} Response shape: { status, message }
+     */
+    async resendRecruiterPhoneOTP(recruiterId) {
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.RECRUITER.RESEND_PHONE_OTP, {
+                recruiterId,
+            }, { skipAuth: true });
+            return response;
+        } catch (error) {
+            console.error('Recruiter Phone OTP resend error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Lookup company from public sources (Gemini + Google Search grounding).
      * @param {{ url?: string, organizationName?: string }} params — provide one of url or organizationName
      * @returns {Promise<Object>} API JSON (may be nested under `data`)

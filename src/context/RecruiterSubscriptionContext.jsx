@@ -7,6 +7,8 @@ const RecruiterSubscriptionContext = createContext(null);
 
 export function RecruiterSubscriptionProvider({ children }) {
     const [tier, setTier] = useState('FREE');
+    // Flex lives on the job listing, not on `tier`, so the matrix needs it separately.
+    const [hasActiveFlexListing, setHasActiveFlexListing] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [modalState, setModalState] = useState({ isOpen: false, featureLabel: '', jobId: null });
 
@@ -16,6 +18,7 @@ export function RecruiterSubscriptionProvider({ children }) {
             const response = await recruiterSettingsService.getMembership();
             const membership = response?.data?.membership || response?.membership || null;
             setTier(membership?.tier || 'FREE');
+            setHasActiveFlexListing(Boolean(membership?.hasActiveFlexListing));
         } catch (error) {
             console.error('Failed to load recruiter membership:', error);
         } finally {
@@ -39,11 +42,12 @@ export function RecruiterSubscriptionProvider({ children }) {
         () => ({
             tier,
             isPremium: isPremiumRecruiterTier(tier),
+            hasActiveFlexListing,
             isLoading,
             refresh,
             openUpgradeModal,
         }),
-        [tier, isLoading, refresh, openUpgradeModal],
+        [tier, hasActiveFlexListing, isLoading, refresh, openUpgradeModal],
     );
 
     return (
@@ -77,7 +81,11 @@ export function useRecruiterSubscriptionGuard() {
             return true;
         }
 
-        const access = getRecruiterFeatureAccess({ recruiterTier: ctx.tier, job });
+        const access = getRecruiterFeatureAccess({
+            recruiterTier: ctx.tier,
+            job,
+            hasAnyActiveFlexListing: ctx.hasActiveFlexListing,
+        });
         if (access[featureKey]) {
             callback?.();
             return true;
@@ -90,6 +98,7 @@ export function useRecruiterSubscriptionGuard() {
     return {
         tier: ctx?.tier || 'FREE',
         isPremium: ctx?.isPremium || false,
+        hasActiveFlexListing: ctx?.hasActiveFlexListing || false,
         guardFeature,
         openUpgradeModal: ctx?.openUpgradeModal,
     };

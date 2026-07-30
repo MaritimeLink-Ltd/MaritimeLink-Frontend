@@ -144,7 +144,7 @@ export const ACCEPTABLE_USE_SECTIONS = [
     {
         "number": "27",
         "title": "CONTACTING MARITIMELINK",
-        "content": "Questions regarding this Policy or reports concerning suspected breaches should be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nEmail: legal@maritimelink.co\nEmail: compliance@maritimelink.co\nWebsite: www.maritimelink.co\nUsers are encouraged to report concerns promptly so that appropriate action may be taken."
+        "content": "Questions regarding this Policy or reports concerning suspected breaches should be directed to:\nMaritimeLink Ltd \nUnited Kingdom\nEmail: admin@maritimelink.co\nWebsite: www.maritimelink.co\nUsers are encouraged to report concerns promptly so that appropriate action may be taken."
     },
     {
         "number": "28",
