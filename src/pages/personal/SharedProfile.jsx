@@ -312,13 +312,13 @@ export default function SharedProfile() {
                                 <div className="flex flex-col items-start sm:items-end gap-2">
                                     <VerificationBadge verified={profile.verified} />
                                     {profile.availableForWork ? (
-                                        <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                            <CheckCircle2 className="h-4 w-4" />
+                                        <div className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 whitespace-nowrap">
+                                            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                                             Available for Job
                                         </div>
                                     ) : (
-                                        <div className="bg-slate-100 text-slate-600 border border-slate-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2">
-                                            <Briefcase className="h-4 w-4" />
+                                        <div className="bg-slate-100 text-slate-600 border border-slate-200 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 whitespace-nowrap">
+                                            <Briefcase className="h-4 w-4 flex-shrink-0" />
                                             Currently Employed / On Contract
                                         </div>
                                     )}
