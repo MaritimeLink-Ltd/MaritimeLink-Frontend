@@ -94,7 +94,14 @@ const ManageRecruiterSubscription = () => {
 
     const [membership, setMembership] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isUpdating, setIsUpdating] = useState(false);
+    /**
+     * Which plan action is in flight ('free' | 'flex' | 'premium'), or null.
+     * A single boolean made every button spin whichever one was clicked, so the
+     * spinner is keyed to the action while the disabling stays global — two
+     * checkouts must not be started at once.
+     */
+    const [pendingAction, setPendingAction] = useState(null);
+    const isUpdating = pendingAction !== null;
     const [myJobs, setMyJobs] = useState([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState(true);
     const [selectedJobId, setSelectedJobId] = useState(preselectedJobId || '');
@@ -248,29 +255,41 @@ const ManageRecruiterSubscription = () => {
         }
     }, [flexEligibleJobs, selectedJobId, preselectedJobId]);
 
+    useEffect(() => {
+        // Starting a checkout leaves the buttons in their loading state on purpose,
+        // so they can't be double-clicked while the browser navigates to Stripe.
+        // Coming back with the Back button restores this page from the bfcache with
+        // that state intact, which left every plan button stuck spinning and
+        // disabled — clear it whenever the page is shown again.
+        const handlePageShow = () => setPendingAction(null);
+
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
+
     const handleSubscribePremium = async () => {
         try {
-            setIsUpdating(true);
+            setPendingAction('premium');
             const response = await recruiterSettingsService.createMembershipCheckout();
             const checkoutUrl = response?.data?.checkoutUrl;
             if (!checkoutUrl) throw new Error('Checkout URL was not returned. Please try again.');
             window.location.href = checkoutUrl;
         } catch (error) {
             toast.error(error.message || 'Failed to start checkout', { position: 'top-right' });
-            setIsUpdating(false);
+            setPendingAction(null);
         }
     };
 
     const handleDowngradeToFree = async () => {
         try {
-            setIsUpdating(true);
+            setPendingAction('free');
             await recruiterSettingsService.updateMembership('FREE');
             setMembership((prev) => ({ ...(prev || {}), tier: 'FREE' }));
             toast.success('Plan updated to Free', { position: 'top-right' });
         } catch (error) {
             toast.error(error.message || 'Failed to update plan', { position: 'top-right' });
         } finally {
-            setIsUpdating(false);
+            setPendingAction(null);
         }
     };
 
@@ -283,14 +302,14 @@ const ManageRecruiterSubscription = () => {
             return;
         }
         try {
-            setIsUpdating(true);
+            setPendingAction('flex');
             const response = await recruiterSettingsService.createFlexListingCheckout(selectedJobId);
             const checkoutUrl = response?.data?.checkoutUrl;
             if (!checkoutUrl) throw new Error('Checkout URL was not returned. Please try again.');
             window.location.href = checkoutUrl;
         } catch (error) {
             toast.error(error.message || 'Failed to start Flex checkout', { position: 'top-right' });
-            setIsUpdating(false);
+            setPendingAction(null);
         }
     };
 
@@ -422,8 +441,9 @@ const ManageRecruiterSubscription = () => {
                                                 <button
                                                     onClick={handleDowngradeToFree}
                                                     disabled={isUpdating || displayPlan === 'FREE' || hasActiveFlex}
-                                                    className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-gray-900 text-white"
+                                                    className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-gray-900 text-white flex items-center justify-center gap-2"
                                                 >
+                                                    {pendingAction === 'free' && <Loader2 className="h-4 w-4 animate-spin" />}
                                                     {displayPlan === 'FREE' ? 'Current Plan' : 'Switch to Free'}
                                                 </button>
                                                 {hasActiveFlex && (
@@ -461,7 +481,11 @@ const ManageRecruiterSubscription = () => {
                                                     disabled={isUpdating || isLoadingJobs}
                                                     className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-blue-600 text-white hover:bg-blue-500 flex items-center justify-center gap-2"
                                                 >
-                                                    <Briefcase size={16} />
+                                                    {pendingAction === 'flex' ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Briefcase size={16} />
+                                                    )}
                                                     {isLoadingJobs
                                                         ? 'Loading your jobs...'
                                                         : flexEligibleJobs.length > 0 && selectedJobId
@@ -490,7 +514,7 @@ const ManageRecruiterSubscription = () => {
                                                         : 'bg-blue-600 text-white hover:bg-blue-500'
                                                 }`}
                                             >
-                                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                                {pendingAction === 'premium' && <Loader2 className="h-4 w-4 animate-spin" />}
                                                 {activeTier === 'PREMIUM' ? 'Current Plan' : 'Subscribe'}
                                             </button>
                                         )}

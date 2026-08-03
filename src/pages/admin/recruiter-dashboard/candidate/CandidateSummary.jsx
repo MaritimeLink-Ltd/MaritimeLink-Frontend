@@ -713,8 +713,14 @@ function CandidateSummary({
      */
     const documentsLockedByPlan = Boolean(candidateAccess && !candidateAccess.viewDocumentWallet);
     const lockedDocumentCount = Number(professional?.documentCount) || 0;
-    /** Only pitch an upgrade when there is genuinely something behind the gate. */
-    const showDocumentUpgradePrompt = documentsLockedByPlan && lockedDocumentCount > 0;
+    /**
+     * Always pitch the upgrade while the plan withholds documents, including for a
+     * candidate who happens to have none. Falling through to "No documents on file"
+     * read as a broken gate next to every other candidate, and told a recruiter
+     * something about a wallet they have not paid to see. The count is only stated
+     * when there really is one (see below), so this never claims "0 documents".
+     */
+    const showDocumentUpgradePrompt = documentsLockedByPlan;
 
     const runProfileAction = (actionLabel, callback) => {
         guardRestrictedAction(actionLabel, callback);
@@ -1783,7 +1789,9 @@ function CandidateSummary({
                                             <Crown size={26} className="text-yellow-400 fill-yellow-400" />
                                         </div>
                                         <p className="text-base font-semibold text-gray-900 mb-1">
-                                            {`${lockedDocumentCount} document${lockedDocumentCount === 1 ? '' : 's'} on file`}
+                                            {lockedDocumentCount > 0
+                                                ? `${lockedDocumentCount} document${lockedDocumentCount === 1 ? '' : 's'} on file`
+                                                : 'Document wallet locked'}
                                         </p>
                                         <p className="text-sm text-gray-600 mb-5">
                                             Upgrade to Flex or Premium Recruiter to see this candidate&apos;s

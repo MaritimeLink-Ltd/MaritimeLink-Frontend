@@ -10,6 +10,7 @@ import {
     Edit2,
     Trash2,
     Flag,
+    Loader2,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
@@ -160,6 +161,11 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
     };
 
     const [showJobDetailsModal, setShowJobDetailsModal] = useState(false);
+    /** Explanation shown when publishing is refused because the listing is unpaid. */
+    const [flexPaymentPrompt, setFlexPaymentPrompt] = useState('');
+    /** Which button in that prompt is working ('pay' | 'premium'), so only it spins. */
+    const [flexPromptAction, setFlexPromptAction] = useState(null);
+    const [flexPromptError, setFlexPromptError] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [jobStatus, setJobStatus] = useState(jobData?.status || 'Active');
@@ -226,6 +232,14 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        // Returning from Stripe with the Back button restores this page from the
+        // bfcache with its old state, which would leave the button spinning.
+        const handlePageShow = () => setFlexPromptAction(null);
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
     }, []);
 
     // Fetch Job Data
@@ -578,15 +592,13 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             setShowJobDetailsModal(false);
         } catch (error) {
             console.error('Failed to update job status:', error);
-            // Free slot used up — this listing needs its own Flex payment to go live.
+            // Unpaid listing — say why it cannot go live before offering payment,
+            // rather than dropping the recruiter on Stripe with no explanation.
             if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
-                try {
-                    const checkout = await recruiterSettingsService.createFlexListingCheckout(jobId);
-                    const checkoutUrl = checkout?.data?.checkoutUrl;
-                    if (checkoutUrl) window.location.href = checkoutUrl;
-                } catch (checkoutError) {
-                    console.error('Failed to start Flex checkout:', checkoutError);
-                }
+                setFlexPaymentPrompt(
+                    error?.data?.message
+                        || 'This job listing has not been paid for yet, so it stays a draft and is not visible to professionals.',
+                );
             }
         }
     };
@@ -1209,6 +1221,61 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
                                 {isDeleting ? 'Deleting...' : 'Delete Job'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment required — the listing stays a draft until it is paid for. */}
+            {flexPaymentPrompt && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">
+                            Payment needed to publish
+                        </h3>
+                        <p className="text-gray-600 mb-4">{flexPaymentPrompt}</p>
+                        {flexPromptError && (
+                            <p className="text-sm text-red-600 mb-4">{flexPromptError}</p>
+                        )}
+                        <button
+                            onClick={async () => {
+                                setFlexPromptError('');
+                                setFlexPromptAction('pay');
+                                try {
+                                    const checkout =
+                                        await recruiterSettingsService.createFlexListingCheckout(jobId);
+                                    const checkoutUrl = checkout?.data?.checkoutUrl;
+                                    if (!checkoutUrl) throw new Error('No checkout URL');
+                                    window.location.href = checkoutUrl;
+                                } catch (checkoutError) {
+                                    console.error('Failed to start Flex checkout:', checkoutError);
+                                    setFlexPromptAction(null);
+                                    setFlexPromptError('Could not start the payment. Please try again.');
+                                }
+                            }}
+                            disabled={flexPromptAction !== null}
+                            className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors mb-3 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {flexPromptAction === 'pay' && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {flexPromptAction === 'pay' ? 'Starting payment...' : 'Pay & publish for 30 days'}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFlexPromptAction('premium');
+                                navigate('/recruiter/manage-subscription');
+                            }}
+                            disabled={flexPromptAction !== null}
+                            className="w-full border-2 border-[#1e5a8f] text-[#1e5a8f] py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors mb-3 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {flexPromptAction === 'premium' && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Upgrade to Premium instead
+                        </button>
+                        <button
+                            onClick={() => setFlexPaymentPrompt('')}
+                            disabled={flexPromptAction !== null}
+                            className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            Keep as draft for now
+                        </button>
                     </div>
                 </div>
             )}

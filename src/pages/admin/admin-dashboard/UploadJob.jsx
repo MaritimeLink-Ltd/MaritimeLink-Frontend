@@ -21,6 +21,15 @@ function UploadJob({ onBack: onBackProp }) {
 
     const [step, setStep] = useState(1);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    /**
+     * Set when a listing is held as a draft because it has not been paid for.
+     * Explains why it is not live and offers the payment, instead of bouncing
+     * the recruiter to Stripe with no context.
+     */
+    const [flexPaymentPrompt, setFlexPaymentPrompt] = useState(null);
+    /** Which button in that prompt is working ('pay' | 'premium'), so only it spins. */
+    const [flexPromptAction, setFlexPromptAction] = useState(null);
+    const [flexPromptError, setFlexPromptError] = useState('');
     const [isPublished, setIsPublished] = useState(editData?.status === 'Active' || false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
@@ -111,6 +120,14 @@ function UploadJob({ onBack: onBackProp }) {
     const contractTypes = ['Temporary', 'Contract', 'Permanent'];
     const regions = ['Global', ...COUNTRY_NAMES];
 
+    useEffect(() => {
+        // Returning from Stripe with the Back button restores this page from the
+        // bfcache with its old state, which would leave the button spinning.
+        const handlePageShow = () => setFlexPromptAction(null);
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
+
     const handleNext = () => {
         setStep(2);
     };
@@ -161,7 +178,7 @@ function UploadJob({ onBack: onBackProp }) {
             console.error('Failed to update job publish status:', error);
             if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
                 setShowPublishModal(false);
-                await startFlexCheckoutForJob(editData.id);
+                setFlexPaymentPrompt({ jobId: editData.id, message: error?.data?.message });
             } else {
                 setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
             }
@@ -194,7 +211,7 @@ function UploadJob({ onBack: onBackProp }) {
             console.error('Failed to pause/resume job:', error);
             if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
                 setShowPauseModal(false);
-                await startFlexCheckoutForJob(editData.id);
+                setFlexPaymentPrompt({ jobId: editData.id, message: error?.data?.message });
             } else {
                 setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
             }
@@ -320,11 +337,12 @@ function UploadJob({ onBack: onBackProp }) {
                 // Saved as a draft because the free slot is taken — pay for this
                 // listing and it goes live for 30 days.
                 if (response?.data?.requiresFlexPayment) {
-                    const started = await startFlexCheckoutForJob(response.data.job.id);
-                    if (started) return;
                     setIsPublished(false);
                     setIsPaused(true);
-                    setShowSuccessModal(true);
+                    setFlexPaymentPrompt({
+                        jobId: response.data.job.id,
+                        message: response.message,
+                    });
                     return;
                 }
             }
@@ -337,7 +355,7 @@ function UploadJob({ onBack: onBackProp }) {
             const errorCode = error?.data?.code;
             const flexJobId = error?.data?.jobId || editData?.id;
             if (errorCode === 'FLEX_PAYMENT_REQUIRED' && flexJobId) {
-                await startFlexCheckoutForJob(flexJobId);
+                setFlexPaymentPrompt({ jobId: flexJobId, message: error?.data?.message });
             } else if (errorCode === 'RECRUITER_JOB_LIMIT' && recruiterSubscription) {
                 recruiterSubscription.openUpgradeModal('Publishing more than 1 active job');
             } else {
@@ -602,6 +620,73 @@ function UploadJob({ onBack: onBackProp }) {
                     )}
                 </div>
             </div>
+
+            {/* Payment required — the listing exists but stays a draft until paid for. */}
+            {flexPaymentPrompt && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+                                <Pause className="h-10 w-10 text-amber-600" />
+                            </div>
+
+                            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                                Saved as draft — payment needed to publish
+                            </h2>
+
+                            <p className="text-gray-600 mb-2">
+                                {flexPaymentPrompt.message
+                                    || 'This job listing has not been paid for yet, so it stays a draft and is not visible to professionals.'}
+                            </p>
+                            <p className="text-sm text-gray-500 mb-8">
+                                Your listing is safe — publish it whenever you are ready.
+                            </p>
+
+                            {flexPromptError && (
+                                <p className="text-sm text-red-600 mb-4">{flexPromptError}</p>
+                            )}
+
+                            <button
+                                onClick={async () => {
+                                    setFlexPromptError('');
+                                    setFlexPromptAction('pay');
+                                    const started = await startFlexCheckoutForJob(flexPaymentPrompt.jobId);
+                                    if (!started) {
+                                        setFlexPromptAction(null);
+                                        setFlexPromptError('Could not start the payment. Please try again.');
+                                    }
+                                }}
+                                disabled={flexPromptAction !== null}
+                                className="w-full bg-[#1e5a8f] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#164a7a] transition-colors mb-3 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {flexPromptAction === 'pay' && <Loader2 className="h-4 w-4 animate-spin" />}
+                                {flexPromptAction === 'pay' ? 'Starting payment...' : 'Pay & publish for 30 days'}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setFlexPromptAction('premium');
+                                    navigate('/recruiter/manage-subscription');
+                                }}
+                                disabled={flexPromptAction !== null}
+                                className="w-full border-2 border-[#1e5a8f] text-[#1e5a8f] py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors mb-3 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {flexPromptAction === 'premium' && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Upgrade to Premium instead
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setFlexPaymentPrompt(null);
+                                    setShowSuccessModal(true);
+                                }}
+                                disabled={flexPromptAction !== null}
+                                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                Keep as draft for now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Success Modal */}
             {showSuccessModal && (
