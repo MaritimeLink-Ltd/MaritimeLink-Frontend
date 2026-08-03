@@ -7,6 +7,7 @@ function RecruiterOTPVerification() {
     const [timer, setTimer] = useState(60);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
     const inputRefs = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -14,6 +15,10 @@ function RecruiterOTPVerification() {
     // Get email from navigation state
     const email = location.state?.email || '';
     const storedRecruiterId = localStorage.getItem('recruiterId');
+    // Set when login found an incomplete signup and sent the user back here —
+    // the OTP from registration has likely long since expired, so get a fresh
+    // one on their behalf instead of leaving them to notice and click Resend.
+    const resumed = location.state?.resumed || false;
 
     useEffect(() => {
         if (timer > 0) {
@@ -23,6 +28,22 @@ function RecruiterOTPVerification() {
             return () => clearInterval(interval);
         }
     }, [timer]);
+
+    useEffect(() => {
+        if (!resumed || !email) return;
+
+        (async () => {
+            try {
+                await authService.resendRecruiterOTP(email);
+                setInfo("Welcome back! We've sent a new verification code to your email.");
+            } catch (err) {
+                console.error('Auto-resend OTP error:', err);
+                setError(err.data?.message || err.message || 'Failed to send a new code. Please use Resend below.');
+            }
+        })();
+        // Only run once, on arrival via the login-resume path.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleChange = (index, value) => {
         if (isNaN(value)) return;
@@ -152,6 +173,13 @@ function RecruiterOTPVerification() {
                                 </svg>
                                 {error}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Info Message */}
+                    {!error && info && (
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-sm text-blue-700">{info}</p>
                         </div>
                     )}
 

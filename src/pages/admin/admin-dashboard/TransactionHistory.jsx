@@ -17,41 +17,11 @@ function TransactionHistory() {
     const [filterStatus, setFilterStatus] = useState('All');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [apiTransactions, setApiTransactions] = useState([]);
-    const [apiLoaded, setApiLoaded] = useState(false);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const itemsPerPage = 10;
 
-    // Expanded Transaction Data
-    const fallbackTransactions = [
-        { id: 'TXN-8821', userCompany: 'OceanHire Agency', type: 'Subscription', date: 'Oct 24, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$499.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8822', userCompany: 'John Smith', type: 'Course Purchase', date: 'Oct 24, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8823', userCompany: 'Blue Wave Shipping', type: 'Subscription', date: 'Oct 23, 2024', status: 'Failed', statusColor: 'text-red-600 bg-red-50', amount: '$899.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8824', userCompany: 'Sarah Jenkins', type: 'Course Purchase', date: 'Oct 23, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$350.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8825', userCompany: 'Maritime Training Inst', type: 'Payout', date: 'Oct 22, 2024', status: 'Processing', statusColor: 'text-blue-600 bg-blue-50', amount: '-$1,250.00', amountColor: 'text-red-600' },
-        { id: 'TXN-8826', userCompany: 'Global Logistics', type: 'Ads Promotion', date: 'Oct 22, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$200.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8827', userCompany: 'David Lee', type: 'Course Purchase', date: 'Oct 21, 2024', status: 'Pending', statusColor: 'text-orange-600 bg-orange-50', amount: '$150.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8828', userCompany: 'Sea Corp', type: 'Subscription', date: 'Oct 21, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$499.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8829', userCompany: 'Mike Ross', type: 'Course Purchase', date: 'Oct 20, 2024', status: 'Failed', statusColor: 'text-red-600 bg-red-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8830', userCompany: 'Northern Shipping', type: 'Ads Promotion', date: 'Oct 20, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$300.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8831', userCompany: 'Emma Watson', type: 'Course Purchase', date: 'Oct 19, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8832', userCompany: 'Ocean Training', type: 'Payout', date: 'Oct 19, 2024', status: 'Processing', statusColor: 'text-blue-600 bg-blue-50', amount: '-$850.00', amountColor: 'text-red-600' },
-        { id: 'TXN-8833', userCompany: 'Pacific Line', type: 'Subscription', date: 'Oct 18, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$899.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8834', userCompany: 'Tom Hardy', type: 'Course Purchase', date: 'Oct 18, 2024', status: 'Pending', statusColor: 'text-orange-600 bg-orange-50', amount: '$150.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8835', userCompany: 'Cargo Masters', type: 'Ads Promotion', date: 'Oct 17, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$250.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8836', userCompany: 'Emily Blunt', type: 'Course Purchase', date: 'Oct 17, 2024', status: 'Failed', statusColor: 'text-red-600 bg-red-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8837', userCompany: 'Atlantic Inc', type: 'Subscription', date: 'Oct 16, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$499.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8838', userCompany: 'John Wick', type: 'Course Purchase', date: 'Oct 16, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8839', userCompany: 'Maritime Safety', type: 'Payout', date: 'Oct 15, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '-$2,100.00', amountColor: 'text-red-600' },
-        { id: 'TXN-8840', userCompany: 'Chris Evans', type: 'Course Purchase', date: 'Oct 15, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8841', userCompany: 'Evergreen Marine', type: 'Subscription', date: 'Oct 14, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$899.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8842', userCompany: 'Scarlett Jo', type: 'Course Purchase', date: 'Oct 14, 2024', status: 'Pending', statusColor: 'text-orange-600 bg-orange-50', amount: '$150.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8843', userCompany: 'Naval Tech', type: 'Ads Promotion', date: 'Oct 13, 2024', status: 'Failed', statusColor: 'text-red-600 bg-red-50', amount: '$300.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8844', userCompany: 'Robert Downey', type: 'Course Purchase', date: 'Oct 13, 2024', status: 'Completed', statusColor: 'text-green-600 bg-green-50', amount: '$120.00', amountColor: 'text-green-600' },
-        { id: 'TXN-8845', userCompany: 'Seafarer Union', type: 'Payout', date: 'Oct 12, 2024', status: 'Processing', statusColor: 'text-blue-600 bg-blue-50', amount: '-$500.00', amountColor: 'text-red-600' },
-    ];
-    const transactions = apiLoaded ? apiTransactions : fallbackTransactions;
 
     useEffect(() => {
         let cancelled = false;
@@ -63,15 +33,17 @@ function TransactionHistory() {
                 const response = await adminDashboardService.getTransactions({ page: 1, limit: 100 });
                 const list = response?.data?.transactions || [];
                 if (!cancelled) {
-                    setApiTransactions(list.map((transaction) => ({
+                    setTransactions(list.map((transaction) => ({
                         ...transaction,
                         date: transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A',
                         amount: transaction.amountDisplay || String(transaction.amount || 0),
                     })));
-                    setApiLoaded(true);
                 }
             } catch (err) {
-                if (!cancelled) setError(err?.message || 'Could not load transaction history.');
+                if (!cancelled) {
+                    setError(err?.message || 'Could not load transaction history.');
+                    setTransactions([]);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -86,17 +58,18 @@ function TransactionHistory() {
 
     // Filter Logic
     const filteredTransactions = useMemo(() => {
+        const term = searchTerm.toLowerCase();
         return transactions.filter(transaction => {
             const matchesSearch =
-                transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                transaction.userCompany.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                transaction.type.toLowerCase().includes(searchTerm.toLowerCase());
+                String(transaction.id || '').toLowerCase().includes(term) ||
+                String(transaction.userCompany || '').toLowerCase().includes(term) ||
+                String(transaction.type || '').toLowerCase().includes(term);
 
             const matchesStatus = filterStatus === 'All' || transaction.status === filterStatus;
 
             return matchesSearch && matchesStatus;
         });
-    }, [searchTerm, filterStatus]);
+    }, [transactions, searchTerm, filterStatus]);
 
     // Pagination Logic
     const totalItems = filteredTransactions.length;
@@ -291,7 +264,11 @@ function TransactionHistory() {
                             ) : (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                                        No transactions found matching your criteria.
+                                        {loading
+                                            ? 'Loading transactions…'
+                                            : error
+                                                ? 'Transactions could not be loaded.'
+                                                : 'No transactions found matching your criteria.'}
                                     </td>
                                 </tr>
                             )}

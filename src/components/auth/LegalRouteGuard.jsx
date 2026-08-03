@@ -7,13 +7,17 @@ import {
 } from '../../utils/sessionManager';
 import { isAccountStage1Approved } from '../../utils/accountStatus';
 import { readUserProfile } from '../../utils/kycStatus';
-import { loginRouteForLegalPath } from '../../constants/legalRoutes';
+import { isPublicLegalPath, loginRouteForLegalPath } from '../../constants/legalRoutes';
 import { withReturnTo } from '../../utils/postLoginRedirect';
 
 /**
- * Gates the legal policy pages (T&Cs, Privacy, Cookie, Acceptable Use, role terms,
+ * Gates the members-only legal policy pages (Cookie, Acceptable Use, role terms,
  * Data Retention, Security Disclosure) so only registered members with an approved
  * account can read them. The landing-page footer still links to all of them.
+ *
+ * Terms & Conditions and Privacy Policy are public and routed without this guard;
+ * `isPublicLegalPath` is honoured here too so the split lives in one place and a
+ * future re-wrap cannot quietly gate them again.
  *
  * Signed-out visitors go to the login screen that matches the policy they asked for,
  * carrying a `returnTo` so signing in lands them on that policy rather than a
@@ -25,6 +29,11 @@ import { withReturnTo } from '../../utils/postLoginRedirect';
  */
 export default function LegalRouteGuard({ children }) {
     const location = useLocation();
+
+    if (isPublicLegalPath(location.pathname)) {
+        return children;
+    }
+
     const token = typeof window === 'undefined' ? null : localStorage.getItem('authToken');
 
     if (!token || isAuthTokenExpired(token)) {

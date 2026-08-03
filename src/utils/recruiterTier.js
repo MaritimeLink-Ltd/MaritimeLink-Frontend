@@ -14,9 +14,10 @@ export function isFlexJobActive(job) {
  * @param {object}  params
  * @param {string}  params.recruiterTier
  * @param {object}  [params.job] - the job in context, for per-listing Flex perks
- * @param {boolean} [params.hasAnyActiveFlexListing] - recruiter has a live Flex listing on ANY job
+ * @param {boolean} [params.candidateMatchedToActiveFlexListing] - the platform matched this
+ *        candidate to one of the recruiter's paid Flex listings (server-computed)
  */
-export function getRecruiterFeatureAccess({ recruiterTier, job, hasAnyActiveFlexListing } = {}) {
+export function getRecruiterFeatureAccess({ recruiterTier, job, candidateMatchedToActiveFlexListing } = {}) {
     const isPremium = isPremiumRecruiterTier(recruiterTier);
 
     if (isPremium) {
@@ -34,16 +35,14 @@ export function getRecruiterFeatureAccess({ recruiterTier, job, hasAnyActiveFlex
     }
 
     const jobFlexActive = isFlexJobActive(job);
-    // Per the pricing doc, Flex scopes the Document Wallet to "candidates who applied to
-    // that vacancy", but View Resume carries no such restriction — so it unlocks off any
-    // currently-active Flex listing, not just this job's.
-    const anyFlexActive = Boolean(hasAnyActiveFlexListing) || jobFlexActive;
 
     return {
         unlimitedApplications: jobFlexActive,
         smartMatching: jobFlexActive,
         inviteCandidates: jobFlexActive,
-        viewResume: anyFlexActive,
+        // Flex reaches a candidate only through a paid listing: they applied to it, or
+        // the platform matched them to it. Browsing the whole pool stays Premium-only.
+        viewResume: jobFlexActive || Boolean(candidateMatchedToActiveFlexListing),
         viewDocumentWallet: jobFlexActive,
         directMessagingBeforeApplication: false,
         csvExport: false,

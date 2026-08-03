@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import jobService from '../../../../services/jobService';
+import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import { resolveAdminJobDisplay } from '../../../../utils/adminJobDisplay';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
@@ -577,6 +578,16 @@ function JobDetail({ onBack, jobId: jobIdProp }) {
             setShowJobDetailsModal(false);
         } catch (error) {
             console.error('Failed to update job status:', error);
+            // Free slot used up — this listing needs its own Flex payment to go live.
+            if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
+                try {
+                    const checkout = await recruiterSettingsService.createFlexListingCheckout(jobId);
+                    const checkoutUrl = checkout?.data?.checkoutUrl;
+                    if (checkoutUrl) window.location.href = checkoutUrl;
+                } catch (checkoutError) {
+                    console.error('Failed to start Flex checkout:', checkoutError);
+                }
+            }
         }
     };
 

@@ -1,12 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Upload, Eye, Edit2, RotateCcw, Download, CheckCircle, Trash2, Loader2, AlertTriangle, Clock, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import DocumentDetail from './DocumentDetail';
 import EditDocument from './EditDocument';
 import ModalOverlay from '../../../../components/common/ModalOverlay';
 import documentService from '../../../../services/documentService';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
-import { readExpiryDate } from '../../../../utils/documentStatus';
+import { readExpiryDate, getDocumentExpiryState } from '../../../../utils/documentStatus';
+
+/** Same colours the wallet folder cards use, so a folder chip and its documents read as one status. */
+const EXPIRY_BADGES = {
+    expired: {
+        label: 'Expired',
+        icon: AlertTriangle,
+        className: 'bg-red-50 text-red-600 border-red-100',
+    },
+    expiring: {
+        label: 'Expiring',
+        icon: Clock,
+        className: 'bg-amber-50 text-amber-700 border-amber-100',
+    },
+    valid: {
+        label: 'Valid',
+        icon: CheckCircle,
+        className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    },
+    // No expiry date means nothing to expire — the folder tile counts these as valid too.
+    none: {
+        label: 'Valid',
+        icon: CheckCircle,
+        className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    },
+};
 
 const CategoryDocuments = ({
     category,
@@ -54,6 +79,7 @@ const CategoryDocuments = ({
                         : 'N/A',
                     type: getDocumentCategoryLabel(getDocumentDisplayCategory(doc)),
                     displayCategory: getDocumentDisplayCategory(doc),
+                    expiryState: getDocumentExpiryState(doc),
                 }));
             
             setDocuments(formattedDocs);
@@ -258,7 +284,12 @@ const CategoryDocuments = ({
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366]"></div>
                     </div>
                 ) : filteredDocuments.length > 0 ? (
-                    filteredDocuments.map((doc) => (
+                    filteredDocuments.map((doc) => {
+                        // Documents without an expiry date get no badge — there is nothing to claim.
+                        const badge = EXPIRY_BADGES[doc.expiryState];
+                        const BadgeIcon = badge?.icon;
+
+                        return (
                         <div
                             key={doc.id}
                             onClick={() => handleDocumentClick(doc)}
@@ -287,8 +318,16 @@ const CategoryDocuments = ({
 
                             {/* Document Info */}
                             <div className="flex-1 flex flex-col">
-                                <div className="mb-2">
+                                <div className="mb-2 flex items-start justify-between gap-2">
                                     <h3 className="text-base font-bold text-gray-800">{doc.name || doc.title}</h3>
+                                    {badge && (
+                                        <span
+                                            className={`shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${badge.className}`}
+                                        >
+                                            <BadgeIcon size={12} />
+                                            {badge.label}
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="space-y-1 mb-3">
@@ -351,7 +390,8 @@ const CategoryDocuments = ({
                                 </div>
                             </div>
                         </div>
-                    ))
+                        );
+                    })
                 ) : (
                     <div className="col-span-full py-12 text-center text-gray-500">
                         <p>No documents found in this category.</p>

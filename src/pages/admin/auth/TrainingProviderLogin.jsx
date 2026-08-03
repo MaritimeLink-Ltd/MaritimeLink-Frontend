@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
 import { syncTermsAcceptedFromProfile } from '../../../utils/termsAcceptance';
 import { readReturnTo } from '../../../utils/postLoginRedirect';
+import { resumeRecruiterSignup, readSignupError } from '../../../utils/resumeSignup';
 
 function TrainingProviderLogin() {
     const navigate = useNavigate();
@@ -50,6 +51,31 @@ function TrainingProviderLogin() {
             navigate(returnTo || '/trainingprovider-dashboard');
         } catch (err) {
             console.error('Login error:', err);
+
+            const { code, payload } = readSignupError(err);
+
+            // Signup was never finished (email OTP not verified) — resume it at the
+            // OTP step instead of leaving the user stuck on a "not verified" error
+            // with no way forward.
+            if (code === 'ACCOUNT_NOT_VERIFIED' && payload.recruiterId) {
+                localStorage.setItem('recruiterId', payload.recruiterId);
+                navigate('/agent/otp-verification', {
+                    state: { email: formData.email, resumed: true },
+                });
+                return;
+            }
+
+            // Email verified but the rest of the wizard (personal info, phone
+            // verification, company details, compliance) was never finished —
+            // continue from the step they stopped at.
+            if (code === 'SIGNUP_INCOMPLETE' && payload.recruiterId) {
+                localStorage.setItem('userEmail', formData.email);
+                navigate(resumeRecruiterSignup(payload), {
+                    state: { email: formData.email, resumed: true },
+                });
+                return;
+            }
+
             setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);

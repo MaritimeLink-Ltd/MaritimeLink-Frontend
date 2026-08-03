@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../../../services/authService';
 import { syncTermsAcceptedFromProfile } from '../../../utils/termsAcceptance';
 import { readReturnTo } from '../../../utils/postLoginRedirect';
+import { resumeProfessionalSignup, readSignupError } from '../../../utils/resumeSignup';
 
 function SignIn() {
   const navigate = useNavigate();
@@ -66,6 +67,34 @@ function SignIn() {
       navigate(returnTo || '/personal/dashboard');
     } catch (err) {
       console.error('Login error:', err);
+
+      // Signup was never finished (email OTP not verified) — resume it at the
+      // OTP step instead of leaving the user stuck on a "not verified" error
+      // with no way forward.
+      const { code, payload } = readSignupError(err);
+
+      if (code === 'ACCOUNT_NOT_VERIFIED' && payload.professionalId) {
+        navigate('/otp-verification', {
+          state: {
+            email: formData.email,
+            professionalId: payload.professionalId,
+            resumed: true,
+          },
+        });
+        return;
+      }
+
+      // Email verified but the rest of the wizard was never finished — continue
+      // from the step they stopped at.
+      if (code === 'SIGNUP_INCOMPLETE' && payload.professionalId) {
+        localStorage.setItem('userType', 'professional');
+        localStorage.setItem('userEmail', formData.email);
+        navigate(resumeProfessionalSignup(payload), {
+          state: { userType: 'professional', resumed: true },
+        });
+        return;
+      }
+
       setError(err.data?.message || err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);

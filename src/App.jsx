@@ -202,9 +202,11 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/otp-verification" element={<OTPVerification />} />
-          {/* Legal policies — members only (see LegalRouteGuard). Signup shows Terms inline instead. */}
-          <Route path="/terms" element={<LegalRouteGuard><PublicTerms /></LegalRouteGuard>} />
-          <Route path="/privacy" element={<LegalRouteGuard><PublicPrivacy /></LegalRouteGuard>} />
+          {/* Terms & Privacy are public: visitors must be able to read what they are
+              agreeing to before they have an account. */}
+          <Route path="/terms" element={<PublicTerms />} />
+          <Route path="/privacy" element={<PublicPrivacy />} />
+          {/* The remaining policies stay members only (see LegalRouteGuard). */}
           <Route path="/cookie-policy" element={<LegalRouteGuard><PublicCookie /></LegalRouteGuard>} />
           <Route path="/acceptable-use-policy" element={<LegalRouteGuard><PublicAcceptableUse /></LegalRouteGuard>} />
           <Route path="/recruiter-terms-of-service" element={<LegalRouteGuard><PublicRecruiterTerms /></LegalRouteGuard>} />

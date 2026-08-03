@@ -84,7 +84,6 @@ export function useRecruiterSubscriptionGuard() {
         const access = getRecruiterFeatureAccess({
             recruiterTier: ctx.tier,
             job,
-            hasAnyActiveFlexListing: ctx.hasActiveFlexListing,
         });
         if (access[featureKey]) {
             callback?.();

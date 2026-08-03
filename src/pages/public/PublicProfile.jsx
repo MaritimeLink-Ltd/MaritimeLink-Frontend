@@ -251,11 +251,6 @@ export default function PublicProfile() {
                                         </div>
                                     )}
                                 </div>
-                                {profile.summary && (
-                                    <p className="text-slate-700 leading-relaxed whitespace-pre-line mt-3">
-                                        {profile.summary}
-                                    </p>
-                                )}
                             </div>
                         </div>
 
@@ -274,6 +269,12 @@ export default function PublicProfile() {
                             )}
                         </div>
                     </div>
+
+                    {profile.summary && (
+                        <p className="mt-6 pt-6 border-t border-slate-100 text-slate-700 leading-relaxed whitespace-pre-line">
+                            {profile.summary}
+                        </p>
+                    )}
                 </div>
 
                 {experienceLines.length > 0 && (

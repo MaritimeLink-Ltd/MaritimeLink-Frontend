@@ -90,6 +90,9 @@ const PUBLIC_PATH_PREFIXES = [
     '/training-provider/forgot-password',
     '/training-provider/reset-password',
     '/recruiter/login',
+    // Publicly readable legal pages — an expiring session must not evict a reader.
+    '/terms',
+    '/privacy',
 ];
 
 /** Decode JWT payload (no signature verification). */

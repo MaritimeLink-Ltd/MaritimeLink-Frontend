@@ -36,15 +36,15 @@ const PLAN_DETAILS = {
         meta: 'Listing duration: 30 days',
         inherits: 'Everything in Free Recruiter, plus:',
         highlights: [
-            'One 30-Day Premium Job Listing',
-            'Unlimited applications for that listing',
+            'Unlimited job listings — pay per listing, each live for 30 days',
+            'Unlimited applications for each paid listing',
             'Smart Candidate Matching',
             'Invite Candidates',
             'Manage applications',
             'Recruiter Dashboard',
             'Search candidates using all available filters',
             'View candidate summary profiles',
-            'View Resume',
+            'View Resume for candidates matched or applied to your paid listing',
             'View Document Wallet for candidates who applied to that vacancy only',
             'Message candidates who have applied to your vacancy',
         ],
@@ -261,7 +261,10 @@ const ManageRecruiterSubscription = () => {
     };
 
     const handleFlexCheckout = async () => {
-        if (!selectedJobId) {
+        // Flex is unlimited-but-paid, so with every listing already upgraded the
+        // next step is posting another job, not a dead end.
+        const canUpgradeSelected = flexEligibleJobs.some((job) => job.id === selectedJobId);
+        if (!selectedJobId || !canUpgradeSelected) {
             navigate('/recruiter/upload-job');
             return;
         }
@@ -408,22 +411,22 @@ const ManageRecruiterSubscription = () => {
                                                 )}
                                                 <button
                                                     onClick={handleFlexCheckout}
-                                                    disabled={isUpdating || isLoadingJobs || (myJobs.length > 0 && flexEligibleJobs.length === 0)}
+                                                    disabled={isUpdating || isLoadingJobs}
                                                     className="w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-60 bg-blue-600 text-white hover:bg-blue-500 flex items-center justify-center gap-2"
                                                 >
                                                     <Briefcase size={16} />
                                                     {isLoadingJobs
                                                         ? 'Loading your jobs...'
-                                                        : selectedJobId
+                                                        : flexEligibleJobs.length > 0 && selectedJobId
                                                             ? 'Upgrade This Listing'
                                                             : myJobs.length > 0
-                                                                ? 'All Jobs Upgraded'
+                                                                ? 'Post Another Job'
                                                                 : 'Post a Job'}
                                                 </button>
                                                 {!isLoadingJobs && flexEligibleJobs.length === 0 && (
                                                     <p className="text-xs text-gray-500 text-center">
                                                         {myJobs.length > 0
-                                                            ? 'All your jobs already have an active Flex or Premium upgrade.'
+                                                            ? 'All your jobs already have an active Flex or Premium upgrade. Post another listing to buy a new one — Flex has no listing limit.'
                                                             : "You don't have any job listings yet — post one first."}
                                                     </p>
                                                 )}

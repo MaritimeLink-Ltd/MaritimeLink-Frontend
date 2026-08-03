@@ -10,7 +10,6 @@ import {
     Calendar,
     ChevronRight,
     CheckCircle,
-    TrendingUp,
     Building,
     DollarSign,
     ArrowUpRight,
@@ -28,15 +27,21 @@ import { useNavigate } from 'react-router-dom';
 import adminDashboardService from '../../../services/adminDashboardService';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 
-function formatAdminCurrencyGbp(value) {
+function formatAdminCurrencyGbp(value, currency = 'GBP') {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
     return new Intl.NumberFormat('en-GB', {
         style: 'currency',
-        currency: 'GBP',
+        currency: currency || 'GBP',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(n);
+}
+
+function formatAdminCount(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return new Intl.NumberFormat('en-GB').format(n);
 }
 
 function adminGrowthBadgeClass(growthStr) {
@@ -44,13 +49,6 @@ function adminGrowthBadgeClass(growthStr) {
     if (!s || s === '—' || s === '…') return 'text-white/70 bg-white/10';
     if (s.startsWith('-')) return 'text-red-300 bg-red-500/20';
     return 'text-green-400 bg-green-500/10';
-}
-
-function adminGrowthHeaderClass(growthStr) {
-    const s = String(growthStr || '').trim();
-    if (!s || s === '—' || s === '…') return 'text-gray-400';
-    if (s.startsWith('-')) return 'text-red-600';
-    return 'text-green-500';
 }
 
 function formatAdminRelativeTime(iso) {
@@ -132,16 +130,27 @@ function AdminDashboard() {
     });
     const [activityLoading, setActivityLoading] = useState(true);
     const [activityError, setActivityError] = useState(null);
+    // Two distinct revenue models: professionals and recruiters pay a subscription,
+    // training providers pay commission on course sales. The card mirrors that split.
     const [revenueData, setRevenueData] = useState({
-        overview: { activeSubscriptions: 0, totalRevenue: 0, growth: '' },
-        breakdown: {
-            professionals: { amount: 0, active: 0, growth: '' },
-            recruiters: { amount: 0, active: 0, growth: '' },
+        overview: {
+            totalRevenue: 0,
+            totalSubscribers: 0,
+            currency: 'GBP',
+            source: 'stripe',
+        },
+        subscriptions: {
+            professionals: { subscribers: 0, revenue: 0 },
+            recruiters: { subscribers: 0, revenue: 0 },
         },
         training: {
-            totalThisMonth: 0,
+            period: 'This Month',
+            commissionRevenue: 0,
             growth: '',
-            sources: { courseSales: 0, pendingPayouts: 0, refunds: 0 },
+            grossSales: 0,
+            costOfSales: 0,
+            pendingPayouts: 0,
+            refunds: 0,
         },
     });
     const [financeAnalytics, setFinanceAnalytics] = useState({
@@ -234,43 +243,36 @@ function AdminDashboard() {
                 if (revenueOutcome.status === 'fulfilled') {
                     const d = revenueOutcome.value?.data;
                     const ov = d?.overview || {};
-                    const bd = d?.breakdown || {};
+                    const subs = d?.subscriptions || {};
                     const tr = d?.training || {};
-                    const src = tr?.sources || {};
                     if (!cancelled) {
                         setRevenueData({
                             overview: {
-                                activeSubscriptions: Number(ov.activeSubscriptions) || 0,
                                 totalRevenue: Number(ov.totalRevenue) || 0,
-                                growth: ov.growth != null && ov.growth !== '' ? String(ov.growth) : '',
+                                totalSubscribers:
+                                    Number(ov.totalSubscribers ?? ov.activeSubscriptions) || 0,
+                                currency: ov.currency || 'GBP',
+                                source: ov.source || 'stripe',
                             },
-                            breakdown: {
+                            subscriptions: {
                                 professionals: {
-                                    amount: Number(bd.professionals?.amount) || 0,
-                                    active: Number(bd.professionals?.active) || 0,
-                                    growth:
-                                        bd.professionals?.growth != null && bd.professionals?.growth !== ''
-                                            ? String(bd.professionals.growth)
-                                            : '',
+                                    subscribers: Number(subs.professionals?.subscribers) || 0,
+                                    revenue: Number(subs.professionals?.revenue) || 0,
                                 },
                                 recruiters: {
-                                    amount: Number(bd.recruiters?.amount) || 0,
-                                    active: Number(bd.recruiters?.active) || 0,
-                                    growth:
-                                        bd.recruiters?.growth != null && bd.recruiters?.growth !== ''
-                                            ? String(bd.recruiters.growth)
-                                            : '',
+                                    subscribers: Number(subs.recruiters?.subscribers) || 0,
+                                    revenue: Number(subs.recruiters?.revenue) || 0,
                                 },
                             },
                             training: {
-                                totalThisMonth: Number(tr.totalThisMonth) || 0,
+                                period: tr.period || 'This Month',
+                                commissionRevenue: Number(tr.commissionRevenue) || 0,
                                 growth:
                                     tr.growth != null && tr.growth !== '' ? String(tr.growth) : '',
-                                sources: {
-                                    courseSales: Number(src.courseSales) || 0,
-                                    pendingPayouts: Number(src.pendingPayouts) || 0,
-                                    refunds: Number(src.refunds) || 0,
-                                },
+                                grossSales: Number(tr.grossSales) || 0,
+                                costOfSales: Number(tr.costOfSales) || 0,
+                                pendingPayouts: Number(tr.pendingPayouts) || 0,
+                                refunds: Number(tr.refunds) || 0,
                             },
                         });
                     }
@@ -424,46 +426,49 @@ function AdminDashboard() {
         ];
     }, [adminActivity, adminUserBreakdown, activityLoading]);
 
-    const revenueOverviewDisplay = useMemo(() => {
-        const ov = revenueData.overview;
-        const s = financeAnalytics.summary;
-        return {
-            bookings: revenueLoading ? '—' : String(Number(s.totalBookings) || 0),
-            totalRevenue: revenueLoading ? '—' : formatAdminCurrencyGbp(s.totalRevenue),
-            growth: revenueLoading ? '…' : ov.growth || '—',
-        };
-    }, [revenueData, financeAnalytics, revenueLoading]);
+    // A failed request must not render as £0 — an unknown figure stays a dash.
+    const revenueUnresolved = revenueLoading || Boolean(revenueError);
 
-    const financeFeeRows = useMemo(() => {
-        const s = financeAnalytics.summary;
-        const fmt = (n) => (revenueLoading ? '—' : formatAdminCurrencyGbp(n));
+    const subscriptionOverviewDisplay = useMemo(() => {
+        const ov = revenueData.overview;
+        return {
+            totalRevenue: revenueUnresolved
+                ? '—'
+                : formatAdminCurrencyGbp(ov.totalRevenue, ov.currency),
+            totalSubscribers: revenueUnresolved ? '—' : formatAdminCount(ov.totalSubscribers),
+            // Subscription amounts live in Stripe; say so when we could not reach it
+            // rather than showing a confident zero.
+            unavailable: !revenueUnresolved && ov.source === 'unavailable',
+        };
+    }, [revenueData, revenueUnresolved]);
+
+    const subscriptionBreakdownRows = useMemo(() => {
+        const { professionals, recruiters } = revenueData.subscriptions;
+        const currency = revenueData.overview.currency;
+        const fmt = (n) => (revenueUnresolved ? '—' : formatAdminCurrencyGbp(n, currency));
+        const subscriberLabel = (n) =>
+            revenueUnresolved
+                ? 'Subscribers unavailable'
+                : `${formatAdminCount(n)} active subscriber${Number(n) === 1 ? '' : 's'}`;
         return [
             {
-                label: 'Platform fees',
-                sublabel: 'Commission on bookings',
-                amount: fmt(s.platformCommission),
-                icon: DollarSign,
-                iconColor: 'text-emerald-600',
-                iconBg: 'bg-emerald-50',
-            },
-            {
-                label: 'Trainer payouts',
-                sublabel: 'Paid to training providers',
-                amount: fmt(s.trainerPayouts),
-                icon: Building,
+                label: 'Professionals',
+                sublabel: subscriberLabel(professionals.subscribers),
+                amount: fmt(professionals.revenue),
+                icon: Users,
                 iconColor: 'text-blue-500',
                 iconBg: 'bg-blue-50',
             },
             {
-                label: 'Pending payouts',
-                sublabel: 'Awaiting settlement',
-                amount: fmt(s.pendingPayouts),
-                icon: Calendar,
-                iconColor: 'text-orange-500',
-                iconBg: 'bg-orange-50',
+                label: 'Recruiters',
+                sublabel: subscriberLabel(recruiters.subscribers),
+                amount: fmt(recruiters.revenue),
+                icon: Briefcase,
+                iconColor: 'text-emerald-600',
+                iconBg: 'bg-emerald-50',
             },
         ];
-    }, [financeAnalytics, revenueLoading]);
+    }, [revenueData, revenueUnresolved]);
 
     const trainerRevenueRows = useMemo(() => {
         const fmt = (n) => (revenueLoading ? '—' : formatAdminCurrencyGbp(n));
@@ -478,22 +483,28 @@ function AdminDashboard() {
     }, [financeAnalytics, revenueLoading]);
 
     const trainingRevenueSources = useMemo(() => {
-        const s = revenueData.training.sources;
-        const fmt = (n) => (revenueLoading ? '—' : formatAdminCurrencyGbp(n));
+        const t = revenueData.training;
+        const currency = revenueData.overview.currency;
+        const fmt = (n) => (revenueUnresolved ? '—' : formatAdminCurrencyGbp(n, currency));
         return [
-            { label: 'Course Sales', value: fmt(s.courseSales) },
-            { label: 'Pending Payouts', value: fmt(s.pendingPayouts) },
-            { label: 'Refunds', value: fmt(s.refunds) },
+            { label: 'Course sales', sublabel: 'Gross booking value', value: fmt(t.grossSales) },
+            { label: 'Cost of sales', sublabel: 'Provider share of sales', value: fmt(t.costOfSales) },
+            { label: 'Pending payouts', sublabel: 'Owed to providers', value: fmt(t.pendingPayouts) },
+            { label: 'Refunds', sublabel: 'Refunded bookings', value: fmt(t.refunds) },
         ];
-    }, [revenueData, revenueLoading]);
+    }, [revenueData, revenueUnresolved]);
 
     const trainingNetDisplay = useMemo(() => {
         const t = revenueData.training;
         return {
-            total: revenueLoading ? '—' : formatAdminCurrencyGbp(t.totalThisMonth),
+            total: revenueUnresolved
+                ? '—'
+                : formatAdminCurrencyGbp(t.commissionRevenue, revenueData.overview.currency),
+            // No prior month to compare against yields no percentage at all.
             growth: revenueLoading ? '…' : t.growth || '—',
+            period: t.period || 'This Month',
         };
-    }, [revenueData, revenueLoading]);
+    }, [revenueData, revenueLoading, revenueUnresolved]);
 
     const reviewQueueDisplay = useMemo(() => {
         return reviewQueueList.map((item) => {
@@ -839,45 +850,51 @@ function AdminDashboard() {
 
                 {/* Right Column - Revenue */}
                 <div className={`space-y-6 ${revenueLoading ? 'opacity-90' : ''}`}>
-                    {/* Revenue Card */}
+                    {/* Subscription Revenue Card — professionals + recruiters */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">Revenue</h2>
-                                <p className="text-xs text-gray-500">Bookings, fees, and payouts</p>
-                            </div>
-                            <div
-                                className={`flex items-center gap-1 text-sm font-bold ${adminGrowthHeaderClass(revenueOverviewDisplay.growth)}`}
-                            >
-                                <TrendingUp className="h-4 w-4" />
-                                {revenueOverviewDisplay.growth}
+                                <h2 className="text-lg font-bold text-gray-900">Subscription Revenue</h2>
+                                <p className="text-xs text-gray-500">Professional &amp; recruiter plans</p>
                             </div>
                         </div>
 
-                        {/* Main Revenue Display */}
+                        {/* Total revenue, then the subscriber count behind it */}
                         <div className="bg-gradient-to-br from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8] rounded-2xl p-6 mb-6">
                             <div className="flex items-center gap-2 mb-3">
-                                <Calendar className="h-4 w-4 text-white/80" />
-                                <span className="text-xs font-bold text-white/80 tracking-wide">TOTAL BOOKINGS</span>
+                                <DollarSign className="h-4 w-4 text-white/80" />
+                                <span className="text-xs font-bold text-white/80 tracking-wide">
+                                    TOTAL REVENUE
+                                </span>
                             </div>
-                            <div className="text-4xl font-extrabold text-white mb-4 tabular-nums">
-                                {revenueOverviewDisplay.bookings}
+                            <div className="text-4xl font-extrabold text-white mb-1 tabular-nums">
+                                {subscriptionOverviewDisplay.totalRevenue}
                             </div>
+                            <span className="text-xs text-white/60">Per month, active subscriptions</span>
 
-                            <div className="pt-4 border-t border-white/20">
-                                <span className="text-xs font-bold text-white/80 tracking-wide block mb-2">TOTAL REVENUE</span>
+                            <div className="pt-4 mt-4 border-t border-white/20">
+                                <span className="text-xs font-bold text-white/80 tracking-wide block mb-2">
+                                    TOTAL SUBSCRIBERS
+                                </span>
                                 <div className="text-3xl font-extrabold text-white tabular-nums">
-                                    {revenueOverviewDisplay.totalRevenue}
+                                    {subscriptionOverviewDisplay.totalSubscribers}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Revenue Breakdown */}
+                        {subscriptionOverviewDisplay.unavailable && (
+                            <p className="text-xs text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 mb-4">
+                                Subscription amounts are unavailable right now — subscriber counts are
+                                still accurate.
+                            </p>
+                        )}
+
+                        {/* Breakdown: who the subscription revenue comes from */}
                         <div>
                             <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4">BREAKDOWN</h3>
                             <div className="space-y-4">
-                                {financeFeeRows.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between">
+                                {subscriptionBreakdownRows.map((item) => (
+                                    <div key={item.label} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className={`p-2 rounded-lg ${item.iconBg} flex-shrink-0`}>
                                                 <item.icon className={`h-4 w-4 ${item.iconColor}`} />
@@ -890,6 +907,62 @@ function AdminDashboard() {
                                         <div className="text-right flex-shrink-0 pl-2">
                                             <p className="text-sm font-bold text-gray-900 tabular-nums">{item.amount}</p>
                                         </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Training Provider Revenue Card — commission, not subscription */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Training Provider Revenue</h2>
+                                <p className="text-xs text-gray-500">Commission on course sales</p>
+                            </div>
+                        </div>
+
+                        {/* Commission earned this month */}
+                        <div className="bg-gradient-to-br from-[#1f2937] via-[#374151] to-[#4b5563] rounded-2xl p-6 mb-6">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4 text-white/80" />
+                                    <span className="text-xs font-bold text-white/80 tracking-wide">
+                                        COMMISSION REVENUE
+                                    </span>
+                                </div>
+                                <span
+                                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${adminGrowthBadgeClass(trainingNetDisplay.growth)}`}
+                                >
+                                    {trainingNetDisplay.growth}
+                                </span>
+                            </div>
+                            <div className="flex items-baseline gap-2 mb-2">
+                                <div className="text-4xl font-extrabold text-white tabular-nums">
+                                    {trainingNetDisplay.total}
+                                </div>
+                            </div>
+                            <span className="text-xs text-white/60">{trainingNetDisplay.period}</span>
+                        </div>
+
+                        {/* Sources */}
+                        <div>
+                            <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4">SOURCES</h3>
+                            <div className="space-y-3">
+                                {trainingRevenueSources.map((source) => (
+                                    <div key={source.label} className="flex items-center justify-between py-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            <div className="min-w-0">
+                                                <span className="text-sm text-gray-600 block">{source.label}</span>
+                                                <span className="text-xs text-gray-400 block truncate">
+                                                    {source.sublabel}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-gray-900 tabular-nums pl-2">
+                                            {source.value}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -935,50 +1008,6 @@ function AdminDashboard() {
                                     ))}
                                 </div>
                             )}
-                        </div>
-                    </div>
-
-                    {/* Training Revenue Card */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-bold text-gray-900">Training Revenue</h2>
-                        </div>
-
-                        {/* Net Revenue Display */}
-                        <div className="bg-gradient-to-br from-[#1f2937] via-[#374151] to-[#4b5563] rounded-2xl p-6 mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-white/80" />
-                                    <span className="text-xs font-bold text-white/80 tracking-wide">NET REVENUE</span>
-                                </div>
-                                <span
-                                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${adminGrowthBadgeClass(trainingNetDisplay.growth)}`}
-                                >
-                                    {trainingNetDisplay.growth}
-                                </span>
-                            </div>
-                            <div className="flex items-baseline gap-2 mb-2">
-                                <div className="text-4xl font-extrabold text-white tabular-nums">
-                                    {trainingNetDisplay.total}
-                                </div>
-                            </div>
-                            <span className="text-xs text-white/60">This Month</span>
-                        </div>
-
-                        {/* Sources */}
-                        <div>
-                            <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4">SOURCES</h3>
-                            <div className="space-y-3">
-                                {trainingRevenueSources.map((source, index) => (
-                                    <div key={index} className="flex items-center justify-between py-2">
-                                        <div className="flex items-center gap-2">
-                                            <DollarSign className="h-4 w-4 text-gray-400" />
-                                            <span className="text-sm text-gray-600">{source.label}</span>
-                                        </div>
-                                        <span className="text-sm font-bold text-gray-900 tabular-nums">{source.value}</span>
-                                    </div>
-                                ))}
-                            </div>
 
                             <Link
                                 to="/admin/transaction-history"

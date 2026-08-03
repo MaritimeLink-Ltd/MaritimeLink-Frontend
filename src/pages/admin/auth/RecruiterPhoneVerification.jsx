@@ -7,6 +7,7 @@ function RecruiterPhoneVerification() {
     const [timer, setTimer] = useState(60);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
     const inputRefs = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
@@ -14,6 +15,10 @@ function RecruiterPhoneVerification() {
     // Phone number is passed through from the profile-completion step, purely for display.
     const phoneNumber = location.state?.phoneNumber || '';
     const storedRecruiterId = localStorage.getItem('recruiterId');
+    // Set when login resumed an abandoned signup at this step — the code from
+    // the original attempt has long since expired, so get a fresh one rather
+    // than leaving the user to work that out and click Resend.
+    const resumed = location.state?.resumed || false;
 
     useEffect(() => {
         if (timer > 0) {
@@ -23,6 +28,22 @@ function RecruiterPhoneVerification() {
             return () => clearInterval(interval);
         }
     }, [timer]);
+
+    useEffect(() => {
+        if (!resumed || !storedRecruiterId) return;
+
+        (async () => {
+            try {
+                await authService.resendRecruiterPhoneOTP(storedRecruiterId);
+                setInfo("Welcome back! We've sent a new code to your phone to finish setting up your account.");
+            } catch (err) {
+                console.error('Auto-resend phone OTP error:', err);
+                setError(err.data?.message || err.message || 'Failed to send a new code. Please use Resend below.');
+            }
+        })();
+        // Only run once, on arrival via the login-resume path.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleChange = (index, value) => {
         if (isNaN(value)) return;
@@ -169,6 +190,13 @@ function RecruiterPhoneVerification() {
                                 </svg>
                                 {error}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Info Message */}
+                    {!error && info && (
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-sm text-blue-700">{info}</p>
                         </div>
                     )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X, Pause, Upload, MapPin, Calendar, Loader2, Trash2 } from 'lucide-react';
 import jobService from '../../../services/jobService';
+import recruiterSettingsService from '../../../services/recruiterSettingsService';
 import { COUNTRY_NAMES } from '../../../utils/countries';
 import { useKycGuard } from '../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../constants/kycRestrictedActions';
@@ -114,6 +115,28 @@ function UploadJob({ onBack: onBackProp }) {
         setStep(2);
     };
 
+    /**
+     * Flex is pay-per-listing: once the free slot is used, a listing is held as a
+     * draft until its own fee is paid. Send the recruiter straight to checkout for
+     * that job — paying publishes it for 30 days.
+     */
+    const startFlexCheckoutForJob = async (jobId) => {
+        try {
+            const response = await recruiterSettingsService.createFlexListingCheckout(jobId);
+            const checkoutUrl = response?.data?.checkoutUrl;
+            if (!checkoutUrl) throw new Error('Checkout URL was not returned. Please try again.');
+            window.location.href = checkoutUrl;
+            return true;
+        } catch (error) {
+            setSubmitError(
+                error?.data?.message
+                || error?.message
+                || 'Could not start payment for this listing. Please try again.',
+            );
+            return false;
+        }
+    };
+
     const handlePublishToggle = () => {
         setShowPublishModal(true);
     };
@@ -136,7 +159,12 @@ function UploadJob({ onBack: onBackProp }) {
             setShowPublishModal(false);
         } catch (error) {
             console.error('Failed to update job publish status:', error);
-            setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+            if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
+                setShowPublishModal(false);
+                await startFlexCheckoutForJob(editData.id);
+            } else {
+                setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+            }
         } finally {
             setIsStatusUpdating(false);
         }
@@ -164,7 +192,12 @@ function UploadJob({ onBack: onBackProp }) {
             setShowPauseModal(false);
         } catch (error) {
             console.error('Failed to pause/resume job:', error);
-            setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+            if (error?.data?.code === 'FLEX_PAYMENT_REQUIRED') {
+                setShowPauseModal(false);
+                await startFlexCheckoutForJob(editData.id);
+            } else {
+                setSubmitError(error?.data?.message || error?.message || 'Could not update job status.');
+            }
         } finally {
             setIsStatusUpdating(false);
         }
@@ -283,6 +316,17 @@ function UploadJob({ onBack: onBackProp }) {
             } else {
                 response = await jobService.createJob(payload);
                 console.log('Job created successfully:', response);
+
+                // Saved as a draft because the free slot is taken — pay for this
+                // listing and it goes live for 30 days.
+                if (response?.data?.requiresFlexPayment) {
+                    const started = await startFlexCheckoutForJob(response.data.job.id);
+                    if (started) return;
+                    setIsPublished(false);
+                    setIsPaused(true);
+                    setShowSuccessModal(true);
+                    return;
+                }
             }
             setIsPublished(status === 'ACTIVE');
             setIsPaused(status === 'DRAFT');
@@ -291,7 +335,10 @@ function UploadJob({ onBack: onBackProp }) {
         } catch (error) {
             console.error('Failed to create job:', error);
             const errorCode = error?.data?.code;
-            if (errorCode === 'RECRUITER_JOB_LIMIT' && recruiterSubscription) {
+            const flexJobId = error?.data?.jobId || editData?.id;
+            if (errorCode === 'FLEX_PAYMENT_REQUIRED' && flexJobId) {
+                await startFlexCheckoutForJob(flexJobId);
+            } else if (errorCode === 'RECRUITER_JOB_LIMIT' && recruiterSubscription) {
                 recruiterSubscription.openUpgradeModal('Publishing more than 1 active job');
             } else {
                 const message = error?.data?.message || error?.message || 'Failed to create job. Please try again.';
