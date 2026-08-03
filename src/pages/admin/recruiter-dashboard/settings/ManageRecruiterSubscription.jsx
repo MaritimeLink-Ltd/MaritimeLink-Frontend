@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Crown, Loader2, Briefcase } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ChevronDown, Crown, Loader2, Briefcase } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import jobService from '../../../../services/jobService';
@@ -55,8 +55,7 @@ const PLAN_DETAILS = {
             'For recruiters, shipowners, crewing companies and manning agencies recruiting continuously.',
         inherits: 'Everything in Flex Recruiter, plus:',
         highlights: [
-            'Unlimited Active Job Listings',
-            'Unlimited Premium Job Listings',
+            'Unlimited Active & Premium Job Listings',
             'Unlimited Applications',
             'Unlimited Candidate Search',
             'Smart Candidate Matching',
@@ -71,6 +70,13 @@ const PLAN_DETAILS = {
         ],
     },
 };
+
+/**
+ * Features shown before the "show more" toggle. The full lists run to 11-13
+ * items, which pushed the Subscribe buttons well below the fold; this keeps all
+ * three cards to one screen while leaving every feature one click away.
+ */
+const FEATURES_PREVIEW_COUNT = 6;
 
 /** Plan prices come from the API (`membership.plans`); always render 2 decimals. */
 const formatPlanPrice = (plan, planCode) => {
@@ -92,6 +98,14 @@ const ManageRecruiterSubscription = () => {
     const [myJobs, setMyJobs] = useState([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState(true);
     const [selectedJobId, setSelectedJobId] = useState(preselectedJobId || '');
+    /** Plan codes whose full feature list the user has opened. */
+    const [expandedPlans, setExpandedPlans] = useState([]);
+
+    const togglePlanFeatures = (planCode) => {
+        setExpandedPlans((prev) =>
+            prev.includes(planCode) ? prev.filter((code) => code !== planCode) : [...prev, planCode],
+        );
+    };
 
     const loadMembership = async () => {
         try {
@@ -299,10 +313,12 @@ const ManageRecruiterSubscription = () => {
                     </div>
                 ) : (
                     <>
-                        <div className="bg-blue-900 rounded-xl p-6 text-white mb-4">
-                            <div className="flex items-center gap-3">
-                                <Crown size={24} />
-                                <div>
+                        {/* Current plan, with the live Flex listings folded in so the
+                            page opens with one status block instead of two stacked ones. */}
+                        <div className="bg-blue-900 rounded-xl p-6 text-white mb-6">
+                            <div className="flex items-start gap-3">
+                                <Crown size={24} className="mt-0.5 flex-shrink-0" />
+                                <div className="min-w-0">
                                     <div className="text-lg font-medium">{PLAN_DETAILS[displayPlan]?.title || 'Free Recruiter'}</div>
                                     <div className="text-sm opacity-90">
                                         {displayPlan === 'FLEX'
@@ -311,26 +327,39 @@ const ManageRecruiterSubscription = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {flexActiveJobs.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-white/20">
+                                    <p className="text-xs font-semibold uppercase tracking-wide opacity-75 mb-2">
+                                        Active Flex listings
+                                    </p>
+                                    <ul className="flex flex-wrap gap-2">
+                                        {flexActiveJobs.map((job) => (
+                                            <li
+                                                key={job.id}
+                                                className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-sm"
+                                            >
+                                                <Briefcase size={14} className="opacity-80 flex-shrink-0" />
+                                                <span className="font-medium">{job.title}</span>
+                                                <span className="opacity-75">
+                                                    until {new Date(job.premiumListingExpiresAt).toLocaleDateString()}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
 
-                        {flexActiveJobs.length > 0 && (
-                            <div className="rounded-xl border border-green-200 bg-green-50 p-4 mb-8">
-                                <p className="text-sm font-semibold text-green-800 mb-1">Active Flex listings</p>
-                                <ul className="space-y-1">
-                                    {flexActiveJobs.map((job) => (
-                                        <li key={job.id} className="text-sm text-green-700">
-                                            {job.title} — upgraded until{' '}
-                                            {new Date(job.premiumListingExpiresAt).toLocaleDateString()}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${flexActiveJobs.length === 0 ? 'mt-4' : ''}`}>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {['FREE', 'FLEX', 'PREMIUM'].map((planCode) => {
                                 const details = PLAN_DETAILS[planCode];
                                 const isCurrent = planCode === displayPlan;
+                                const isExpanded = expandedPlans.includes(planCode);
+                                const visibleHighlights = isExpanded
+                                    ? details.highlights
+                                    : details.highlights.slice(0, FEATURES_PREVIEW_COUNT);
+                                const hiddenCount = details.highlights.length - visibleHighlights.length;
 
                                 return (
                                     <div
@@ -361,14 +390,32 @@ const ManageRecruiterSubscription = () => {
                                             <p className="text-sm font-semibold text-gray-800 mb-2">{details.inherits}</p>
                                         )}
 
-                                        <ul className="space-y-2 mb-5 flex-1">
-                                            {details.highlights.map((item) => (
-                                                <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
-                                                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <span>{item}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                        <div className="flex-1 mb-5">
+                                            <ul className="space-y-2">
+                                                {visibleHighlights.map((item) => (
+                                                    <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                                                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                                        <span>{item}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                            {(hiddenCount > 0 || isExpanded) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePlanFeatures(planCode)}
+                                                    className="mt-3 flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                                                >
+                                                    {isExpanded
+                                                        ? 'Show less'
+                                                        : `Show ${hiddenCount} more feature${hiddenCount === 1 ? '' : 's'}`}
+                                                    <ChevronDown
+                                                        size={16}
+                                                        className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                    />
+                                                </button>
+                                            )}
+                                        </div>
 
                                         {planCode === 'FREE' && (
                                             <div className="space-y-2">

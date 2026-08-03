@@ -59,12 +59,32 @@ export function shouldShowKycStage2Banner(profile = readUserProfile()) {
   return !isAccountPendingReview(profile) && !hasStage2KycAccess(profile);
 }
 
-const DASHBOARD_WELCOME_STAGE1_HINTS = {
-  professional:
-    'While your account is under review, you can still update your Resume, Documents, and Profile from the menu.',
-  recruiter:
-    'While your account is under review, you can still open Profile Settings from the menu.',
-  trainer: 'While your account is under review, you can still open Profile from the menu.',
+/**
+ * Stage 1 copy per role. Professionals reach this screen by submitting a resume,
+ * so their wording says so — and points at what they can still edit meanwhile,
+ * rather than telling them no action is required.
+ */
+const DASHBOARD_WELCOME_STAGE1_COPY = {
+  professional: {
+    thankYouMessage: 'Thank you for completing and submitting your profile.',
+    reviewMessage: 'Your information is currently under review by our team.',
+    setupHint:
+      'While your account is under review, you can still update your Resume, Documents, and Profile from the menu.',
+    showNoActionRequired: false,
+  },
+  recruiter: {
+    thankYouMessage: 'Thank you for completing your profile.',
+    reviewMessage: 'Your information and documents are currently under review by our team.',
+    setupHint:
+      'While your account is under review, you can still open Profile Settings from the menu.',
+    showNoActionRequired: true,
+  },
+  trainer: {
+    thankYouMessage: 'Thank you for completing your profile.',
+    reviewMessage: 'Your information and documents are currently under review by our team.',
+    setupHint: 'While your account is under review, you can still open Profile from the menu.',
+    showNoActionRequired: true,
+  },
 };
 
 /**
@@ -73,11 +93,9 @@ const DASHBOARD_WELCOME_STAGE1_HINTS = {
  */
 export function getDashboardWelcomeMessages(profile = readUserProfile(), role = 'professional') {
   if (isAccountPendingReview(profile)) {
-    return {
-      reviewMessage: 'Your information and documents are currently under review by our team.',
-      setupHint: DASHBOARD_WELCOME_STAGE1_HINTS[role] || DASHBOARD_WELCOME_STAGE1_HINTS.professional,
-      showNoActionRequired: true,
-    };
+    return (
+      DASHBOARD_WELCOME_STAGE1_COPY[role] || DASHBOARD_WELCOME_STAGE1_COPY.professional
+    );
   }
 
   if (isKycUnderReview(profile)) {
@@ -98,10 +116,11 @@ export function getDashboardWelcomeMessages(profile = readUserProfile(), role = 
 
 /**
  * Routes reachable while Stage 1 account review is pending (`status` === PENDING).
+ * Profile Summary (`/personal/career-summary`) is the Digital Career Profile and
+ * stays locked until Stage 1 is approved, alongside Jobs, Training and Chats.
  */
 export const PROFESSIONAL_LIMITED_ACCESS_PATH_PREFIXES = [
   '/personal/dashboard',
-  '/personal/career-summary',
   '/personal/resume',
   '/personal/documents',
   '/personal/profile',

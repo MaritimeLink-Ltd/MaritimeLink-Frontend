@@ -80,6 +80,16 @@ describe('accountStatus', () => {
     expect(stage1.reviewMessage).toMatch(/under review by our team/i);
     expect(stage1.setupHint).toMatch(/Profile Settings/i);
 
+    const professionalStage1 = getDashboardWelcomeMessages({ status: 'PENDING' }, 'professional');
+    expect(professionalStage1.thankYouMessage).toBe(
+      'Thank you for completing and submitting your profile.',
+    );
+    expect(professionalStage1.reviewMessage).toBe(
+      'Your information is currently under review by our team.',
+    );
+    expect(professionalStage1.setupHint).toMatch(/Resume, Documents, and Profile/i);
+    expect(professionalStage1.showNoActionRequired).toBe(false);
+
     const kycPending = getDashboardWelcomeMessages(
       {
         status: 'APPROVED',
@@ -104,6 +114,8 @@ describe('accountStatus', () => {
     expect(isPathAllowedDuringLimitedAccess('/personal/documents')).toBe(true);
     expect(isPathAllowedDuringLimitedAccess('/personal/profile')).toBe(true);
     expect(isPathAllowedDuringLimitedAccess('/personal/profile/change-password')).toBe(true);
+    // Profile Summary is the Digital Career Profile — Stage 1 approval unlocks it.
+    expect(isPathAllowedDuringLimitedAccess('/personal/career-summary')).toBe(false);
     expect(isPathAllowedDuringLimitedAccess('/personal/jobs')).toBe(false);
     expect(isPathAllowedDuringLimitedAccess('/personal/training')).toBe(false);
     expect(isPathAllowedDuringLimitedAccess('/personal/chats')).toBe(false);

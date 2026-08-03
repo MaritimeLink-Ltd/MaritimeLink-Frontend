@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
+import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -81,6 +82,14 @@ const OfficerDashboard = () => {
     { id: 7, title: 'Medical & Travel Documents' },
     { id: 8, title: 'Biometrics, Next Of Kin & Referees' }
   ];
+
+  // Progress is measured from the data entered, not the step reached, so the
+  // resume dashboard reports the same figure as this sidebar.
+  const completionPercent = useMemo(
+    () => calculateResumeCompletion(allData, 'officer'),
+    [allData],
+  );
+  const isReviewStep = activeSection > sections.length;
 
   const handleNext = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
@@ -337,7 +346,11 @@ const OfficerDashboard = () => {
     try {
       setIsLoading(true);
       await resumeService.submitBulkResume(allData, 'PUT');
-      
+
+      // Saving from the review step is the submit action — it is what moves the
+      // dashboard from "keep building" to "under review".
+      saveResumeProgress(completionPercent, { submitted: isReviewStep });
+
       setShowSaveModal(true);
       // Auto close modal after 1.5 seconds and redirect
       setTimeout(() => {
@@ -545,18 +558,18 @@ const OfficerDashboard = () => {
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
                   className="bg-[#003971] h-1.5 rounded-full"
-                  style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
+                  style={{ width: `${completionPercent}%` }}
                 ></div>
               </div>
             </div>
             <p className="text-xs text-gray-600 mb-2">
-              {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
+              {completionPercent}% complete
             </p>
             <button
               onClick={handleSaveAndContinue}
               className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
             >
-              {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
+              {isReviewStep ? 'Submit Resume for Review' : 'Save & Continue Later'}
             </button>
           </div>
         </div>
@@ -624,18 +637,18 @@ const OfficerDashboard = () => {
             <div className="w-full bg-gray-200 rounded-full h-1.5">
               <div
                 className="bg-[#003971] h-1.5 rounded-full"
-                style={{ width: `${Math.min(100, Math.round((activeSection / sections.length) * 100))}%` }}
+                style={{ width: `${completionPercent}%` }}
               ></div>
             </div>
           </div>
           <p className="text-xs text-gray-600 mb-3">
-            {Math.min(100, Math.round((activeSection / sections.length) * 100))}% complete
+            {completionPercent}% complete
           </p>
           <button
             onClick={handleSaveAndContinue}
             className="w-full bg-[#003971] text-white py-1.5 px-3 rounded-full font-medium hover:bg-[#002855] transition-colors text-xs"
           >
-            {activeSection > sections.length ? 'Save & Continue to Dashboard' : 'Save & Continue Later'}
+            {isReviewStep ? 'Submit Resume for Review' : 'Save & Continue Later'}
           </button>
         </div>
       </div>
@@ -675,9 +688,13 @@ const OfficerDashboard = () => {
               </div>
 
               {/* Message */}
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Saved!</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {isReviewStep ? 'Submitted!' : 'Saved!'}
+              </h3>
               <p className="text-gray-600 text-center text-sm">
-                Your progress has been saved successfully
+                {isReviewStep
+                  ? 'Your Resume has been submitted for review'
+                  : 'Your progress has been saved successfully'}
               </p>
             </div>
           </div>
