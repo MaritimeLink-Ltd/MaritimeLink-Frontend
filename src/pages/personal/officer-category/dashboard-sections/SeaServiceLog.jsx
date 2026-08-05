@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
@@ -86,8 +88,16 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     });
   };
 
-  const handleRemoveSeaService = (id) => {
-    setSeaServiceEntries(seaServiceEntries.filter(entry => entry.id !== id));
+  const handleRemoveSeaService = async (entry) => {
+    if (entry._persisted) {
+      try {
+        await resumeService.deleteSeaServiceEntry(entry.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete sea service entry. Please try again.'));
+        return;
+      }
+    }
+    setSeaServiceEntries(seaServiceEntries.filter(e => e.id !== entry.id));
   };
 
   const handleNext = () => {
@@ -121,7 +131,7 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
               >
                 <button
                   type="button"
-                  onClick={() => handleRemoveSeaService(entry.id)}
+                  onClick={() => handleRemoveSeaService(entry)}
                   className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

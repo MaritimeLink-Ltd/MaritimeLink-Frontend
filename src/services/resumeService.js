@@ -6,6 +6,7 @@
 
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
+import { markPersisted } from '../utils/resumeStepSync';
 
 class ResumeService {
     /**
@@ -284,6 +285,22 @@ class ResumeService {
     }
 
     /**
+     * Delete a Key Skill
+     * DELETE /api/professional/resume/skills/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteSkill(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.SKILLS}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Skill delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Step 9 - Add License or Endorsement
      * POST /api/professional/resume/licenses
      * @param {Object} data
@@ -311,6 +328,22 @@ class ResumeService {
             return response;
         } catch (error) {
             console.error('Resume License add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a License, Endorsement, or Certificate
+     * DELETE /api/professional/resume/licenses/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteLicense(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.LICENSES}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume License delete error:', error);
             throw error;
         }
     }
@@ -346,6 +379,22 @@ class ResumeService {
     }
 
     /**
+     * Delete a Sea Service Entry
+     * DELETE /api/professional/resume/sea-service/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteSeaServiceEntry(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.SEA_SERVICE}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Sea Service delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Step 11a - Add Education Entry (Academic Qualifications)
      * POST /api/professional/resume/education
      * @param {Object} data
@@ -367,6 +416,22 @@ class ResumeService {
             return response;
         } catch (error) {
             console.error('Resume Education add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete an Academic Qualification
+     * DELETE /api/professional/resume/education/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteEducation(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.EDUCATION}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Education delete error:', error);
             throw error;
         }
     }
@@ -396,6 +461,22 @@ class ResumeService {
     }
 
     /**
+     * Delete an STCW Certificate
+     * DELETE /api/professional/resume/stcw-certificates/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteStcwCertificate(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.STCW}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume STCW delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Step 12 - Add Medical or Travel Document
      * POST /api/professional/resume/medical-travel-documents
      * @param {Object} data
@@ -417,6 +498,22 @@ class ResumeService {
             return response;
         } catch (error) {
             console.error('Resume Medical/Travel Document add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a Medical or Travel Document
+     * DELETE /api/professional/resume/medical-travel-documents/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteMedicalTravelDocument(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.MEDICAL_TRAVEL_DOCS}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Medical/Travel Document delete error:', error);
             throw error;
         }
     }
@@ -472,6 +569,22 @@ class ResumeService {
     }
 
     /**
+     * Delete a Next of Kin entry
+     * DELETE /api/professional/resume/next-of-kin/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteNextOfKin(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.NEXT_OF_KIN}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Next of Kin delete error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Step 15 - Add Referee
      * POST /api/professional/resume/referees
      * @param {Object} data
@@ -492,6 +605,22 @@ class ResumeService {
             return response;
         } catch (error) {
             console.error('Resume Referee add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a Referee entry
+     * DELETE /api/professional/resume/referees/:id
+     * @param {string} id
+     * @returns {Promise<Object>}
+     */
+    async deleteReferee(id) {
+        try {
+            const response = await httpClient.delete(`${API_ENDPOINTS.RESUME.REFEREES}/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Resume Referee delete error:', error);
             throw error;
         }
     }
@@ -556,7 +685,7 @@ class ResumeService {
             }
         }
         
-        let formattedGender = bio.gender || bio.gender_identity || 'Male';
+        let formattedGender = bio.gender || bio.gender_identity || '';
         if (formattedGender.toLowerCase() === 'male') formattedGender = 'Male';
         else if (formattedGender.toLowerCase() === 'female') formattedGender = 'Female';
 
@@ -577,57 +706,57 @@ class ResumeService {
             },
             professionalSummary: { professionalSummary: api.summary || api.professional_summary || '' },
             skills: {
-                skills: (api.skills || []).map(s => ({
-                    name: s.skillName || s.skill_name || s.name, level: s.rating || s.level, id: Date.now() + Math.random()
-                }))
+                skills: markPersisted((api.skills || []).map(s => ({
+                    name: s.skillName || s.skill_name || s.name, level: s.rating || s.level, id: s.id
+                })))
             },
             licensesEndorsements: {
-                licenses: licenses.map(l => ({
+                licenses: markPersisted(licenses.map(l => ({
                     licenseName: l.name || l.license_name, licenseNumber: l.number || l.license_number,
                     issuingCountry: l.country || l.issuing_country, dateOfIssue: l.issueDate || l.issue_date,
-                    validTill: l.expiryDate || l.expiry_date, id: Date.now() + Math.random()
-                })),
-                endorsements: endorsements.map(e => ({
+                    validTill: l.expiryDate || l.expiry_date, id: l.id
+                }))),
+                endorsements: markPersisted(endorsements.map(e => ({
                     licenseName: e.name || e.endorsement_name, licenseNumber: e.number || e.endorsement_number || 'N/A',
                     issuingCountry: e.country || e.issuing_country, dateOfIssue: e.issueDate || e.issue_date,
-                    validTill: e.expiryDate || e.expiry_date, id: Date.now() + Math.random()
-                }))
+                    validTill: e.expiryDate || e.expiry_date, id: e.id
+                })))
             },
             seaServiceLog: {
-                seaServiceEntries: (api.seaService || api.sea_service || api.seaServiceLog || []).map(s => ({
+                seaServiceEntries: markPersisted((api.seaService || api.sea_service || api.seaServiceLog || []).map(s => ({
                     companyName: s.companyName || s.company_name, role: s.role, vesselName: s.vesselName || s.vessel_name,
                     imoNo: s.imoNumber || s.imo_number, flag: s.flag, type: s.vesselType || s.vessel_type,
                     dwt: s.dwt, meType: s.meType || s.me_type, kwt: s.kwType || s.kw_type || s.kw,
                     joiningDate: s.joiningDate || s.joining_date, till: s.tillDate || s.till_date,
-                    id: Date.now() + Math.random()
-                }))
+                    id: s.id
+                })))
             },
             academicQualifications: {
-                academicQualifications: (api.education || api.academicQualifications || api.academic_qualifications || []).map(a => ({
+                academicQualifications: markPersisted((api.education || api.academicQualifications || api.academic_qualifications || []).map(a => ({
                     qualificationName: a.qualificationName || a.qualification_name, institution: a.institution,
                     city: a.city, institutionCountry: a.country || a.institution_country, grade: a.grade,
                     startDate: a.startDate || a.start_date, endDate: a.endDate || a.end_date,
-                    id: Date.now() + Math.random()
-                })),
-                stcwCertificates: (api.stcwCertificates || api.stcw_certificates || []).map(c => ({
+                    id: a.id
+                }))),
+                stcwCertificates: markPersisted((api.stcwCertificates || api.stcw_certificates || []).map(c => ({
                     qualificationName: c.qualification || c.qualification_name, certificateNumber: c.certificateNumber || c.certificate_number,
                     issuingCountry: c.issuingCountry || c.issuing_country, dateOfIssue: c.issueDate || c.issue_date,
-                    validTill: c.expiryDate || c.expiry_date, id: Date.now() + Math.random()
-                }))
+                    validTill: c.expiryDate || c.expiry_date, id: c.id
+                })))
             },
             medicalTravelDocs: {
-                medicalDocuments: medDocs.map(m => ({
+                medicalDocuments: markPersisted(medDocs.map(m => ({
                     certificateName: m.name || m.certificate_name, certificateNumber: m.documentNumber || m.document_number,
                     issuingCountry: m.issuingCountry || m.issuing_country, city: m.city || '',
                     dateOfIssue: m.issueDate || m.issue_date, validTill: m.expiryDate || m.expiry_date,
-                    id: Date.now() + Math.random()
-                })),
-                travelDocuments: travelDocs.map(t => ({
+                    id: m.id
+                }))),
+                travelDocuments: markPersisted(travelDocs.map(t => ({
                     documentName: t.name || t.document_name, documentNumber: t.documentNumber || t.document_number,
                     issuingCountry: t.issuingCountry || t.issuing_country,
                     dateOfIssue: t.issueDate || t.issue_date, validTill: t.expiryDate || t.expiry_date,
-                    id: Date.now() + Math.random()
-                }))
+                    id: t.id
+                })))
             },
             biometricsNextOfKin: {
                 biometricData: {
@@ -636,16 +765,16 @@ class ResumeService {
                     eyeColor: bio.eyeColor || bio.eye_color || '', overallSize: bio.overallSize || bio.overall_size || '',
                     shoeSize: bio.shoeSize || bio.shoe_size || ''
                 },
-                nextOfKinList: (api.nextOfKin || api.next_of_kin || []).map(k => ({
+                nextOfKinList: markPersisted((api.nextOfKin || api.next_of_kin || []).map(k => ({
                     name: k.name, relationship: k.relationship,
                     countryCode: k.countryCode || k.country_code || '+44', phone: k.phone || k.phoneNumber || k.phone_number || '',
-                    email: k.email || '', id: Date.now() + Math.random()
-                })),
-                refereesList: (api.referees || []).map(r => ({
+                    email: k.email || '', id: k.id
+                }))),
+                refereesList: markPersisted((api.referees || []).map(r => ({
                     name: r.name, position: r.position || '', company: r.company || r.companyName || r.company_name || '',
                     countryCode: r.countryCode || r.country_code || '+44', phone: r.phone || r.phoneNumber || r.phone_number || '',
-                    email: r.email || '', id: Date.now() + Math.random()
-                }))
+                    email: r.email || '', id: r.id
+                })))
             }
         };
     }
@@ -672,16 +801,16 @@ class ResumeService {
         return {
             ...rest,
             professionalLicensesCertificates: {
-                licenses: licenses.map(l => ({
+                licenses: markPersisted(licenses.map(l => ({
                     licenseName: l.name || l.license_name, licenseNumber: l.number || l.license_number,
                     issuingCountry: l.country || l.issuing_country, dateOfIssue: l.issueDate || l.issue_date,
                     validTill: l.expiryDate || l.expiry_date, id: Date.now() + Math.random()
-                })),
-                certificates: certificates.map(c => ({
+                }))),
+                certificates: markPersisted(certificates.map(c => ({
                     licenseName: c.name || c.license_name, licenseNumber: c.number || c.license_number,
                     issuingCountry: c.country || c.issuing_country, dateOfIssue: c.issueDate || c.issue_date,
                     validTill: c.expiryDate || c.expiry_date, id: Date.now() + Math.random()
-                }))
+                })))
             }
         };
     }

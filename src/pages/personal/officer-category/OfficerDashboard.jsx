@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
+import { markPersisted, getUnpersisted, withCreatedIds } from '../../../utils/resumeStepSync';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -103,6 +104,7 @@ const OfficerDashboard = () => {
     }
 
     setApiError(null);
+    let dataToStore = sectionData;
 
     // Section 1: Personal Info — call API
     if (activeSection === 1) {
@@ -131,36 +133,43 @@ const OfficerDashboard = () => {
     }
 
     // Section 3: Key Skills — call API
-    if (activeSection === 3 && sectionData.skills?.length > 0) {
-      setIsLoading(true);
-      try {
-        await Promise.all(
-          sectionData.skills.map((skill) =>
-            resumeService.addSkill({ skillName: skill.name, rating: skill.level })
-          )
-        );
-      } catch (error) {
-        setApiError(getApiErrorMessage(error, 'Failed to save skills. Please try again.'));
+    if (activeSection === 3) {
+      const newSkills = getUnpersisted(sectionData.skills);
+      if (newSkills.length > 0) {
+        setIsLoading(true);
+        let results;
+        try {
+          results = await Promise.all(
+            newSkills.map((skill) => resumeService.addSkill({ skillName: skill.name, rating: skill.level }))
+          );
+        } catch (error) {
+          setApiError(getApiErrorMessage(error, 'Failed to save skills. Please try again.'));
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
         setIsLoading(false);
-        return; // Do not advance on error
+        dataToStore = { ...dataToStore, skills: markPersisted(withCreatedIds(sectionData.skills, newSkills, results)) };
+      } else {
+        dataToStore = { ...dataToStore, skills: markPersisted(sectionData.skills) };
       }
-      setIsLoading(false);
     }
 
     // Section 4: Licenses & Endorsements — call API
     if (activeSection === 4) {
-      const promises = [];
-      if (sectionData.licenses?.length > 0) {
-        sectionData.licenses.forEach(lic => promises.push(resumeService.addLicense({ ...lic, isEndorsement: false })));
-      }
-      if (sectionData.endorsements?.length > 0) {
-        sectionData.endorsements.forEach(end => promises.push(resumeService.addLicense({ ...end, isEndorsement: true })));
-      }
+      const newLicenses = getUnpersisted(sectionData.licenses);
+      const newEndorsements = getUnpersisted(sectionData.endorsements);
+      let mergedLicenses = sectionData.licenses;
+      let mergedEndorsements = sectionData.endorsements;
 
-      if (promises.length > 0) {
+      if (newLicenses.length > 0 || newEndorsements.length > 0) {
         setIsLoading(true);
         try {
-          await Promise.all(promises);
+          const [licenseResults, endorsementResults] = await Promise.all([
+            Promise.all(newLicenses.map(lic => resumeService.addLicense({ ...lic, isEndorsement: false }))),
+            Promise.all(newEndorsements.map(end => resumeService.addLicense({ ...end, isEndorsement: true }))),
+          ]);
+          mergedLicenses = withCreatedIds(sectionData.licenses, newLicenses, licenseResults);
+          mergedEndorsements = withCreatedIds(sectionData.endorsements, newEndorsements, endorsementResults);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save licenses and endorsements. Please try again.'));
           setIsLoading(false);
@@ -168,73 +177,86 @@ const OfficerDashboard = () => {
         }
         setIsLoading(false);
       }
+      dataToStore = {
+        ...dataToStore,
+        licenses: markPersisted(mergedLicenses),
+        endorsements: markPersisted(mergedEndorsements),
+      };
     }
 
     // Section 5: Sea Service Log — call API
-    if (activeSection === 5 && sectionData.seaServiceEntries?.length > 0) {
-      setIsLoading(true);
-      try {
-        await Promise.all(
-          sectionData.seaServiceEntries.map((entry) => 
-            resumeService.addSeaServiceEntry(entry)
-          )
-        );
-      } catch (error) {
-        setApiError(getApiErrorMessage(error, 'Failed to save sea service entries. Please try again.'));
+    if (activeSection === 5) {
+      const newEntries = getUnpersisted(sectionData.seaServiceEntries);
+      let mergedEntries = sectionData.seaServiceEntries;
+      if (newEntries.length > 0) {
+        setIsLoading(true);
+        try {
+          const results = await Promise.all(newEntries.map((entry) => resumeService.addSeaServiceEntry(entry)));
+          mergedEntries = withCreatedIds(sectionData.seaServiceEntries, newEntries, results);
+        } catch (error) {
+          setApiError(getApiErrorMessage(error, 'Failed to save sea service entries. Please try again.'));
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
         setIsLoading(false);
-        return; // Do not advance on error
       }
-      setIsLoading(false);
+      dataToStore = { ...dataToStore, seaServiceEntries: markPersisted(mergedEntries) };
     }
 
     // Section 6: Academic Qualifications — call API (wait for Certificates endpoint later)
-    if (activeSection === 6 && sectionData.academicQualifications?.length > 0) {
-      setIsLoading(true);
-      try {
-        await Promise.all(
-          sectionData.academicQualifications.map((edu) => 
-            resumeService.addEducation(edu)
-          )
-        );
-      } catch (error) {
-        setApiError(getApiErrorMessage(error, 'Failed to save academic qualifications. Please try again.'));
+    if (activeSection === 6) {
+      const newAcademic = getUnpersisted(sectionData.academicQualifications);
+      let mergedAcademic = sectionData.academicQualifications;
+      if (newAcademic.length > 0) {
+        setIsLoading(true);
+        try {
+          const results = await Promise.all(newAcademic.map((edu) => resumeService.addEducation(edu)));
+          mergedAcademic = withCreatedIds(sectionData.academicQualifications, newAcademic, results);
+        } catch (error) {
+          setApiError(getApiErrorMessage(error, 'Failed to save academic qualifications. Please try again.'));
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
         setIsLoading(false);
-        return; // Do not advance on error
       }
-      setIsLoading(false);
+      dataToStore = { ...dataToStore, academicQualifications: markPersisted(mergedAcademic) };
     }
 
     // Section 6: STCW Certificates — call API
-    if (activeSection === 6 && sectionData.stcwCertificates?.length > 0) {
-      setIsLoading(true);
-      try {
-        await Promise.all(
-          sectionData.stcwCertificates.map((cert) => 
-            resumeService.addStcwCertificate(cert)
-          )
-        );
-      } catch (error) {
-        setApiError(getApiErrorMessage(error, 'Failed to save STCW certificates. Please try again.'));
+    if (activeSection === 6) {
+      const newStcw = getUnpersisted(sectionData.stcwCertificates);
+      let mergedStcw = sectionData.stcwCertificates;
+      if (newStcw.length > 0) {
+        setIsLoading(true);
+        try {
+          const results = await Promise.all(newStcw.map((cert) => resumeService.addStcwCertificate(cert)));
+          mergedStcw = withCreatedIds(sectionData.stcwCertificates, newStcw, results);
+        } catch (error) {
+          setApiError(getApiErrorMessage(error, 'Failed to save STCW certificates. Please try again.'));
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
         setIsLoading(false);
-        return; // Do not advance on error
       }
-      setIsLoading(false);
+      dataToStore = { ...dataToStore, stcwCertificates: markPersisted(mergedStcw) };
     }
 
     // Section 7: Medical & Travel Documents — call API
     if (activeSection === 7) {
-      const promises = [];
-      if (sectionData.medicalDocuments?.length > 0) {
-        sectionData.medicalDocuments.forEach(doc => promises.push(resumeService.addMedicalTravelDocument({ ...doc, type: 'MEDICAL' })));
-      }
-      if (sectionData.travelDocuments?.length > 0) {
-        sectionData.travelDocuments.forEach(doc => promises.push(resumeService.addMedicalTravelDocument({ ...doc, type: 'TRAVEL' })));
-      }
+      const newMedical = getUnpersisted(sectionData.medicalDocuments);
+      const newTravel = getUnpersisted(sectionData.travelDocuments);
+      let mergedMedical = sectionData.medicalDocuments;
+      let mergedTravel = sectionData.travelDocuments;
 
-      if (promises.length > 0) {
+      if (newMedical.length > 0 || newTravel.length > 0) {
         setIsLoading(true);
         try {
-          await Promise.all(promises);
+          const [medicalResults, travelResults] = await Promise.all([
+            Promise.all(newMedical.map(doc => resumeService.addMedicalTravelDocument({ ...doc, type: 'MEDICAL' }))),
+            Promise.all(newTravel.map(doc => resumeService.addMedicalTravelDocument({ ...doc, type: 'TRAVEL' }))),
+          ]);
+          mergedMedical = withCreatedIds(sectionData.medicalDocuments, newMedical, medicalResults);
+          mergedTravel = withCreatedIds(sectionData.travelDocuments, newTravel, travelResults);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save medical/travel documents. Please try again.'));
           setIsLoading(false);
@@ -242,13 +264,18 @@ const OfficerDashboard = () => {
         }
         setIsLoading(false);
       }
+      dataToStore = {
+        ...dataToStore,
+        medicalDocuments: markPersisted(mergedMedical),
+        travelDocuments: markPersisted(mergedTravel),
+      };
     }
 
     // Save section data locally
     const sectionKey = Object.keys(allData)[activeSection - 1];
     setAllData({
       ...allData,
-      [sectionKey]: sectionData
+      [sectionKey]: dataToStore
     });
 
     // Mark current section as completed
@@ -281,6 +308,7 @@ const OfficerDashboard = () => {
 
     setApiError(null);
     setIsLoading(true);
+    let dataToStore = sectionData;
 
     // Section 8a: Biometrics — call API
     if (sectionData.biometricData) {
@@ -294,13 +322,12 @@ const OfficerDashboard = () => {
     }
 
     // Section 8b: Next Of Kin — call API
-    if (sectionData.nextOfKinList?.length > 0) {
+    const newKin = getUnpersisted(sectionData.nextOfKinList);
+    let mergedKin = sectionData.nextOfKinList;
+    if (newKin.length > 0) {
       try {
-        await Promise.all(
-          sectionData.nextOfKinList.map((kin) => 
-            resumeService.addNextOfKin(kin)
-          )
-        );
+        const results = await Promise.all(newKin.map((kin) => resumeService.addNextOfKin(kin)));
+        mergedKin = withCreatedIds(sectionData.nextOfKinList, newKin, results);
       } catch (error) {
         setApiError(getApiErrorMessage(error, 'Failed to save next of kin. Please try again.'));
         setIsLoading(false);
@@ -309,13 +336,12 @@ const OfficerDashboard = () => {
     }
 
     // Section 8c: Referees — call API
-    if (sectionData.refereesList?.length > 0) {
+    const newReferees = getUnpersisted(sectionData.refereesList);
+    let mergedReferees = sectionData.refereesList;
+    if (newReferees.length > 0) {
       try {
-        await Promise.all(
-          sectionData.refereesList.map((referee) => 
-            resumeService.addReferee(referee)
-          )
-        );
+        const results = await Promise.all(newReferees.map((referee) => resumeService.addReferee(referee)));
+        mergedReferees = withCreatedIds(sectionData.refereesList, newReferees, results);
       } catch (error) {
         setApiError(getApiErrorMessage(error, 'Failed to save referees. Please try again.'));
         setIsLoading(false);
@@ -325,10 +351,16 @@ const OfficerDashboard = () => {
 
     setIsLoading(false);
 
+    dataToStore = {
+      ...dataToStore,
+      nextOfKinList: markPersisted(mergedKin),
+      refereesList: markPersisted(mergedReferees),
+    };
+
     // Save final section data
     setAllData({
       ...allData,
-      biometricsNextOfKin: sectionData
+      biometricsNextOfKin: dataToStore
     });
     console.log('Resume completed!', allData);
 

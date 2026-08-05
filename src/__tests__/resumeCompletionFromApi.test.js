@@ -88,10 +88,11 @@ describe('resume completion from API payloads', () => {
   });
 
   it('does not count a resume as started from the mapper defaults alone', () => {
-    // gender defaults to 'Male' and the phone country code to '+44' for every
-    // resume the mapper touches — neither may register as user-entered data.
+    // gender is left unset (no silent 'Male' default) and the phone country
+    // code defaults to '+44' for every resume the mapper touches — neither
+    // may register as user-entered data.
     const mapped = resumeService.mapApiToOfficerData({});
-    expect(mapped.biometricsNextOfKin.biometricData.gender).toBe('Male');
+    expect(mapped.biometricsNextOfKin.biometricData.gender).toBe('');
     expect(mapped.personalInfo.countryCode).toBe('+44');
     expect(calculateResumeCompletion(mapped, 'officer')).toBe(0);
   });

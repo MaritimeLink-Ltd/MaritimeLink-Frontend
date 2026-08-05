@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
@@ -84,8 +86,16 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
     });
   };
 
-  const handleRemoveAcademic = (id) => {
-    setAcademicQualifications(academicQualifications.filter(academic => academic.id !== id));
+  const handleRemoveAcademic = async (academic) => {
+    if (academic._persisted) {
+      try {
+        await resumeService.deleteEducation(academic.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete academic qualification. Please try again.'));
+        return;
+      }
+    }
+    setAcademicQualifications(academicQualifications.filter(a => a.id !== academic.id));
   };
 
   const handleAddStcw = () => {
@@ -105,8 +115,16 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
     });
   };
 
-  const handleRemoveStcw = (id) => {
-    setStcwCertificates(stcwCertificates.filter(stcw => stcw.id !== id));
+  const handleRemoveStcw = async (stcw) => {
+    if (stcw._persisted) {
+      try {
+        await resumeService.deleteStcwCertificate(stcw.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete STCW certificate. Please try again.'));
+        return;
+      }
+    }
+    setStcwCertificates(stcwCertificates.filter(s => s.id !== stcw.id));
   };
 
   const handleNext = () => {
@@ -177,7 +195,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveAcademic(academic.id)}
+                      onClick={() => handleRemoveAcademic(academic)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,7 +331,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveStcw(stcw.id)}
+                      onClick={() => handleRemoveStcw(stcw)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biometricTab, setActiveTab: setBiometricTab, isLoading = false, apiError = null }) => {
   const [biometricData, setBiometricData] = useState(initialData.biometricData || {
-    gender: 'Male',
+    gender: '',
     height: '',
     weight: '',
     bmi: '',
@@ -104,8 +106,21 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   };
 
   const validateReferee = (entry) => {
-    if (!entry.name || !entry.phone) {
-      return 'Please fill in all mandatory Referee fields (Name, Phone) before adding.';
+    if (!entry.name || !entry.phone || !entry.position || !entry.company) {
+      return 'Please fill in all mandatory Referee fields (Name, Position, Company, Phone) before adding.';
+    }
+    return null;
+  };
+
+  const validateBiometrics = (data) => {
+    if (!data.gender) {
+      return 'Please select a Gender.';
+    }
+    if (!data.height || Number(data.height) <= 0) {
+      return 'Please enter a valid Height.';
+    }
+    if (!data.weight || Number(data.weight) <= 0) {
+      return 'Please enter a valid Weight.';
     }
     return null;
   };
@@ -126,8 +141,16 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     });
   };
 
-  const handleRemoveNextOfKin = (id) => {
-    setNextOfKinList(nextOfKinList.filter(kin => kin.id !== id));
+  const handleRemoveNextOfKin = async (kin) => {
+    if (kin._persisted) {
+      try {
+        await resumeService.deleteNextOfKin(kin.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete next of kin. Please try again.'));
+        return;
+      }
+    }
+    setNextOfKinList(nextOfKinList.filter(k => k.id !== kin.id));
   };
 
   const handleAddReferee = () => {
@@ -147,11 +170,31 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     });
   };
 
-  const handleRemoveReferee = (id) => {
-    setRefereesList(refereesList.filter(referee => referee.id !== id));
+  const handleRemoveReferee = async (referee) => {
+    if (referee._persisted) {
+      try {
+        await resumeService.deleteReferee(referee.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete referee. Please try again.'));
+        return;
+      }
+    }
+    setRefereesList(refereesList.filter(r => r.id !== referee.id));
   };
 
   const handleCompleteResume = () => {
+    // Biometrics is only actually submitted once the user reaches the last
+    // tab (referees) and clicks through — validate here so a missing
+    // gender/height/weight surfaces as a clear message instead of a failed
+    // API call.
+    if (biometricTab === 'referees') {
+      const bioError = validateBiometrics(biometricData);
+      if (bioError) {
+        alert(bioError);
+        return;
+      }
+    }
+
     let finalKin = [...nextOfKinList];
     let finalReferees = [...refereesList];
 
@@ -227,7 +270,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
               <div className="flex space-x-2">
                 <button
                   type="button"
-                  onClick={() => setBiometricData({ ...biometricData, gender: 'Male' })}
+                  onClick={() => setBiometricData({ ...biometricData, gender: biometricData.gender === 'Male' ? '' : 'Male' })}
                   className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Male'
                     ? 'bg-[#003971] text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -237,7 +280,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                 </button>
                 <button
                   type="button"
-                  onClick={() => setBiometricData({ ...biometricData, gender: 'Female' })}
+                  onClick={() => setBiometricData({ ...biometricData, gender: biometricData.gender === 'Female' ? '' : 'Female' })}
                   className={`px-6 py-2 rounded-full font-medium transition-colors text-sm ${biometricData.gender === 'Female'
                     ? 'bg-[#003971] text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -377,7 +420,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveNextOfKin(kin.id)}
+                      onClick={() => handleRemoveNextOfKin(kin)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -483,7 +526,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveReferee(referee.id)}
+                      onClick={() => handleRemoveReferee(referee)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

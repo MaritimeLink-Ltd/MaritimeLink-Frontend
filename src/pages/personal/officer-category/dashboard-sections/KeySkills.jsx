@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
   const [skills, setSkills] = useState(initialData.skills || []);
@@ -27,8 +29,16 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
     setCurrentSkill({ name: '', level: 0 });
   };
 
-  const handleRemoveSkill = (id) => {
-    setSkills(skills.filter(skill => skill.id !== id));
+  const handleRemoveSkill = async (skill) => {
+    if (skill._persisted) {
+      try {
+        await resumeService.deleteSkill(skill.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete skill. Please try again.'));
+        return;
+      }
+    }
+    setSkills(skills.filter(s => s.id !== skill.id));
   };
 
   const handleStarClick = (level) => {
@@ -78,7 +88,7 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemoveSkill(skill.id)}
+                  onClick={() => handleRemoveSkill(skill)}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

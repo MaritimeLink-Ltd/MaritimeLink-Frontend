@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -94,8 +96,16 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
     });
   };
 
-  const handleRemoveLicense = (id) => {
-    setLicenses(licenses.filter(license => license.id !== id));
+  const handleRemoveLicense = async (license) => {
+    if (license._persisted) {
+      try {
+        await resumeService.deleteLicense(license.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete license. Please try again.'));
+        return;
+      }
+    }
+    setLicenses(licenses.filter(l => l.id !== license.id));
   };
 
   const handleAddCertificate = () => {
@@ -115,8 +125,16 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
     });
   };
 
-  const handleRemoveCertificate = (id) => {
-    setCertificates(certificates.filter(cert => cert.id !== id));
+  const handleRemoveCertificate = async (certificate) => {
+    if (certificate._persisted) {
+      try {
+        await resumeService.deleteLicense(certificate.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete certificate. Please try again.'));
+        return;
+      }
+    }
+    setCertificates(certificates.filter(c => c.id !== certificate.id));
   };
 
   const handleNext = () => {
@@ -187,7 +205,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveLicense(license.id)}
+                      onClick={() => handleRemoveLicense(license)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,7 +321,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveCertificate(cert.id)}
+                      onClick={() => handleRemoveCertificate(cert)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

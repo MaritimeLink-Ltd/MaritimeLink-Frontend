@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
@@ -96,8 +98,16 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     });
   };
 
-  const handleRemoveMedical = (id) => {
-    setMedicalDocuments(medicalDocuments.filter(doc => doc.id !== id));
+  const handleRemoveMedical = async (doc) => {
+    if (doc._persisted) {
+      try {
+        await resumeService.deleteMedicalTravelDocument(doc.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete medical document. Please try again.'));
+        return;
+      }
+    }
+    setMedicalDocuments(medicalDocuments.filter(d => d.id !== doc.id));
   };
 
   const handleAddTravel = () => {
@@ -117,8 +127,16 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     });
   };
 
-  const handleRemoveTravel = (id) => {
-    setTravelDocuments(travelDocuments.filter(doc => doc.id !== id));
+  const handleRemoveTravel = async (doc) => {
+    if (doc._persisted) {
+      try {
+        await resumeService.deleteMedicalTravelDocument(doc.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete travel document. Please try again.'));
+        return;
+      }
+    }
+    setTravelDocuments(travelDocuments.filter(d => d.id !== doc.id));
   };
 
   const handleNext = () => {
@@ -189,7 +207,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveMedical(doc.id)}
+                      onClick={() => handleRemoveMedical(doc)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,7 +343,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveTravel(doc.id)}
+                      onClick={() => handleRemoveTravel(doc)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

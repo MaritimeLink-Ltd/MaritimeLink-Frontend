@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
+import resumeService from '../../../../services/resumeService';
+import { getApiErrorMessage } from '../../../../utils/apiError';
 
 const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -79,8 +81,16 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
     });
   };
 
-  const handleRemoveLicense = (id) => {
-    setLicenses(licenses.filter(license => license.id !== id));
+  const handleRemoveLicense = async (license) => {
+    if (license._persisted) {
+      try {
+        await resumeService.deleteLicense(license.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete license. Please try again.'));
+        return;
+      }
+    }
+    setLicenses(licenses.filter(l => l.id !== license.id));
   };
 
   const handleAddEndorsement = () => {
@@ -99,8 +109,16 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
     });
   };
 
-  const handleRemoveEndorsement = (id) => {
-    setEndorsements(endorsements.filter(endorsement => endorsement.id !== id));
+  const handleRemoveEndorsement = async (endorsement) => {
+    if (endorsement._persisted) {
+      try {
+        await resumeService.deleteLicense(endorsement.id);
+      } catch (error) {
+        alert(getApiErrorMessage(error, 'Failed to delete endorsement. Please try again.'));
+        return;
+      }
+    }
+    setEndorsements(endorsements.filter(e => e.id !== endorsement.id));
   };
 
   const handleNext = () => {
@@ -171,7 +189,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveLicense(license.id)}
+                      onClick={() => handleRemoveLicense(license)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,7 +303,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
                   >
                     <button
                       type="button"
-                      onClick={() => handleRemoveEndorsement(endorsement.id)}
+                      onClick={() => handleRemoveEndorsement(endorsement)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
