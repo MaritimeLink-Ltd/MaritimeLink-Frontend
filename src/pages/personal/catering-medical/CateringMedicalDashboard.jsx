@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
-import { markPersisted, getUnpersisted, withCreatedIds, mergePendingDrafts } from '../../../utils/resumeStepSync';
+import { markPersisted, getUnpersisted, getEdited, withCreatedIds, mergePendingDrafts } from '../../../utils/resumeStepSync';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -133,43 +133,52 @@ const CateringMedicalDashboard = () => {
     // Section 3: Key Skills — call API
     if (activeSection === 3) {
       const newSkills = getUnpersisted(sectionData.skills);
-      if (newSkills.length > 0) {
+      const editedSkills = getEdited(sectionData.skills);
+      let mergedSkills = sectionData.skills;
+      if (newSkills.length > 0 || editedSkills.length > 0) {
         setIsLoading(true);
-        let results;
         try {
-          results = await Promise.all(
-            newSkills.map((skill) => resumeService.addSkill({ skillName: skill.name, rating: skill.level }))
-          );
+          const [results] = await Promise.all([
+            Promise.all(newSkills.map((skill) => resumeService.addSkill({ skillName: skill.name, rating: skill.level }))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedSkills.map((skill) => resumeService.updateSkill(skill.id, skill))),
+          ]);
+          mergedSkills = withCreatedIds(sectionData.skills, newSkills, results);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save skills. Please try again.'));
           setIsLoading(false);
           return; // Do not advance on error
         }
         setIsLoading(false);
-        dataToStore = { ...dataToStore, skills: markPersisted(withCreatedIds(sectionData.skills, newSkills, results)) };
-      } else {
-        dataToStore = { ...dataToStore, skills: markPersisted(sectionData.skills) };
       }
+      dataToStore = { ...dataToStore, skills: markPersisted(mergedSkills) };
     }
 
     // Section 4: Licenses & Certificates — call API
     if (activeSection === 4) {
       const newLicenses = getUnpersisted(sectionData.licenses);
       const newCertificates = getUnpersisted(sectionData.certificates);
+      const editedLicenses = getEdited(sectionData.licenses);
+      const editedCertificates = getEdited(sectionData.certificates);
       let mergedLicenses = sectionData.licenses;
       let mergedCertificates = sectionData.certificates;
 
-      if (newLicenses.length > 0 || newCertificates.length > 0) {
+      const asCertificate = (cert) => ({
+        ...cert,
+        licenseName: cert.licenseName || cert.certificateName,
+        licenseNumber: cert.licenseNumber || cert.number || cert.certificateNumber,
+        isCertificate: true
+      });
+
+      if (newLicenses.length > 0 || newCertificates.length > 0 || editedLicenses.length > 0 || editedCertificates.length > 0) {
         setIsLoading(true);
         try {
           const [licenseResults, certificateResults] = await Promise.all([
             Promise.all(newLicenses.map(lic => resumeService.addLicense({ ...lic, isEndorsement: false }))),
-            Promise.all(newCertificates.map(cert => resumeService.addLicense({
-              ...cert,
-              licenseName: cert.licenseName || cert.certificateName,
-              licenseNumber: cert.licenseNumber || cert.number || cert.certificateNumber,
-              isCertificate: true
-            }))),
+            Promise.all(newCertificates.map(cert => resumeService.addLicense(asCertificate(cert)))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedLicenses.map(lic => resumeService.updateLicense(lic.id, { ...lic, isEndorsement: false }))),
+            Promise.all(editedCertificates.map(cert => resumeService.updateLicense(cert.id, asCertificate(cert)))),
           ]);
           mergedLicenses = withCreatedIds(sectionData.licenses, newLicenses, licenseResults);
           mergedCertificates = withCreatedIds(sectionData.certificates, newCertificates, certificateResults);
@@ -190,11 +199,16 @@ const CateringMedicalDashboard = () => {
     // Section 5: Sea Service Log — call API
     if (activeSection === 5) {
       const newEntries = getUnpersisted(sectionData.seaServiceEntries);
+      const editedEntries = getEdited(sectionData.seaServiceEntries);
       let mergedEntries = sectionData.seaServiceEntries;
-      if (newEntries.length > 0) {
+      if (newEntries.length > 0 || editedEntries.length > 0) {
         setIsLoading(true);
         try {
-          const results = await Promise.all(newEntries.map((entry) => resumeService.addSeaServiceEntry(entry)));
+          const [results] = await Promise.all([
+            Promise.all(newEntries.map((entry) => resumeService.addSeaServiceEntry(entry))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedEntries.map((entry) => resumeService.updateSeaServiceEntry(entry.id, entry))),
+          ]);
           mergedEntries = withCreatedIds(sectionData.seaServiceEntries, newEntries, results);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save sea service entries. Please try again.'));
@@ -209,11 +223,16 @@ const CateringMedicalDashboard = () => {
     // Section 6: Academic Qualifications — call API
     if (activeSection === 6) {
       const newAcademic = getUnpersisted(sectionData.academicQualifications);
+      const editedAcademic = getEdited(sectionData.academicQualifications);
       let mergedAcademic = sectionData.academicQualifications;
-      if (newAcademic.length > 0) {
+      if (newAcademic.length > 0 || editedAcademic.length > 0) {
         setIsLoading(true);
         try {
-          const results = await Promise.all(newAcademic.map((edu) => resumeService.addEducation(edu)));
+          const [results] = await Promise.all([
+            Promise.all(newAcademic.map((edu) => resumeService.addEducation(edu))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedAcademic.map((edu) => resumeService.updateEducation(edu.id, edu))),
+          ]);
           mergedAcademic = withCreatedIds(sectionData.academicQualifications, newAcademic, results);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save academic qualifications. Please try again.'));
@@ -228,11 +247,16 @@ const CateringMedicalDashboard = () => {
     // Section 6: STCW Certificates — call API
     if (activeSection === 6) {
       const newStcw = getUnpersisted(sectionData.stcwCertificates);
+      const editedStcw = getEdited(sectionData.stcwCertificates);
       let mergedStcw = sectionData.stcwCertificates;
-      if (newStcw.length > 0) {
+      if (newStcw.length > 0 || editedStcw.length > 0) {
         setIsLoading(true);
         try {
-          const results = await Promise.all(newStcw.map((cert) => resumeService.addStcwCertificate(cert)));
+          const [results] = await Promise.all([
+            Promise.all(newStcw.map((cert) => resumeService.addStcwCertificate(cert))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedStcw.map((cert) => resumeService.updateStcwCertificate(cert.id, cert))),
+          ]);
           mergedStcw = withCreatedIds(sectionData.stcwCertificates, newStcw, results);
         } catch (error) {
           setApiError(getApiErrorMessage(error, 'Failed to save STCW certificates. Please try again.'));
@@ -248,15 +272,21 @@ const CateringMedicalDashboard = () => {
     if (activeSection === 7) {
       const newMedical = getUnpersisted(sectionData.medicalDocuments);
       const newTravel = getUnpersisted(sectionData.travelDocuments);
+      const editedMedical = getEdited(sectionData.medicalDocuments);
+      const editedTravel = getEdited(sectionData.travelDocuments);
       let mergedMedical = sectionData.medicalDocuments;
       let mergedTravel = sectionData.travelDocuments;
 
-      if (newMedical.length > 0 || newTravel.length > 0) {
+      if (newMedical.length > 0 || newTravel.length > 0 || editedMedical.length > 0 || editedTravel.length > 0) {
         setIsLoading(true);
         try {
           const [medicalResults, travelResults] = await Promise.all([
             Promise.all(newMedical.map(doc => resumeService.addMedicalTravelDocument({ ...doc, type: 'MEDICAL' }))),
             Promise.all(newTravel.map(doc => resumeService.addMedicalTravelDocument({ ...doc, type: 'TRAVEL' }))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            // `type` picks the table the row lives in.
+            Promise.all(editedMedical.map(doc => resumeService.updateMedicalTravelDocument(doc.id, { ...doc, type: 'MEDICAL' }))),
+            Promise.all(editedTravel.map(doc => resumeService.updateMedicalTravelDocument(doc.id, { ...doc, type: 'TRAVEL' }))),
           ]);
           mergedMedical = withCreatedIds(sectionData.medicalDocuments, newMedical, medicalResults);
           mergedTravel = withCreatedIds(sectionData.travelDocuments, newTravel, travelResults);
@@ -332,10 +362,15 @@ const CateringMedicalDashboard = () => {
 
     // Section 8b: Next Of Kin — call API
     const newKin = getUnpersisted(sectionData.nextOfKinList);
+    const editedKin = getEdited(sectionData.nextOfKinList);
     let mergedKin = sectionData.nextOfKinList;
-    if (newKin.length > 0) {
+    if (newKin.length > 0 || editedKin.length > 0) {
       try {
-        const results = await Promise.all(newKin.map((kin) => resumeService.addNextOfKin(kin)));
+        const [results] = await Promise.all([
+          Promise.all(newKin.map((kin) => resumeService.addNextOfKin(kin))),
+          // Corrections to entries that already exist are PUT, not POSTed.
+          Promise.all(editedKin.map((kin) => resumeService.updateNextOfKin(kin.id, kin))),
+        ]);
         mergedKin = withCreatedIds(sectionData.nextOfKinList, newKin, results);
       } catch (error) {
         setApiError(getApiErrorMessage(error, 'Failed to save next of kin. Please try again.'));
@@ -346,10 +381,15 @@ const CateringMedicalDashboard = () => {
 
     // Section 8c: Referees — call API
     const newReferees = getUnpersisted(sectionData.refereesList);
+    const editedReferees = getEdited(sectionData.refereesList);
     let mergedReferees = sectionData.refereesList;
-    if (newReferees.length > 0) {
+    if (newReferees.length > 0 || editedReferees.length > 0) {
       try {
-        const results = await Promise.all(newReferees.map((referee) => resumeService.addReferee(referee)));
+        const [results] = await Promise.all([
+          Promise.all(newReferees.map((referee) => resumeService.addReferee(referee))),
+          // Corrections to entries that already exist are PUT, not POSTed.
+          Promise.all(editedReferees.map((referee) => resumeService.updateReferee(referee.id, referee))),
+        ]);
         mergedReferees = withCreatedIds(sectionData.refereesList, newReferees, results);
       } catch (error) {
         setApiError(getApiErrorMessage(error, 'Failed to save referees. Please try again.'));

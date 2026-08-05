@@ -3,6 +3,34 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+import { sortAcademic, sortDocuments } from '../../../../utils/resumeEntryOrder';
+
+const EMPTY_ACADEMIC = {
+  qualificationName: '',
+  institution: '',
+  city: '',
+  institutionCountry: '',
+  grade: '',
+  startDate: '',
+  endDate: ''
+};
+
+const EMPTY_STCW = {
+  qualificationName: '',
+  certificateNumber: '',
+  issuingCountry: '',
+  dateOfIssue: '',
+  validTill: ''
+};
+
+/** Fold a correction into its entry, flagging saved ones for a PUT. */
+const applyEdit = (list, id, fields) =>
+  list.map((item) =>
+    item.id === id
+      ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+      : item
+  );
 
 const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
@@ -15,23 +43,16 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
       setStcwCertificates(initialData.stcwCertificates);
     }
   }, [initialData]);
-  const [currentAcademic, setCurrentAcademic] = useState({
-    qualificationName: '',
-    institution: '',
-    city: '',
-    institutionCountry: '',
-    grade: '',
-    startDate: '',
-    endDate: ''
-  });
+  const [currentAcademic, setCurrentAcademic] = useState(EMPTY_ACADEMIC);
   const [stcwCertificates, setStcwCertificates] = useState(initialData.stcwCertificates || []);
-  const [currentStcw, setCurrentStcw] = useState({
-    qualificationName: '',
-    certificateNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentStcw, setCurrentStcw] = useState(EMPTY_STCW);
+  // id of the entry being corrected in each tab, or null while adding
+  const [editingAcademicId, setEditingAcademicId] = useState(null);
+  const [editingStcwId, setEditingStcwId] = useState(null);
+
+  // Most recent study / certificate first.
+  const orderedAcademic = sortAcademic(academicQualifications);
+  const orderedStcw = sortDocuments(stcwCertificates);
 
   const handleAcademicChange = (e) => {
     setCurrentAcademic({
@@ -73,16 +94,25 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
   // entries are reported too (once they validate), since the user may fill one
   // in and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
+    const academicValid = validateAcademic(currentAcademic) === null;
+    const stcwValid = validateStcw(currentStcw) === null;
     onLocalChange?.({
       academicQualifications,
       stcwCertificates,
       __drafts: {
-        academicQualifications: validateAcademic(currentAcademic) === null ? currentAcademic : null,
-        stcwCertificates: validateStcw(currentStcw) === null ? currentStcw : null,
+        academicQualifications: editingAcademicId === null && academicValid ? currentAcademic : null,
+        stcwCertificates: editingStcwId === null && stcwValid ? currentStcw : null,
+      },
+      // In-flight corrections replace their entry rather than adding one.
+      __edits: {
+        academicQualifications: editingAcademicId !== null && academicValid
+          ? { id: editingAcademicId, fields: currentAcademic } : null,
+        stcwCertificates: editingStcwId !== null && stcwValid
+          ? { id: editingStcwId, fields: currentStcw } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [academicQualifications, stcwCertificates, currentAcademic, currentStcw]);
+  }, [academicQualifications, stcwCertificates, currentAcademic, currentStcw, editingAcademicId, editingStcwId]);
 
   const handleAddAcademic = () => {
     const errorMsg = validateAcademic(currentAcademic);
@@ -91,16 +121,24 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
       return;
     }
 
-    setAcademicQualifications([...academicQualifications, { ...currentAcademic, id: Date.now() }]);
-    setCurrentAcademic({
-      qualificationName: '',
-      institution: '',
-      city: '',
-      institutionCountry: '',
-      grade: '',
-      startDate: '',
-      endDate: ''
-    });
+    if (editingAcademicId !== null) {
+      setAcademicQualifications(applyEdit(academicQualifications, editingAcademicId, currentAcademic));
+      setEditingAcademicId(null);
+    } else {
+      setAcademicQualifications([...academicQualifications, { ...currentAcademic, id: Date.now() }]);
+    }
+    setCurrentAcademic(EMPTY_ACADEMIC);
+  };
+
+  const handleEditAcademic = (academic) => {
+    const { id, _persisted, _dirty, ...fields } = academic;
+    setCurrentAcademic({ ...EMPTY_ACADEMIC, ...fields });
+    setEditingAcademicId(id);
+  };
+
+  const handleCancelAcademicEdit = () => {
+    setEditingAcademicId(null);
+    setCurrentAcademic(EMPTY_ACADEMIC);
   };
 
   const handleRemoveAcademic = async (academic) => {
@@ -112,6 +150,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         return;
       }
     }
+    if (editingAcademicId === academic.id) handleCancelAcademicEdit();
     setAcademicQualifications(academicQualifications.filter(a => a.id !== academic.id));
   };
 
@@ -122,14 +161,24 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
       return;
     }
 
-    setStcwCertificates([...stcwCertificates, { ...currentStcw, id: Date.now() }]);
-    setCurrentStcw({
-      qualificationName: '',
-      certificateNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingStcwId !== null) {
+      setStcwCertificates(applyEdit(stcwCertificates, editingStcwId, currentStcw));
+      setEditingStcwId(null);
+    } else {
+      setStcwCertificates([...stcwCertificates, { ...currentStcw, id: Date.now() }]);
+    }
+    setCurrentStcw(EMPTY_STCW);
+  };
+
+  const handleEditStcw = (stcw) => {
+    const { id, _persisted, _dirty, ...fields } = stcw;
+    setCurrentStcw({ ...EMPTY_STCW, ...fields });
+    setEditingStcwId(id);
+  };
+
+  const handleCancelStcwEdit = () => {
+    setEditingStcwId(null);
+    setCurrentStcw(EMPTY_STCW);
   };
 
   const handleRemoveStcw = async (stcw) => {
@@ -141,6 +190,7 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         return;
       }
     }
+    if (editingStcwId === stcw.id) handleCancelStcwEdit();
     setStcwCertificates(stcwCertificates.filter(s => s.id !== stcw.id));
   };
 
@@ -155,7 +205,9 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         alert("Please complete or clear the active Academic entry before continuing: " + errorMsg);
         return;
       }
-      finalAcademic.push({ ...currentAcademic, id: Date.now() });
+      finalAcademic = editingAcademicId !== null
+        ? applyEdit(finalAcademic, editingAcademicId, currentAcademic)
+        : [...finalAcademic, { ...currentAcademic, id: Date.now() }];
     }
 
     const isPartialStcw = Object.values(currentStcw).some(val => val !== '');
@@ -165,7 +217,9 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         alert("Please complete or clear the active STCW entry before continuing: " + errorMsg);
         return;
       }
-      finalStcw.push({ ...currentStcw, id: Date.now() + 1 });
+      finalStcw = editingStcwId !== null
+        ? applyEdit(finalStcw, editingStcwId, currentStcw)
+        : [...finalStcw, { ...currentStcw, id: Date.now() + 1 }];
     }
 
     onNext({ academicQualifications: finalAcademic, stcwCertificates: finalStcw });
@@ -202,23 +256,38 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         {/* Academic Qualifications Tab Content */}
         {academicTab === 'academic' && (
           <>
-            {/* Added Academic Qualifications */}
-            {academicQualifications.length > 0 && (
+            {/* Added Academic Qualifications — most recent first */}
+            {orderedAcademic.length > 0 && (
               <div className="space-y-3 mb-4">
-                {academicQualifications.map((academic) => (
+                {orderedAcademic.map((academic) => (
                   <div
                     key={academic.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingAcademicId === academic.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAcademic(academic)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditAcademic(academic)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${academic.qualificationName || 'qualification'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAcademic(academic)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${academic.qualificationName || 'qualification'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{academic.qualificationName}</p>
                     <p className="text-xs text-gray-600">
                       {academic.institution}
@@ -338,23 +407,38 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
         {/* STCW Certificate Tab Content */}
         {academicTab === 'stcw' && (
           <>
-            {/* Added STCW Certificates */}
-            {stcwCertificates.length > 0 && (
+            {/* Added STCW Certificates — most recent first */}
+            {orderedStcw.length > 0 && (
               <div className="space-y-3 mb-4">
-                {stcwCertificates.map((stcw) => (
+                {orderedStcw.map((stcw) => (
                   <div
                     key={stcw.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingStcwId === stcw.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveStcw(stcw)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditStcw(stcw)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${stcw.qualificationName || 'certificate'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveStcw(stcw)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${stcw.qualificationName || 'certificate'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{stcw.qualificationName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={stcw.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -465,13 +549,23 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
             Go Back
           </button>
           <div className="flex space-x-3">
+            {(academicTab === 'academic' ? editingAcademicId : editingStcwId) !== null && (
+              <button
+                type="button"
+                onClick={academicTab === 'academic' ? handleCancelAcademicEdit : handleCancelStcwEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={academicTab === 'academic' ? handleAddAcademic : handleAddStcw}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {(academicTab === 'academic' ? editingAcademicId : editingStcwId) !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

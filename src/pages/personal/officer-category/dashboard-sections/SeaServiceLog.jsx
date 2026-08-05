@@ -2,28 +2,38 @@ import { useState, useEffect } from 'react';
 import CountrySelect from '../../../../components/common/CountrySelect';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+import { sortSeaService } from '../../../../utils/resumeEntryOrder';
+
+const EMPTY_SEA_SERVICE = {
+  companyName: '',
+  role: '',
+  vesselName: '',
+  imoNo: '',
+  flag: '',
+  type: '',
+  dwt: '',
+  meType: '',
+  kwt: '',
+  joiningDate: '',
+  till: ''
+};
 
 const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null, onLocalChange }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
+  // id of the entry being corrected, or null while adding a new one
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData.seaServiceEntries)) {
       setSeaServiceEntries(initialData.seaServiceEntries);
     }
   }, [initialData]);
-  const [currentSeaService, setCurrentSeaService] = useState({
-    companyName: '',
-    role: '',
-    vesselName: '',
-    imoNo: '',
-    flag: '',
-    type: '',
-    dwt: '',
-    meType: '',
-    kwt: '',
-    joiningDate: '',
-    till: ''
-  });
+  const [currentSeaService, setCurrentSeaService] = useState(EMPTY_SEA_SERVICE);
+
+  // Newest posting first, so a current role sits above one from years ago
+  // regardless of the order entries happened to be typed in.
+  const orderedEntries = sortSeaService(seaServiceEntries);
 
   const handleSeaServiceChange = (e) => {
     setCurrentSeaService({
@@ -71,10 +81,20 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
   // entry is reported too (once it validates), since the user may fill it in
   // and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
-    const draft = validateForm(currentSeaService) === null ? currentSeaService : null;
-    onLocalChange?.({ seaServiceEntries, __drafts: { seaServiceEntries: draft } });
+    const isValid = validateForm(currentSeaService) === null;
+    onLocalChange?.({
+      seaServiceEntries,
+      __drafts: {
+        seaServiceEntries: editingId === null && isValid ? currentSeaService : null,
+      },
+      // An in-flight correction replaces its entry rather than adding one.
+      __edits: {
+        seaServiceEntries:
+          editingId !== null && isValid ? { id: editingId, fields: currentSeaService } : null,
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seaServiceEntries, currentSeaService]);
+  }, [seaServiceEntries, currentSeaService, editingId]);
 
   const handleAddSeaService = () => {
     const errorMsg = validateForm(currentSeaService);
@@ -83,20 +103,34 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
       return;
     }
 
-    setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
-    setCurrentSeaService({
-      companyName: '',
-      role: '',
-      vesselName: '',
-      imoNo: '',
-      flag: '',
-      type: '',
-      dwt: '',
-      meType: '',
-      kwt: '',
-      joiningDate: '',
-      till: ''
-    });
+    if (editingId !== null) {
+      // Correcting an existing entry. An already-saved entry is flagged so the
+      // dashboard PUTs it on the way out instead of POSTing a second copy.
+      setSeaServiceEntries(seaServiceEntries.map((entry) =>
+        entry.id === editingId
+          ? (entry._persisted
+            ? markEdited({ ...entry, ...currentSeaService })
+            : { ...entry, ...currentSeaService })
+          : entry
+      ));
+      setEditingId(null);
+    } else {
+      setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
+    }
+
+    setCurrentSeaService(EMPTY_SEA_SERVICE);
+  };
+
+  const handleEditSeaService = (entry) => {
+    // Only the editable fields — id/_persisted/_dirty stay on the stored entry.
+    const { id, _persisted, _dirty, ...fields } = entry;
+    setCurrentSeaService({ ...EMPTY_SEA_SERVICE, ...fields });
+    setEditingId(id);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCurrentSeaService(EMPTY_SEA_SERVICE);
   };
 
   const handleRemoveSeaService = async (entry) => {
@@ -108,6 +142,8 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
         return;
       }
     }
+    // Deleting the entry being corrected leaves the form editing nothing.
+    if (editingId === entry.id) handleCancelEdit();
     setSeaServiceEntries(seaServiceEntries.filter(e => e.id !== entry.id));
   };
 
@@ -119,10 +155,26 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     if (isPartial) {
       const errorMsg = validateForm(currentSeaService);
       if (errorMsg) {
-        alert("Please complete or clear the active entry before continuing: " + errorMsg);
-        return; // Halt 
+        alert(
+          (editingId !== null
+            ? 'Please finish or cancel the entry you are editing before continuing: '
+            : 'Please complete or clear the active entry before continuing: ') + errorMsg
+        );
+        return; // Halt
       }
-      finalEntries.push({ ...currentSeaService, id: Date.now() });
+
+      if (editingId !== null) {
+        // Fold the correction into its entry — never add it as a new one.
+        finalEntries = finalEntries.map((entry) =>
+          entry.id === editingId
+            ? (entry._persisted
+              ? markEdited({ ...entry, ...currentSeaService })
+              : { ...entry, ...currentSeaService })
+            : entry
+        );
+      } else {
+        finalEntries.push({ ...currentSeaService, id: Date.now() });
+      }
     }
 
     onNext({ seaServiceEntries: finalEntries });
@@ -132,23 +184,38 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     <form className="flex flex-col h-full">
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-        {/* Added Sea Service Entries */}
-        {seaServiceEntries.length > 0 && (
+        {/* Added Sea Service Entries — newest posting first */}
+        {orderedEntries.length > 0 && (
           <div className="space-y-3 mb-4">
-            {seaServiceEntries.map((entry) => (
+            {orderedEntries.map((entry) => (
               <div
                 key={entry.id}
-                className="bg-gray-50 rounded-lg p-4 relative"
+                className={`bg-gray-50 rounded-lg p-4 relative ${editingId === entry.id ? 'ring-2 ring-[#003971]' : ''}`}
               >
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSeaService(entry)}
-                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditSeaService(entry)}
+                    className="text-gray-400 hover:text-[#003971]"
+                    aria-label={`Edit ${entry.vesselName || 'entry'}`}
+                    title="Edit"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSeaService(entry)}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label={`Remove ${entry.vesselName || 'entry'}`}
+                    title="Remove"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="mb-2">
                   <p className="text-sm font-semibold text-gray-800">{entry.vesselName}</p>
                   {entry.type ? (
@@ -352,13 +419,23 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
             Go Back
           </button>
           <div className="flex space-x-3">
+            {editingId !== null && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={handleAddSeaService}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {editingId !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

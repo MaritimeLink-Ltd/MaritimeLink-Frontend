@@ -3,6 +3,33 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+import { sortDocuments } from '../../../../utils/resumeEntryOrder';
+
+const EMPTY_MEDICAL = {
+  certificateName: '',
+  certificateNumber: '',
+  issuingCountry: '',
+  city: '',
+  dateOfIssue: '',
+  validTill: ''
+};
+
+const EMPTY_TRAVEL = {
+  documentName: '',
+  documentNumber: '',
+  issuingCountry: '',
+  dateOfIssue: '',
+  validTill: ''
+};
+
+/** Fold a correction into its entry, flagging saved ones for a PUT. */
+const applyEdit = (list, id, fields) =>
+  list.map((item) =>
+    item.id === id
+      ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+      : item
+  );
 
 const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
@@ -15,22 +42,16 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
       setTravelDocuments(initialData.travelDocuments);
     }
   }, [initialData]);
-  const [currentMedical, setCurrentMedical] = useState({
-    certificateName: '',
-    certificateNumber: '',
-    issuingCountry: '',
-    city: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentMedical, setCurrentMedical] = useState(EMPTY_MEDICAL);
   const [travelDocuments, setTravelDocuments] = useState(initialData.travelDocuments || []);
-  const [currentTravel, setCurrentTravel] = useState({
-    documentName: '',
-    documentNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentTravel, setCurrentTravel] = useState(EMPTY_TRAVEL);
+  // id of the entry being corrected in each tab, or null while adding
+  const [editingMedicalId, setEditingMedicalId] = useState(null);
+  const [editingTravelId, setEditingTravelId] = useState(null);
+
+  // Most recently issued document first.
+  const orderedMedical = sortDocuments(medicalDocuments);
+  const orderedTravel = sortDocuments(travelDocuments);
   const [medicalDateError, setMedicalDateError] = useState('');
   const [travelDateError, setTravelDateError] = useState('');
 
@@ -86,16 +107,25 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
   // entries are reported too (once they validate), since the user may fill one
   // in and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
+    const medicalValid = validateMedical(currentMedical) === null;
+    const travelValid = validateTravel(currentTravel) === null;
     onLocalChange?.({
       medicalDocuments,
       travelDocuments,
       __drafts: {
-        medicalDocuments: validateMedical(currentMedical) === null ? currentMedical : null,
-        travelDocuments: validateTravel(currentTravel) === null ? currentTravel : null,
+        medicalDocuments: editingMedicalId === null && medicalValid ? currentMedical : null,
+        travelDocuments: editingTravelId === null && travelValid ? currentTravel : null,
+      },
+      // In-flight corrections replace their entry rather than adding one.
+      __edits: {
+        medicalDocuments: editingMedicalId !== null && medicalValid
+          ? { id: editingMedicalId, fields: currentMedical } : null,
+        travelDocuments: editingTravelId !== null && travelValid
+          ? { id: editingTravelId, fields: currentTravel } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medicalDocuments, travelDocuments, currentMedical, currentTravel]);
+  }, [medicalDocuments, travelDocuments, currentMedical, currentTravel, editingMedicalId, editingTravelId]);
 
   const handleAddMedical = () => {
     const errorMsg = validateMedical(currentMedical);
@@ -104,15 +134,26 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
       return;
     }
     setMedicalDateError('');
-    setMedicalDocuments([...medicalDocuments, { ...currentMedical, id: Date.now() }]);
-    setCurrentMedical({
-      certificateName: '',
-      certificateNumber: '',
-      issuingCountry: '',
-      city: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingMedicalId !== null) {
+      setMedicalDocuments(applyEdit(medicalDocuments, editingMedicalId, currentMedical));
+      setEditingMedicalId(null);
+    } else {
+      setMedicalDocuments([...medicalDocuments, { ...currentMedical, id: Date.now() }]);
+    }
+    setCurrentMedical(EMPTY_MEDICAL);
+  };
+
+  const handleEditMedical = (doc) => {
+    const { id, _persisted, _dirty, ...fields } = doc;
+    setCurrentMedical({ ...EMPTY_MEDICAL, ...fields });
+    setEditingMedicalId(id);
+    setMedicalDateError('');
+  };
+
+  const handleCancelMedicalEdit = () => {
+    setEditingMedicalId(null);
+    setCurrentMedical(EMPTY_MEDICAL);
+    setMedicalDateError('');
   };
 
   const handleRemoveMedical = async (doc) => {
@@ -124,6 +165,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         return;
       }
     }
+    if (editingMedicalId === doc.id) handleCancelMedicalEdit();
     setMedicalDocuments(medicalDocuments.filter(d => d.id !== doc.id));
   };
 
@@ -134,14 +176,26 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
       return;
     }
     setTravelDateError('');
-    setTravelDocuments([...travelDocuments, { ...currentTravel, id: Date.now() }]);
-    setCurrentTravel({
-      documentName: '',
-      documentNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingTravelId !== null) {
+      setTravelDocuments(applyEdit(travelDocuments, editingTravelId, currentTravel));
+      setEditingTravelId(null);
+    } else {
+      setTravelDocuments([...travelDocuments, { ...currentTravel, id: Date.now() }]);
+    }
+    setCurrentTravel(EMPTY_TRAVEL);
+  };
+
+  const handleEditTravel = (doc) => {
+    const { id, _persisted, _dirty, ...fields } = doc;
+    setCurrentTravel({ ...EMPTY_TRAVEL, ...fields });
+    setEditingTravelId(id);
+    setTravelDateError('');
+  };
+
+  const handleCancelTravelEdit = () => {
+    setEditingTravelId(null);
+    setCurrentTravel(EMPTY_TRAVEL);
+    setTravelDateError('');
   };
 
   const handleRemoveTravel = async (doc) => {
@@ -153,6 +207,7 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         return;
       }
     }
+    if (editingTravelId === doc.id) handleCancelTravelEdit();
     setTravelDocuments(travelDocuments.filter(d => d.id !== doc.id));
   };
 
@@ -167,7 +222,9 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         setMedicalDateError("Please complete or clear active Medical entry: " + errorMsg);
         return;
       }
-      finalMedical.push({ ...currentMedical, id: Date.now() });
+      finalMedical = editingMedicalId !== null
+        ? applyEdit(finalMedical, editingMedicalId, currentMedical)
+        : [...finalMedical, { ...currentMedical, id: Date.now() }];
     }
 
     const isPartialTravel = Object.values(currentTravel).some(val => val !== '');
@@ -177,7 +234,9 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         setTravelDateError("Please complete or clear active Travel entry: " + errorMsg);
         return;
       }
-      finalTravel.push({ ...currentTravel, id: Date.now() + 1 });
+      finalTravel = editingTravelId !== null
+        ? applyEdit(finalTravel, editingTravelId, currentTravel)
+        : [...finalTravel, { ...currentTravel, id: Date.now() + 1 }];
     }
 
     onNext({ medicalDocuments: finalMedical, travelDocuments: finalTravel });
@@ -214,23 +273,38 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         {/* Medical Document Tab Content */}
         {medicalTab === 'medical' && (
           <>
-            {/* Added Medical Documents */}
-            {medicalDocuments.length > 0 && (
+            {/* Added Medical Documents — most recently issued first */}
+            {orderedMedical.length > 0 && (
               <div className="space-y-3 mb-4">
-                {medicalDocuments.map((doc) => (
+                {orderedMedical.map((doc) => (
                   <div
                     key={doc.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingMedicalId === doc.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedical(doc)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditMedical(doc)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${doc.certificateName || 'document'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedical(doc)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${doc.certificateName || 'document'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{doc.certificateName}</p>
                     <p className="text-xs text-gray-600">
                       <CountryDisplay name={doc.issuingCountry} />
@@ -350,23 +424,38 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
         {/* Travel Document Tab Content */}
         {medicalTab === 'travel' && (
           <>
-            {/* Added Travel Documents */}
-            {travelDocuments.length > 0 && (
+            {/* Added Travel Documents — most recently issued first */}
+            {orderedTravel.length > 0 && (
               <div className="space-y-3 mb-4">
-                {travelDocuments.map((doc) => (
+                {orderedTravel.map((doc) => (
                   <div
                     key={doc.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingTravelId === doc.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTravel(doc)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditTravel(doc)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${doc.documentName || 'document'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTravel(doc)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${doc.documentName || 'document'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{doc.documentName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={doc.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -482,13 +571,23 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
             Go Back
           </button>
           <div className="flex space-x-3">
+            {(medicalTab === 'medical' ? editingMedicalId : editingTravelId) !== null && (
+              <button
+                type="button"
+                onClick={medicalTab === 'medical' ? handleCancelMedicalEdit : handleCancelTravelEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={medicalTab === 'medical' ? handleAddMedical : handleAddTravel}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {(medicalTab === 'medical' ? editingMedicalId : editingTravelId) !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

@@ -3,6 +3,24 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+import { sortLicenses } from '../../../../utils/resumeEntryOrder';
+
+const EMPTY_LICENSE = {
+  licenseName: '',
+  licenseNumber: '',
+  issuingCountry: '',
+  dateOfIssue: '',
+  validTill: ''
+};
+
+/** Fold a correction into its entry, flagging saved ones for a PUT. */
+const applyEdit = (list, id, fields) =>
+  list.map((item) =>
+    item.id === id
+      ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+      : item
+  );
 
 const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -15,21 +33,16 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
       setEndorsements(initialData.endorsements);
     }
   }, [initialData]);
-  const [currentLicense, setCurrentLicense] = useState({
-    licenseName: '',
-    licenseNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentLicense, setCurrentLicense] = useState(EMPTY_LICENSE);
   const [endorsements, setEndorsements] = useState(initialData.endorsements || []);
-  const [currentEndorsement, setCurrentEndorsement] = useState({
-    licenseName: '',
-    licenseNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentEndorsement, setCurrentEndorsement] = useState(EMPTY_LICENSE);
+  // id of the entry being corrected in each tab, or null while adding
+  const [editingLicenseId, setEditingLicenseId] = useState(null);
+  const [editingEndorsementId, setEditingEndorsementId] = useState(null);
+
+  // Newest first, so a current licence sits above one issued years ago.
+  const orderedLicenses = sortLicenses(licenses);
+  const orderedEndorsements = sortLicenses(endorsements);
 
   const handleLicenseChange = (e) => {
     setCurrentLicense({
@@ -71,16 +84,25 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
   // entries are reported too (once they validate), since the user may fill one
   // in and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
+    const licenseValid = validateLicense(currentLicense) === null;
+    const endorsementValid = validateEndorsement(currentEndorsement) === null;
     onLocalChange?.({
       licenses,
       endorsements,
       __drafts: {
-        licenses: validateLicense(currentLicense) === null ? currentLicense : null,
-        endorsements: validateEndorsement(currentEndorsement) === null ? currentEndorsement : null,
+        licenses: editingLicenseId === null && licenseValid ? currentLicense : null,
+        endorsements: editingEndorsementId === null && endorsementValid ? currentEndorsement : null,
+      },
+      // In-flight corrections replace their entry rather than adding one.
+      __edits: {
+        licenses: editingLicenseId !== null && licenseValid
+          ? { id: editingLicenseId, fields: currentLicense } : null,
+        endorsements: editingEndorsementId !== null && endorsementValid
+          ? { id: editingEndorsementId, fields: currentEndorsement } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [licenses, endorsements, currentLicense, currentEndorsement]);
+  }, [licenses, endorsements, currentLicense, currentEndorsement, editingLicenseId, editingEndorsementId]);
 
   const handleAddLicense = () => {
     const errorMsg = validateLicense(currentLicense);
@@ -88,14 +110,24 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
       alert(errorMsg);
       return;
     }
-    setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
-    setCurrentLicense({
-      licenseName: '',
-      licenseNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingLicenseId !== null) {
+      setLicenses(applyEdit(licenses, editingLicenseId, currentLicense));
+      setEditingLicenseId(null);
+    } else {
+      setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
+    }
+    setCurrentLicense(EMPTY_LICENSE);
+  };
+
+  const handleEditLicense = (license) => {
+    const { id, _persisted, _dirty, ...fields } = license;
+    setCurrentLicense({ ...EMPTY_LICENSE, ...fields });
+    setEditingLicenseId(id);
+  };
+
+  const handleCancelLicenseEdit = () => {
+    setEditingLicenseId(null);
+    setCurrentLicense(EMPTY_LICENSE);
   };
 
   const handleRemoveLicense = async (license) => {
@@ -107,6 +139,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
         return;
       }
     }
+    if (editingLicenseId === license.id) handleCancelLicenseEdit();
     setLicenses(licenses.filter(l => l.id !== license.id));
   };
 
@@ -116,14 +149,24 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
       alert(errorMsg);
       return;
     }
-    setEndorsements([...endorsements, { ...currentEndorsement, id: Date.now() }]);
-    setCurrentEndorsement({
-      licenseName: '',
-      licenseNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingEndorsementId !== null) {
+      setEndorsements(applyEdit(endorsements, editingEndorsementId, currentEndorsement));
+      setEditingEndorsementId(null);
+    } else {
+      setEndorsements([...endorsements, { ...currentEndorsement, id: Date.now() }]);
+    }
+    setCurrentEndorsement(EMPTY_LICENSE);
+  };
+
+  const handleEditEndorsement = (endorsement) => {
+    const { id, _persisted, _dirty, ...fields } = endorsement;
+    setCurrentEndorsement({ ...EMPTY_LICENSE, ...fields });
+    setEditingEndorsementId(id);
+  };
+
+  const handleCancelEndorsementEdit = () => {
+    setEditingEndorsementId(null);
+    setCurrentEndorsement(EMPTY_LICENSE);
   };
 
   const handleRemoveEndorsement = async (endorsement) => {
@@ -135,6 +178,7 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
         return;
       }
     }
+    if (editingEndorsementId === endorsement.id) handleCancelEndorsementEdit();
     setEndorsements(endorsements.filter(e => e.id !== endorsement.id));
   };
 
@@ -146,20 +190,32 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
     if (isPartialLicense) {
       const errorMsg = validateLicense(currentLicense);
       if (errorMsg) {
-        alert("Please complete or clear the active License entry before continuing: " + errorMsg);
+        alert(
+          (editingLicenseId !== null
+            ? 'Please finish or cancel the License you are editing: '
+            : 'Please complete or clear the active License entry before continuing: ') + errorMsg
+        );
         return;
       }
-      finalLicenses.push({ ...currentLicense, id: Date.now() });
+      finalLicenses = editingLicenseId !== null
+        ? applyEdit(finalLicenses, editingLicenseId, currentLicense)
+        : [...finalLicenses, { ...currentLicense, id: Date.now() }];
     }
 
     const isPartialEndorsement = Object.values(currentEndorsement).some(val => val !== '');
     if (isPartialEndorsement) {
       const errorMsg = validateEndorsement(currentEndorsement);
       if (errorMsg) {
-        alert("Please complete or clear the active Endorsement entry before continuing: " + errorMsg);
+        alert(
+          (editingEndorsementId !== null
+            ? 'Please finish or cancel the Endorsement you are editing: '
+            : 'Please complete or clear the active Endorsement entry before continuing: ') + errorMsg
+        );
         return;
       }
-      finalEndorsements.push({ ...currentEndorsement, id: Date.now() + 1 });
+      finalEndorsements = editingEndorsementId !== null
+        ? applyEdit(finalEndorsements, editingEndorsementId, currentEndorsement)
+        : [...finalEndorsements, { ...currentEndorsement, id: Date.now() + 1 }];
     }
 
     onNext({ licenses: finalLicenses, endorsements: finalEndorsements });
@@ -196,23 +252,38 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
         {/* Licenses Tab Content */}
         {activeTab === 'licenses' && (
           <>
-            {/* Added Licenses */}
-            {licenses.length > 0 && (
+            {/* Added Licenses — newest first */}
+            {orderedLicenses.length > 0 && (
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {licenses.map((license) => (
+                {orderedLicenses.map((license) => (
                   <div
                     key={license.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingLicenseId === license.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLicense(license)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditLicense(license)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${license.licenseName || 'license'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLicense(license)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${license.licenseName || 'license'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{license.licenseName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={license.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -310,23 +381,38 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
         {/* Endorsements Tab Content */}
         {activeTab === 'endorsements' && (
           <>
-            {/* Added Endorsements */}
-            {endorsements.length > 0 && (
+            {/* Added Endorsements — newest first */}
+            {orderedEndorsements.length > 0 && (
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {endorsements.map((endorsement) => (
+                {orderedEndorsements.map((endorsement) => (
                   <div
                     key={endorsement.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingEndorsementId === endorsement.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveEndorsement(endorsement)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditEndorsement(endorsement)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${endorsement.licenseName || 'endorsement'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEndorsement(endorsement)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${endorsement.licenseName || 'endorsement'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{endorsement.licenseName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={endorsement.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -439,13 +525,23 @@ const LicensesEndorsements = ({ onNext, onBack, initialData = {}, activeTab, set
             Go Back
           </button>
           <div className="flex space-x-3">
+            {(activeTab === 'licenses' ? editingLicenseId : editingEndorsementId) !== null && (
+              <button
+                type="button"
+                onClick={activeTab === 'licenses' ? handleCancelLicenseEdit : handleCancelEndorsementEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={activeTab === 'licenses' ? handleAddLicense : handleAddEndorsement}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {(activeTab === 'licenses' ? editingLicenseId : editingEndorsementId) !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

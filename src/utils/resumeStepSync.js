@@ -12,10 +12,24 @@
  */
 
 export const markPersisted = (list) =>
-    Array.isArray(list) ? list.map((item) => ({ ...item, _persisted: true })) : [];
+    Array.isArray(list)
+        // Saving settles any pending edit, so the dirty flag is cleared here
+        // rather than left to accumulate and re-PUT on the next step.
+        ? list.map(({ _dirty, ...item }) => ({ ...item, _persisted: true }))
+        : [];
 
 export const getUnpersisted = (list) =>
     Array.isArray(list) ? list.filter((item) => !item._persisted) : [];
+
+/**
+ * An entry that already exists server-side and has since been edited. These
+ * need a PUT rather than a POST — sending them as new is what would turn a
+ * correction into a duplicate row.
+ */
+export const markEdited = (entry) => ({ ...entry, _dirty: true });
+
+export const getEdited = (list) =>
+    Array.isArray(list) ? list.filter((item) => item._persisted && item._dirty) : [];
 
 /**
  * The "add" endpoints return the real database id of the row they just
@@ -38,8 +52,9 @@ export const withCreatedIds = (fullList, submittedEntries, results) => {
     );
 };
 
-/** Bookkeeping key sections use to report an uncommitted form entry upwards. */
+/** Bookkeeping keys sections use to report uncommitted form state upwards. */
 export const DRAFTS_KEY = '__drafts';
+export const EDITS_KEY = '__edits';
 
 /**
  * A section's form holds a typed-but-not-yet-added entry separately from its
@@ -48,9 +63,12 @@ export const DRAFTS_KEY = '__drafts';
  * whatever the user had typed without pressing the section's Save button.
  *
  * Sections report such an entry (only once it validates) under `__drafts`,
- * keyed by the list it belongs to. This returns a copy of the builder's
- * aggregate state with each draft appended to its list and the `__drafts`
- * bookkeeping stripped back out, ready to serialize.
+ * keyed by the list it belongs to. An in-progress correction to an existing
+ * entry is reported under `__edits` instead, as `{ id, fields }`, so it
+ * replaces that entry rather than appending a second copy of it.
+ *
+ * This returns a copy of the builder's aggregate state with drafts appended,
+ * edits applied, and both bookkeeping keys stripped back out.
  */
 export const mergePendingDrafts = (allData) => {
     const merged = {};
@@ -61,10 +79,19 @@ export const mergePendingDrafts = (allData) => {
             return;
         }
 
-        const { [DRAFTS_KEY]: drafts, ...rest } = section;
+        const { [DRAFTS_KEY]: drafts, [EDITS_KEY]: edits, ...rest } = section;
+
+        Object.entries(edits || {}).forEach(([listKey, edit]) => {
+            if (!edit || !Array.isArray(rest[listKey])) return;
+            rest[listKey] = rest[listKey].map((item) =>
+                item.id === edit.id ? { ...item, ...edit.fields } : item
+            );
+        });
+
         Object.entries(drafts || {}).forEach(([listKey, draft]) => {
             if (draft) rest[listKey] = [...(rest[listKey] || []), draft];
         });
+
         merged[sectionKey] = rest;
     });
 

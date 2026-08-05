@@ -3,6 +3,24 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+import { sortLicenses } from '../../../../utils/resumeEntryOrder';
+
+const EMPTY_LICENSE = {
+  licenseName: '',
+  licenseNumber: '',
+  issuingCountry: '',
+  dateOfIssue: '',
+  validTill: ''
+};
+
+/** Fold a correction into its entry, flagging saved ones for a PUT. */
+const applyEdit = (list, id, fields) =>
+  list.map((item) =>
+    item.id === id
+      ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+      : item
+  );
 
 const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
@@ -15,21 +33,16 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
       setCertificates(initialData.certificates);
     }
   }, [initialData]);
-  const [currentLicense, setCurrentLicense] = useState({
-    licenseName: '',
-    licenseNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentLicense, setCurrentLicense] = useState(EMPTY_LICENSE);
   const [certificates, setCertificates] = useState(initialData.certificates || []);
-  const [currentCertificate, setCurrentCertificate] = useState({
-    licenseName: '',
-    licenseNumber: '',
-    issuingCountry: '',
-    dateOfIssue: '',
-    validTill: ''
-  });
+  const [currentCertificate, setCurrentCertificate] = useState(EMPTY_LICENSE);
+  // id of the entry being corrected in each tab, or null while adding
+  const [editingLicenseId, setEditingLicenseId] = useState(null);
+  const [editingCertificateId, setEditingCertificateId] = useState(null);
+
+  // Newest first, so a current licence sits above one issued years ago.
+  const orderedLicenses = sortLicenses(licenses);
+  const orderedCertificates = sortLicenses(certificates);
   const [licenseDateError, setLicenseDateError] = useState('');
   const [certificateDateError, setCertificateDateError] = useState('');
 
@@ -85,16 +98,25 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
   // entries are reported too (once they validate), since the user may fill one
   // in and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
+    const licenseValid = validateLicense(currentLicense) === null;
+    const certificateValid = validateCertificate(currentCertificate) === null;
     onLocalChange?.({
       licenses,
       certificates,
       __drafts: {
-        licenses: validateLicense(currentLicense) === null ? currentLicense : null,
-        certificates: validateCertificate(currentCertificate) === null ? currentCertificate : null,
+        licenses: editingLicenseId === null && licenseValid ? currentLicense : null,
+        certificates: editingCertificateId === null && certificateValid ? currentCertificate : null,
+      },
+      // In-flight corrections replace their entry rather than adding one.
+      __edits: {
+        licenses: editingLicenseId !== null && licenseValid
+          ? { id: editingLicenseId, fields: currentLicense } : null,
+        certificates: editingCertificateId !== null && certificateValid
+          ? { id: editingCertificateId, fields: currentCertificate } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [licenses, certificates, currentLicense, currentCertificate]);
+  }, [licenses, certificates, currentLicense, currentCertificate, editingLicenseId, editingCertificateId]);
 
   const handleAddLicense = () => {
     const errorMsg = validateLicense(currentLicense);
@@ -103,14 +125,26 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
       return;
     }
     setLicenseDateError('');
-    setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
-    setCurrentLicense({
-      licenseName: '',
-      licenseNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingLicenseId !== null) {
+      setLicenses(applyEdit(licenses, editingLicenseId, currentLicense));
+      setEditingLicenseId(null);
+    } else {
+      setLicenses([...licenses, { ...currentLicense, id: Date.now() }]);
+    }
+    setCurrentLicense(EMPTY_LICENSE);
+  };
+
+  const handleEditLicense = (license) => {
+    const { id, _persisted, _dirty, ...fields } = license;
+    setCurrentLicense({ ...EMPTY_LICENSE, ...fields });
+    setEditingLicenseId(id);
+    setLicenseDateError('');
+  };
+
+  const handleCancelLicenseEdit = () => {
+    setEditingLicenseId(null);
+    setCurrentLicense(EMPTY_LICENSE);
+    setLicenseDateError('');
   };
 
   const handleRemoveLicense = async (license) => {
@@ -122,6 +156,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         return;
       }
     }
+    if (editingLicenseId === license.id) handleCancelLicenseEdit();
     setLicenses(licenses.filter(l => l.id !== license.id));
   };
 
@@ -132,14 +167,26 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
       return;
     }
     setCertificateDateError('');
-    setCertificates([...certificates, { ...currentCertificate, id: Date.now() }]);
-    setCurrentCertificate({
-      licenseName: '',
-      licenseNumber: '',
-      issuingCountry: '',
-      dateOfIssue: '',
-      validTill: ''
-    });
+    if (editingCertificateId !== null) {
+      setCertificates(applyEdit(certificates, editingCertificateId, currentCertificate));
+      setEditingCertificateId(null);
+    } else {
+      setCertificates([...certificates, { ...currentCertificate, id: Date.now() }]);
+    }
+    setCurrentCertificate(EMPTY_LICENSE);
+  };
+
+  const handleEditCertificate = (certificate) => {
+    const { id, _persisted, _dirty, ...fields } = certificate;
+    setCurrentCertificate({ ...EMPTY_LICENSE, ...fields });
+    setEditingCertificateId(id);
+    setCertificateDateError('');
+  };
+
+  const handleCancelCertificateEdit = () => {
+    setEditingCertificateId(null);
+    setCurrentCertificate(EMPTY_LICENSE);
+    setCertificateDateError('');
   };
 
   const handleRemoveCertificate = async (certificate) => {
@@ -151,6 +198,7 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         return;
       }
     }
+    if (editingCertificateId === certificate.id) handleCancelCertificateEdit();
     setCertificates(certificates.filter(c => c.id !== certificate.id));
   };
 
@@ -165,7 +213,9 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         setLicenseDateError("Please complete or clear active License entry: " + errorMsg);
         return;
       }
-      finalLicenses.push({ ...currentLicense, id: Date.now() });
+      finalLicenses = editingLicenseId !== null
+        ? applyEdit(finalLicenses, editingLicenseId, currentLicense)
+        : [...finalLicenses, { ...currentLicense, id: Date.now() }];
     }
 
     const isPartialCertificate = Object.values(currentCertificate).some(val => val !== '');
@@ -175,7 +225,9 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         setCertificateDateError("Please complete or clear active Certificate entry: " + errorMsg);
         return;
       }
-      finalCertificates.push({ ...currentCertificate, id: Date.now() + 1 });
+      finalCertificates = editingCertificateId !== null
+        ? applyEdit(finalCertificates, editingCertificateId, currentCertificate)
+        : [...finalCertificates, { ...currentCertificate, id: Date.now() + 1 }];
     }
 
     onNext({ licenses: finalLicenses, certificates: finalCertificates });
@@ -212,23 +264,38 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         {/* Licenses Tab Content */}
         {activeTab === 'licenses' && (
           <>
-            {/* Added Licenses */}
-            {licenses.length > 0 && (
+            {/* Added Licenses — newest first */}
+            {orderedLicenses.length > 0 && (
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {licenses.map((license) => (
+                {orderedLicenses.map((license) => (
                   <div
                     key={license.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingLicenseId === license.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLicense(license)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditLicense(license)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${license.licenseName || 'license'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLicense(license)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${license.licenseName || 'license'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{license.licenseName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={license.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -328,23 +395,38 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
         {/* Certificates Tab Content */}
         {activeTab === 'certificates' && (
           <>
-            {/* Added Certificates */}
-            {certificates.length > 0 && (
+            {/* Added Certificates — newest first */}
+            {orderedCertificates.length > 0 && (
               <div className="grid grid-cols-2 gap-3 mb-4">
-                {certificates.map((cert) => (
+                {orderedCertificates.map((cert) => (
                   <div
                     key={cert.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingCertificateId === cert.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCertificate(cert)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditCertificate(cert)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${cert.licenseName || 'certificate'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCertificate(cert)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${cert.licenseName || 'certificate'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{cert.licenseName}</p>
                     <p className="text-xs text-gray-600"><CountryDisplay name={cert.issuingCountry} /></p>
                     <p className="text-xs text-gray-500">
@@ -459,13 +541,23 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
             Go Back
           </button>
           <div className="flex space-x-3">
+            {(activeTab === 'licenses' ? editingLicenseId : editingCertificateId) !== null && (
+              <button
+                type="button"
+                onClick={activeTab === 'licenses' ? handleCancelLicenseEdit : handleCancelCertificateEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={activeTab === 'licenses' ? handleAddLicense : handleAddCertificate}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {(activeTab === 'licenses' ? editingLicenseId : editingCertificateId) !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

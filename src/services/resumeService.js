@@ -283,6 +283,101 @@ class ResumeService {
     }
 
     /**
+     * Request-body builders shared by the "add" (POST) and "edit" (PUT) call
+     * for each resume list, so a field can never be mapped one way when an
+     * entry is created and another way when it is corrected.
+     */
+    static buildSkillPayload(data) {
+        return {
+            skillName: data.skillName ?? data.name,
+            rating: parseInt(data.rating ?? data.level, 10)
+        };
+    }
+
+    static buildLicensePayload(data) {
+        return {
+            name: data.licenseName || data.name || data.certificateName,
+            number: data.licenseNumber || data.number || data.certificateNumber,
+            country: data.issuingCountry || data.country,
+            issueDate: data.dateOfIssue || data.issueDate || null,
+            expiryDate: data.validTill || data.expiryDate || null,
+            isEndorsement: data.isEndorsement || false,
+            isCertificate: data.isCertificate || false
+        };
+    }
+
+    static buildSeaServicePayload(data) {
+        return {
+            companyName: data.companyName,
+            role: data.role,
+            vesselName: data.vesselName,
+            imoNumber: data.imoNo,
+            flag: data.flag,
+            vesselType: data.type,
+            dwt: data.dwt,
+            meType: data.meType,
+            kwtType: data.kwt,
+            joiningDate: data.joiningDate || null,
+            tillDate: data.till || null
+        };
+    }
+
+    static buildEducationPayload(data) {
+        return {
+            qualificationName: data.qualificationName,
+            institution: data.institution,
+            city: data.city,
+            country: data.institutionCountry,
+            grade: data.grade,
+            startDate: data.startDate || null,
+            endDate: data.endDate || null
+        };
+    }
+
+    static buildStcwPayload(data) {
+        return {
+            qualification: data.qualificationName,
+            certificateNumber: data.certificateNumber,
+            issuingCountry: data.issuingCountry,
+            issueDate: data.dateOfIssue || null,
+            expiryDate: data.validTill || null
+        };
+    }
+
+    static buildMedicalTravelPayload(data) {
+        return {
+            name: data.certificateName || data.documentName,
+            documentNumber: data.certificateNumber || data.documentNumber,
+            issuingCountry: data.issuingCountry || '',
+            city: data.city || '',
+            issueDate: data.dateOfIssue || '',
+            expiryDate: data.validTill || '',
+            type: data.type // 'MEDICAL' or 'TRAVEL'
+        };
+    }
+
+    static buildNextOfKinPayload(data) {
+        return {
+            name: data.name,
+            relationship: data.relationship,
+            countryCode: data.countryCode,
+            phoneNumber: data.phone,
+            email: data.email || null
+        };
+    }
+
+    static buildRefereePayload(data) {
+        return {
+            name: data.name,
+            position: data.position || null,
+            companyName: data.company || null,
+            countryCode: data.countryCode,
+            phoneNumber: data.phone,
+            email: data.email || null
+        };
+    }
+
+    /**
      * Step 8 - Add a Key Skill
      * POST /api/professional/resume/skills
      * @param {Object} data - Skill data
@@ -292,13 +387,33 @@ class ResumeService {
      */
     async addSkill(data) {
         try {
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.SKILLS, {
-                skillName: data.skillName,
-                rating: parseInt(data.rating, 10)
-            });
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.SKILLS,
+                ResumeService.buildSkillPayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Skills add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a Key Skill
+     * PUT /api/professional/resume/skills/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateSkill(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.SKILLS}/${id}`,
+                ResumeService.buildSkillPayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Skill update error:', error);
             throw error;
         }
     }
@@ -333,20 +448,33 @@ class ResumeService {
      */
     async addLicense(data) {
         try {
-            const payload = {
-                name: data.licenseName || data.name || data.certificateName,
-                number: data.licenseNumber || data.number || data.certificateNumber,
-                country: data.issuingCountry || data.country,
-                issueDate: data.dateOfIssue || data.issueDate || null,
-                expiryDate: data.validTill || data.expiryDate || null,
-                isEndorsement: data.isEndorsement || false,
-                isCertificate: data.isCertificate || false
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.LICENSES, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.LICENSES,
+                ResumeService.buildLicensePayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume License add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a License, Endorsement, or Certificate
+     * PUT /api/professional/resume/licenses/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateLicense(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.LICENSES}/${id}`,
+                ResumeService.buildLicensePayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume License update error:', error);
             throw error;
         }
     }
@@ -375,24 +503,33 @@ class ResumeService {
      */
     async addSeaServiceEntry(data) {
         try {
-            const payload = {
-                companyName: data.companyName,
-                role: data.role,
-                vesselName: data.vesselName,
-                imoNumber: data.imoNo,
-                flag: data.flag,
-                vesselType: data.type,
-                dwt: data.dwt,
-                meType: data.meType,
-                kwType: data.kwt,
-                joiningDate: data.joiningDate || null,
-                tillDate: data.till || null
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.SEA_SERVICE, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.SEA_SERVICE,
+                ResumeService.buildSeaServicePayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Sea Service add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a Sea Service Entry
+     * PUT /api/professional/resume/sea-service/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateSeaServiceEntry(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.SEA_SERVICE}/${id}`,
+                ResumeService.buildSeaServicePayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Sea Service update error:', error);
             throw error;
         }
     }
@@ -421,20 +558,33 @@ class ResumeService {
      */
     async addEducation(data) {
         try {
-            const payload = {
-                qualificationName: data.qualificationName,
-                institution: data.institution,
-                city: data.city,
-                country: data.institutionCountry,
-                grade: data.grade,
-                startDate: data.startDate || null,
-                endDate: data.endDate || null
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.EDUCATION, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.EDUCATION,
+                ResumeService.buildEducationPayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Education add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit an Academic Qualification
+     * PUT /api/professional/resume/education/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateEducation(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.EDUCATION}/${id}`,
+                ResumeService.buildEducationPayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Education update error:', error);
             throw error;
         }
     }
@@ -463,18 +613,33 @@ class ResumeService {
      */
     async addStcwCertificate(data) {
         try {
-            const payload = {
-                qualification: data.qualificationName,
-                certificateNumber: data.certificateNumber,
-                issuingCountry: data.issuingCountry,
-                issueDate: data.dateOfIssue || null,
-                expiryDate: data.validTill || null
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.STCW, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.STCW,
+                ResumeService.buildStcwPayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume STCW add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit an STCW Certificate
+     * PUT /api/professional/resume/stcw-certificates/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateStcwCertificate(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.STCW}/${id}`,
+                ResumeService.buildStcwPayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume STCW update error:', error);
             throw error;
         }
     }
@@ -503,20 +668,33 @@ class ResumeService {
      */
     async addMedicalTravelDocument(data) {
         try {
-            const payload = {
-                name: data.certificateName || data.documentName,
-                documentNumber: data.certificateNumber || data.documentNumber,
-                issuingCountry: data.issuingCountry || '',
-                city: data.city || '',
-                issueDate: data.dateOfIssue || '',
-                expiryDate: data.validTill || '',
-                type: data.type // 'MEDICAL' or 'TRAVEL'
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.MEDICAL_TRAVEL_DOCS, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.MEDICAL_TRAVEL_DOCS,
+                ResumeService.buildMedicalTravelPayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Medical/Travel Document add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a Medical or Travel Document
+     * PUT /api/professional/resume/medical-travel-documents/:id
+     * @param {string} id
+     * @param {Object} data - must carry `type` so the right table is updated
+     * @returns {Promise<Object>}
+     */
+    async updateMedicalTravelDocument(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.MEDICAL_TRAVEL_DOCS}/${id}`,
+                ResumeService.buildMedicalTravelPayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Medical/Travel Document update error:', error);
             throw error;
         }
     }
@@ -571,18 +749,33 @@ class ResumeService {
      */
     async addNextOfKin(data) {
         try {
-            const payload = {
-                name: data.name,
-                relationship: data.relationship,
-                countryCode: data.countryCode,
-                phoneNumber: data.phone,
-                email: data.email || null
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.NEXT_OF_KIN, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.NEXT_OF_KIN,
+                ResumeService.buildNextOfKinPayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Next of Kin add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a Next of Kin entry
+     * PUT /api/professional/resume/next-of-kin/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateNextOfKin(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.NEXT_OF_KIN}/${id}`,
+                ResumeService.buildNextOfKinPayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Next of Kin update error:', error);
             throw error;
         }
     }
@@ -611,19 +804,33 @@ class ResumeService {
      */
     async addReferee(data) {
         try {
-            const payload = {
-                name: data.name,
-                position: data.position || null,
-                companyName: data.company || null,
-                countryCode: data.countryCode,
-                phoneNumber: data.phone,
-                email: data.email || null
-            };
-
-            const response = await httpClient.post(API_ENDPOINTS.RESUME.REFEREES, payload);
+            const response = await httpClient.post(
+                API_ENDPOINTS.RESUME.REFEREES,
+                ResumeService.buildRefereePayload(data)
+            );
             return response;
         } catch (error) {
             console.error('Resume Referee add error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Edit a Referee entry
+     * PUT /api/professional/resume/referees/:id
+     * @param {string} id
+     * @param {Object} data
+     * @returns {Promise<Object>}
+     */
+    async updateReferee(id, data) {
+        try {
+            const response = await httpClient.put(
+                `${API_ENDPOINTS.RESUME.REFEREES}/${id}`,
+                ResumeService.buildRefereePayload(data)
+            );
+            return response;
+        } catch (error) {
+            console.error('Resume Referee update error:', error);
             throw error;
         }
     }
@@ -745,7 +952,9 @@ class ResumeService {
                 seaServiceEntries: markPersisted((api.seaService || api.sea_service || api.seaServiceLog || []).map(s => ({
                     companyName: s.companyName || s.company_name, role: s.role, vesselName: s.vesselName || s.vessel_name,
                     imoNo: s.imoNumber || s.imo_number, flag: s.flag, type: s.vesselType || s.vessel_type,
-                    dwt: s.dwt, meType: s.meType || s.me_type, kwt: s.kwType || s.kw_type || s.kw,
+                    // The column is `kwtType`; reading only the old `kwType`
+                    // spelling left KWT blank, which an edit would then save back.
+                    dwt: s.dwt, meType: s.meType || s.me_type, kwt: s.kwtType || s.kwType || s.kw_type || s.kw,
                     joiningDate: s.joiningDate || s.joining_date, till: s.tillDate || s.till_date,
                     id: s.id
                 })))

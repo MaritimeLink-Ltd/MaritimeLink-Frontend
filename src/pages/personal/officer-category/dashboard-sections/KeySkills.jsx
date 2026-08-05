@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+
+const EMPTY_SKILL = { name: '', level: 0 };
 
 const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null, onLocalChange }) => {
   const [skills, setSkills] = useState(initialData.skills || []);
-  const [currentSkill, setCurrentSkill] = useState({ name: '', level: 0 });
+  const [currentSkill, setCurrentSkill] = useState(EMPTY_SKILL);
+  // id of the skill being corrected, or null while adding a new one
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     if (initialData && Array.isArray(initialData.skills)) {
@@ -25,10 +30,24 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
   // entry is reported too (once it validates), since the user may fill it in
   // and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
-    const draft = validateSkill(currentSkill) === null ? currentSkill : null;
-    onLocalChange?.({ skills, __drafts: { skills: draft } });
+    const isValid = validateSkill(currentSkill) === null;
+    onLocalChange?.({
+      skills,
+      __drafts: { skills: editingId === null && isValid ? currentSkill : null },
+      // An in-flight correction replaces its entry rather than adding one.
+      __edits: {
+        skills: editingId !== null && isValid ? { id: editingId, fields: currentSkill } : null,
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skills, currentSkill]);
+  }, [skills, currentSkill, editingId]);
+
+  const applyEdit = (list, id, fields) =>
+    list.map((item) =>
+      item.id === id
+        ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+        : item
+    );
 
   const handleAddSkill = () => {
     const errorMsg = validateSkill(currentSkill);
@@ -36,8 +55,24 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
       alert(errorMsg);
       return;
     }
-    setSkills([...skills, { ...currentSkill, id: Date.now() }]);
-    setCurrentSkill({ name: '', level: 0 });
+    if (editingId !== null) {
+      setSkills(applyEdit(skills, editingId, currentSkill));
+      setEditingId(null);
+    } else {
+      setSkills([...skills, { ...currentSkill, id: Date.now() }]);
+    }
+    setCurrentSkill(EMPTY_SKILL);
+  };
+
+  const handleEditSkill = (skill) => {
+    const { id, _persisted, _dirty, ...fields } = skill;
+    setCurrentSkill({ ...EMPTY_SKILL, ...fields });
+    setEditingId(id);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCurrentSkill(EMPTY_SKILL);
   };
 
   const handleRemoveSkill = async (skill) => {
@@ -49,6 +84,7 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
         return;
       }
     }
+    if (editingId === skill.id) handleCancelEdit();
     setSkills(skills.filter(s => s.id !== skill.id));
   };
 
@@ -62,10 +98,16 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
     if (isPartial) {
       const errorMsg = validateSkill(currentSkill);
       if (errorMsg) {
-        alert("Please complete or clear active Skill entry: " + errorMsg);
+        alert(
+          (editingId !== null
+            ? 'Please finish or cancel the skill you are editing: '
+            : 'Please complete or clear active Skill entry: ') + errorMsg
+        );
         return;
       }
-      finalSkills.push({ ...currentSkill, id: Date.now() });
+      finalSkills = editingId !== null
+        ? applyEdit(finalSkills, editingId, currentSkill)
+        : [...finalSkills, { ...currentSkill, id: Date.now() }];
     }
     onNext({ skills: finalSkills });
   };
@@ -80,7 +122,7 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
             {skills.map((skill) => (
               <div
                 key={skill.id}
-                className="bg-gray-100 rounded-lg px-3 py-2 flex items-center space-x-2"
+                className={`bg-gray-100 rounded-lg px-3 py-2 flex items-center space-x-2 ${editingId === skill.id ? 'ring-2 ring-[#003971]' : ''}`}
               >
                 <div>
                   <p className="text-xs font-medium text-gray-700">{skill.name}</p>
@@ -99,8 +141,21 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
                 </div>
                 <button
                   type="button"
+                  onClick={() => handleEditSkill(skill)}
+                  className="text-gray-400 hover:text-[#003971]"
+                  aria-label={`Edit ${skill.name}`}
+                  title="Edit"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleRemoveSkill(skill)}
                   className="text-gray-400 hover:text-gray-600"
+                  aria-label={`Remove ${skill.name}`}
+                  title="Remove"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -177,13 +232,23 @@ const KeySkills = ({ onNext, onBack, initialData = {}, isLoading = false, apiErr
             Go Back
           </button>
           <div className="flex space-x-3">
+            {editingId !== null && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isLoading}
+                className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={handleAddSkill}
               disabled={isLoading}
               className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
             >
-              Save
+              {editingId !== null ? 'Update' : 'Save'}
             </button>
             <button
               type="button"

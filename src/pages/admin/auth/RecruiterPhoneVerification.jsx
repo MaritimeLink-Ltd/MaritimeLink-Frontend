@@ -94,6 +94,7 @@ function RecruiterPhoneVerification() {
 
         setLoading(true);
         setError('');
+        setInfo('');
 
         try {
             await authService.verifyRecruiterPhoneOTP({
@@ -119,12 +120,19 @@ function RecruiterPhoneVerification() {
 
         setLoading(true);
         setError('');
+        setInfo('');
 
         try {
-            await authService.resendRecruiterPhoneOTP(storedRecruiterId);
+            const response = await authService.resendRecruiterPhoneOTP(storedRecruiterId);
             setTimer(60);
+            // Clearing the boxes matters: the code still shown there has just
+            // been cancelled by this resend, and retyping it would only fail.
             setOtp(['', '', '', '', '', '']);
             inputRefs.current[0]?.focus();
+            setInfo(
+                response?.message ||
+                'A new code has been sent to your phone. Earlier codes no longer work — please use the latest SMS.'
+            );
         } catch (err) {
             console.error('Resend OTP error:', err);
             setError(err.data?.message || err.message || 'Failed to resend OTP. Please try again.');
@@ -251,6 +259,12 @@ function RecruiterPhoneVerification() {
                         >
                             Resend
                         </button>
+                        {timer > 0 && ' once the timer above runs out'}
+                    </p>
+                    {/* Resending cancels the previous code, so an older SMS can
+                        never be used to finish — say so before it is tried. */}
+                    <p className="mt-2 text-xs text-gray-400">
+                        Resending replaces your previous code. Always enter the code from the most recent SMS.
                     </p>
                 </div>
             </div>

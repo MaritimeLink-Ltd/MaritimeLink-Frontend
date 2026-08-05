@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react';
 import { countryCodes } from '../../../../utils/countryCodes';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
+import { markEdited } from '../../../../utils/resumeStepSync';
+
+const EMPTY_KIN = { name: '', relationship: '', countryCode: '+44', phone: '', email: '' };
+const EMPTY_REFEREE = { name: '', position: '', company: '', countryCode: '+44', phone: '', email: '' };
+
+/** Fold a correction into its entry, flagging saved ones for a PUT. */
+const applyEdit = (list, id, fields) =>
+  list.map((item) =>
+    item.id === id
+      ? (item._persisted ? markEdited({ ...item, ...fields }) : { ...item, ...fields })
+      : item
+  );
 
 const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biometricTab, setActiveTab: setBiometricTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [biometricData, setBiometricData] = useState(initialData.biometricData || {
@@ -26,22 +38,12 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
     }
   }, [initialData]);
   const [nextOfKinList, setNextOfKinList] = useState(initialData.nextOfKinList || []);
-  const [currentNextOfKin, setCurrentNextOfKin] = useState({
-    name: '',
-    relationship: '',
-    countryCode: '+44',
-    phone: '',
-    email: ''
-  });
+  const [currentNextOfKin, setCurrentNextOfKin] = useState(EMPTY_KIN);
   const [refereesList, setRefereesList] = useState(initialData.refereesList || []);
-  const [currentReferee, setCurrentReferee] = useState({
-    name: '',
-    position: '',
-    company: '',
-    countryCode: '+44',
-    phone: '',
-    email: ''
-  });
+  const [currentReferee, setCurrentReferee] = useState(EMPTY_REFEREE);
+  // id of the entry being corrected in each tab, or null while adding
+  const [editingKinId, setEditingKinId] = useState(null);
+  const [editingRefereeId, setEditingRefereeId] = useState(null);
 
   const handleBiometricChange = (e) => {
     setBiometricData({
@@ -131,17 +133,26 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
   // entries are reported too (once they validate), since the user may fill one
   // in and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
+    const kinValid = validateNextOfKin(currentNextOfKin) === null;
+    const refereeValid = validateReferee(currentReferee) === null;
     onLocalChange?.({
       biometricData,
       nextOfKinList,
       refereesList,
       __drafts: {
-        nextOfKinList: validateNextOfKin(currentNextOfKin) === null ? currentNextOfKin : null,
-        refereesList: validateReferee(currentReferee) === null ? currentReferee : null,
+        nextOfKinList: editingKinId === null && kinValid ? currentNextOfKin : null,
+        refereesList: editingRefereeId === null && refereeValid ? currentReferee : null,
+      },
+      // In-flight corrections replace their entry rather than adding one.
+      __edits: {
+        nextOfKinList: editingKinId !== null && kinValid
+          ? { id: editingKinId, fields: currentNextOfKin } : null,
+        refereesList: editingRefereeId !== null && refereeValid
+          ? { id: editingRefereeId, fields: currentReferee } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [biometricData, nextOfKinList, refereesList, currentNextOfKin, currentReferee]);
+  }, [biometricData, nextOfKinList, refereesList, currentNextOfKin, currentReferee, editingKinId, editingRefereeId]);
 
   const handleAddNextOfKin = () => {
     const errorMsg = validateNextOfKin(currentNextOfKin);
@@ -149,14 +160,24 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
       alert(errorMsg);
       return;
     }
-    setNextOfKinList([...nextOfKinList, { ...currentNextOfKin, id: Date.now() }]);
-    setCurrentNextOfKin({
-      name: '',
-      relationship: '',
-      countryCode: '+44',
-      phone: '',
-      email: ''
-    });
+    if (editingKinId !== null) {
+      setNextOfKinList(applyEdit(nextOfKinList, editingKinId, currentNextOfKin));
+      setEditingKinId(null);
+    } else {
+      setNextOfKinList([...nextOfKinList, { ...currentNextOfKin, id: Date.now() }]);
+    }
+    setCurrentNextOfKin(EMPTY_KIN);
+  };
+
+  const handleEditNextOfKin = (kin) => {
+    const { id, _persisted, _dirty, ...fields } = kin;
+    setCurrentNextOfKin({ ...EMPTY_KIN, ...fields });
+    setEditingKinId(id);
+  };
+
+  const handleCancelKinEdit = () => {
+    setEditingKinId(null);
+    setCurrentNextOfKin(EMPTY_KIN);
   };
 
   const handleRemoveNextOfKin = async (kin) => {
@@ -168,6 +189,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
         return;
       }
     }
+    if (editingKinId === kin.id) handleCancelKinEdit();
     setNextOfKinList(nextOfKinList.filter(k => k.id !== kin.id));
   };
 
@@ -177,15 +199,24 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
       alert(errorMsg);
       return;
     }
-    setRefereesList([...refereesList, { ...currentReferee, id: Date.now() }]);
-    setCurrentReferee({
-      name: '',
-      position: '',
-      company: '',
-      countryCode: '+44',
-      phone: '',
-      email: ''
-    });
+    if (editingRefereeId !== null) {
+      setRefereesList(applyEdit(refereesList, editingRefereeId, currentReferee));
+      setEditingRefereeId(null);
+    } else {
+      setRefereesList([...refereesList, { ...currentReferee, id: Date.now() }]);
+    }
+    setCurrentReferee(EMPTY_REFEREE);
+  };
+
+  const handleEditReferee = (referee) => {
+    const { id, _persisted, _dirty, ...fields } = referee;
+    setCurrentReferee({ ...EMPTY_REFEREE, ...fields });
+    setEditingRefereeId(id);
+  };
+
+  const handleCancelRefereeEdit = () => {
+    setEditingRefereeId(null);
+    setCurrentReferee(EMPTY_REFEREE);
   };
 
   const handleRemoveReferee = async (referee) => {
@@ -197,6 +228,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
         return;
       }
     }
+    if (editingRefereeId === referee.id) handleCancelRefereeEdit();
     setRefereesList(refereesList.filter(r => r.id !== referee.id));
   };
 
@@ -223,7 +255,9 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
         alert("Please complete or clear active Next of Kin entry: " + errorMsg);
         return;
       }
-      finalKin.push({ ...currentNextOfKin, id: Date.now() });
+      finalKin = editingKinId !== null
+        ? applyEdit(finalKin, editingKinId, currentNextOfKin)
+        : [...finalKin, { ...currentNextOfKin, id: Date.now() }];
     }
 
     const isPartialReferee = Object.values(currentReferee).some(val => val !== '' && val !== '+44');
@@ -233,7 +267,9 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
         alert("Please complete or clear active Referee entry: " + errorMsg);
         return;
       }
-      finalReferees.push({ ...currentReferee, id: Date.now() + 1 });
+      finalReferees = editingRefereeId !== null
+        ? applyEdit(finalReferees, editingRefereeId, currentReferee)
+        : [...finalReferees, { ...currentReferee, id: Date.now() + 1 }];
     }
 
     onNext({ biometricData, nextOfKinList: finalKin, refereesList: finalReferees });
@@ -434,17 +470,32 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                 {nextOfKinList.map((kin) => (
                   <div
                     key={kin.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingKinId === kin.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveNextOfKin(kin)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditNextOfKin(kin)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${kin.name || 'next of kin'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNextOfKin(kin)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${kin.name || 'next of kin'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{kin.name}</p>
                     <p className="text-xs text-gray-600">{kin.email}</p>
                   </div>
@@ -540,17 +591,32 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                 {refereesList.map((referee) => (
                   <div
                     key={referee.id}
-                    className="bg-gray-50 rounded-lg p-3 relative"
+                    className={`bg-gray-50 rounded-lg p-3 relative ${editingRefereeId === referee.id ? 'ring-2 ring-[#003971]' : ''}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveReferee(referee)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditReferee(referee)}
+                        className="text-gray-400 hover:text-[#003971]"
+                        aria-label={`Edit ${referee.name || 'referee'}`}
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveReferee(referee)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove ${referee.name || 'referee'}`}
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-sm font-semibold text-gray-800">{referee.name}</p>
                     {(referee.position || referee.company) && (
                       <p className="text-xs font-medium text-gray-700">
@@ -675,6 +741,17 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
             Go Back
           </button>
           <div className="flex space-x-3">
+            {biometricTab !== 'biometric' &&
+              (biometricTab === 'nextOfKin' ? editingKinId : editingRefereeId) !== null && (
+                <button
+                  type="button"
+                  onClick={biometricTab === 'nextOfKin' ? handleCancelKinEdit : handleCancelRefereeEdit}
+                  disabled={isLoading}
+                  className="text-gray-400 py-2 px-4 rounded-lg font-medium hover:text-gray-600 transition-colors text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              )}
             {biometricTab !== 'biometric' && (
               <button
                 type="button"
@@ -682,7 +759,7 @@ const BiometricsNextOfKin = ({ onNext, onBack, initialData = {}, activeTab: biom
                 disabled={isLoading}
                 className="text-[#003971] py-2 px-6 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm disabled:opacity-50"
               >
-                Save
+                {(biometricTab === 'nextOfKin' ? editingKinId : editingRefereeId) !== null ? 'Update' : 'Save'}
               </button>
             )}
             <button
