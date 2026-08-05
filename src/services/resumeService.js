@@ -62,21 +62,51 @@ class ResumeService {
                 return [];
             };
 
+            // The bulk endpoint validates with Zod, which *strips unknown keys
+            // silently* and rejects the whole request if an optional field is
+            // present but empty (`emailAddress: ''` fails .email(), `height:
+            // null` fails .number()). So the payload has to match the schema's
+            // flat shape exactly, and blank values must be omitted rather than
+            // sent as ''/null.
+            const omitBlank = (obj) =>
+                Object.fromEntries(
+                    Object.entries(obj).filter(
+                        ([, value]) => value !== undefined && value !== null && value !== ''
+                    )
+                );
+
+            const toNumber = (value) => {
+                if (value === undefined || value === null || value === '') return undefined;
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : undefined;
+            };
+
             const payload = {
-                personalInfo: {
-                    firstName: pi.firstName || '',
-                    middleName: pi.middleName || '',
-                    lastName: pi.lastName || '',
-                    dateOfBirth: pi.dateOfBirth || null,
-                    address: pi.streetAddress || '',
-                    city: pi.city || '',
-                    state: pi.state || '',
-                    postcode: pi.zipCode || '',
-                    country: pi.country || '',
-                    phoneCode: pi.countryCode || '',
-                    phoneNumber: pi.contactNumber || '',
-                    emailAddress: pi.email || ''
-                },
+                ...omitBlank({
+                    firstName: pi.firstName,
+                    middleName: pi.middleName,
+                    lastName: pi.lastName,
+                    dateOfBirth: pi.dateOfBirth,
+                    address: pi.streetAddress || pi.address,
+                    city: pi.city,
+                    state: pi.state,
+                    postcode: pi.zipCode || pi.postcode,
+                    country: pi.country,
+                    phoneCode: pi.countryCode || pi.phoneCode,
+                    phoneNumber: pi.contactNumber || pi.phoneNumber,
+                    emailAddress: pi.email || pi.emailAddress,
+                }),
+                ...omitBlank({
+                    gender: bio.biometricData?.gender
+                        ? bio.biometricData.gender.toUpperCase()
+                        : undefined,
+                    height: toNumber(bio.biometricData?.height),
+                    weight: toNumber(bio.biometricData?.weight),
+                    bmi: toNumber(bio.biometricData?.bmi),
+                    eyeColor: bio.biometricData?.eyeColor,
+                    overallSize: bio.biometricData?.overallSize,
+                    shoeSize: bio.biometricData?.shoeSize,
+                }),
                 summary: ps.professionalSummary || ps.summary || '',
                 skills: getArray(sk.skills).map(s => ({
                     skillName: s.name || s.skillName,
@@ -121,7 +151,7 @@ class ResumeService {
                     vesselType: s.type || s.vesselType,
                     dwt: s.dwt,
                     meType: s.meType,
-                    kwType: s.kwt || s.kw,
+                    kwtType: s.kwt || s.kw,
                     joiningDate: s.joiningDate || s.signOn || null,
                     tillDate: s.till || s.signOff || s.tillDate || null
                 })),
@@ -141,50 +171,39 @@ class ResumeService {
                     issueDate: c.dateOfIssue || c.issueDate || null,
                     expiryDate: c.validTill || c.expiryDate || null
                 })),
-                medicalTravelDocuments: [
-                    ...getArray(med.medical, med.medicalDocuments).map(m => ({
-                        name: m.certificateName || m.name,
-                        documentNumber: m.certificateNumber || m.documentNumber,
-                        issuingCountry: m.issuingCountry,
-                        city: m.city || null,
-                        issueDate: m.dateOfIssue || m.issueDate || null,
-                        expiryDate: m.validTill || m.expiryDate || null,
-                        type: "MEDICAL"
-                    })),
-                    ...getArray(med.travel, med.travelDocuments).map(t => ({
-                        name: t.documentName || t.name,
-                        documentNumber: t.documentNumber,
-                        issuingCountry: t.issuingCountry,
-                        city: t.city || null,
-                        institutionCountry: t.institutionCountry || null,
-                        issueDate: t.dateOfIssue || t.issueDate || null,
-                        expiryDate: t.validTill || t.expiryDate || null,
-                        type: "TRAVEL"
-                    }))
-                ],
-                biometrics: {
-                    gender: bio.biometricData?.gender ? bio.biometricData.gender.toUpperCase() : null,
-                    height: bio.biometricData?.height ? Number(bio.biometricData.height) : null,
-                    weight: bio.biometricData?.weight ? Number(bio.biometricData.weight) : null,
-                    bmi: bio.biometricData?.bmi ? Number(bio.biometricData.bmi) : null,
-                    eyeColor: bio.biometricData?.eyeColor || null,
-                    overallSize: bio.biometricData?.overallSize || null,
-                    shoeSize: bio.biometricData?.shoeSize || null
-                },
-                nextOfKin: getArray(bio.nextOfKinList).map(kin => ({
+                medicalCertificates: getArray(med.medical, med.medicalDocuments).map(m => ({
+                    name: m.certificateName || m.name,
+                    documentNumber: m.certificateNumber || m.documentNumber,
+                    issuingCountry: m.issuingCountry,
+                    city: m.city || undefined,
+                    issueDate: m.dateOfIssue || m.issueDate || null,
+                    expiryDate: m.validTill || m.expiryDate || null
+                })),
+                travelDocuments: getArray(med.travel, med.travelDocuments).map(t => ({
+                    name: t.documentName || t.name,
+                    documentNumber: t.documentNumber,
+                    issuingCountry: t.issuingCountry,
+                    city: t.city || undefined,
+                    institutionCountry: t.institutionCountry || undefined,
+                    issueDate: t.dateOfIssue || t.issueDate || null,
+                    expiryDate: t.validTill || t.expiryDate || null
+                })),
+                // `null` is not a valid value for these optional fields — Zod's
+                // .optional() only permits undefined — so blanks are omitted.
+                nextOfKin: getArray(bio.nextOfKinList).map(kin => omitBlank({
                     name: kin.name,
                     relationship: kin.relationship,
                     countryCode: kin.countryCode,
                     phoneNumber: kin.phone || kin.phoneNumber,
-                    email: kin.email || null
+                    email: kin.email
                 })),
-                referees: getArray(bio.refereesList).map(ref => ({
+                referees: getArray(bio.refereesList).map(ref => omitBlank({
                     name: ref.name,
-                    position: ref.position || null,
-                    companyName: ref.company || ref.companyName || null,
+                    position: ref.position,
+                    companyName: ref.company || ref.companyName,
                     countryCode: ref.countryCode,
                     phoneNumber: ref.phone || ref.phoneNumber,
-                    email: ref.email || null
+                    email: ref.email
                 }))
             };
 

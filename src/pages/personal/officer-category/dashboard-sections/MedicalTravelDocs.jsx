@@ -4,7 +4,7 @@ import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 
-const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null }) => {
+const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medicalTab, setActiveTab: setMedicalTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [medicalDocuments, setMedicalDocuments] = useState(initialData.medicalDocuments || []);
 
   useEffect(() => {
@@ -79,6 +79,23 @@ const MedicalTravelDocs = ({ onNext, onBack, initialData = {}, activeTab: medica
     if (entry.validTill && issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
     return null;
   };
+
+  // Report this step's state up to the dashboard on every change, not just on
+  // "Next" — "Save & Continue Later" serializes the dashboard's snapshot, so
+  // without this it can undo a removal or drop an entry. The trailing form
+  // entries are reported too (once they validate), since the user may fill one
+  // in and save from the sidebar without pressing this step's Save button.
+  useEffect(() => {
+    onLocalChange?.({
+      medicalDocuments,
+      travelDocuments,
+      __drafts: {
+        medicalDocuments: validateMedical(currentMedical) === null ? currentMedical : null,
+        travelDocuments: validateTravel(currentTravel) === null ? currentTravel : null,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medicalDocuments, travelDocuments, currentMedical, currentTravel]);
 
   const handleAddMedical = () => {
     const errorMsg = validateMedical(currentMedical);

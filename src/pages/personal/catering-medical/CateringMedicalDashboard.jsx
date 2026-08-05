@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
 import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
-import { markPersisted, getUnpersisted, withCreatedIds } from '../../../utils/resumeStepSync';
+import { markPersisted, getUnpersisted, withCreatedIds, mergePendingDrafts } from '../../../utils/resumeStepSync';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
@@ -293,6 +293,17 @@ const CateringMedicalDashboard = () => {
     }
   };
 
+  // Sections report their live list state here as soon as it changes
+  // (add/remove), independent of the "Next" click, so "Save & Continue
+  // Later" — which serializes allData, not each section's own state —
+  // never sends a stale snapshot that undoes an in-progress edit.
+  const handleLocalChange = (sectionKey) => (partialData) => {
+    setAllData((prev) => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], ...partialData },
+    }));
+  };
+
   const handleCompleteResume = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
     const currentTab = getCurrentTab();
@@ -370,7 +381,7 @@ const CateringMedicalDashboard = () => {
     console.log('Saving and continuing later...', allData);
     try {
       setIsLoading(true);
-      await resumeService.submitBulkResume(allData, 'PUT');
+      await resumeService.submitBulkResume(mergePendingDrafts(allData), 'PUT');
 
       // Saving from the review step is the submit action — it is what moves the
       // dashboard from "keep building" to "under review".
@@ -415,6 +426,7 @@ const CateringMedicalDashboard = () => {
             initialData={allData.skills}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('skills')}
           />
         );
       case 4:
@@ -427,6 +439,7 @@ const CateringMedicalDashboard = () => {
             setActiveTab={setCurrentTab}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('professionalLicensesCertificates')}
           />
         );
       case 5:
@@ -437,6 +450,7 @@ const CateringMedicalDashboard = () => {
             initialData={allData.seaServiceLog}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('seaServiceLog')}
           />
         );
       case 6:
@@ -449,6 +463,7 @@ const CateringMedicalDashboard = () => {
             setActiveTab={setCurrentTab}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('academicQualifications')}
           />
         );
       case 7:
@@ -461,6 +476,7 @@ const CateringMedicalDashboard = () => {
             setActiveTab={setCurrentTab}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('medicalTravelDocs')}
           />
         );
       case 8:
@@ -473,6 +489,7 @@ const CateringMedicalDashboard = () => {
             setActiveTab={setCurrentTab}
             isLoading={isLoading}
             apiError={apiError}
+            onLocalChange={handleLocalChange('biometricsNextOfKin')}
           />
         );
       case 9:

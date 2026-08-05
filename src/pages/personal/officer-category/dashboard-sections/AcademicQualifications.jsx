@@ -4,7 +4,7 @@ import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 
-const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null }) => {
+const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: academicTab, setActiveTab: setAcademicTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [academicQualifications, setAcademicQualifications] = useState(initialData.academicQualifications || []);
 
   useEffect(() => {
@@ -66,6 +66,23 @@ const AcademicQualifications = ({ onNext, onBack, initialData = {}, activeTab: a
     }
     return null;
   };
+
+  // Report this step's state up to the dashboard on every change, not just on
+  // "Next" — "Save & Continue Later" serializes the dashboard's snapshot, so
+  // without this it can undo a removal or drop an entry. The trailing form
+  // entries are reported too (once they validate), since the user may fill one
+  // in and save from the sidebar without pressing this step's Save button.
+  useEffect(() => {
+    onLocalChange?.({
+      academicQualifications,
+      stcwCertificates,
+      __drafts: {
+        academicQualifications: validateAcademic(currentAcademic) === null ? currentAcademic : null,
+        stcwCertificates: validateStcw(currentStcw) === null ? currentStcw : null,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academicQualifications, stcwCertificates, currentAcademic, currentStcw]);
 
   const handleAddAcademic = () => {
     const errorMsg = validateAcademic(currentAcademic);

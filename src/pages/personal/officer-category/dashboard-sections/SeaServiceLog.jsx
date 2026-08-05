@@ -3,7 +3,7 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 
-const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null }) => {
+const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null, onLocalChange }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
 
   useEffect(() => {
@@ -64,6 +64,17 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     }
     return null;
   };
+
+  // Report this step's state up to the dashboard on every change, not just on
+  // "Next" — "Save & Continue Later" serializes the dashboard's snapshot, so
+  // without this it can undo a removal or drop an entry. The trailing form
+  // entry is reported too (once it validates), since the user may fill it in
+  // and save from the sidebar without pressing this step's Save button.
+  useEffect(() => {
+    const draft = validateForm(currentSeaService) === null ? currentSeaService : null;
+    onLocalChange?.({ seaServiceEntries, __drafts: { seaServiceEntries: draft } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seaServiceEntries, currentSeaService]);
 
   const handleAddSeaService = () => {
     const errorMsg = validateForm(currentSeaService);

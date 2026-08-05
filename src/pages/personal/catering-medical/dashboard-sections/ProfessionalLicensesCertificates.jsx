@@ -4,7 +4,7 @@ import CountryDisplay from '../../../../components/common/CountryDisplay';
 import resumeService from '../../../../services/resumeService';
 import { getApiErrorMessage } from '../../../../utils/apiError';
 
-const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null }) => {
+const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, activeTab, setActiveTab, isLoading = false, apiError = null, onLocalChange }) => {
   const [licenses, setLicenses] = useState(initialData.licenses || []);
 
   useEffect(() => {
@@ -78,6 +78,23 @@ const ProfessionalLicensesCertificates = ({ onNext, onBack, initialData = {}, ac
     if (issueDate >= new Date(entry.validTill)) return 'Date of Issue must be before Valid Till date.';
     return null;
   };
+
+  // Report this step's state up to the dashboard on every change, not just on
+  // "Next" — "Save & Continue Later" serializes the dashboard's snapshot, so
+  // without this it can undo a removal or drop an entry. The trailing form
+  // entries are reported too (once they validate), since the user may fill one
+  // in and save from the sidebar without pressing this step's Save button.
+  useEffect(() => {
+    onLocalChange?.({
+      licenses,
+      certificates,
+      __drafts: {
+        licenses: validateLicense(currentLicense) === null ? currentLicense : null,
+        certificates: validateCertificate(currentCertificate) === null ? currentCertificate : null,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [licenses, certificates, currentLicense, currentCertificate]);
 
   const handleAddLicense = () => {
     const errorMsg = validateLicense(currentLicense);

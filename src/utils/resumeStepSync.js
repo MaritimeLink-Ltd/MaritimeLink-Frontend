@@ -37,3 +37,36 @@ export const withCreatedIds = (fullList, submittedEntries, results) => {
         idByEntry.has(entry) ? { ...entry, id: idByEntry.get(entry) } : entry
     );
 };
+
+/** Bookkeeping key sections use to report an uncommitted form entry upwards. */
+export const DRAFTS_KEY = '__drafts';
+
+/**
+ * A section's form holds a typed-but-not-yet-added entry separately from its
+ * committed list — "Next" folds that trailing entry in, but "Save & Continue
+ * Later" serializes the dashboard's state directly and would otherwise drop
+ * whatever the user had typed without pressing the section's Save button.
+ *
+ * Sections report such an entry (only once it validates) under `__drafts`,
+ * keyed by the list it belongs to. This returns a copy of the builder's
+ * aggregate state with each draft appended to its list and the `__drafts`
+ * bookkeeping stripped back out, ready to serialize.
+ */
+export const mergePendingDrafts = (allData) => {
+    const merged = {};
+
+    Object.entries(allData || {}).forEach(([sectionKey, section]) => {
+        if (!section || typeof section !== 'object' || Array.isArray(section)) {
+            merged[sectionKey] = section;
+            return;
+        }
+
+        const { [DRAFTS_KEY]: drafts, ...rest } = section;
+        Object.entries(drafts || {}).forEach(([listKey, draft]) => {
+            if (draft) rest[listKey] = [...(rest[listKey] || []), draft];
+        });
+        merged[sectionKey] = rest;
+    });
+
+    return merged;
+};
