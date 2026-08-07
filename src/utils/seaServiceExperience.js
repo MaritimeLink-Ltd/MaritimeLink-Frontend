@@ -59,11 +59,20 @@ const resolveVesselTypeLabel = (log = {}) => {
   return vesselType;
 };
 
-/** Returns raw decimal days between two dates (no rounding — accumulate then round once at the end). */
+/**
+ * Returns raw decimal days between two dates (no rounding — accumulate then
+ * round once at the end).
+ *
+ * A sea service entry with no end date is one the professional is still on:
+ * the Sea Service step only lets the end date be left blank when "I am still
+ * on this vessel" is ticked. Such a posting is counted up to today, otherwise
+ * a seafarer's current contract — often their longest — would score as zero
+ * sea time.
+ */
 const diffDaysBetween = (joiningDate, tillDate) => {
-  if (!joiningDate || !tillDate) return 0;
+  if (!joiningDate) return 0;
   const start = new Date(joiningDate);
-  const end = new Date(tillDate);
+  const end = tillDate ? new Date(tillDate) : new Date();
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
   return Math.max(0, (end.getTime() - start.getTime()) / MS_PER_DAY);
 };

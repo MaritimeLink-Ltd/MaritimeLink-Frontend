@@ -19,6 +19,21 @@ const EMPTY_SEA_SERVICE = {
   till: ''
 };
 
+/**
+ * A seafarer who has not signed off yet has no end date to give. That is
+ * recorded as an empty `till` — deliberately chosen with the "still on this
+ * vessel" tick rather than left blank by accident — so an absent end date
+ * reads unambiguously as "this posting is still running".
+ */
+const isOngoing = (entry) => !entry?.till;
+
+const formatEntryDate = (value) =>
+  new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
 const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, apiError = null, onLocalChange }) => {
   const [seaServiceEntries, setSeaServiceEntries] = useState(initialData.seaServiceEntries || []);
   // id of the entry being corrected, or null while adding a new one
@@ -30,6 +45,10 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     }
   }, [initialData]);
   const [currentSeaService, setCurrentSeaService] = useState(EMPTY_SEA_SERVICE);
+  // Kept outside the entry itself: the saved record carries only an empty
+  // `till`, so an entry loaded back from the API needs no extra field to
+  // round-trip correctly.
+  const [stillOnVessel, setStillOnVessel] = useState(false);
 
   // Newest posting first, so a current role sits above one from years ago
   // regardless of the order entries happened to be typed in.
@@ -42,7 +61,12 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     });
   };
 
-  const validateForm = (entry) => {
+  /**
+   * @param {Object} entry
+   * @param {boolean} [ongoing] - the posting is still running, so it has no
+   *   end date to validate. Defaults to the form's current tick.
+   */
+  const validateForm = (entry, ongoing = stillOnVessel) => {
     const requiredFields = [
       { key: 'companyName', label: 'Company Name' },
       { key: 'role', label: 'Role' },
@@ -51,7 +75,8 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
       { key: 'flag', label: 'Flag' },
       { key: 'type', label: 'Type' },
       { key: 'joiningDate', label: 'Joining Date' },
-      { key: 'till', label: 'Till' }
+      // Only demanded once the professional has signed off.
+      ...(ongoing ? [] : [{ key: 'till', label: 'Till' }]),
     ];
 
     const missingFields = requiredFields
@@ -63,10 +88,17 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     }
 
     const joiningDate = new Date(entry.joiningDate);
+
+    if (Number.isNaN(joiningDate.getTime())) {
+      return 'Please enter a valid Joining Date.';
+    }
+
+    if (ongoing) return null;
+
     const tillDate = new Date(entry.till);
 
-    if (Number.isNaN(joiningDate.getTime()) || Number.isNaN(tillDate.getTime())) {
-      return 'Please enter valid Joining Date and Till values.';
+    if (Number.isNaN(tillDate.getTime())) {
+      return 'Please enter a valid Till date.';
     }
 
     if (joiningDate > tillDate) {
@@ -75,6 +107,12 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
     return null;
   };
 
+  /** The entry as it should be stored: an ongoing posting carries no end date. */
+  const toEntry = (form, ongoing = stillOnVessel) => ({
+    ...form,
+    till: ongoing ? '' : form.till,
+  });
+
   // Report this step's state up to the dashboard on every change, not just on
   // "Next" — "Save & Continue Later" serializes the dashboard's snapshot, so
   // without this it can undo a removal or drop an entry. The trailing form
@@ -82,19 +120,20 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
   // and save from the sidebar without pressing this step's Save button.
   useEffect(() => {
     const isValid = validateForm(currentSeaService) === null;
+    const entry = toEntry(currentSeaService);
     onLocalChange?.({
       seaServiceEntries,
       __drafts: {
-        seaServiceEntries: editingId === null && isValid ? currentSeaService : null,
+        seaServiceEntries: editingId === null && isValid ? entry : null,
       },
       // An in-flight correction replaces its entry rather than adding one.
       __edits: {
         seaServiceEntries:
-          editingId !== null && isValid ? { id: editingId, fields: currentSeaService } : null,
+          editingId !== null && isValid ? { id: editingId, fields: entry } : null,
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seaServiceEntries, currentSeaService, editingId]);
+  }, [seaServiceEntries, currentSeaService, editingId, stillOnVessel]);
 
   const handleAddSeaService = () => {
     const errorMsg = validateForm(currentSeaService);
@@ -103,34 +142,49 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
       return;
     }
 
+    const entry = toEntry(currentSeaService);
+
     if (editingId !== null) {
       // Correcting an existing entry. An already-saved entry is flagged so the
       // dashboard PUTs it on the way out instead of POSTing a second copy.
-      setSeaServiceEntries(seaServiceEntries.map((entry) =>
-        entry.id === editingId
-          ? (entry._persisted
-            ? markEdited({ ...entry, ...currentSeaService })
-            : { ...entry, ...currentSeaService })
-          : entry
+      setSeaServiceEntries(seaServiceEntries.map((existing) =>
+        existing.id === editingId
+          ? (existing._persisted
+            ? markEdited({ ...existing, ...entry })
+            : { ...existing, ...entry })
+          : existing
       ));
       setEditingId(null);
     } else {
-      setSeaServiceEntries([...seaServiceEntries, { ...currentSeaService, id: Date.now() }]);
+      setSeaServiceEntries([...seaServiceEntries, { ...entry, id: Date.now() }]);
     }
 
     setCurrentSeaService(EMPTY_SEA_SERVICE);
+    setStillOnVessel(false);
   };
 
   const handleEditSeaService = (entry) => {
     // Only the editable fields — id/_persisted/_dirty stay on the stored entry.
     const { id, _persisted, _dirty, ...fields } = entry;
     setCurrentSeaService({ ...EMPTY_SEA_SERVICE, ...fields });
+    // No end date on the stored entry means it was saved as still running.
+    setStillOnVessel(isOngoing(entry));
     setEditingId(id);
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setCurrentSeaService(EMPTY_SEA_SERVICE);
+    setStillOnVessel(false);
+  };
+
+  /** Ticking the box drops any end date already typed; unticking asks for one. */
+  const handleStillOnVesselToggle = (e) => {
+    const checked = e.target.checked;
+    setStillOnVessel(checked);
+    if (checked) {
+      setCurrentSeaService((prev) => ({ ...prev, till: '' }));
+    }
   };
 
   const handleRemoveSeaService = async (entry) => {
@@ -163,17 +217,19 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
         return; // Halt
       }
 
+      const entry = toEntry(currentSeaService);
+
       if (editingId !== null) {
         // Fold the correction into its entry — never add it as a new one.
-        finalEntries = finalEntries.map((entry) =>
-          entry.id === editingId
-            ? (entry._persisted
-              ? markEdited({ ...entry, ...currentSeaService })
-              : { ...entry, ...currentSeaService })
-            : entry
+        finalEntries = finalEntries.map((existing) =>
+          existing.id === editingId
+            ? (existing._persisted
+              ? markEdited({ ...existing, ...entry })
+              : { ...existing, ...entry })
+            : existing
         );
       } else {
-        finalEntries.push({ ...currentSeaService, id: Date.now() });
+        finalEntries.push({ ...entry, id: Date.now() });
       }
     }
 
@@ -217,14 +273,21 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
                   </button>
                 </div>
                 <div className="mb-2">
-                  <p className="text-sm font-semibold text-gray-800">{entry.vesselName}</p>
+                  <div className="flex items-center gap-2 pr-14">
+                    <p className="text-sm font-semibold text-gray-800">{entry.vesselName}</p>
+                    {entry.joiningDate && isOngoing(entry) && (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                        On board
+                      </span>
+                    )}
+                  </div>
                   {entry.type ? (
                     <p className="text-xs text-gray-600">{entry.type}</p>
                   ) : null}
                   <p className="text-xs text-gray-500">{entry.role}</p>
                   <p className="text-xs text-gray-500">
-                    {entry.joiningDate && entry.till ?
-                      `${new Date(entry.joiningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} to ${new Date(entry.till).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    {entry.joiningDate
+                      ? `${formatEntryDate(entry.joiningDate)} to ${isOngoing(entry) ? 'Present' : formatEntryDate(entry.till)}`
                       : 'Dates not specified'}
                   </p>
                 </div>
@@ -388,16 +451,33 @@ const SeaServiceLog = ({ onNext, onBack, initialData = {}, isLoading = false, ap
             <label htmlFor="till" className="block text-gray-700 font-medium mb-1 text-sm">
               Till
             </label>
-            <input
-              type="date"
-              id="till"
-              name="till"
-              placeholder="dd/mm/yyyy"
-              value={currentSeaService.till}
-              onChange={handleSeaServiceChange}
-              min={currentSeaService.joiningDate || undefined}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
-            />
+            {stillOnVessel ? (
+              // Standing in for the date input rather than showing a disabled,
+              // empty one makes it obvious the end date is intentionally absent.
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500">
+                Present
+              </div>
+            ) : (
+              <input
+                type="date"
+                id="till"
+                name="till"
+                placeholder="dd/mm/yyyy"
+                value={currentSeaService.till}
+                onChange={handleSeaServiceChange}
+                min={currentSeaService.joiningDate || undefined}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-gray-50 focus:bg-opacity-70 text-sm bg-white transition-colors"
+              />
+            )}
+            <label className="mt-2 flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={stillOnVessel}
+                onChange={handleStillOnVesselToggle}
+                className="h-4 w-4 rounded border-gray-300 text-[#003971] focus:ring-[#003971] cursor-pointer"
+              />
+              I am still on this vessel
+            </label>
           </div>
         </div>
       </div>
