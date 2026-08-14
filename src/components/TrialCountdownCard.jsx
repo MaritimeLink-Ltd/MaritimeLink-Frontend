@@ -4,15 +4,18 @@ import { Sparkles, X } from 'lucide-react';
 const TRIAL_DAYS = 90;
 
 /**
- * Floating card on the subscription pages, two states:
- *  - Not yet subscribed: a promo nudge advertising the 90-day free trial
- *    (checkout is created with `trial_period_days: 90`, so this is a real
- *    claim about what happens if they upgrade, not just marketing copy).
+ * Two states, either as a fixed corner card (`variant="floating"`, the
+ * default) or an inline banner strip (`variant="inline"`, for placing inside
+ * a modal/page where a second fixed-position layer would overlap the modal
+ * itself):
+ *  - Not yet subscribed: a soft-launch promo advertising the 90-day free
+ *    trial (checkout is created with `trial_period_days: 90`, so this is a
+ *    real claim about what happens if they upgrade, not just marketing copy).
  *  - Already subscribed and still inside the trial window: a countdown to
  *    when the card is actually charged. Renders nothing once the trial has
  *    lapsed — Stripe's own billing/dunning takes over from there.
  */
-const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenFree }) => {
+const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenFree, variant = 'floating' }) => {
     const [dismissed, setDismissed] = useState(false);
     if (dismissed) return null;
 
@@ -34,10 +37,24 @@ const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenF
             day: 'numeric',
         })}.`;
     } else if (showPromoWhenFree) {
-        title = 'First 90 days free';
-        subtitle = 'Upgrade below — you won\'t be charged until the trial ends.';
+        title = 'Soft Launch Offer — First 90 Days Free';
+        subtitle = "We're in soft launch — upgrade now and pay nothing for 90 days. No charge until your trial ends.";
     } else {
         return null;
+    }
+
+    if (variant === 'inline') {
+        return (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                <div className="flex-shrink-0 h-9 w-9 rounded-full bg-white flex items-center justify-center">
+                    <Sparkles size={18} className="text-blue-600" />
+                </div>
+                <div>
+                    <div className="text-sm font-semibold text-gray-900">{title}</div>
+                    <div className="text-xs text-gray-600 mt-1">{subtitle}</div>
+                </div>
+            </div>
+        );
     }
 
     return (

@@ -4,6 +4,7 @@ import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, Chevron
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
 import SupportCenterSection from '../../../../components/support/SupportCenterSection';
+import TrialCountdownCard from '../../../../components/TrialCountdownCard';
 import toast, { Toaster } from 'react-hot-toast';
 import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF } from '../../../../constants/contact';
@@ -53,6 +54,7 @@ const Profile = () => {
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [membershipTier, setMembershipTier] = useState('FREE');
+    const [membershipUpdatedAt, setMembershipUpdatedAt] = useState(null);
     const [isUpdatingMembership, setIsUpdatingMembership] = useState(false);
     const [membershipPlans, setMembershipPlans] = useState([]);
     const [plansLoading, setPlansLoading] = useState(false);
@@ -175,6 +177,7 @@ const Profile = () => {
             setMembershipPlans(Array.isArray(plans) ? plans : []);
             const tier = response?.data?.membership?.tier;
             if (tier) setMembershipTier(tier);
+            setMembershipUpdatedAt(response?.data?.membership?.membershipUpdatedAt ?? null);
         } catch (error) {
             toast.error(error.message || 'Failed to load plans', { position: 'top-right' });
             setMembershipPlans([]);
@@ -550,6 +553,12 @@ const Profile = () => {
                                 </button>
                             </div>
                             <div className="p-6">
+                                <TrialCountdownCard
+                                    isTrialTier={membershipTier !== 'FREE'}
+                                    subscriptionStartedAt={membershipUpdatedAt}
+                                    showPromoWhenFree={membershipTier === 'FREE'}
+                                    variant="inline"
+                                />
                                 {plansLoading ? (
                                     <div className="flex items-center justify-center py-16 text-gray-500">
                                         <Loader2 className="h-8 w-8 animate-spin text-[#003971] mr-3" />
