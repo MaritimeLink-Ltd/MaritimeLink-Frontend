@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, ChevronDown, Crown, Loader2, Briefcase } from '
 import toast, { Toaster } from 'react-hot-toast';
 import recruiterSettingsService from '../../../../services/recruiterSettingsService';
 import jobService from '../../../../services/jobService';
+import TrialCountdownCard from '../../../../components/TrialCountdownCard';
 import { isFlexJobActive } from '../../../../utils/recruiterTier';
 
 /**
@@ -316,6 +317,11 @@ const ManageRecruiterSubscription = () => {
     return (
         <div className="w-full min-h-screen overflow-y-auto flex flex-col items-center py-20 px-4 sm:px-8 bg-gray-50">
             <Toaster />
+            <TrialCountdownCard
+                isTrialTier={activeTier === 'PREMIUM'}
+                subscriptionStartedAt={membership?.membershipUpdatedAt}
+                showPromoWhenFree={activeTier !== 'PREMIUM'}
+            />
             <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-8 my-auto">
                 <button
                     onClick={() => navigate(-1)}

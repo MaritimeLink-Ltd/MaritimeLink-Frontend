@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Crown, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import authService from '../../../../services/authService';
+import TrialCountdownCard from '../../../../components/TrialCountdownCard';
 import {
     FREE_PLAN_HIGHLIGHTS,
     PREMIUM_PLAN_HIGHLIGHTS,
@@ -132,6 +133,11 @@ const ManageSubscription = () => {
     return (
         <div className="w-full min-h-screen overflow-y-auto flex flex-col items-center py-20 px-4 sm:px-8 bg-gray-50">
             <Toaster />
+            <TrialCountdownCard
+                isTrialTier={activeTier !== 'FREE'}
+                subscriptionStartedAt={membership?.membershipUpdatedAt}
+                showPromoWhenFree={activeTier === 'FREE'}
+            />
             <div className="absolute top-6 left-6">
                 <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />
             </div>
