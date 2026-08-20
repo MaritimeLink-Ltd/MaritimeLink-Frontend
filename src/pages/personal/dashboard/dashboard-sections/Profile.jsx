@@ -558,6 +558,7 @@ const Profile = () => {
                                     subscriptionStartedAt={membershipUpdatedAt}
                                     showPromoWhenFree={membershipTier === 'FREE'}
                                     variant="inline"
+                                    trialDays={60}
                                 />
                                 {plansLoading ? (
                                     <div className="flex items-center justify-center py-16 text-gray-500">

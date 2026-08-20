@@ -252,6 +252,8 @@ export const API_ENDPOINTS = {
     RECRUITER_MATCHES: (id) => `/api/recruiter/jobs/${id}/matches`,
     RECRUITER_INVITE_MATCH: (jobId, professionalId) => `/api/recruiter/jobs/${jobId}/invite/${professionalId}`,
     ADMIN_BULK_UPLOAD: '/api/admin/jobs/bulk-upload',
+    /** External jobs matched to my profile (SerpApi + syndicated feeds), refreshed at most once every 24h */
+    EXTERNAL: '/api/professional/jobs/external',
   },
   // Admin Endpoints
   ADMIN: {

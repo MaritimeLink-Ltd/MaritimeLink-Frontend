@@ -137,6 +137,7 @@ const ManageSubscription = () => {
                 isTrialTier={activeTier !== 'FREE'}
                 subscriptionStartedAt={membership?.membershipUpdatedAt}
                 showPromoWhenFree={activeTier === 'FREE'}
+                trialDays={60}
             />
             <div className="absolute top-6 left-6">
                 <img src="/images/logo.png" alt="Maritime Link Logo" className="w-16 h-16 object-contain" />

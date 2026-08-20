@@ -219,6 +219,23 @@ class JobService {
     }
 
     /**
+     * Get external maritime job listings matched to my profile.
+     * Aggregated from SerpApi Google Jobs and syndicated maritime job feeds,
+     * ranked against my rank/sea service/skills. Backend refreshes at most once every 24h.
+     * GET /api/professional/jobs/external
+     * @returns {Promise<Object>} Response shape: { status, results, matchedCount, personalized, data: { jobs: [...] } }
+     */
+    async getExternalJobs() {
+        try {
+            const response = await httpClient.get(API_ENDPOINTS.JOBS.EXTERNAL);
+            return response;
+        } catch (error) {
+            console.error('Get External Jobs error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get a single job by ID for Professional
      * GET /api/professional/jobs/:id
      * @param {string} id - Job ID

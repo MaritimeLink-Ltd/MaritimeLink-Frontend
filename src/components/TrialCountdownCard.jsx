@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 
-const TRIAL_DAYS = 90;
-
 /**
  * Two states, either as a fixed corner card (`variant="floating"`, the
  * default) or an inline banner strip (`variant="inline"`, for placing inside
  * a modal/page where a second fixed-position layer would overlap the modal
  * itself):
- *  - Not yet subscribed: a soft-launch promo advertising the 90-day free
- *    trial (checkout is created with `trial_period_days: 90`, so this is a
- *    real claim about what happens if they upgrade, not just marketing copy).
+ *  - Not yet subscribed: a soft-launch promo advertising the free trial
+ *    (checkout is created with `trial_period_days`, so this is a real claim
+ *    about what happens if they upgrade, not just marketing copy).
  *  - Already subscribed and still inside the trial window: a countdown to
  *    when the card is actually charged. Renders nothing once the trial has
  *    lapsed — Stripe's own billing/dunning takes over from there.
+ *
+ * `trialDays` defaults to 90 (recruiter side); professional usages pass 60.
  */
-const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenFree, variant = 'floating' }) => {
+const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenFree, variant = 'floating', trialDays = 90 }) => {
     const [dismissed, setDismissed] = useState(false);
     if (dismissed) return null;
 
@@ -26,7 +26,7 @@ const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenF
         const startedAt = new Date(subscriptionStartedAt);
         if (Number.isNaN(startedAt.getTime())) return null;
 
-        const trialEndsAt = new Date(startedAt.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+        const trialEndsAt = new Date(startedAt.getTime() + trialDays * 24 * 60 * 60 * 1000);
         const daysLeft = Math.ceil((trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
         if (daysLeft <= 0) return null;
 
@@ -37,8 +37,8 @@ const TrialCountdownCard = ({ isTrialTier, subscriptionStartedAt, showPromoWhenF
             day: 'numeric',
         })}.`;
     } else if (showPromoWhenFree) {
-        title = 'Soft Launch Offer — First 90 Days Free';
-        subtitle = "We're in soft launch — upgrade now and pay nothing for 90 days. No charge until your trial ends.";
+        title = `Soft Launch Offer — First ${trialDays} Days Free`;
+        subtitle = `We're in soft launch — upgrade now and pay nothing for ${trialDays} days. No charge until your trial ends.`;
     } else {
         return null;
     }
