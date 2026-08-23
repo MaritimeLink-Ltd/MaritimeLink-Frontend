@@ -1009,12 +1009,11 @@ class ResumeService {
 
     /**
      * Map API GET response → Ratings Dashboard allData shape
+     * Ratings shares the Officer template (including licensesEndorsements) —
+     * only Catering/Medical maps to a different shape below.
      */
     mapApiToRatingsData(api) {
-        const officer = this.mapApiToOfficerData(api);
-        // Ratings has no licensesEndorsements key
-        const { licensesEndorsements, ...rest } = officer;
-        return rest;
+        return this.mapApiToOfficerData(api);
     }
 
     /**

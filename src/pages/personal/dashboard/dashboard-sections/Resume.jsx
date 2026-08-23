@@ -640,8 +640,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                         </div>
                     )}
 
-                    {/* Licenses Section - For Officers and Medical */}
-                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.licenses && userData.licenses.length > 0 && (
+                    {/* Licenses Section - For Officers, Ratings & Crew, and Medical (Ratings share the Officer template) */}
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.licenses && userData.licenses.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />
@@ -676,8 +676,8 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
                         </div>
                     )}
 
-                    {/* Endorsements/Certificates Section - For Officers and Medical */}
-                    {(userData.userType === 'officer' || userData.userType === 'medical') && userData.endorsements && userData.endorsements.length > 0 && (
+                    {/* Endorsements/Certificates Section - For Officers, Ratings & Crew, and Medical (Ratings share the Officer template) */}
+                    {(userData.userType === 'officer' || userData.userType === 'rating' || userData.userType === 'medical') && userData.endorsements && userData.endorsements.length > 0 && (
                         <div className="mt-8">
                             <div className="flex items-center gap-2 mb-5">
                                 <FiBriefcase size={20} className="text-[#1E3A5F]" />

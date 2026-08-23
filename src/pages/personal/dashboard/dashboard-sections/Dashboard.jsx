@@ -94,6 +94,10 @@ function alertDestination(alert) {
         return `/personal/training/applied/${metadata.bookingId}`;
     }
 
+    if (type === 'PROFILE_COMPLETION_REQUEST') {
+        return '/personal/profile';
+    }
+
     return null;
 }
 

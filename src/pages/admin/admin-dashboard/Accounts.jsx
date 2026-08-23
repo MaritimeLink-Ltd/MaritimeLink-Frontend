@@ -148,6 +148,18 @@ function Accounts() {
     const tabs = ['Recruiters', 'Training Providers', 'Professionals', 'KYC Status'];
     const isProfessionalTab = activeTab === 'Professionals';
 
+    // Bulk/individual "request profile completion" for pending professionals
+    const [selectedProfessionalIds, setSelectedProfessionalIds] = useState(new Set());
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [completionTargetIds, setCompletionTargetIds] = useState([]);
+    const [completionMessage, setCompletionMessage] = useState('');
+    const [isSendingCompletion, setIsSendingCompletion] = useState(false);
+    const [completionError, setCompletionError] = useState('');
+
+    useEffect(() => {
+        setSelectedProfessionalIds(new Set());
+    }, [activeTab]);
+
     const mapKycStatusLabel = (status) => {
         if (!status) return 'Unknown';
         const upper = status.toUpperCase();
@@ -390,6 +402,7 @@ function Accounts() {
                     lastActive: getTimeAgo(item.lastActive || item.createdAt),
                     status: complianceRowStatus || statusLabel,
                     statusColor: statusColor,
+                    rawStatus: accountStatus,
                     isVerified: item.isVerified,
                     nearestComplianceExpiry: item.nearestComplianceExpiry || null,
                     nearestComplianceDocumentName: item.nearestComplianceDocumentName || null,
@@ -625,7 +638,7 @@ function Accounts() {
     };
 
     const accounts = getCurrentTabData();
-    const dataTableColSpan = isProfessionalTab ? 7 : 8;
+    const dataTableColSpan = 8;
 
     // Tab-specific stats
     const getTabStats = () => {
@@ -955,6 +968,72 @@ function Accounts() {
         setCurrentPage(page);
     };
 
+    // Rows currently on screen that are eligible for a profile-completion request.
+    const pendingProfessionalsOnPage = isProfessionalTab
+        ? paginatedAccounts.filter((account) => account.rawStatus === 'PENDING')
+        : [];
+    const allPendingOnPageSelected =
+        pendingProfessionalsOnPage.length > 0 &&
+        pendingProfessionalsOnPage.every((account) => selectedProfessionalIds.has(account.id));
+
+    const toggleProfessionalSelected = (id) => {
+        setSelectedProfessionalIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAllPendingOnPage = () => {
+        setSelectedProfessionalIds((prev) => {
+            const next = new Set(prev);
+            if (allPendingOnPageSelected) {
+                pendingProfessionalsOnPage.forEach((account) => next.delete(account.id));
+            } else {
+                pendingProfessionalsOnPage.forEach((account) => next.add(account.id));
+            }
+            return next;
+        });
+    };
+
+    const openCompletionModal = (ids) => {
+        setCompletionTargetIds(ids);
+        setCompletionMessage('');
+        setCompletionError('');
+        setShowCompletionModal(true);
+    };
+
+    const closeCompletionModal = () => {
+        if (isSendingCompletion) return;
+        setShowCompletionModal(false);
+    };
+
+    const submitCompletionRequest = async () => {
+        if (!completionMessage.trim()) return;
+        setIsSendingCompletion(true);
+        setCompletionError('');
+        try {
+            const response = await httpClient.post(API_ENDPOINTS.ADMIN.REQUEST_PROFILE_COMPLETION, {
+                professionalIds: completionTargetIds,
+                message: completionMessage.trim(),
+            });
+            const notified = response?.data?.notified ?? 0;
+            setShowCompletionModal(false);
+            setSelectedProfessionalIds(new Set());
+            setSuccessMessage(
+                notified > 0
+                    ? `Profile completion request sent to ${notified} professional${notified === 1 ? '' : 's'}.`
+                    : 'No pending professionals matched the selection — nothing was sent.'
+            );
+            setTimeout(() => setSuccessMessage(''), 4000);
+        } catch (error) {
+            setCompletionError(error.message || 'Failed to send the request. Please try again.');
+        } finally {
+            setIsSendingCompletion(false);
+        }
+    };
+
     // Generate page numbers to display
     const getPageNumbers = () => {
         const pages = [];
@@ -1245,11 +1324,48 @@ function Accounts() {
                     </div>
                 </div>
 
+                {/* Bulk action bar — request profile completion from selected pending professionals */}
+                {isProfessionalTab && selectedProfessionalIds.size > 0 && (
+                    <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-amber-50 flex items-center justify-between">
+                        <span className="text-sm font-medium text-amber-900">
+                            {selectedProfessionalIds.size} pending account{selectedProfessionalIds.size === 1 ? '' : 's'} selected
+                        </span>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProfessionalIds(new Set())}
+                                className="text-sm font-medium text-gray-600 hover:underline"
+                            >
+                                Clear selection
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => openCompletionModal([...selectedProfessionalIds])}
+                                className="px-4 py-2 bg-[#1e5a8f] text-white rounded-lg text-sm font-semibold hover:bg-[#164569] transition-colors"
+                            >
+                                Request Profile Completion
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Table - Scrollable Content */}
                 <div className="overflow-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
+                                {isProfessionalTab && (
+                                    <th className="px-4 py-3 text-left w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={allPendingOnPageSelected}
+                                            onChange={toggleSelectAllPendingOnPage}
+                                            disabled={pendingProfessionalsOnPage.length === 0}
+                                            title="Select all pending accounts on this page"
+                                            className="h-4 w-4 rounded border-gray-300 text-[#1e5a8f] focus:ring-[#1e5a8f]/30 disabled:opacity-30"
+                                        />
+                                    </th>
+                                )}
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                     Name
                                 </th>
@@ -1330,6 +1446,18 @@ function Accounts() {
                             ) : paginatedAccounts.length > 0 ? (
                                 paginatedAccounts.map((account, index) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                        {isProfessionalTab && (
+                                            <td className="px-4 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedProfessionalIds.has(account.id)}
+                                                    onChange={() => toggleProfessionalSelected(account.id)}
+                                                    disabled={account.rawStatus !== 'PENDING'}
+                                                    title={account.rawStatus !== 'PENDING' ? 'Only pending accounts can be messaged this way' : ''}
+                                                    className="h-4 w-4 rounded border-gray-300 text-[#1e5a8f] focus:ring-[#1e5a8f]/30 disabled:opacity-30"
+                                                />
+                                            </td>
+                                        )}
                                         <td className="px-4 py-4">
                                             <div className="text-sm font-semibold text-gray-900">{account.name}</div>
                                             <div className="text-xs text-gray-500">ID: {account.id}</div>
@@ -1376,13 +1504,24 @@ function Accounts() {
                                         </td>
                                         <td className="px-4 py-4">
                                             {activeTab === 'Professionals' ? (
-                                                <Link
-                                                    to={`/admin/accounts/${account.id}`}
-                                                    state={{ accountType: 'professional' }}
-                                                    className="text-sm font-semibold text-[#1e5a8f] hover:underline"
-                                                >
-                                                    View Details
-                                                </Link>
+                                                <div className="flex items-center gap-3">
+                                                    <Link
+                                                        to={`/admin/accounts/${account.id}`}
+                                                        state={{ accountType: 'professional' }}
+                                                        className="text-sm font-semibold text-[#1e5a8f] hover:underline"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                    {account.rawStatus === 'PENDING' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCompletionModal([account.id])}
+                                                            className="text-sm font-semibold text-amber-700 hover:underline"
+                                                        >
+                                                            Message
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <Link
                                                     to={
@@ -1470,6 +1609,59 @@ function Accounts() {
                     </div>
                 )}
             </div>
+
+            {/* Request Profile Completion Modal */}
+            {showCompletionModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                                <UserCheck className="h-6 w-6 text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Request Profile Completion</h3>
+                                <p className="text-sm text-gray-500">
+                                    {completionTargetIds.length === 1
+                                        ? 'Sends an in-app notification and an email to this professional'
+                                        : `Sends an in-app notification and an email to ${completionTargetIds.length} professionals`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                What do they need to complete? <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={completionMessage}
+                                onChange={(e) => setCompletionMessage(e.target.value)}
+                                placeholder="e.g. Please upload a clear copy of your seaman's book and passport photo page, and fill in your sea service history, so we can complete your review."
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]"
+                                rows="5"
+                                disabled={isSendingCompletion}
+                            />
+                            {completionError && (
+                                <p className="text-sm text-red-600 mt-2">{completionError}</p>
+                            )}
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={closeCompletionModal}
+                                disabled={isSendingCompletion}
+                                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitCompletionRequest}
+                                disabled={!completionMessage.trim() || isSendingCompletion}
+                                className="flex-1 px-4 py-3 bg-[#1e5a8f] text-white rounded-lg font-semibold hover:bg-[#164569] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSendingCompletion ? 'Sending...' : 'Send Request'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

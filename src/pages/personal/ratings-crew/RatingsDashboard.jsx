@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
 import ProfessionalSummary from './dashboard-sections/ProfessionalSummary';
 import KeySkills from '../officer-category/dashboard-sections/KeySkills';
+import LicensesEndorsements from '../officer-category/dashboard-sections/LicensesEndorsements';
 import SeaServiceLog from '../officer-category/dashboard-sections/SeaServiceLog';
 import AcademicQualifications from '../officer-category/dashboard-sections/AcademicQualifications';
 import MedicalTravelDocs from '../officer-category/dashboard-sections/MedicalTravelDocs';
@@ -21,10 +22,14 @@ const RatingsDashboard = () => {
   const [apiError, setApiError] = useState(null);
 
   // Centralized data storage
+  // Same shape as OfficerDashboard — Ratings shares the Officer template now,
+  // licensesEndorsements included; only PersonalInfo/ProfessionalSummary stay
+  // Ratings-specific components.
   const [allData, setAllData] = useState({
     personalInfo: {},
     professionalSummary: {},
     skills: {},
+    licensesEndorsements: {},
     seaServiceLog: {},
     academicQualifications: {},
     medicalTravelDocs: {},
@@ -50,9 +55,10 @@ const RatingsDashboard = () => {
     fetchResume();
   }, []);
   const sectionTabs = {
-    5: ['academic', 'stcw'],
-    6: ['medical', 'travel'],
-    7: ['biometric', 'nextOfKin', 'referees'],
+    4: ['licenses', 'endorsements'],
+    6: ['academic', 'stcw'],
+    7: ['medical', 'travel'],
+    8: ['biometric', 'nextOfKin', 'referees'],
   };
   // Track the active sub-tab per section
   const [activeSubTab, setActiveSubTab] = useState({});
@@ -72,10 +78,11 @@ const RatingsDashboard = () => {
     { id: 1, title: 'Personal Information' },
     { id: 2, title: 'Professional Summary' },
     { id: 3, title: 'Key Skills' },
-    { id: 4, title: 'Sea Service Log' },
-    { id: 5, title: 'Academic Qualifications & STCW Certificates' },
-    { id: 6, title: 'Medical & Travel Documents' },
-    { id: 7, title: 'Biometrics, Next Of Kin & Referees' }
+    { id: 4, title: 'Licenses & Endorsement' },
+    { id: 5, title: 'Sea Service Log' },
+    { id: 6, title: 'Academic Qualifications & STCW Certificates' },
+    { id: 7, title: 'Medical & Travel Documents' },
+    { id: 8, title: 'Biometrics, Next Of Kin & Referees' }
   ];
 
   // Progress is measured from the data entered, not the step reached, so the
@@ -91,7 +98,7 @@ const RatingsDashboard = () => {
     const currentTab = getCurrentTab();
 
     if (tabs && currentTab !== tabs[tabs.length - 1]) {
-      // Still more sub-tabs — advance the sub-tab
+      // Still more sub-tabs to go through — advance the sub-tab
       const nextTabIndex = tabs.indexOf(currentTab) + 1;
       setCurrentTab(tabs[nextTabIndex]);
       return;
@@ -150,8 +157,43 @@ const RatingsDashboard = () => {
       dataToStore = { ...dataToStore, skills: markPersisted(mergedSkills) };
     }
 
-    // Section 4: Sea Service Log — call API
+    // Section 4: Licenses & Endorsements — call API
     if (activeSection === 4) {
+      const newLicenses = getUnpersisted(sectionData.licenses);
+      const newEndorsements = getUnpersisted(sectionData.endorsements);
+      const editedLicenses = getEdited(sectionData.licenses);
+      const editedEndorsements = getEdited(sectionData.endorsements);
+      let mergedLicenses = sectionData.licenses;
+      let mergedEndorsements = sectionData.endorsements;
+
+      if (newLicenses.length > 0 || newEndorsements.length > 0 || editedLicenses.length > 0 || editedEndorsements.length > 0) {
+        setIsLoading(true);
+        try {
+          const [licenseResults, endorsementResults] = await Promise.all([
+            Promise.all(newLicenses.map(lic => resumeService.addLicense({ ...lic, isEndorsement: false }))),
+            Promise.all(newEndorsements.map(end => resumeService.addLicense({ ...end, isEndorsement: true }))),
+            // Corrections to entries that already exist are PUT, not POSTed.
+            Promise.all(editedLicenses.map(lic => resumeService.updateLicense(lic.id, { ...lic, isEndorsement: false }))),
+            Promise.all(editedEndorsements.map(end => resumeService.updateLicense(end.id, { ...end, isEndorsement: true }))),
+          ]);
+          mergedLicenses = withCreatedIds(sectionData.licenses, newLicenses, licenseResults);
+          mergedEndorsements = withCreatedIds(sectionData.endorsements, newEndorsements, endorsementResults);
+        } catch (error) {
+          setApiError(getApiErrorMessage(error, 'Failed to save licenses and endorsements. Please try again.'));
+          setIsLoading(false);
+          return; // Do not advance on error
+        }
+        setIsLoading(false);
+      }
+      dataToStore = {
+        ...dataToStore,
+        licenses: markPersisted(mergedLicenses),
+        endorsements: markPersisted(mergedEndorsements),
+      };
+    }
+
+    // Section 5: Sea Service Log — call API
+    if (activeSection === 5) {
       const newEntries = getUnpersisted(sectionData.seaServiceEntries);
       const editedEntries = getEdited(sectionData.seaServiceEntries);
       let mergedEntries = sectionData.seaServiceEntries;
@@ -174,8 +216,8 @@ const RatingsDashboard = () => {
       dataToStore = { ...dataToStore, seaServiceEntries: markPersisted(mergedEntries) };
     }
 
-    // Section 5: Academic Qualifications — call API
-    if (activeSection === 5) {
+    // Section 6: Academic Qualifications — call API
+    if (activeSection === 6) {
       const newAcademic = getUnpersisted(sectionData.academicQualifications);
       const editedAcademic = getEdited(sectionData.academicQualifications);
       let mergedAcademic = sectionData.academicQualifications;
@@ -198,8 +240,8 @@ const RatingsDashboard = () => {
       dataToStore = { ...dataToStore, academicQualifications: markPersisted(mergedAcademic) };
     }
 
-    // Section 5: STCW Certificates — call API
-    if (activeSection === 5) {
+    // Section 6: STCW Certificates — call API
+    if (activeSection === 6) {
       const newStcw = getUnpersisted(sectionData.stcwCertificates);
       const editedStcw = getEdited(sectionData.stcwCertificates);
       let mergedStcw = sectionData.stcwCertificates;
@@ -222,8 +264,8 @@ const RatingsDashboard = () => {
       dataToStore = { ...dataToStore, stcwCertificates: markPersisted(mergedStcw) };
     }
 
-    // Section 6: Medical & Travel Documents — call API
-    if (activeSection === 6) {
+    // Section 7: Medical & Travel Documents — call API
+    if (activeSection === 7) {
       const newMedical = getUnpersisted(sectionData.medicalDocuments);
       const newTravel = getUnpersisted(sectionData.travelDocuments);
       const editedMedical = getEdited(sectionData.medicalDocuments);
@@ -293,7 +335,7 @@ const RatingsDashboard = () => {
     const currentTab = getCurrentTab();
 
     if (tabs && currentTab !== tabs[tabs.length - 1]) {
-      // Still more sub-tabs — advance the sub-tab
+      // Still more sub-tabs to go through — advance the sub-tab
       const nextTabIndex = tabs.indexOf(currentTab) + 1;
       setCurrentTab(tabs[nextTabIndex]);
       return;
@@ -303,7 +345,7 @@ const RatingsDashboard = () => {
     setIsLoading(true);
     let dataToStore = sectionData;
 
-    // Section 7a: Biometrics — call API
+    // Section 8a: Biometrics — call API
     if (sectionData.biometricData) {
       try {
         await resumeService.updateBiometrics(sectionData.biometricData);
@@ -314,7 +356,7 @@ const RatingsDashboard = () => {
       }
     }
 
-    // Section 7b: Next Of Kin — call API
+    // Section 8b: Next Of Kin — call API
     const newKin = getUnpersisted(sectionData.nextOfKinList);
     const editedKin = getEdited(sectionData.nextOfKinList);
     let mergedKin = sectionData.nextOfKinList;
@@ -333,7 +375,7 @@ const RatingsDashboard = () => {
       }
     }
 
-    // Section 7c: Referees — call API
+    // Section 8c: Referees — call API
     const newReferees = getUnpersisted(sectionData.refereesList);
     const editedReferees = getEdited(sectionData.refereesList);
     let mergedReferees = sectionData.refereesList;
@@ -368,7 +410,7 @@ const RatingsDashboard = () => {
     console.log('Resume completed!', allData);
 
     // Move to Review Resume section
-    setActiveSection(8);
+    setActiveSection(9);
   };
 
   const handleSaveAndContinue = async () => {
@@ -425,6 +467,19 @@ const RatingsDashboard = () => {
         );
       case 4:
         return (
+          <LicensesEndorsements
+            onNext={handleNext}
+            onBack={handleGoBack}
+            initialData={allData.licensesEndorsements}
+            activeTab={getCurrentTab() || 'licenses'}
+            setActiveTab={setCurrentTab}
+            isLoading={isLoading}
+            apiError={apiError}
+            onLocalChange={handleLocalChange('licensesEndorsements')}
+          />
+        );
+      case 5:
+        return (
           <SeaServiceLog
             onNext={handleNext}
             onBack={handleGoBack}
@@ -434,7 +489,7 @@ const RatingsDashboard = () => {
             onLocalChange={handleLocalChange('seaServiceLog')}
           />
         );
-      case 5:
+      case 6:
         return (
           <AcademicQualifications
             onNext={handleNext}
@@ -447,7 +502,7 @@ const RatingsDashboard = () => {
             onLocalChange={handleLocalChange('academicQualifications')}
           />
         );
-      case 6:
+      case 7:
         return (
           <MedicalTravelDocs
             onNext={handleNext}
@@ -460,7 +515,7 @@ const RatingsDashboard = () => {
             onLocalChange={handleLocalChange('medicalTravelDocs')}
           />
         );
-      case 7:
+      case 8:
         return (
           <BiometricsNextOfKin
             onNext={handleCompleteResume}
@@ -473,7 +528,7 @@ const RatingsDashboard = () => {
             onLocalChange={handleLocalChange('biometricsNextOfKin')}
           />
         );
-      case 8:
+      case 9:
         return <Resume isReviewMode={true} defaultUserType="rating" onEdit={() => setActiveSection(1)} formData={allData} />;
       default:
         return <div>Section not found</div>;
@@ -485,11 +540,12 @@ const RatingsDashboard = () => {
       1: 'Personal Info',
       2: 'Professional Summary',
       3: 'Key Skills',
-      4: 'Sea Service Log',
-      5: 'Academic Qualifications & STCW Certificates',
-      6: 'Medical & Travel Documents',
-      7: 'Biometric, Next Of Kin & Referees',
-      8: 'Review Resume'
+      4: 'Licences & Endorsements',
+      5: 'Sea Service Log',
+      6: 'Academic Qualifications & STCW Certificates',
+      7: 'Medical & Travel Documents',
+      8: 'Biometric, Next Of Kin & Referees',
+      9: 'Review Resume'
     };
     return titles[activeSection] || 'Unknown';
   };
@@ -499,11 +555,12 @@ const RatingsDashboard = () => {
       1: 'Fill out to get started',
       2: 'Enter your professional summary',
       3: 'Add your skills',
-      4: 'Add your sea service details',
-      5: 'Add your academic and certificate details',
-      6: 'Add your medical and travel documents',
-      7: 'Fill out to get started',
-      8: 'Review your complete profile before proceeding'
+      4: 'Add your licenses & endorsements',
+      5: 'Add your sea service details',
+      6: 'Add your academic and certificate details',
+      7: 'Add your medical and travel documents',
+      8: 'Fill out to get started',
+      9: 'Review your complete profile before proceeding'
     };
     return descriptions[activeSection] || '';
   };
@@ -670,10 +727,10 @@ const RatingsDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 flex justify-center overflow-auto py-10 px-4 ${activeSection === 8 ? 'bg-[#F5F7FA]' : ''}`}>
-        <div className={`w-full flex flex-col items-center ${activeSection === 8 ? 'max-w-7xl' : 'max-w-3xl'}`}>
+      <div className={`flex-1 flex justify-center overflow-auto py-10 px-4 ${activeSection === 9 ? 'bg-[#F5F7FA]' : ''}`}>
+        <div className={`w-full flex flex-col items-center ${activeSection === 9 ? 'max-w-7xl' : 'max-w-3xl'}`}>
           {/* Header */}
-          {activeSection !== 8 && (
+          {activeSection !== 9 && (
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-1">
                 {getSectionTitle()}
@@ -685,7 +742,7 @@ const RatingsDashboard = () => {
           )}
 
           {/* Form Container */}
-          <div className={`w-full ${activeSection === 8 ? '' : 'max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh] flex flex-col'}`}>
+          <div className={`w-full ${activeSection === 9 ? '' : 'max-w-xl bg-white rounded-2xl shadow-md p-8 h-[80vh] flex flex-col'}`}>
             {renderSection()}
           </div>
         </div>

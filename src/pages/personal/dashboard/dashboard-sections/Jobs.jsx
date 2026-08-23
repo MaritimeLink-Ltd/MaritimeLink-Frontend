@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2, Crown, Globe, ExternalLink } from 'lucide-react';
 import jobService from '../../../../services/jobService';
@@ -39,6 +39,19 @@ const DATE_POSTED_TO_API = {
     'Last 30 days': '30d',
 };
 
+/** Approximate mapping from the platform's contract-type filter to free-text job postings. */
+const JOB_TYPE_KEYWORDS = {
+    Temporary: ['temporary', 'temp'],
+    Contract: ['contract'],
+    Permanent: ['permanent', 'full-time', 'full time', 'fulltime'],
+};
+
+const DATE_POSTED_WINDOW_DAYS = {
+    'Last 24 hours': 1,
+    'Last 7 days': 7,
+    'Last 30 days': 30,
+};
+
 const trimSearchValue = (value) => String(value || '').trim();
 
 const formatJobCategory = (category) => API_CATEGORY_LABEL[String(category || '').trim()] || String(category || '');
@@ -47,8 +60,8 @@ const formatJobType = (jobType) => API_JOB_TYPE_LABEL[String(jobType || '').trim
 
 /**
  * External sources disagree on date format: syndicated feeds send ISO
- * timestamps, Google Jobs sends relative text like "3 days ago". Render ISO as
- * a readable date and pass anything else through untouched.
+ * timestamps, Google Jobs sends relative text like "3 days ago". Parseable
+ * dates render as a readable date; anything else passes through as-is.
  */
 const formatExternalPostedAt = (postedAt) => {
     if (!postedAt) return '';
@@ -61,16 +74,25 @@ const formatExternalPostedAt = (postedAt) => {
     });
 };
 
-/** Sticky divider separating the matched band from the wider market. */
-const ExternalJobSectionHeading = ({ title, subtitle, count }) => (
-    <div className="sticky top-0 z-10 px-5 py-2.5 bg-gray-50/95 backdrop-blur-sm border-y border-gray-200">
-        <div className="flex items-center justify-between gap-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-700">{title}</h4>
-            <span className="text-[11px] font-medium text-gray-500">{count}</span>
-        </div>
-        <p className="text-[11px] text-gray-500 mt-0.5">{subtitle}</p>
-    </div>
-);
+/** Normalizes a backend external-job row into the same display shape internal jobs use. */
+const mapExternalJob = (raw) => ({
+    id: raw.id,
+    source: 'external',
+    title: raw.title,
+    company: raw.company || raw.via || 'Company not listed',
+    isPremiumRecruiter: false,
+    location: raw.location || '',
+    salary: raw.salary || '',
+    category: raw.category || '',
+    jobType: raw.employmentType || '',
+    /** Raw value for display (may be relative text like "3 days ago", not always parseable). */
+    postedAt: raw.postedAt || null,
+    jobDescription: raw.description,
+    applyLink: raw.applyLink,
+    via: raw.via,
+    matchScore: raw.matchScore,
+    matchReasons: raw.matchReasons,
+});
 
 const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
     const kw = trimSearchValue(keywords).toLowerCase();
@@ -98,20 +120,67 @@ const applyClientJobSearch = (jobs, { keywords, location, officerType }) => {
     });
 };
 
+/**
+ * External jobs carry free-text category/employment fields, not the platform's
+ * OFFICER/RATINGS_AND_CREW enums, so filtering them uses the same `categoryRoles`
+ * rank taxonomy the UI already shows in the officer-type dropdown and filter
+ * panel — matching specific rank words (e.g. "Chief Officer") rather than the
+ * generic category label, which rarely appears verbatim in a real posting.
+ * Location and date are matched leniently: a job with no parseable value is
+ * kept rather than hidden, since most external postings don't carry one.
+ */
+const applyExternalJobSearch = (jobs, { keywords, location, officerType, filters, categoryRoles }) => {
+    const kw = trimSearchValue(keywords).toLowerCase();
+    const loc = trimSearchValue(location).toLowerCase();
+    const effectiveCategory = officerType || filters.category;
+
+    return jobs.filter((job) => {
+        const haystack = [job.title, job.company, job.jobDescription, job.category, job.via]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+        if (kw && !haystack.includes(kw)) return false;
+
+        if (loc) {
+            const jobLocation = String(job.location || '').toLowerCase();
+            if (jobLocation && !jobLocation.includes(loc)) return false;
+        }
+
+        if (effectiveCategory) {
+            const terms = categoryRoles[effectiveCategory] || [effectiveCategory];
+            if (!terms.some((term) => haystack.includes(term.toLowerCase()))) return false;
+        }
+
+        if (filters.role && !haystack.includes(filters.role.toLowerCase())) return false;
+
+        if (filters.jobType) {
+            const keywordsForType = JOB_TYPE_KEYWORDS[filters.jobType] || [filters.jobType.toLowerCase()];
+            const employmentText = String(job.jobType || '').toLowerCase();
+            if (!keywordsForType.some((term) => employmentText.includes(term) || haystack.includes(term))) return false;
+        }
+
+        if (filters.datePosted && job.postedAt) {
+            const parsed = new Date(job.postedAt);
+            const windowDays = DATE_POSTED_WINDOW_DAYS[filters.datePosted];
+            if (windowDays && !Number.isNaN(parsed.getTime())) {
+                const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+                if (parsed.getTime() < cutoff) return false;
+            }
+        }
+
+        return true;
+    });
+};
+
 const Jobs = () => {
     const navigate = useNavigate();
     const { guardRestrictedAction } = useKycGuard();
     const PAGE_SIZE = 10;
 
-
-    const [activeTab, setActiveTab] = useState('internal'); // 'internal' | 'external'
     const [externalJobs, setExternalJobs] = useState([]);
-    const [selectedExternalJob, setSelectedExternalJob] = useState(null);
-    const [isExternalLoading, setIsExternalLoading] = useState(false);
-    const [externalJobsLoaded, setExternalJobsLoaded] = useState(false);
+    const [isExternalLoading, setIsExternalLoading] = useState(true);
     const [externalError, setExternalError] = useState('');
-    /** Leading entries of externalJobs that matched this professional's profile. */
-    const [externalMatchedCount, setExternalMatchedCount] = useState(0);
 
     const [selectedJob, setSelectedJob] = useState(null);
     const [appliedJobs, setAppliedJobs] = useState(new Set());
@@ -190,6 +259,11 @@ const Jobs = () => {
         Boolean(searchOfficerType);
 
     const handleJobClick = async (job) => {
+        if (job.source === 'external') {
+            setSelectedJob(job);
+            return;
+        }
+
         setSelectedJob(job);
         setIsDetailLoading(true);
         try {
@@ -198,6 +272,7 @@ const Jobs = () => {
                 const apiJob = response.data.job;
                 setSelectedJob({
                     id: apiJob.id,
+                    source: 'internal',
                     title: apiJob.title,
                     company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
                     location: apiJob.location || 'Global',
@@ -239,6 +314,7 @@ const Jobs = () => {
                         .filter(apiJob => !appliedSet.has(apiJob.id))
                         .map(apiJob => ({
                             id: apiJob.id,
+                            source: 'internal',
                             title: apiJob.title,
                             company: apiJob.recruiter?.organizationName || 'MaritimeLink Admin',
                             isPremiumRecruiter: Boolean(apiJob.isPremiumRecruiter),
@@ -263,7 +339,7 @@ const Jobs = () => {
                         if (current && visibleJobs.some((job) => job.id === current.id)) {
                             return current;
                         }
-                        return null;
+                        return current?.source === 'external' ? current : null;
                     });
                 }
             } catch (error) {
@@ -277,7 +353,6 @@ const Jobs = () => {
     }, [buildJobsQuery]);
 
     useEffect(() => {
-        if (activeTab !== 'external' || externalJobsLoaded) return;
         let cancelled = false;
 
         const fetchExternalJobs = async () => {
@@ -288,63 +363,33 @@ const Jobs = () => {
                 if (cancelled) return;
                 if (response.status === 'success' && response.data?.jobs) {
                     setExternalJobs(response.data.jobs);
-                    setExternalMatchedCount(Number(response.matchedCount) || 0);
                 }
             } catch (error) {
                 console.error('Failed to fetch external jobs:', error);
-                if (!cancelled) setExternalError('Unable to load external jobs right now. Please try again later.');
+                if (!cancelled) setExternalError('Unable to load external jobs right now.');
             } finally {
-                if (!cancelled) {
-                    setIsExternalLoading(false);
-                    setExternalJobsLoaded(true);
-                }
+                if (!cancelled) setIsExternalLoading(false);
             }
         };
 
         fetchExternalJobs();
         return () => { cancelled = true; };
-    }, [activeTab, externalJobsLoaded]);
+    }, []);
 
-    const isExternalTab = activeTab === 'external';
-    const jobs = allJobs;
-
-    // The API returns matched jobs first, then the wider maritime market.
-    const matchedExternalJobs = externalJobs.slice(0, externalMatchedCount);
-    const otherExternalJobs = externalJobs.slice(externalMatchedCount);
-
-    const renderExternalJobCard = (job) => (
-        <div
-            key={job.id}
-            onClick={() => setSelectedExternalJob(job)}
-            className={`p-5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedExternalJob?.id === job.id ? 'bg-blue-50' : ''
-                }`}
-        >
-            <div className="mb-3">
-                <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="flex items-center gap-1.5">
-                        <Building2 size={14} />
-                        {job.company || job.via || 'Company not listed'}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
-                        <Globe size={10} />
-                        External
-                    </span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-gray-800 font-medium">
-                    <span>{job.salary || ''}</span>
-                    {job.location && (
-                        <div className="flex items-center gap-1 text-[#003971] text-sm">
-                            <MapPin size={14} />
-                            <span>{job.location}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+    // Backend already ranks matched-first; filtering preserves that order.
+    const filteredExternalJobs = useMemo(
+        () => applyExternalJobSearch(externalJobs.map(mapExternalJob), {
+            keywords: debouncedKeywords,
+            location: debouncedLocation,
+            officerType: searchOfficerType,
+            filters,
+            categoryRoles,
+        }),
+        [externalJobs, debouncedKeywords, debouncedLocation, searchOfficerType, filters]
     );
+
+    // Internal jobs first as usual, external ones appended after — each carries its own "External" badge.
+    const jobs = [...allJobs, ...filteredExternalJobs];
 
     return (
         <div className="w-full h-full flex flex-col bg-gray-50 overflow-y-auto lg:overflow-hidden">
@@ -356,7 +401,6 @@ const Jobs = () => {
                         <p className="text-gray-500 mt-1 text-base sm:text-lg">Jobs based on your resume</p>
                     </div>
 
-                    {isExternalTab ? null : (
                     <div className="flex flex-col gap-3 w-full lg:flex-1 lg:max-w-4xl lg:justify-end">
                         {/* Search: keywords, officer type, location */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
@@ -439,37 +483,10 @@ const Jobs = () => {
                             </button>
                         </div>
                     </div>
-                    )}
-                </div>
-
-                {/* Job source tabs */}
-                <div className="flex items-center gap-2 mt-4">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('internal')}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${!isExternalTab
-                            ? 'bg-[#003971] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                    >
-                        MaritimeLink Jobs
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('external')}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${isExternalTab
-                            ? 'bg-[#003971] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                    >
-                        <Globe size={14} />
-                        External Jobs
-                    </button>
                 </div>
             </div>
 
             {/* Jobs Layout */}
-            {!isExternalTab && (
             <div className="flex-1 flex overflow-hidden">
                 {/* Job List - Left Sidebar - Hidden on mobile when job detail is open */}
                 <div className={`${selectedJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-full`}>
@@ -485,41 +502,56 @@ const Jobs = () => {
                             <p className="text-sm mt-1">Try different keywords, officer type, location, or filters</p>
                         </div>
                     ) : (
-                        jobs.map((job) => (
-                            <div
-                                key={job.id}
-                                onClick={() => handleJobClick(job)}
-                                className={`p-5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedJob?.id === job.id ? 'bg-blue-50' : ''
-                                    }`}
-                            >
-                                <div className="mb-3">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
-                                        <div className="flex items-center gap-1 text-[#003971] text-sm hidden">
-                                            <MapPin size={14} />
-                                            <span>{job.location}</span>
+                        <>
+                            {jobs.map((job) => (
+                                <div
+                                    key={job.id}
+                                    onClick={() => handleJobClick(job)}
+                                    className={`p-5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedJob?.id === job.id ? 'bg-blue-50' : ''
+                                        }`}
+                                >
+                                    <div className="mb-3">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <h3 className="text-base font-semibold text-gray-800">{job.title}</h3>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                                        <Building2 size={14} />
-                                        <span>{job.company}</span>
-                                        {job.isPremiumRecruiter && (
-                                            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                                                <Crown size={10} />
-                                                Premium Recruiter
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm text-gray-800 font-medium">
-                                        <span>{job.salary}</span>
-                                        <div className="flex items-center gap-1 text-[#003971] text-sm">
-                                            <MapPin size={14} />
-                                            <span>{job.location}</span>
+                                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-1">
+                                            <Building2 size={14} />
+                                            <span>{job.company}</span>
+                                            {job.isPremiumRecruiter && (
+                                                <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                                    <Crown size={10} />
+                                                    Premium Recruiter
+                                                </span>
+                                            )}
+                                            {job.source === 'external' && (
+                                                <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
+                                                    <Globe size={10} />
+                                                    External
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm text-gray-800 font-medium">
+                                            <span>{job.salary}</span>
+                                            {job.location && (
+                                                <div className="flex items-center gap-1 text-[#003971] text-sm">
+                                                    <MapPin size={14} />
+                                                    <span>{job.location}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                            {isExternalLoading && (
+                                <div className="flex items-center justify-center gap-2 py-4 text-gray-400 text-sm">
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Loading more jobs...
+                                </div>
+                            )}
+                            {externalError && !isExternalLoading && filteredExternalJobs.length === 0 && (
+                                <p className="text-center text-xs text-gray-400 py-4">{externalError}</p>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -545,54 +577,72 @@ const Jobs = () => {
                                         <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{selectedJob.title}</h2>
                                     </div>
                                     <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                                        {appliedJobs.has(selectedJob.id) ? (
-                                            <button
-                                                disabled
-                                                className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-600 rounded-full text-sm font-medium cursor-default"
-                                            >
-                                                <Check size={18} />
-                                                Applied
-                                            </button>
+                                        {selectedJob.source === 'external' ? (
+                                            selectedJob.applyLink ? (
+                                                <a
+                                                    href={selectedJob.applyLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
+                                                >
+                                                    Apply on Company Site
+                                                    <ExternalLink size={16} />
+                                                </a>
+                                            ) : (
+                                                <span className="text-sm text-gray-500">No apply link available</span>
+                                            )
                                         ) : (
-                                            <button
-                                                onClick={() => {
-                                                    guardRestrictedAction(KYC_ACTIONS.APPLY_JOB, () => {
-                                                        navigate(`/personal/jobs/apply/${selectedJob.id}`);
-                                                        setAppliedJobs(prev => new Set([...prev, selectedJob.id]));
-                                                        setShowAppliedModal(true);
-                                                        setTimeout(() => setShowAppliedModal(false), 2000);
-                                                    });
-                                                }}
-                                                className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
-                                            >
-                                                Apply Now
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    await jobService.saveJob(selectedJob.id);
-                                                    setSavedJobs(prev => {
-                                                        const newSaved = new Set(prev);
-                                                        if (newSaved.has(selectedJob.id)) {
-                                                            newSaved.delete(selectedJob.id);
-                                                        } else {
-                                                            newSaved.add(selectedJob.id);
+                                            <>
+                                                {appliedJobs.has(selectedJob.id) ? (
+                                                    <button
+                                                        disabled
+                                                        className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-gray-300 text-gray-600 rounded-full text-sm font-medium cursor-default"
+                                                    >
+                                                        <Check size={18} />
+                                                        Applied
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            guardRestrictedAction(KYC_ACTIONS.APPLY_JOB, () => {
+                                                                navigate(`/personal/jobs/apply/${selectedJob.id}`);
+                                                                setAppliedJobs(prev => new Set([...prev, selectedJob.id]));
+                                                                setShowAppliedModal(true);
+                                                                setTimeout(() => setShowAppliedModal(false), 2000);
+                                                            });
+                                                        }}
+                                                        className="px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
+                                                    >
+                                                        Apply Now
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await jobService.saveJob(selectedJob.id);
+                                                            setSavedJobs(prev => {
+                                                                const newSaved = new Set(prev);
+                                                                if (newSaved.has(selectedJob.id)) {
+                                                                    newSaved.delete(selectedJob.id);
+                                                                } else {
+                                                                    newSaved.add(selectedJob.id);
+                                                                }
+                                                                return newSaved;
+                                                            });
+                                                        } catch (error) {
+                                                            console.error("Failed to save/unsave job:", error);
                                                         }
-                                                        return newSaved;
-                                                    });
-                                                } catch (error) {
-                                                    console.error("Failed to save/unsave job:", error);
-                                                }
-                                            }}
-                                            className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${savedJobs.has(selectedJob.id)
-                                                ? 'bg-[#003971] border-[#003971] text-white'
-                                                : 'border-[#003971] text-[#003971] hover:bg-blue-50'
-                                                }`}
-                                        >
-                                            <Bookmark size={16} fill={savedJobs.has(selectedJob.id) ? 'white' : 'none'} />
-                                            {savedJobs.has(selectedJob.id) ? 'Saved' : 'Save'}
-                                        </button>
+                                                    }}
+                                                    className={`flex items-center gap-2 px-5 py-2.5 border-2 rounded-full text-sm font-medium transition-colors ${savedJobs.has(selectedJob.id)
+                                                        ? 'bg-[#003971] border-[#003971] text-white'
+                                                        : 'border-[#003971] text-[#003971] hover:bg-blue-50'
+                                                        }`}
+                                                >
+                                                    <Bookmark size={16} fill={savedJobs.has(selectedJob.id) ? 'white' : 'none'} />
+                                                    {savedJobs.has(selectedJob.id) ? 'Saved' : 'Save'}
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -602,186 +652,54 @@ const Jobs = () => {
                                         <Building2 size={18} className="text-gray-400" />
                                         <span className="text-base">{selectedJob.company}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <MapPin size={18} className="text-gray-400" />
-                                        <span className="text-base">{selectedJob.location}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Banknote size={18} className="text-gray-400" />
-                                        <span className="text-base font-medium">{selectedJob.salary}</span>
-                                    </div>
-                                </div>
-
-                                {/* Category and Job Type */}
-                                <div className="flex items-center gap-6 mb-6">
-                                    <div>
-                                        <p className="text-xs text-gray-500 mb-1">Category</p>
-                                        <p className="text-base font-medium text-gray-800">{selectedJob.category}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500 mb-1">Job Type</p>
-                                        <p className="text-base font-medium text-gray-800">{selectedJob.jobType}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Job Description */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-3">Job Description</h3>
-                                <p className="text-gray-600 leading-relaxed">{selectedJob.jobDescription}</p>
-                            </div>
-
-                            {/* About the Company */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-3">About the Company</h3>
-                                <p className="text-gray-600 leading-relaxed">{selectedJob.aboutCompany}</p>
-                            </div>
-
-                            {/* What We Look For */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-3">What We Look For</h3>
-                                <p className="text-gray-600 leading-relaxed">{selectedJob.whatWeLookFor}</p>
-                            </div>
-
-                            {/* Responsibilities */}
-                            {selectedJob.responsibilities.length > 0 && (
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Responsibilities</h3>
-                                    <ul className="list-disc list-inside space-y-2 text-gray-600">
-                                        {selectedJob.responsibilities.map((resp, index) => (
-                                            <li key={index}>{resp}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        // No job selected
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center">
-                                <Briefcase size={64} className="text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
-                                <p className="text-gray-400 text-lg">Select a job to view details</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-            )}
-
-            {/* External Jobs Layout */}
-            {isExternalTab && (
-            <div className="flex-1 flex overflow-hidden">
-                {/* External Job List - Left Sidebar - Hidden on mobile when job detail is open */}
-                <div className={`${selectedExternalJob && 'hidden lg:block'} w-full lg:w-96 bg-white border-r border-gray-200 overflow-y-auto scrollbar-hide lg:h-full`}>
-                    {isExternalLoading ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                            <Loader2 size={32} className="animate-spin mb-4 text-[#003971]" />
-                            <p>Loading external jobs...</p>
-                        </div>
-                    ) : externalError ? (
-                        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
-                            <Globe size={48} className="text-gray-300 mb-4" strokeWidth={1.5} />
-                            <p className="text-lg font-medium text-gray-700">Couldn't load jobs</p>
-                            <p className="text-sm mt-1">{externalError}</p>
-                        </div>
-                    ) : externalJobs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500">
-                            <Globe size={48} className="text-gray-300 mb-4" strokeWidth={1.5} />
-                            <p className="text-lg font-medium text-gray-700">No external jobs found</p>
-                            <p className="text-sm mt-1">Check back later for new listings</p>
-                        </div>
-                    ) : (<>
-                        {matchedExternalJobs.map(renderExternalJobCard)}
-
-                        {otherExternalJobs.length > 0 && (
-                            <ExternalJobSectionHeading
-                                title="More maritime jobs"
-                                subtitle="Other roles across the maritime industry"
-                                count={otherExternalJobs.length}
-                            />
-                        )}
-                        {otherExternalJobs.map(renderExternalJobCard)}
-                    </>)}
-                </div>
-
-                {/* External Job Detail - Right Side - Full width on mobile when job is selected */}
-                <div className={`${!selectedExternalJob && 'hidden lg:flex'} flex-1 flex flex-col bg-white overflow-y-auto scrollbar-hide relative`}>
-                    {selectedExternalJob ? (
-                        <div className="px-4 sm:px-8 py-4 sm:py-6">
-                            {/* Job Header */}
-                            <div className="mb-6">
-                                <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3">
-                                    <div className="flex items-center gap-2 sm:gap-0">
-                                        <button
-                                            onClick={() => setSelectedExternalJob(null)}
-                                            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors mr-2"
-                                        >
-                                            <ArrowLeft size={20} className="text-gray-700" />
-                                        </button>
-                                        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">{selectedExternalJob.title}</h2>
-                                    </div>
-                                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                                        {selectedExternalJob.applyLink ? (
-                                            <a
-                                                href={selectedExternalJob.applyLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
-                                            >
-                                                Apply on Company Site
-                                                <ExternalLink size={16} />
-                                            </a>
-                                        ) : (
-                                            <span className="text-sm text-gray-500">No apply link available</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Company Info */}
-                                <div className="space-y-2 mb-5">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Building2 size={18} className="text-gray-400" />
-                                        <span className="text-base">
-                                            {selectedExternalJob.company || selectedExternalJob.via || 'Company not listed'}
-                                        </span>
-                                    </div>
-                                    {selectedExternalJob.location && (
+                                    {selectedJob.location && (
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <MapPin size={18} className="text-gray-400" />
-                                            <span className="text-base">{selectedExternalJob.location}</span>
+                                            <span className="text-base">{selectedJob.location}</span>
                                         </div>
                                     )}
-                                    {selectedExternalJob.salary && (
+                                    {selectedJob.salary && (
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Banknote size={18} className="text-gray-400" />
-                                            <span className="text-base font-medium">{selectedExternalJob.salary}</span>
+                                            <span className="text-base font-medium">{selectedJob.salary}</span>
                                         </div>
                                     )}
-                                    {(selectedExternalJob.category || selectedExternalJob.employmentType) && (
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Briefcase size={18} className="text-gray-400" />
-                                            <span className="text-base">
-                                                {[selectedExternalJob.category, selectedExternalJob.employmentType]
-                                                    .filter(Boolean)
-                                                    .join(' · ')}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {(selectedExternalJob.via || selectedExternalJob.postedAt) && (
+                                    {selectedJob.source === 'external' && (selectedJob.via || selectedJob.postedAt) && (
                                         <div className="flex items-center gap-2 text-gray-500 text-sm">
                                             <Globe size={16} className="text-gray-400" />
                                             <span>
-                                                {[selectedExternalJob.via, formatExternalPostedAt(selectedExternalJob.postedAt)]
-                                                    .filter(Boolean)
-                                                    .join(' · ')}
+                                                {[selectedJob.via, formatExternalPostedAt(selectedJob.postedAt)].filter(Boolean).join(' · ')}
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {selectedExternalJob.matchReasons?.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedExternalJob.matchReasons.map((reason) => (
+                                {selectedJob.source === 'internal' ? (
+                                    /* Category and Job Type */
+                                    <div className="flex items-center gap-6 mb-6">
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">Category</p>
+                                            <p className="text-base font-medium text-gray-800">{selectedJob.category}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">Job Type</p>
+                                            <p className="text-base font-medium text-gray-800">{selectedJob.jobType}</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    (selectedJob.category || selectedJob.jobType) && (
+                                        <div className="mb-6">
+                                            <p className="text-xs text-gray-500 mb-1">Job Type</p>
+                                            <p className="text-base font-medium text-gray-800">
+                                                {[selectedJob.category, selectedJob.jobType].filter(Boolean).join(' · ')}
+                                            </p>
+                                        </div>
+                                    )
+                                )}
+
+                                {selectedJob.matchReasons?.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        {selectedJob.matchReasons.map((reason) => (
                                             <span
                                                 key={reason}
                                                 className="text-[11px] font-medium text-[#003971] bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1"
@@ -796,21 +714,48 @@ const Jobs = () => {
                             {/* Job Description */}
                             <div className="mb-6">
                                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Job Description</h3>
-                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{selectedExternalJob.description}</p>
+                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{selectedJob.jobDescription}</p>
                             </div>
+
+                            {selectedJob.source === 'internal' && (
+                                <>
+                                    {/* About the Company */}
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">About the Company</h3>
+                                        <p className="text-gray-600 leading-relaxed">{selectedJob.aboutCompany}</p>
+                                    </div>
+
+                                    {/* What We Look For */}
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">What We Look For</h3>
+                                        <p className="text-gray-600 leading-relaxed">{selectedJob.whatWeLookFor}</p>
+                                    </div>
+
+                                    {/* Responsibilities */}
+                                    {selectedJob.responsibilities.length > 0 && (
+                                        <div className="mb-6">
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Responsibilities</h3>
+                                            <ul className="list-disc list-inside space-y-2 text-gray-600">
+                                                {selectedJob.responsibilities.map((resp, index) => (
+                                                    <li key={index}>{resp}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     ) : (
                         // No job selected
                         <div className="flex-1 flex items-center justify-center">
                             <div className="text-center">
-                                <Globe size={64} className="text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
+                                <Briefcase size={64} className="text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
                                 <p className="text-gray-400 text-lg">Select a job to view details</p>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
-            )}
 
             {/* Filter Modal */}
             {showFilter && (

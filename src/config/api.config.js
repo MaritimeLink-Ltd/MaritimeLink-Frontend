@@ -321,6 +321,8 @@ export const API_ENDPOINTS = {
     APPLICANT_DETAILS: (id) => `/api/admin/applicants/${id}`,
     PROFESSIONAL_DETAIL: (id) => `/api/admin/professionals/${id}`,
     UPDATE_PROFESSIONAL_STATUS: (id) => `/api/admin/professionals/${id}/status`,
+    /** Nudges one or more PENDING professionals (in-app alert + email) to finish their profile before approval. */
+    REQUEST_PROFILE_COMPLETION: '/api/admin/professionals/request-profile-completion',
     UPDATE_APPLICANT_STATUS: (id) => `/api/admin/applicants/${id}/status`,
     /** All organizations (recruitment & training agents) — SUPER_ADMIN */
     COMPANIES: '/api/admin/companies',

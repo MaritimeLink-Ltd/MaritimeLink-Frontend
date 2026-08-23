@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X } from 'lucide-react';
+import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X, Camera } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
@@ -7,6 +7,7 @@ import CountrySelect from '../../../../components/common/CountrySelect';
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
     const fileInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
     const filePreviewUrlRef = useRef(null);
 
     // ─── Tab Setup ────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         setOcrMatchStatus(null);
         setLocalPreviewUrl(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
         setFormData({ certificateName: '', certificateNumber: '', issuingCountry: '', dateOfIssue: '', validTill: '' });
     };
 
@@ -206,8 +208,8 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Reset the input so the same file can be re-selected
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        // Reset whichever input fired (browse or camera) so it can be used again
+        e.target.value = '';
 
         setSelectedFile(file);
         setFormData(prev => ({ ...prev, certificateName: file.name.split('.')[0] }));
@@ -235,6 +237,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         setUploadedFileUrl(null);
         setOcrMatchStatus(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        if (cameraInputRef.current) cameraInputRef.current.value = '';
 
         if (isOcrRequired) {
             await runRealOCR(file);
@@ -335,6 +338,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
             setLocalPreviewUrl(null);
             setShowFullPreview(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
             setFormData({ certificateName: '', certificateNumber: '', issuingCountry: '', dateOfIssue: '', validTill: '' });
 
             if (onCompletion) {
@@ -672,6 +676,33 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                             )}
                         </div>
                     )}
+
+                    {/*
+                        Take Photo — mobile only. Jumps straight to the phone
+                        camera instead of the generic file picker, so a
+                        professional can photograph a document and upload it
+                        in one flow without scanning/saving/transferring it
+                        from another device first. Uploads the photo exactly
+                        like any other selected file (same OCR/preview/upload
+                        path) — no PDF conversion, since images already
+                        upload, preview and OCR correctly as-is.
+                    */}
+                    <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="lg:hidden mt-3 w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    >
+                        <Camera size={18} />
+                        Take Photo
+                    </button>
+                    <input
+                        type="file"
+                        ref={cameraInputRef}
+                        className="hidden"
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        capture="environment"
+                    />
                 </div>
             </div>
 

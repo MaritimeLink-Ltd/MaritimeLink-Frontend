@@ -59,6 +59,7 @@ export const RESUME_SECTIONS = {
         'personalInfo',
         'professionalSummary',
         'skills',
+        'licensesEndorsements',
         'seaServiceLog',
         'academicQualifications',
         'medicalTravelDocs',
