@@ -225,11 +225,33 @@ export function saveResumeProgress(percent, { submitted = false } = {}) {
     }
 }
 
+/** Every section must hold data before a resume counts as finished. */
+export const RESUME_COMPLETE_PERCENT = 100;
+
+/**
+ * A resume is only finished once every section holds data. Stage 1 review is
+ * granted on a complete resume plus documents, so this is the same bar the
+ * dashboard, the builder and the review step all measure against.
+ * @param {number|null} percent
+ * @returns {boolean}
+ */
+export function isResumeComplete(percent) {
+    return Number.isFinite(percent) && percent >= RESUME_COMPLETE_PERCENT;
+}
+
 /**
  * Whether the dashboard should show "under review" rather than "keep building".
+ *
+ * Completion is authoritative: pressing Submit on the review step does not put
+ * a half-finished resume under review, because admin only approves Stage 1
+ * once the resume is actually complete. The stored `submitted` flag is only
+ * consulted when the percentage is unknown (storage cleared and the resume
+ * could not be fetched), so a finished profile is never pushed back to the
+ * "keep building" screen by a failed request.
  * @param {{percent: number|null, submitted: boolean}} progress
  * @returns {boolean}
  */
 export function isResumeSubmitted({ percent = null, submitted = false } = {}) {
-    return Boolean(submitted) || (Number.isFinite(percent) && percent >= 100);
+    if (Number.isFinite(percent)) return isResumeComplete(percent);
+    return Boolean(submitted);
 }

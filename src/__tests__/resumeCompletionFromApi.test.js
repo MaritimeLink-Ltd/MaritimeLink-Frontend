@@ -67,9 +67,11 @@ describe('resume completion from API payloads', () => {
     expect(calculateResumeCompletion(mapped, 'officer')).toBe(25);
   });
 
-  it('reports 100% for ratings, which has no licenses section', () => {
+  // Ratings shares the Officer template, so licenses & endorsements map through
+  // for them too and count towards completion.
+  it('reports 100% for ratings, which shares the officer sections', () => {
     const mapped = resumeService.mapApiToRatingsData(FULL_API_RESUME);
-    expect(mapped.licensesEndorsements).toBeUndefined();
+    expect(mapped.licensesEndorsements.licenses).toHaveLength(1);
     expect(calculateResumeCompletion(mapped, 'ratings')).toBe(100);
   });
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
-import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
+import { calculateResumeCompletion, isResumeComplete, saveResumeProgress } from '../../../utils/resumeProgress';
 import { markPersisted, getUnpersisted, getEdited, withCreatedIds, mergePendingDrafts } from '../../../utils/resumeStepSync';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
@@ -92,6 +92,13 @@ const RatingsDashboard = () => {
     [allData],
   );
   const isReviewStep = activeSection > sections.length;
+  /**
+   * Reaching the review step is not the same as finishing the resume — every
+   * step is clickable, so it can be opened with sections still empty. Stage 1
+   * is only granted on a complete resume, so an unfinished one is saved but
+   * not marked submitted, and the dashboard keeps showing its progress.
+   */
+  const isSubmittingForReview = isReviewStep && isResumeComplete(completionPercent);
 
   const handleNext = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
@@ -421,7 +428,7 @@ const RatingsDashboard = () => {
 
       // Saving from the review step is the submit action — it is what moves the
       // dashboard from "keep building" to "under review".
-      saveResumeProgress(completionPercent, { submitted: isReviewStep });
+      saveResumeProgress(completionPercent, { submitted: isSubmittingForReview });
 
       navigate('/personal/documents', {
         state: { showDocumentWalletPrompt: true },

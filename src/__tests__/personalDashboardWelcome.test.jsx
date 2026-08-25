@@ -102,14 +102,22 @@ describe('PersonalDashboard Stage 1 welcome', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows the under-review message when the resume was submitted below 100%', async () => {
+  // Stage 1 is only approved on a complete resume, so pressing Submit on the
+  // review step must not leave an unfinished resume claiming to be under review.
+  it('keeps showing progress when the resume was submitted below 100%', async () => {
     localStorage.setItem('resumeSubmitted:pro-1', 'true');
     resumeService.getResume.mockResolvedValue(PART_BUILT_RESUME);
 
     renderDashboard();
 
     expect(
-      await screen.findByText('Thank you for completing and submitting your profile.'),
+      await screen.findByText(/your Resume is 13% complete/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Thank you for completing and submitting your profile.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /continue building resume/i }),
     ).toBeInTheDocument();
   });
 

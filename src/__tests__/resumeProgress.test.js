@@ -3,6 +3,7 @@ import {
   RESUME_SECTIONS,
   calculateResumeCompletion,
   getResumeBuilderPath,
+  isResumeComplete,
   isResumeSubmitted,
   normalizeProfessionType,
   readStoredResumeProgress,
@@ -40,8 +41,10 @@ describe('resumeProgress', () => {
 
   it('scales to the section count of each profession', () => {
     const oneSection = { personalInfo: filledPersonalInfo };
-    expect(RESUME_SECTIONS.ratings).toHaveLength(7);
-    expect(calculateResumeCompletion(oneSection, 'ratings')).toBe(14);
+    // Ratings shares the Officer template, licenses & endorsements included.
+    expect(RESUME_SECTIONS.ratings).toHaveLength(8);
+    expect(RESUME_SECTIONS.ratings).toEqual(RESUME_SECTIONS.officer);
+    expect(calculateResumeCompletion(oneSection, 'ratings')).toBe(13);
     expect(calculateResumeCompletion(oneSection, 'catering')).toBe(13);
   });
 
@@ -115,11 +118,33 @@ describe('resumeProgress', () => {
     expect(readStoredResumeProgress()).toEqual({ percent: 88, submitted: true });
   });
 
-  it('treats a submitted flag or a finished resume as submitted', () => {
+  it('treats only a finished resume as submitted', () => {
     expect(isResumeSubmitted({ percent: 13, submitted: false })).toBe(false);
     expect(isResumeSubmitted({ percent: 99, submitted: false })).toBe(false);
-    expect(isResumeSubmitted({ percent: 13, submitted: true })).toBe(true);
     expect(isResumeSubmitted({ percent: 100, submitted: false })).toBe(true);
     expect(isResumeSubmitted({})).toBe(false);
+  });
+
+  // Stage 1 is only approved on a complete resume, so pressing Submit on the
+  // review step must not put a half-finished resume "under review".
+  it('ignores the submitted flag while the resume is unfinished', () => {
+    expect(isResumeSubmitted({ percent: 13, submitted: true })).toBe(false);
+    expect(isResumeSubmitted({ percent: 0, submitted: true })).toBe(false);
+    expect(isResumeSubmitted({ percent: 100, submitted: true })).toBe(true);
+  });
+
+  // Percentage unknown (storage cleared and the resume could not be fetched) —
+  // fall back to the flag so a finished profile is not pushed back to
+  // "keep building" by a failed request.
+  it('falls back to the submitted flag when the percentage is unknown', () => {
+    expect(isResumeSubmitted({ percent: null, submitted: true })).toBe(true);
+    expect(isResumeSubmitted({ percent: null, submitted: false })).toBe(false);
+  });
+
+  it('reports whether a resume is complete', () => {
+    expect(isResumeComplete(100)).toBe(true);
+    expect(isResumeComplete(99)).toBe(false);
+    expect(isResumeComplete(null)).toBe(false);
+    expect(isResumeComplete(undefined)).toBe(false);
   });
 });

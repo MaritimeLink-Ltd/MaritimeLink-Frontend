@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import resumeService from '../../../services/resumeService';
 import { getApiErrorMessage } from '../../../utils/apiError';
-import { calculateResumeCompletion, saveResumeProgress } from '../../../utils/resumeProgress';
+import { calculateResumeCompletion, isResumeComplete, saveResumeProgress } from '../../../utils/resumeProgress';
 import { markPersisted, getUnpersisted, getEdited, withCreatedIds, mergePendingDrafts } from '../../../utils/resumeStepSync';
 import { useNavigate } from 'react-router-dom';
 import PersonalInfo from './dashboard-sections/PersonalInfo';
@@ -91,6 +91,13 @@ const OfficerDashboard = () => {
     [allData],
   );
   const isReviewStep = activeSection > sections.length;
+  /**
+   * Reaching the review step is not the same as finishing the resume — every
+   * step is clickable, so it can be opened with sections still empty. Stage 1
+   * is only granted on a complete resume, so an unfinished one is saved but
+   * not marked submitted, and the dashboard keeps showing its progress.
+   */
+  const isSubmittingForReview = isReviewStep && isResumeComplete(completionPercent);
 
   const handleNext = async (sectionData) => {
     const tabs = sectionTabs[activeSection];
@@ -429,8 +436,9 @@ const OfficerDashboard = () => {
       await resumeService.submitBulkResume(mergePendingDrafts(allData), 'PUT');
 
       // Saving from the review step is the submit action — it is what moves the
-      // dashboard from "keep building" to "under review".
-      saveResumeProgress(completionPercent, { submitted: isReviewStep });
+      // dashboard from "keep building" to "under review", but only once the
+      // resume is actually complete.
+      saveResumeProgress(completionPercent, { submitted: isSubmittingForReview });
 
       setShowSaveModal(true);
       // Auto close modal after 1.5 seconds and redirect
@@ -776,12 +784,14 @@ const OfficerDashboard = () => {
 
               {/* Message */}
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {isReviewStep ? 'Submitted!' : 'Saved!'}
+                {isSubmittingForReview ? 'Submitted!' : 'Saved!'}
               </h3>
               <p className="text-gray-600 text-center text-sm">
-                {isReviewStep
+                {isSubmittingForReview
                   ? 'Your Resume has been submitted for review'
-                  : 'Your progress has been saved successfully'}
+                  : isReviewStep
+                    ? `Your progress has been saved. Your Resume is ${completionPercent}% complete — finish the remaining sections to submit it for review.`
+                    : 'Your progress has been saved successfully'}
               </p>
             </div>
           </div>
