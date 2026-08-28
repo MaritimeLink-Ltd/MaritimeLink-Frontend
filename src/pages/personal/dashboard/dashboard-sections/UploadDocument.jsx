@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X, Camera } from 'lucide-react';
+import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X, Camera, Smartphone, Link as LinkIcon } from 'lucide-react';
+import QRCode from 'qrcode';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
@@ -52,6 +53,38 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     const [ocrMatchStatus, setOcrMatchStatus] = useState(null); // API matchStatus details for OCR mismatch UI
     const [showFullPreview, setShowFullPreview] = useState(false); // Full-screen preview modal
     const [localPreviewUrl, setLocalPreviewUrl] = useState(null);  // Local blob URL for preview
+
+    // ─── Phone handoff (desktop only) ────────────────────────────────────────
+    // On a laptop, converting a scan to PDF and moving it over is the exact
+    // friction that motivated the mobile "Take Photo" button below — but a
+    // desktop user has no way to discover that button exists on their phone.
+    // This nudge points them there via a QR code or a copyable link to this
+    // same page, so their phone's camera-capture flow is one scan away.
+    const walletUrl = `${window.location.origin}/personal/documents`;
+    const [qrDataUrl, setQrDataUrl] = useState('');
+    const [linkCopied, setLinkCopied] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        QRCode.toDataURL(walletUrl, { width: 160, margin: 1, color: { dark: '#003366', light: '#ffffff' } })
+            .then((url) => { if (!cancelled) setQrDataUrl(url); })
+            .catch((error) => console.error('Failed to generate phone-handoff QR code:', error));
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleCopyWalletLink = async () => {
+        try {
+            await navigator.clipboard.writeText(walletUrl);
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        } catch (error) {
+            console.error('Failed to copy wallet link:', error);
+            toast.error('Could not copy the link. Please copy it from your address bar instead.', {
+                position: 'top-right',
+            });
+        }
+    };
 
     // Manage local blob URL lifecycle — create on file select, revoke on cleanup
     useEffect(() => {
@@ -544,6 +577,42 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
 
                 {/* ── File Drop Zone ─────────────────────────────────────────── */}
                 <div className="flex-1">
+                    {/*
+                        Phone handoff — desktop only. Mirrors the "Take Photo"
+                        button below, which only shows on mobile: a laptop user
+                        has no way to know that faster camera-scan flow exists
+                        on their phone, so this points them there directly.
+                    */}
+                    <div className="hidden lg:flex items-start gap-4 mb-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        {qrDataUrl ? (
+                            <img
+                                src={qrDataUrl}
+                                alt="QR code to open Document Wallet on your phone"
+                                className="w-20 h-20 rounded-lg bg-white p-1 border border-blue-100 flex-shrink-0"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-lg bg-white border border-blue-100 flex-shrink-0 animate-pulse" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                                <Smartphone size={16} className="text-[#003366]" />
+                                Faster from your phone
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Scan this code to open Document Wallet on your phone, then use your camera to
+                                snap and upload directly — no scanning or file transfers needed.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleCopyWalletLink}
+                                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#003366] hover:underline"
+                            >
+                                <LinkIcon size={14} />
+                                {linkCopied ? 'Link copied!' : 'Or copy the link instead'}
+                            </button>
+                        </div>
+                    </div>
+
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Upload Image / PDF
                     </label>
