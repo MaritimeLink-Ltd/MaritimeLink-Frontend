@@ -311,6 +311,9 @@ export const API_ENDPOINTS = {
     MARKETPLACE_STATS: '/api/admin/marketplace/stats',
     MARKETPLACE_OVERSIGHT: '/api/admin/marketplace/oversight',
     MARKETPLACE_LISTINGS: '/api/admin/marketplace/listings',
+    /** Scraped/external jobs (SerpApi, JSearch, RSS feeds) surfaced to professionals as MaritimeLink listings — admin review/removal. */
+    EXTERNAL_JOBS: '/api/admin/external-jobs',
+    DELETE_EXTERNAL_JOB: (id) => `/api/admin/external-jobs/${id}`,
     ADMIN_JOBS: '/api/admin/jobs',
     ADMIN_JOB_DETAIL: (id) => `/api/admin/jobs/${id}`,
     ADMIN_COURSES: '/api/admin/courses',

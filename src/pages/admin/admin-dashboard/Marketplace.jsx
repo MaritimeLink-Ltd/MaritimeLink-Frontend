@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronDown, Briefcase, GraduationCap, CheckCircle, AlertTriangle, XCircle, RefreshCw, Download, Clock, Eye, FileEdit, PauseCircle, Upload, Plus } from 'lucide-react';
+import { Search, ChevronDown, Briefcase, GraduationCap, CheckCircle, AlertTriangle, XCircle, RefreshCw, Download, Clock, Eye, FileEdit, PauseCircle, Upload, Plus, Globe } from 'lucide-react';
 import jobService from '../../../services/jobService';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import { getAdminJobDisplayLabel } from '../../../utils/adminJobDisplay';
+import ScrapedListingsPanel from './ScrapedListingsPanel';
 
 
 function Marketplace() {
@@ -682,9 +683,28 @@ function Marketplace() {
                         <GraduationCap className="h-4 w-4" />
                         Training Courses
                     </button>
+                    {isMaritimeLinkTab && (
+                        <button
+                            onClick={() => {
+                                setActiveSubTab('Scraped Listings');
+                                setCurrentPage(1);
+                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeSubTab === 'Scraped Listings'
+                                ? 'bg-[#1e5a8f] text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                        >
+                            <Globe className="h-4 w-4" />
+                            Scraped Listings
+                        </button>
+                    )}
                 </div>
             </div>
 
+            {isMaritimeLinkTab && activeSubTab === 'Scraped Listings' ? (
+                <ScrapedListingsPanel />
+            ) : (
+                <>
             {/* Stats Cards */}
             <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 {currentStats.map((stat, index) => (
@@ -1144,6 +1164,8 @@ function Marketplace() {
                     </div>
                 </div>
             </div>
+                </>
+            )}
 
             {/* Export Success Notification */}
             {showExportNotification && (

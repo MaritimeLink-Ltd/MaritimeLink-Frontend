@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2, Crown, Globe, ExternalLink } from 'lucide-react';
+import { MapPin, Building2, Banknote, Bookmark, SlidersHorizontal, Briefcase, Check, X, ArrowLeft, Search, Loader2, Crown, Globe, ExternalLink, ShieldAlert } from 'lucide-react';
 import jobService from '../../../../services/jobService';
 import LocationAutocomplete from '../../../../components/common/LocationAutocomplete';
 import { useKycGuard } from '../../../../context/KycContext';
@@ -187,6 +187,9 @@ const Jobs = () => {
     const [savedJobs, setSavedJobs] = useState(new Set());
     const [showFilter, setShowFilter] = useState(false);
     const [showAppliedModal, setShowAppliedModal] = useState(false);
+    // Holds the job pending confirmation before leaving to an external apply
+    // link — null when no confirmation is showing.
+    const [externalApplyTarget, setExternalApplyTarget] = useState(null);
     const [filters, setFilters] = useState({
         category: null,
         role: null,
@@ -579,15 +582,17 @@ const Jobs = () => {
                                     <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                         {selectedJob.source === 'external' ? (
                                             selectedJob.applyLink ? (
-                                                <a
-                                                    href={selectedJob.applyLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    onClick={() => setExternalApplyTarget({
+                                                        applyLink: selectedJob.applyLink,
+                                                        title: selectedJob.title,
+                                                        company: selectedJob.company,
+                                                    })}
                                                     className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#003971] text-white rounded-full text-sm font-medium hover:bg-[#003971]/90 transition-colors"
                                                 >
                                                     Apply on Company Site
                                                     <ExternalLink size={16} />
-                                                </a>
+                                                </button>
                                             ) : (
                                                 <span className="text-sm text-gray-500">No apply link available</span>
                                             )
@@ -893,6 +898,42 @@ const Jobs = () => {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Leaving MaritimeLink Modal — external/scraped listings only */}
+            {externalApplyTarget && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <ShieldAlert size={32} className="text-amber-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">You're leaving MaritimeLink</h3>
+                        <p className="text-gray-600 text-sm mb-1">
+                            "{externalApplyTarget.title}"{externalApplyTarget.company ? ` at ${externalApplyTarget.company}` : ''} is sourced automatically from external job boards and has not been verified by MaritimeLink.
+                        </p>
+                        <p className="text-gray-600 text-sm mb-6">
+                            Before applying or sharing any personal or payment details, it's your responsibility to confirm this listing and employer are genuine.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setExternalApplyTarget(null)}
+                                className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-full text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    window.open(externalApplyTarget.applyLink, '_blank', 'noopener,noreferrer');
+                                    setExternalApplyTarget(null);
+                                }}
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#003971] text-white rounded-full font-medium hover:bg-[#003971]/90 transition-colors"
+                            >
+                                Continue
+                                <ExternalLink size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Applied Successfully Modal */}
