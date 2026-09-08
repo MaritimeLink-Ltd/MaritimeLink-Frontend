@@ -219,20 +219,61 @@ class JobService {
     }
 
     /**
-     * Get external maritime job listings matched to my profile.
-     * Aggregated from SerpApi Google Jobs and syndicated maritime job feeds,
-     * ranked against my rank/sea service/skills. Backend refreshes at most once every 24h.
-     * GET /api/professional/jobs/external
-     * @returns {Promise<Object>} Response shape: { status, results, matchedCount, personalized, data: { jobs: [...] } }
+     * Get one page of external maritime job listings matched to my profile.
+     * Aggregated from SerpApi Google Jobs, JSearch, and syndicated maritime job
+     * feeds, ranked against my rank/sea service/skills. Backend refreshes at
+     * most once every 24h. Paginated: the pool now spans 500+ listings across
+     * all 12 target countries, so a single call only returns one page — call
+     * again with an incremented `page` to reach the rest (see
+     * fetchAllExternalJobs, which does this automatically).
+     * GET /api/professional/jobs/external?page=1&limit=50
+     * @param {number} [page=1]
+     * @param {number} [limit=50] - server clamps to a max of 100
+     * @returns {Promise<Object>} Response shape: { status, results, matchedCount, personalized, pagination: { page, limit, total, pages }, data: { jobs: [...] } }
      */
-    async getExternalJobs() {
+    async getExternalJobs(page = 1, limit = 50) {
         try {
-            const response = await httpClient.get(API_ENDPOINTS.JOBS.EXTERNAL);
+            const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+            const response = await httpClient.get(`${API_ENDPOINTS.JOBS.EXTERNAL}?${params.toString()}`);
             return response;
         } catch (error) {
             console.error('Get External Jobs error:', error);
             throw error;
         }
+    }
+
+    /**
+     * Fetches every page of external jobs and returns them combined, in the
+     * order the backend ranked them (matched-first, newest-first within each
+     * band). `onPage` is called after each page lands, so a caller can render
+     * progressively instead of waiting for the whole pool.
+     *
+     * Capped at MAX_PAGES as a sane ceiling — the pool is a few hundred rows
+     * today, not unbounded, so this only exists to stop a runaway loop if the
+     * backend ever reports an implausible page count.
+     * @param {(jobs: object[], meta: {page:number, pages:number, total:number}) => void} [onPage]
+     */
+    async fetchAllExternalJobs(onPage) {
+        const MAX_PAGES = 20;
+        const PAGE_SIZE = 100;
+        const allJobs = [];
+        let page = 1;
+        let totalPages = 1;
+        let matchedCount = 0;
+        let personalized = false;
+
+        do {
+            const response = await this.getExternalJobs(page, PAGE_SIZE);
+            const jobs = response?.data?.jobs ?? [];
+            allJobs.push(...jobs);
+            totalPages = response?.pagination?.pages ?? 1;
+            matchedCount = response?.matchedCount ?? matchedCount;
+            personalized = response?.personalized ?? personalized;
+            onPage?.(jobs, { page, pages: totalPages, total: response?.pagination?.total ?? allJobs.length });
+            page += 1;
+        } while (page <= totalPages && page <= MAX_PAGES);
+
+        return { jobs: allJobs, matchedCount, personalized };
     }
 
     /**

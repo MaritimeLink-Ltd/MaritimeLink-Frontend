@@ -362,11 +362,17 @@ const Jobs = () => {
             try {
                 setIsExternalLoading(true);
                 setExternalError('');
-                const response = await jobService.getExternalJobs();
-                if (cancelled) return;
-                if (response.status === 'success' && response.data?.jobs) {
-                    setExternalJobs(response.data.jobs);
-                }
+                setExternalJobs([]);
+                // The pool now spans 500+ listings across all 12 target
+                // countries, paginated server-side so a single request can't
+                // silently omit a whole country's worth of real jobs — this
+                // walks every page and appends as they arrive, so the list
+                // fills in progressively rather than blocking on the whole
+                // pool before showing anything.
+                await jobService.fetchAllExternalJobs((jobs) => {
+                    if (cancelled) return;
+                    setExternalJobs((prev) => [...prev, ...jobs]);
+                });
             } catch (error) {
                 console.error('Failed to fetch external jobs:', error);
                 if (!cancelled) setExternalError('Unable to load external jobs right now.');
