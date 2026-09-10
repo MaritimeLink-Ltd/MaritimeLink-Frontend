@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Briefcase, Users, CheckCircle, AlertTriangle, FileText, Image as ImageIcon, Loader, Eye, ExternalLink } from 'lucide-react';
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
+import { downloadDocumentAsPdf } from '../../../utils/documentDownload';
 import AccountModerationPanel from '../../../components/moderation/AccountModerationPanel';
 import {
     formatAdminChatDisplayName,
@@ -1165,17 +1166,7 @@ function AccountProfile() {
                             <button
                                 onClick={async () => {
                                     try {
-                                        const response = await fetch(document.url);
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link =
-                                            window.document.createElement('a');
-                                        link.href = url;
-                                        link.download = document.name;
-                                        window.document.body.appendChild(link);
-                                        link.click();
-                                        window.document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
+                                        await downloadDocumentAsPdf(document.url, document.name);
                                     } catch (error) {
                                         console.error('Download failed:', error);
                                         // Fallback to opening in new tab

@@ -28,6 +28,7 @@ import { isPremiumTier } from '../../../../utils/isPremiumTier';
 import ShareDocumentsModal from '../../../../components/profile/ShareDocumentsModal';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
+import { ensurePdfBlob } from '../../../../utils/documentDownload';
 
 const WALLET_EXCLUDED_CATEGORIES = new Set(['CV_RESUME', 'COVER_LETTER']);
 
@@ -354,8 +355,12 @@ const DocumentsWallet = () => {
                 }
 
                 const contentType = response.headers.get('content-type') || '';
-                const blob = await response.blob();
-                const ext = guessExtension({ url: resolvedUrl, contentType });
+                const rawBlob = await response.blob();
+                // Photographed/scanned documents were uploaded as images — the
+                // exported pack should still read as one folder of PDFs, so
+                // wrap any raster image in a single-page PDF here.
+                const { blob, extension } = await ensurePdfBlob(rawBlob, { url: resolvedUrl });
+                const ext = extension || guessExtension({ url: resolvedUrl, contentType });
                 const baseFileName = sanitizeFileName(displayName);
                 const fileName = baseFileName.toLowerCase().endsWith(ext) ? baseFileName : `${baseFileName}${ext}`;
 

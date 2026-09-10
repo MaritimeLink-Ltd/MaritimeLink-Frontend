@@ -35,6 +35,7 @@ import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 import KycRestrictedView from '../../../../components/kyc/KycRestrictedView';
 import VerificationBadge from '../../../../components/common/VerificationBadge';
 import { isIdentityVerified } from '../../../../utils/kycStatus';
+import { downloadDocumentAsPdf } from '../../../../utils/documentDownload';
 import ReportAccountModal from '../../../../components/moderation/ReportAccountModal';
 import { useRecruiterSubscription } from '../../../../context/RecruiterSubscriptionContext';
 import {
@@ -2007,12 +2008,18 @@ function CandidateSummary({
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            if (selectedDocument.url) window.open(selectedDocument.url, '_blank', 'noopener,noreferrer');
+                                        onClick={async () => {
+                                            if (!selectedDocument.url) return;
+                                            try {
+                                                await downloadDocumentAsPdf(selectedDocument.url, selectedDocument.name || 'document');
+                                            } catch (error) {
+                                                console.error('Failed to download document:', error);
+                                                toast.error('Failed to download document.');
+                                            }
                                         }}
                                         disabled={!selectedDocument.url}
                                         className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                        title="Open / download file"
+                                        title="Download as PDF"
                                     >
                                         <Download className="h-5 w-5" />
                                     </button>

@@ -7,6 +7,7 @@ import ModalOverlay from '../../../../components/common/ModalOverlay';
 import documentService from '../../../../services/documentService';
 import { getDocumentCategoryLabel, getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { readExpiryDate, getDocumentExpiryState } from '../../../../utils/documentStatus';
+import { downloadDocumentAsPdf } from '../../../../utils/documentDownload';
 
 /** Same colours the wallet folder cards use, so a folder chip and its documents read as one status. */
 const EXPIRY_BADGES = {
@@ -182,11 +183,16 @@ const CategoryDocuments = ({
     };
 
     // Handle Download Document
-    const handleDownloadDocument = (doc) => {
-        if (doc.fileUrl) {
-            window.open(doc.fileUrl, '_blank');
-        } else {
+    const handleDownloadDocument = async (doc) => {
+        if (!doc.fileUrl) {
             toast.error("Document file not available.");
+            return;
+        }
+        try {
+            await downloadDocumentAsPdf(doc.fileUrl, doc.name || doc.title || 'document');
+        } catch (error) {
+            console.error('Failed to download document:', error);
+            toast.error('Failed to download document.');
         }
     };
 

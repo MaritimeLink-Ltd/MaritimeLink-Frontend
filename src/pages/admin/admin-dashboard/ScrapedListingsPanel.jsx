@@ -5,7 +5,8 @@ import { API_ENDPOINTS } from '../../../config/api.config';
 
 /**
  * Admin review/removal for scraped external jobs (SerpApi, JSearch, RSS
- * feeds) — self-contained on purpose. Marketplace.jsx's Jobs/Training
+ * feeds, and company career pages via Greenhouse/Lever/SmartRecruiters/
+ * Workday) — self-contained on purpose. Marketplace.jsx's Jobs/Training
  * Courses tabs share a lot of tangled conditional logic (stats, filters,
  * CSV export, pagination math); wiring a third data shape through all of
  * that risked breaking those working tabs. This component owns its own
@@ -16,6 +17,10 @@ const PROVIDER_LABELS = {
     serpapi: 'SerpApi',
     jsearch: 'JSearch',
     feed: 'RSS Feed',
+    greenhouse: 'Greenhouse',
+    lever: 'Lever',
+    smartrecruiters: 'SmartRecruiters',
+    workday: 'Workday',
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -101,8 +106,8 @@ function ScrapedListingsPanel() {
                 <div>
                     <h3 className="text-sm font-bold text-amber-900">Scraped / External Listings</h3>
                     <p className="text-xs text-amber-700 mt-0.5">
-                        Pulled in automatically (SerpApi, JSearch, RSS feeds) and shown to professionals as MaritimeLink
-                        job listings. Neither source verifies authenticity — review and remove anything that looks bad,
+                        Pulled in automatically (SerpApi, JSearch, RSS feeds, Greenhouse, Lever, SmartRecruiters, Workday)
+                        and shown to professionals as MaritimeLink job listings. No source verifies authenticity — review and remove anything that looks bad,
                         suspicious, or scam-like. Removing a listing here also hides it permanently, even if the source
                         lists the same job again on a future refresh.
                     </p>

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, Eye, Search, RefreshCcw, AlertTriangle, FileTex
 import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import { mapAdminNoteFromApi } from '../../../utils/adminDisplayName';
+import { downloadDocumentAsPdf } from '../../../utils/documentDownload';
 import CountryDisplay from '../../../components/common/CountryDisplay';
 
 function ComplianceProfile() {
@@ -297,23 +298,14 @@ function ComplianceProfile() {
                             <button
                                 onClick={async () => {
                                     try {
-                                        const response = await fetch(document.url);
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link = window.document.createElement('a');
-                                        link.href = url;
-                                        link.download = document.name;
-                                        window.document.body.appendChild(link);
-                                        link.click();
-                                        window.document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
+                                        await downloadDocumentAsPdf(document.url, document.name);
                                     } catch (error) {
                                         console.error('Download failed:', error);
                                         window.open(document.url, '_blank');
                                     }
                                 }}
                                 className="p-2 text-gray-500 hover:text-[#003971] hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Download"
+                                title="Download as PDF"
                             >
                                 <Download className="h-5 w-5" />
                             </button>

@@ -78,6 +78,7 @@ const formatExternalPostedAt = (postedAt) => {
 const mapExternalJob = (raw) => ({
     id: raw.id,
     source: 'external',
+    provider: raw.provider,
     title: raw.title,
     company: raw.company || raw.via || 'Company not listed',
     isPremiumRecruiter: false,
