@@ -21,6 +21,9 @@ const PROVIDER_LABELS = {
     lever: 'Lever',
     smartrecruiters: 'SmartRecruiters',
     workday: 'Workday',
+    pinpoint: 'Pinpoint',
+    teamtailor: 'Teamtailor',
+    recruitee: 'Recruitee',
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -106,7 +109,7 @@ function ScrapedListingsPanel() {
                 <div>
                     <h3 className="text-sm font-bold text-amber-900">Scraped / External Listings</h3>
                     <p className="text-xs text-amber-700 mt-0.5">
-                        Pulled in automatically (SerpApi, JSearch, RSS feeds, Greenhouse, Lever, SmartRecruiters, Workday)
+                        Pulled in automatically (SerpApi, JSearch, RSS feeds, and company career boards)
                         and shown to professionals as MaritimeLink job listings. No source verifies authenticity — review and remove anything that looks bad,
                         suspicious, or scam-like. Removing a listing here also hides it permanently, even if the source
                         lists the same job again on a future refresh.

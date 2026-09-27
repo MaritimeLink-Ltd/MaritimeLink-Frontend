@@ -248,13 +248,16 @@ class JobService {
      * band). `onPage` is called after each page lands, so a caller can render
      * progressively instead of waiting for the whole pool.
      *
-     * Capped at MAX_PAGES as a sane ceiling — the pool is a few hundred rows
-     * today, not unbounded, so this only exists to stop a runaway loop if the
-     * backend ever reports an implausible page count.
+     * Capped at MAX_PAGES only as a runaway guard, in case the backend ever
+     * reports an implausible page count. It must stay well above the real
+     * pool: the earlier cap of 20 pages (2,000 jobs) was written when the pool
+     * was a few hundred rows, and once the pool passed 2,100 it silently
+     * dropped the oldest ~100 listings — the exact "exists in the database
+     * but never shown" bug the pagination was introduced to fix.
      * @param {(jobs: object[], meta: {page:number, pages:number, total:number}) => void} [onPage]
      */
     async fetchAllExternalJobs(onPage) {
-        const MAX_PAGES = 20;
+        const MAX_PAGES = 100;
         const PAGE_SIZE = 100;
         const allJobs = [];
         let page = 1;
