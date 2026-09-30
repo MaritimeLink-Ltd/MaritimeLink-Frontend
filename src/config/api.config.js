@@ -81,6 +81,7 @@ export const API_ENDPOINTS = {
     KYC_SUBMIT: '/api/professional/kyc/submit',
     KYC_UPLOAD_SELFIE: '/api/professional/kyc/upload-selfie',
     UPDATE_PASSWORD: '/api/professional/update-password',
+    PHONE_LINK_REDEEM: '/api/professional/phone-link/redeem',
     SUPPORT: {
       CASES: '/api/professional/support/cases',
       CASE_DETAIL: (id) => `/api/professional/support/cases/${id}`,
@@ -93,6 +94,7 @@ export const API_ENDPOINTS = {
     LIST: '/api/professional/documents',
     MARK_REPORT_GENERATED: '/api/professional/documents/report-generated',
     CREATE_SHARE_LINK: '/api/professional/documents/share-link',
+    CREATE_PHONE_LINK: '/api/professional/documents/phone-link',
     SHARED_PACK: (token) =>
       `/api/professional/documents/shared/${encodeURIComponent(token)}`,
     SHARED_FILE: (token, documentId) =>

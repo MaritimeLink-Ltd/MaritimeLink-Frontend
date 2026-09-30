@@ -814,56 +814,86 @@ class AuthService {
                 password: credentials.password,
             }, { skipAuth: true });
 
-            // Response shape: { status, token, data: { user } }
-            if (response?.token) {
-                localStorage.setItem('authToken', response.token);
-                emitAuthTokenChanged();
-            }
-
-            // Persist user profile for use across the app
-            if (response?.data?.user) {
-                const user = response.data.user;
-                const profilePhoto = user.profilePhotoUrl || user.profilePhoto || user.photo || null;
-                const normalizedUser = mergeAuthUserProfile({
-                    ...user,
-                    fullName: user.fullName || user.fullname || '',
-                    profilePhoto,
-                    photo: user.photo || profilePhoto,
-                });
-
-                localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
-                syncKycSubmittedFlag(normalizedUser);
-                syncStage2KycFlags(normalizedUser);
-
-                if (profilePhoto) {
-                    // Keep legacy consumers in sync while API photo remains the source of truth.
-                    localStorage.setItem('profileImage', profilePhoto);
-                }
-
-                // Save professionalId so KYC and other flows can resolve it
-                const id = normalizedUser.id || normalizedUser.professionalId || normalizedUser._id;
-                if (id) {
-                    localStorage.setItem('professionalId', id);
-                }
-
-                // Persist admin verification status for dashboard access control
-                const userStatus = normalizedUser.status;
-                if (userStatus) {
-                    localStorage.setItem('professionalVerificationStatus', userStatus);
-                    // Also set the adminVerified flag if status is VERIFIED
-                    if (userStatus.toUpperCase() === 'VERIFIED') {
-                        localStorage.setItem('adminVerified', 'true');
-                    } else {
-                        localStorage.setItem('adminVerified', 'false');
-                    }
-                }
-            }
-
+            this.persistProfessionalSession(response);
             return response;
         } catch (error) {
             console.error('Login error:', error);
             throw error;
         }
+    }
+
+    /**
+     * Store a professional session from a login-shaped response
+     * ({ status, token, data: { user } }) — shared by password login and the
+     * phone sign-in link.
+     */
+    persistProfessionalSession(response) {
+        // Response shape: { status, token, data: { user } }
+        if (response?.token) {
+            localStorage.setItem('authToken', response.token);
+            emitAuthTokenChanged();
+        }
+
+        // Persist user profile for use across the app
+        if (response?.data?.user) {
+            const user = response.data.user;
+            const profilePhoto = user.profilePhotoUrl || user.profilePhoto || user.photo || null;
+            const normalizedUser = mergeAuthUserProfile({
+                ...user,
+                fullName: user.fullName || user.fullname || '',
+                profilePhoto,
+                photo: user.photo || profilePhoto,
+            });
+
+            localStorage.setItem('userProfile', JSON.stringify(normalizedUser));
+            syncKycSubmittedFlag(normalizedUser);
+            syncStage2KycFlags(normalizedUser);
+
+            if (profilePhoto) {
+                // Keep legacy consumers in sync while API photo remains the source of truth.
+                localStorage.setItem('profileImage', profilePhoto);
+            }
+
+            // Save professionalId so KYC and other flows can resolve it
+            const id = normalizedUser.id || normalizedUser.professionalId || normalizedUser._id;
+            if (id) {
+                localStorage.setItem('professionalId', id);
+            }
+
+            // Persist admin verification status for dashboard access control
+            const userStatus = normalizedUser.status;
+            if (userStatus) {
+                localStorage.setItem('professionalVerificationStatus', userStatus);
+                // Also set the adminVerified flag if status is VERIFIED
+                if (userStatus.toUpperCase() === 'VERIFIED') {
+                    localStorage.setItem('adminVerified', 'true');
+                } else {
+                    localStorage.setItem('adminVerified', 'false');
+                }
+            }
+        }
+    }
+
+    /**
+     * Sign in on a phone from the desktop Document Wallet's QR code. The
+     * one-time token is exchanged for a normal session; whoever was signed in
+     * on this device before is signed out first.
+     * @param {string} token - One-time token from the QR code / copied link
+     * @returns {Promise<Object>} Response shape: { status, token, data: { user } }
+     *   Errors: 401 = link expired, already used or invalid; 403 = account restricted
+     */
+    async redeemPhoneLink(token) {
+        const response = await httpClient.post(API_ENDPOINTS.PROFESSIONAL.PHONE_LINK_REDEEM, {
+            token,
+        }, { skipAuth: true });
+
+        clearAuthStorage();
+        this.persistProfessionalSession(response);
+
+        const user = response?.data?.user;
+        localStorage.setItem('userType', 'professional');
+        if (user?.email) localStorage.setItem('userEmail', user.email);
+        return response;
     }
 
     /**

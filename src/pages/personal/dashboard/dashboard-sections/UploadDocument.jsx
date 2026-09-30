@@ -58,24 +58,72 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     // On a laptop, converting a scan to PDF and moving it over is the exact
     // friction that motivated the mobile "Take Photo" button below — but a
     // desktop user has no way to discover that button exists on their phone.
-    // This nudge points them there via a QR code or a copyable link to this
-    // same page, so their phone's camera-capture flow is one scan away.
+    // This nudge points them there via a QR code or a copyable link. The link
+    // carries a one-time sign-in token (10 minutes, single use — see
+    // PhoneLink.jsx), so the phone opens straight into this professional's
+    // wallet instead of the login screen. It's refreshed before it expires;
+    // if it can't be created, the plain wallet link is the fallback.
     const walletUrl = `${window.location.origin}/personal/documents`;
+    const [phoneUrl, setPhoneUrl] = useState(null);
     const [qrDataUrl, setQrDataUrl] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
     useEffect(() => {
+        // The card only renders on desktop widths; don't mint tokens on a phone.
+        if (!window.matchMedia?.('(min-width: 1024px)').matches) return undefined;
+
         let cancelled = false;
-        QRCode.toDataURL(walletUrl, { width: 160, margin: 1, color: { dark: '#003366', light: '#ffffff' } })
-            .then((url) => { if (!cancelled) setQrDataUrl(url); })
-            .catch((error) => console.error('Failed to generate phone-handoff QR code:', error));
-        return () => { cancelled = true; };
+        let refreshTimer = null;
+        let refreshDueAt = 0;
+
+        const issuePhoneLink = async () => {
+            clearTimeout(refreshTimer);
+            try {
+                const response = await documentService.createPhoneLink();
+                const { token, expiresInSeconds } = response?.data || {};
+                if (!token) throw new Error('No phone link token returned');
+                if (cancelled) return;
+                setPhoneUrl(`${window.location.origin}/phone-link#t=${encodeURIComponent(token)}`);
+                // Swap in a fresh code a minute before this one stops working.
+                const refreshInMs = Math.max((Number(expiresInSeconds) || 600) - 60, 60) * 1000;
+                refreshDueAt = Date.now() + refreshInMs;
+                refreshTimer = setTimeout(issuePhoneLink, refreshInMs);
+            } catch (error) {
+                console.error('Failed to create phone sign-in link:', error);
+                if (!cancelled) setPhoneUrl(walletUrl);
+            }
+        };
+
+        // Timers stall while a laptop sleeps or the tab is in the background;
+        // coming back to a stale code would show one that no longer works.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && refreshDueAt && Date.now() >= refreshDueAt) {
+                issuePhoneLink();
+            }
+        };
+
+        issuePhoneLink();
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            cancelled = true;
+            clearTimeout(refreshTimer);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        if (!phoneUrl) return undefined;
+        let cancelled = false;
+        QRCode.toDataURL(phoneUrl, { width: 240, margin: 1, color: { dark: '#003366', light: '#ffffff' } })
+            .then((url) => { if (!cancelled) setQrDataUrl(url); })
+            .catch((error) => console.error('Failed to generate phone-handoff QR code:', error));
+        return () => { cancelled = true; };
+    }, [phoneUrl]);
+
     const handleCopyWalletLink = async () => {
         try {
-            await navigator.clipboard.writeText(walletUrl);
+            await navigator.clipboard.writeText(phoneUrl || walletUrl);
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 2000);
         } catch (error) {
@@ -588,10 +636,10 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                             <img
                                 src={qrDataUrl}
                                 alt="QR code to open Document Wallet on your phone"
-                                className="w-20 h-20 rounded-lg bg-white p-1 border border-blue-100 flex-shrink-0"
+                                className="w-24 h-24 rounded-lg bg-white p-1 border border-blue-100 flex-shrink-0"
                             />
                         ) : (
-                            <div className="w-20 h-20 rounded-lg bg-white border border-blue-100 flex-shrink-0 animate-pulse" />
+                            <div className="w-24 h-24 rounded-lg bg-white border border-blue-100 flex-shrink-0 animate-pulse" />
                         )}
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
@@ -599,8 +647,11 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                 Faster from your phone
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
-                                Scan this code to open Document Wallet on your phone, then use your camera to
-                                snap and upload directly — no scanning or file transfers needed.
+                                Scan this code to open your Document Wallet on your phone — already signed in —
+                                then use your camera to snap and upload directly. No scanning or file transfers needed.
+                            </p>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                                The code signs in once and refreshes every 10 minutes. Only share the link with yourself.
                             </p>
                             <button
                                 type="button"

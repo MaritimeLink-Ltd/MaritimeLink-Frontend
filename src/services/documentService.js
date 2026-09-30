@@ -140,6 +140,15 @@ class DocumentService {
     }
 
     /**
+     * One-time token for the desktop "Faster from your phone" QR code: opening
+     * it on a phone signs this professional in there (10 minutes, single use).
+     * @returns {Promise<Object>} { status, data: { token, expiresAt, expiresInSeconds } }
+     */
+    async createPhoneLink() {
+        return httpClient.post(API_ENDPOINTS.DOCUMENTS.CREATE_PHONE_LINK, {});
+    }
+
+    /**
      * Public: list documents for a share token (no auth).
      */
     async getSharedDocumentPack(shareToken) {

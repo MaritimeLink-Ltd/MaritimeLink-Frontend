@@ -134,6 +134,7 @@ import ManageSubscription from './pages/personal/dashboard/dashboard-sections/Ma
 import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
 import SharedDocumentPack from './pages/personal/SharedDocumentPack';
+import PhoneLink from './pages/personal/PhoneLink';
 import SharedProfile from './pages/personal/SharedProfile';
 import PublicProfile from './pages/public/PublicProfile';
 import { expireSessionAndRedirect, parseJwtExpiryMs } from './utils/sessionManager';
@@ -236,6 +237,7 @@ function App() {
           <Route path="/catering-medical-dashboard" element={<CateringMedicalDashboard />} />
           <Route path="/cv-resume" element={<CVResume />} />
           <Route path="/personal/documents/shared/:token" element={<SharedDocumentPack />} />
+          <Route path="/phone-link" element={<PhoneLink />} />
           <Route path="/shared/profile/:token" element={<SharedProfile />} />
           <Route path="/in/:slug" element={<PublicProfile />} />
 

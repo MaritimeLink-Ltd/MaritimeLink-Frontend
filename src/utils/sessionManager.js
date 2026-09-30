@@ -90,6 +90,9 @@ const PUBLIC_PATH_PREFIXES = [
     '/training-provider/forgot-password',
     '/training-provider/reset-password',
     '/recruiter/login',
+    // Phone sign-in link from the desktop Document Wallet QR code: a dead
+    // link must show its own message, not bounce to the login screen.
+    '/phone-link',
     // Publicly readable legal pages — an expiring session must not evict a reader.
     '/terms',
     '/privacy',
