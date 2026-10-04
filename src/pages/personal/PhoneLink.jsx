@@ -7,8 +7,14 @@ import { isAuthTokenExpired } from '../../utils/sessionManager';
 
 const WALLET_PATH = '/personal/documents';
 
-/** The one-time token rides in the fragment (#t=…), so it never reaches server or proxy logs. */
-const readToken = (hash) => new URLSearchParams((hash || '').replace(/^#/, '')).get('t');
+/**
+ * The one-time token rides in the fragment (#t=…), so it never reaches server
+ * or proxy logs. `f` is the folder chosen on the desktop upload screen.
+ */
+const readFragment = (hash) => {
+    const params = new URLSearchParams((hash || '').replace(/^#/, ''));
+    return { token: params.get('t'), folder: params.get('f') };
+};
 
 const hasProfessionalSession = () => {
     const token = localStorage.getItem('authToken');
@@ -17,8 +23,9 @@ const hasProfessionalSession = () => {
 
 /**
  * Landing page for the QR code / link on the desktop Document Wallet upload
- * screen. Exchanges the one-time token for a session and opens the wallet,
- * so the professional can photograph documents without signing in.
+ * screen. Exchanges the one-time token for a session and opens the upload
+ * screen on the same folder, so the professional can photograph documents
+ * straight away without signing in.
  */
 function PhoneLink() {
     const location = useLocation();
@@ -31,9 +38,13 @@ function PhoneLink() {
         if (redeemStarted.current) return;
         redeemStarted.current = true;
 
-        const token = readToken(location.hash);
+        const { token, folder } = readFragment(location.hash);
+        // Straight to the upload screen, on the folder picked on the desktop.
+        const destination = folder
+            ? `${WALLET_PATH}?upload=${encodeURIComponent(folder)}`
+            : `${WALLET_PATH}?upload=`;
         if (!token) {
-            if (hasProfessionalSession()) navigate(WALLET_PATH, { replace: true });
+            if (hasProfessionalSession()) navigate(destination, { replace: true });
             else setError('This link is incomplete. Scan the QR code again from your computer, or sign in.');
             return;
         }
@@ -42,12 +53,12 @@ function PhoneLink() {
             .redeemPhoneLink(token)
             .then((response) => {
                 syncTermsAcceptedFromProfile(response?.data?.user);
-                navigate(WALLET_PATH, { replace: true });
+                navigate(destination, { replace: true });
             })
             .catch((err) => {
                 // Scanned twice: the first scan already signed this phone in.
                 if (hasProfessionalSession()) {
-                    navigate(WALLET_PATH, { replace: true });
+                    navigate(destination, { replace: true });
                     return;
                 }
                 setError(
@@ -65,7 +76,7 @@ function PhoneLink() {
                 {!error ? (
                     <>
                         <Loader2 className="w-8 h-8 animate-spin text-[#003366] mx-auto mb-3" />
-                        <p className="text-sm text-slate-600">Opening your Document Wallet…</p>
+                        <p className="text-sm text-slate-600">Opening document upload…</p>
                     </>
                 ) : (
                     <>

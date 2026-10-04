@@ -95,6 +95,7 @@ export const API_ENDPOINTS = {
     MARK_REPORT_GENERATED: '/api/professional/documents/report-generated',
     CREATE_SHARE_LINK: '/api/professional/documents/share-link',
     CREATE_PHONE_LINK: '/api/professional/documents/phone-link',
+    PHONE_LINK_STATUS: (id) => `/api/professional/documents/phone-link/${encodeURIComponent(id)}`,
     SHARED_PACK: (token) =>
       `/api/professional/documents/shared/${encodeURIComponent(token)}`,
     SHARED_FILE: (token, documentId) =>

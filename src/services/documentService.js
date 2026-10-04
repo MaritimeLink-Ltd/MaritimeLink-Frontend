@@ -149,6 +149,15 @@ class DocumentService {
     }
 
     /**
+     * Whether a phone sign-in code is still usable (not used, not expired).
+     * @param {string} id - The `id` returned by createPhoneLink
+     * @returns {Promise<Object>} { status, data: { usable } }
+     */
+    async getPhoneLinkStatus(id) {
+        return httpClient.get(API_ENDPOINTS.DOCUMENTS.PHONE_LINK_STATUS(id));
+    }
+
+    /**
      * Public: list documents for a share token (no auth).
      */
     async getSharedDocumentPack(shareToken) {

@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Upload, FileText, Scan, CheckCircle, ArrowLeft, Loader2, Eye, ZoomIn, X, Camera, Smartphone, Link as LinkIcon } from 'lucide-react';
 import QRCode from 'qrcode';
 import toast, { Toaster } from 'react-hot-toast';
 import documentService from '../../../../services/documentService';
 import { UPLOAD_TAB_TO_API_CATEGORY } from '../../../../constants/documentWalletCategories';
 import CountrySelect from '../../../../components/common/CountrySelect';
+
+/** How often the desktop checks whether the phone has used the QR code. */
+const PHONE_LINK_CHECK_MS = 3000;
 
 const UploadDocument = ({ onBack, onCompletion, category }) => {
     const fileInputRef = useRef(null);
@@ -63,8 +66,17 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
     // PhoneLink.jsx), so the phone opens straight into this professional's
     // wallet instead of the login screen. It's refreshed before it expires;
     // if it can't be created, the plain wallet link is the fallback.
-    const walletUrl = `${window.location.origin}/personal/documents`;
-    const [phoneUrl, setPhoneUrl] = useState(null);
+    // The phone opens straight on the upload screen, on the folder picked here.
+    const activeFolderId = Object.keys(initialTabMap).find((id) => initialTabMap[id] === activeTab) || '';
+    const walletUrl = `${window.location.origin}/personal/documents?upload=${encodeURIComponent(activeFolderId)}`;
+    // null while loading, false when a code couldn't be created.
+    const [phoneToken, setPhoneToken] = useState(null);
+    const phoneUrl = useMemo(() => {
+        if (phoneToken === null) return null;
+        if (phoneToken === false) return walletUrl;
+        const fragment = new URLSearchParams({ t: phoneToken, f: activeFolderId });
+        return `${window.location.origin}/phone-link#${fragment.toString()}`;
+    }, [phoneToken, activeFolderId, walletUrl]);
     const [qrDataUrl, setQrDataUrl] = useState('');
     const [linkCopied, setLinkCopied] = useState(false);
 
@@ -73,41 +85,57 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
         if (!window.matchMedia?.('(min-width: 1024px)').matches) return undefined;
 
         let cancelled = false;
-        let refreshTimer = null;
+        let issuing = false;
+        let linkId = null;
         let refreshDueAt = 0;
 
         const issuePhoneLink = async () => {
-            clearTimeout(refreshTimer);
+            if (issuing) return;
+            issuing = true;
             try {
                 const response = await documentService.createPhoneLink();
-                const { token, expiresInSeconds } = response?.data || {};
+                const { id, token, expiresInSeconds } = response?.data || {};
                 if (!token) throw new Error('No phone link token returned');
                 if (cancelled) return;
-                setPhoneUrl(`${window.location.origin}/phone-link#t=${encodeURIComponent(token)}`);
+                linkId = id || null;
+                setPhoneToken(token);
                 // Swap in a fresh code a minute before this one stops working.
-                const refreshInMs = Math.max((Number(expiresInSeconds) || 600) - 60, 60) * 1000;
-                refreshDueAt = Date.now() + refreshInMs;
-                refreshTimer = setTimeout(issuePhoneLink, refreshInMs);
+                refreshDueAt = Date.now() + Math.max((Number(expiresInSeconds) || 600) - 60, 60) * 1000;
             } catch (error) {
                 console.error('Failed to create phone sign-in link:', error);
-                if (!cancelled) setPhoneUrl(walletUrl);
+                if (!cancelled) setPhoneToken(false);
+            } finally {
+                issuing = false;
             }
         };
 
-        // Timers stall while a laptop sleeps or the tab is in the background;
-        // coming back to a stale code would show one that no longer works.
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible' && refreshDueAt && Date.now() >= refreshDueAt) {
-                issuePhoneLink();
+        // Each code works once. The QR stays on screen after the phone has
+        // used it (to scan again for another folder, say), so check every few
+        // seconds and put up a fresh code as soon as this one is used — or
+        // about to expire. Only while the tab is visible: nobody scans a
+        // hidden tab, and coming back to it triggers a check straight away.
+        const checkPhoneLink = async () => {
+            if (cancelled || issuing || document.visibilityState !== 'visible') return;
+            if (Date.now() >= refreshDueAt) {
+                await issuePhoneLink();
+                return;
+            }
+            if (!linkId) return;
+            try {
+                const response = await documentService.getPhoneLinkStatus(linkId);
+                if (!cancelled && response?.data?.usable === false) await issuePhoneLink();
+            } catch {
+                // A failed check leaves the current code up; the next one retries.
             }
         };
 
         issuePhoneLink();
-        document.addEventListener('visibilitychange', handleVisibility);
+        const pollTimer = setInterval(checkPhoneLink, PHONE_LINK_CHECK_MS);
+        document.addEventListener('visibilitychange', checkPhoneLink);
         return () => {
             cancelled = true;
-            clearTimeout(refreshTimer);
-            document.removeEventListener('visibilitychange', handleVisibility);
+            clearInterval(pollTimer);
+            document.removeEventListener('visibilitychange', checkPhoneLink);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -651,7 +679,7 @@ const UploadDocument = ({ onBack, onCompletion, category }) => {
                                 then use your camera to snap and upload directly. No scanning or file transfers needed.
                             </p>
                             <p className="text-[11px] text-gray-400 mt-1">
-                                The code signs in once and refreshes every 10 minutes. Only share the link with yourself.
+                                Each code signs in once — a new one appears after you scan it. Only share the link with yourself.
                             </p>
                             <button
                                 type="button"

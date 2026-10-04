@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 vi.mock('../services/authService', () => ({
   default: { redeemPhoneLink: vi.fn() },
@@ -9,12 +9,17 @@ vi.mock('../services/authService', () => ({
 import authService from '../services/authService';
 import PhoneLink from '../pages/personal/PhoneLink';
 
+function WalletStub() {
+  const { search } = useLocation();
+  return <p>Document Wallet {search}</p>;
+}
+
 const renderAt = (entry) =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
         <Route path="/phone-link" element={<PhoneLink />} />
-        <Route path="/personal/documents" element={<p>Document Wallet</p>} />
+        <Route path="/personal/documents" element={<WalletStub />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -37,9 +42,17 @@ describe('PhoneLink', () => {
 
     renderAt({ pathname: '/phone-link', hash: '#t=abc123' });
 
-    expect(await screen.findByText('Document Wallet')).toBeInTheDocument();
+    expect(await screen.findByText(/Document Wallet/)).toBeInTheDocument();
     expect(authService.redeemPhoneLink).toHaveBeenCalledOnce();
     expect(authService.redeemPhoneLink).toHaveBeenCalledWith('abc123');
+  });
+
+  it('opens the upload screen on the folder chosen on the desktop', async () => {
+    authService.redeemPhoneLink.mockResolvedValue({ token: 't', data: { user: { id: 'p1' } } });
+
+    renderAt({ pathname: '/phone-link', hash: '#t=abc123&f=medical' });
+
+    expect(await screen.findByText('Document Wallet ?upload=medical')).toBeInTheDocument();
   });
 
   it('shows a sign-in option when the link has expired', async () => {
@@ -60,6 +73,6 @@ describe('PhoneLink', () => {
 
     renderAt({ pathname: '/phone-link', hash: '#t=used' });
 
-    await waitFor(() => expect(screen.getByText('Document Wallet')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Document Wallet/)).toBeInTheDocument());
   });
 });

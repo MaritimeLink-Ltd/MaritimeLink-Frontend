@@ -165,6 +165,19 @@ const DocumentsWallet = () => {
         return documents.filter((d) => d.category && !WALLET_EXCLUDED_CATEGORIES.has(d.category));
     }, [documents]);
 
+    // `?upload=<folder>` opens the upload screen on that folder — it's where
+    // the desktop upload screen's QR code sends the phone (see PhoneLink.jsx).
+    useEffect(() => {
+        const folderId = new URLSearchParams(location.search).get('upload');
+        if (folderId === null) return;
+        const folder = categoryDefinitions.find((definition) => definition.id === folderId);
+        setUploadCategory(folder || null);
+        setView('upload');
+        // Drop the parameter so Back and refresh behave like a normal visit.
+        navigate(location.pathname, { replace: true, state: location.state });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.search]);
+
     useEffect(() => {
         if (isLoading || signupPromptHandledRef.current) return;
 
