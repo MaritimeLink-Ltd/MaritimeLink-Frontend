@@ -24,7 +24,8 @@ import authService from '../../../../services/authService';
 import { API_CONFIG } from '../../../../config/api.config';
 import { getDocumentDisplayCategory } from '../../../../utils/documentCategory';
 import { summarizeExpiry } from '../../../../utils/documentStatus';
-import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { isProfessionalPremium } from '../../../../utils/isPremiumTier';
+import { PROFESSIONAL_SUBSCRIPTIONS_HIDDEN } from '../../../../constants/professionalMembership';
 import ShareDocumentsModal from '../../../../components/profile/ShareDocumentsModal';
 import { useKycGuard } from '../../../../context/KycContext';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
@@ -295,7 +296,7 @@ const DocumentsWallet = () => {
     };
 
     const exportDocumentPack = async () => {
-        if (!isPremiumTier(membershipTier)) {
+        if (!isProfessionalPremium(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
@@ -415,7 +416,7 @@ const DocumentsWallet = () => {
     };
 
     const shareSecureLink = () => {
-        if (!isPremiumTier(membershipTier)) {
+        if (!isProfessionalPremium(membershipTier)) {
             setShowPremiumModal(true);
             return;
         }
@@ -500,7 +501,7 @@ const DocumentsWallet = () => {
                             onClick={handleExportDocumentPack}
                             className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
                         >
-                            <Crown size={14} />
+                            {!PROFESSIONAL_SUBSCRIPTIONS_HIDDEN && <Crown size={14} />}
                             <span className="hidden sm:inline">Export Document Pack</span>
                             <span className="sm:hidden">Export Pack</span>
                         </button>
@@ -508,7 +509,7 @@ const DocumentsWallet = () => {
                             onClick={handleShareSecureLink}
                             className="flex items-center justify-center gap-2 bg-[#003366] text-white px-4 py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-blue-900 transition-colors min-h-[44px]"
                         >
-                            <Crown size={14} />
+                            {!PROFESSIONAL_SUBSCRIPTIONS_HIDDEN && <Crown size={14} />}
                             <span className="hidden sm:inline">Share Secure Link</span>
                             <span className="sm:hidden">Share Link</span>
                         </button>

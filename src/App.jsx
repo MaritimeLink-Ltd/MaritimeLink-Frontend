@@ -131,6 +131,7 @@ import Chats from './pages/personal/dashboard/dashboard-sections/Chats';
 import Profile from './pages/personal/dashboard/dashboard-sections/Profile';
 import ChangePassword from './pages/personal/dashboard/dashboard-sections/ChangePassword';
 import ManageSubscription from './pages/personal/dashboard/dashboard-sections/ManageSubscription';
+import { PROFESSIONAL_SUBSCRIPTIONS_HIDDEN } from './constants/professionalMembership';
 import TermsConditions from './pages/personal/dashboard/dashboard-sections/TermsConditions';
 import PrivacyPolicy from './pages/personal/dashboard/dashboard-sections/PrivacyPolicy';
 import SharedDocumentPack from './pages/personal/SharedDocumentPack';
@@ -373,7 +374,11 @@ function App() {
             <Route path="/personal/profile" element={<Profile />} />
             <Route path="/personal/settings" element={<Profile />} />
             <Route path="/personal/profile/change-password" element={<ChangePassword />} />
-            <Route path="/personal/profile/manage-subscription" element={<ManageSubscription />} />
+            {/* Hidden while professionals are free — constants/professionalMembership.js */}
+            <Route
+              path="/personal/profile/manage-subscription"
+              element={PROFESSIONAL_SUBSCRIPTIONS_HIDDEN ? <Navigate to="/personal/profile" replace /> : <ManageSubscription />}
+            />
             <Route path="/personal/terms" element={<TermsConditions />} />
             <Route path="/personal/privacy" element={<PrivacyPolicy />} />
           </Route>

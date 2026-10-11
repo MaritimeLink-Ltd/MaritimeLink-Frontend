@@ -6,7 +6,7 @@ import authService from '../../../../services/authService';
 import resumeService from '../../../../services/resumeService';
 import ShareProfileModal from '../../../../components/profile/ShareProfileModal';
 import publicProfileService from '../../../../services/publicProfileService';
-import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { isProfessionalPremium } from '../../../../utils/isPremiumTier';
 import VerificationBadge from '../../../../components/common/VerificationBadge';
 import { isIdentityVerified } from '../../../../utils/kycStatus';
 import { resolveProfilePhotoUrl } from '../../../../utils/profilePhoto';
@@ -157,7 +157,7 @@ const CareerSummary = () => {
         : '';
 
     /** Secure share links are Premium-only, matching the document wallet share flow. */
-    const isPremium = isPremiumTier(
+    const isPremium = isProfessionalPremium(
         professional?.tier || professional?.membershipTier || professional?.membership?.tier,
     );
 

@@ -14,7 +14,7 @@ import {
 import userSupportService from '../../services/userSupportService';
 import conversationService from '../../services/conversationService';
 
-const DEFAULT_CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
     'Account Access',
     'Subscription',
     'Billing',
@@ -82,6 +82,7 @@ function SupportCenterSection({
     priorityDefault = 'LOW',
     categoryOptions = DEFAULT_CATEGORIES,
     caseLabel = 'Support case',
+    priorityNote = 'Priority is assigned automatically based on your account type and subscription tier.',
 }) {
     const navigate = useNavigate();
     const [subject, setSubject] = useState('');
@@ -303,7 +304,7 @@ function SupportCenterSection({
                             </div>
 
                             <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs text-blue-800">
-                                Priority is assigned automatically based on your account type and subscription tier.
+                                {priorityNote}
                             </div>
 
                             <button

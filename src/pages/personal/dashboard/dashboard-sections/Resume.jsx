@@ -9,7 +9,7 @@ import ResumeExportMenu from '../../../../components/resume/ResumeExportMenu';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
-import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { isProfessionalPremium } from '../../../../utils/isPremiumTier';
 import { shareOrDownloadFile } from '../../../../utils/shareFile';
 import { formatDisplayDate, formatDateRange } from '../../../../utils/formatDate';
 import { buildSeaServiceExperience, formatTotalSeaTimeLabel } from '../../../../utils/seaServiceExperience';
@@ -469,7 +469,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
     const handleDownloadPDF = () => {
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
-            if (!isPremiumTier(membershipTier)) {
+            if (!isProfessionalPremium(membershipTier)) {
                 setShowPremiumModal(true);
                 return;
             }
@@ -479,7 +479,7 @@ const Resume = ({ isReviewMode = false, defaultUserType = 'officer', onEdit, for
 
     const handleShareResume = () => {
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
-            if (!isPremiumTier(membershipTier)) {
+            if (!isProfessionalPremium(membershipTier)) {
                 setShowPremiumModal(true);
                 return;
             }

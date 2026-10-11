@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { FaStar } from 'react-icons/fa';
 import resumeService from '../../services/resumeService';
 import authService from '../../services/authService';
-import { isPremiumTier } from '../../utils/isPremiumTier';
+import { isProfessionalPremium } from '../../utils/isPremiumTier';
 import { formatDisplayDate, formatDateRange } from '../../utils/formatDate';
 import CountryDisplay from '../../components/common/CountryDisplay';
 import { useKycGuard } from '../../context/KycContext';
@@ -359,7 +359,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const handleDownloadPDF = () => {
         if (isReadOnly) return;
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
-            if (!isPremiumTier(membershipTier)) {
+            if (!isProfessionalPremium(membershipTier)) {
                 setShowPremiumModal(true);
                 return;
             }
@@ -370,7 +370,7 @@ const CVResume = ({ isReadOnly = false, resumeData = null }) => {
     const handleShareResume = () => {
         if (isReadOnly) return;
         guardRestrictedAction(KYC_ACTIONS.EXPORT_RESUME, () => {
-            if (!isPremiumTier(membershipTier)) {
+            if (!isProfessionalPremium(membershipTier)) {
                 setShowPremiumModal(true);
                 return;
             }

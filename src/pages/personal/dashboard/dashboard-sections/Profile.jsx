@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, Loader2, MessageSquare } from 'lucide-react';
+import { Lock, CreditCard, Mail, Send, FileText, Shield, LogOut, Trash2, ChevronRight, Crown, X, Check, AlertTriangle, Camera, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import resumeService from '../../../../services/resumeService';
 import authService from '../../../../services/authService';
-import SupportCenterSection from '../../../../components/support/SupportCenterSection';
+import SupportCenterSection, { DEFAULT_CATEGORIES as SUPPORT_CATEGORIES } from '../../../../components/support/SupportCenterSection';
+import { PROFESSIONAL_SUBSCRIPTIONS_HIDDEN } from '../../../../constants/professionalMembership';
 import TrialCountdownCard from '../../../../components/TrialCountdownCard';
 import toast, { Toaster } from 'react-hot-toast';
-import { isPremiumTier } from '../../../../utils/isPremiumTier';
+import { isProfessionalPremium } from '../../../../utils/isPremiumTier';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF } from '../../../../constants/contact';
 import {
+    FREE_PLAN_HIGHLIGHTS,
+    PREMIUM_PLAN_HIGHLIGHTS,
     formatMembershipPlanName,
     formatMembershipPrice,
     getPlanHighlights,
     isMembershipPlanCurrent,
 } from '../../../../utils/membershipPlans';
+
+/** Everything a professional gets — free and premium features in one list, no plan names. */
+const PROFESSIONAL_FEATURES = [
+    ...FREE_PLAN_HIGHLIGHTS,
+    ...PREMIUM_PLAN_HIGHLIGHTS.filter((feature) => !/^everything in/i.test(feature)),
+];
 
 function resolveProfessionalId() {
     const direct = localStorage.getItem('professionalId');
@@ -30,6 +39,7 @@ const Profile = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [showPremiumPlans, setShowPremiumPlans] = useState(false);
+    const [showFeatures, setShowFeatures] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -406,19 +416,21 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        {/* Maritime Premium Card */}
-                        <div
-                            onClick={() => setShowPremiumPlans(true)}
-                            className="bg-[#003971] rounded-xl p-4 sm:p-5 text-white cursor-pointer hover:bg-[#003971]/90 transition-colors relative"
-                        >
-                            <div className="flex items-center gap-2 mb-3">
-                                <Crown size={20} />
-                                <h4 className="font-semibold text-base">Maritime Premium</h4>
+                        {/* Maritime Premium Card — hidden while professionals are free */}
+                        {!PROFESSIONAL_SUBSCRIPTIONS_HIDDEN && (
+                            <div
+                                onClick={() => setShowPremiumPlans(true)}
+                                className="bg-[#003971] rounded-xl p-4 sm:p-5 text-white cursor-pointer hover:bg-[#003971]/90 transition-colors relative"
+                            >
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Crown size={20} />
+                                    <h4 className="font-semibold text-base">Maritime Premium</h4>
+                                </div>
+                                <p className="text-sm mb-1">{membershipTier === 'PRO' ? 'Active membership plan' : 'No active membership plan'}</p>
+                                <p className="text-sm opacity-90">{membershipTier === 'PRO' ? 'Maritime Premium is active' : 'Click to see available plans'}</p>
+                                <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2" size={20} />
                             </div>
-                            <p className="text-sm mb-1">{membershipTier === 'PRO' ? 'Active membership plan' : 'No active membership plan'}</p>
-                            <p className="text-sm opacity-90">{membershipTier === 'PRO' ? 'Maritime Premium is active' : 'Click to see available plans'}</p>
-                            <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2" size={20} />
-                        </div>
+                        )}
                     </div>
 
                     {/* Right Column - Settings Options */}
@@ -438,19 +450,35 @@ const Profile = () => {
                             </button>
                         </div>
 
-                        <div className="mb-8">
-                            <p className="text-xs text-gray-400 mb-3">Subscription</p>
-                            <button
-                                onClick={() => navigate('/personal/profile/manage-subscription')}
-                                className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <CreditCard size={16} className="text-[#003971]" />
-                                    <span className="text-gray-800 text-sm">Manage Subscription</span>
-                                </div>
-                                <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
-                            </button>
-                        </div>
+                        {PROFESSIONAL_SUBSCRIPTIONS_HIDDEN ? (
+                            <div className="mb-8">
+                                <p className="text-xs text-gray-400 mb-3">Features</p>
+                                <button
+                                    onClick={() => setShowFeatures(true)}
+                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Sparkles size={16} className="text-[#003971]" />
+                                        <span className="text-gray-800 text-sm">Your features</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="mb-8">
+                                <p className="text-xs text-gray-400 mb-3">Subscription</p>
+                                <button
+                                    onClick={() => navigate('/personal/profile/manage-subscription')}
+                                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard size={16} className="text-[#003971]" />
+                                        <span className="text-gray-800 text-sm">Manage Subscription</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
+                                </button>
+                            </div>
+                        )}
 
                         {/* Contact Section */}
                         <div className="mb-8">
@@ -539,6 +567,31 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Features — what every professional gets while the app is free */}
+            {showFeatures && (
+                <>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowFeatures(false)} />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 flex items-center justify-between">
+                                <h2 className="text-xl font-semibold text-gray-800">Your features</h2>
+                                <button onClick={() => setShowFeatures(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X size={22} className="text-gray-600" />
+                                </button>
+                            </div>
+                            <ul className="p-5 space-y-3">
+                                {PROFESSIONAL_FEATURES.map((feature) => (
+                                    <li key={feature} className="flex items-start gap-2">
+                                        <Check size={18} className="text-green-500 flex-shrink-0 mt-0.5" />
+                                        <span className="text-sm text-gray-700">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* Premium Plans Modal */}
             {showPremiumPlans && (
@@ -714,9 +767,17 @@ const Profile = () => {
                                 <SupportCenterSection
                                     basePath="professional"
                                     title="Professional Support"
-                                    description="Tell us what you need help with. Premium professionals default to High priority so urgent issues get seen first."
-                                    priorityDefault={isPremiumTier(membershipTier) ? 'HIGH' : 'LOW'}
+                                    description={
+                                        PROFESSIONAL_SUBSCRIPTIONS_HIDDEN
+                                            ? 'Tell us what you need help with, and we will get back to you as soon as possible.'
+                                            : 'Tell us what you need help with. Premium professionals default to High priority so urgent issues get seen first.'
+                                    }
+                                    priorityDefault={isProfessionalPremium(membershipTier) ? 'HIGH' : 'LOW'}
                                     caseLabel="support case"
+                                    {...(PROFESSIONAL_SUBSCRIPTIONS_HIDDEN && {
+                                        categoryOptions: SUPPORT_CATEGORIES.filter((category) => category !== 'Subscription'),
+                                        priorityNote: 'Priority is assigned automatically based on your account type.',
+                                    })}
                                 />
                             </div>
                         </div>
