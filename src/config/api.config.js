@@ -261,6 +261,16 @@ export const API_ENDPOINTS = {
   // Admin Endpoints
   ADMIN: {
     LOGIN: '/api/admin/login',
+    // Admin team (super admins) and invitation acceptance (public)
+    TEAM: '/api/admin/team',
+    TEAM_INVITATIONS: '/api/admin/team/invitations',
+    TEAM_INVITATION_RESEND: (id) => `/api/admin/team/invitations/${id}/resend`,
+    TEAM_INVITATION: (id) => `/api/admin/team/invitations/${id}`,
+    TEAM_MEMBER: (id) => `/api/admin/team/members/${id}`,
+    TEAM_MEMBER_DEACTIVATE: (id) => `/api/admin/team/members/${id}/deactivate`,
+    TEAM_MEMBER_REACTIVATE: (id) => `/api/admin/team/members/${id}/reactivate`,
+    INVITATION: (token) => `/api/admin/invitations/${token}`,
+    INVITATION_ACCEPT: (token) => `/api/admin/invitations/${token}/accept`,
     SETTINGS: '/api/admin/settings',
     SETTINGS_PROFILE: '/api/admin/settings/profile',
     SETTINGS_PASSWORD: '/api/admin/settings/password',

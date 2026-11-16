@@ -6,6 +6,7 @@
 import httpClient from '../utils/httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
 import { clearAuthStorage } from '../utils/sessionManager';
+import { setAdminRole } from '../utils/adminPermissions';
 import { mergeAuthUserProfile, syncKycSubmittedFlag, syncStage2KycFlags } from '../utils/kycStatus';
 import { markTermsAcceptedLocally } from '../utils/termsAcceptance';
 import recruiterSettingsService from './recruiterSettingsService';
@@ -915,6 +916,8 @@ class AuthService {
                 localStorage.setItem('authToken', token);
                 localStorage.setItem('adminUserType', 'admin');
                 localStorage.removeItem('profileImage');
+                // Role decides which admin areas are shown (Team, revenue…).
+                setAdminRole(response?.data?.user?.role || null);
                 emitAuthTokenChanged();
             }
 

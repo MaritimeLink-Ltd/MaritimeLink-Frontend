@@ -21,6 +21,7 @@ import { getApiErrorMessage, isSuccessfulMutationResponse } from '../../../../ut
 import { getCourseCurrencySymbol } from '../../../../utils/courseCurrency';
 import { formatSessionDateRange } from '../../../../utils/formatDate';
 import { useKycGuard } from '../../../../context/KycContext';
+import { useAdminPermissions } from '../../../../utils/adminPermissions';
 import { KYC_ACTIONS } from '../../../../constants/kycRestrictedActions';
 
 const statusPillStyles = {
@@ -302,6 +303,9 @@ export default function CourseDetail() {
 
   const isAdminMarketplaceCourse =
     location.pathname.includes('/admin/marketplace');
+  // In the admin panel, Operations Managers don't see takings.
+  const { canViewFinancials } = useAdminPermissions();
+  const showRevenue = !isAdminMarketplaceCourse || canViewFinancials;
 
   const canManageCourseActions = useMemo(() => {
     if (!courseSummary) return false;
@@ -652,7 +656,7 @@ export default function CourseDetail() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+      <div className={`grid grid-cols-1 ${showRevenue ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 mb-5`}>
         <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
             <Users className="h-5 w-5 text-blue-600" />
@@ -692,6 +696,7 @@ export default function CourseDetail() {
             </p>
           </div>
         </div>
+        {showRevenue && (
         <div className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
             <DollarSign className="h-5 w-5 text-emerald-600" />
@@ -705,6 +710,7 @@ export default function CourseDetail() {
             </p>
           </div>
         </div>
+        )}
       </div>
 
       {/* Description + Sessions */}

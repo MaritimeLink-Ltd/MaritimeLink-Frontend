@@ -25,6 +25,7 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import adminDashboardService from '../../../services/adminDashboardService';
+import { useAdminPermissions } from '../../../utils/adminPermissions';
 import { DASHBOARD_LIST_PAGE_SIZE } from '../../../constants/dashboardPagination';
 
 function formatAdminCurrencyGbp(value, currency = 'GBP') {
@@ -93,9 +94,14 @@ function mapAlertSeverityColor(severity) {
 
 function reviewQueueItemPath(queueType) {
     const t = String(queueType || '').toUpperCase();
-    if (t === 'PROFESSIONAL_KYC') return '/admin/accounts';
+    // Account reviews happen on Accounts; ID (KYC) checks on Compliance.
+    if (t === 'PROFESSIONAL_KYC' || t === 'PROFESSIONAL_ACCOUNT' || t === 'RECRUITER_VERIFICATION') {
+        return '/admin/accounts';
+    }
     return '/admin/compliance';
 }
+
+const plural = (n, word) => `${n} ${word}${Number(n) === 1 ? '' : 's'}`;
 
 function formatAdminExpiringTimeframe(tf) {
     const t = String(tf || '').toLowerCase();
@@ -110,7 +116,11 @@ function AdminDashboard() {
     const navigate = useNavigate();
     const [adminStats, setAdminStats] = useState({
         pendingTotal: 0,
+        pendingAccountReviews: 0,
+        pendingIdChecks: 0,
         flaggedIssues: 0,
+        flaggedBreakdown: { reports: 0, content: 0, accounts: 0 },
+        rejectedAccounts: 0,
         expiringCount: 0,
         expiringTimeframe: '30d',
         expiringExpiredLookbackDays: 365,
@@ -127,6 +137,7 @@ function AdminDashboard() {
         providers: 0,
         recruiters: 0,
         professionals: 0,
+        unfinishedSignups: 0,
     });
     const [activityLoading, setActivityLoading] = useState(true);
     const [activityError, setActivityError] = useState(null);
@@ -167,10 +178,15 @@ function AdminDashboard() {
     const [revenueError, setRevenueError] = useState(null);
     const [financeAnalyticsError, setFinanceAnalyticsError] = useState(null);
     const [reviewQueueList, setReviewQueueList] = useState([]);
+    const [reviewQueueTotal, setReviewQueueTotal] = useState(null);
     const [systemAlerts, setSystemAlerts] = useState([]);
     const [queuesLoading, setQueuesLoading] = useState(true);
     const [queuesError, setQueuesError] = useState(null);
     const [reviewVisibleCount, setReviewVisibleCount] = useState(DASHBOARD_LIST_PAGE_SIZE);
+
+    // Operations Managers don't see money: the revenue column is hidden and
+    // its data isn't requested (the API refuses it for them as well).
+    const { canViewFinancials } = useAdminPermissions();
 
     useEffect(() => {
         let cancelled = false;
@@ -189,8 +205,12 @@ function AdminDashboard() {
                     await Promise.allSettled([
                         adminDashboardService.getDashboardStats(),
                         adminDashboardService.getDashboardActivity(),
-                        adminDashboardService.getDashboardRevenue(),
-                        adminDashboardService.getRevenueAnalytics(),
+                        canViewFinancials
+                            ? adminDashboardService.getDashboardRevenue()
+                            : Promise.resolve(null),
+                        canViewFinancials
+                            ? adminDashboardService.getRevenueAnalytics()
+                            : Promise.resolve(null),
                         adminDashboardService.getDashboardQueues(),
                     ]);
 
@@ -199,9 +219,18 @@ function AdminDashboard() {
                     if (!cancelled && s && typeof s === 'object') {
                         const pending = s.pendingApprovals || {};
                         const exp = s.expiringCompliance || {};
+                        const fb = s.flaggedBreakdown || {};
                         setAdminStats({
                             pendingTotal: Number(pending.total) || 0,
+                            pendingAccountReviews: Number(pending.accountReviews) || 0,
+                            pendingIdChecks: Number(pending.idChecks) || 0,
                             flaggedIssues: Number(s.flaggedIssues) || 0,
+                            flaggedBreakdown: {
+                                reports: Number(fb.reports) || 0,
+                                content: Number(fb.content) || 0,
+                                accounts: Number(fb.accounts) || 0,
+                            },
+                            rejectedAccounts: Number(s.rejectedAccounts) || 0,
                             expiringCount: Number(exp.count) || 0,
                             expiringTimeframe: exp.timeframe || '30d',
                             expiringExpiredLookbackDays: Number(exp.expiredLookbackDays) || 365,
@@ -231,6 +260,7 @@ function AdminDashboard() {
                             providers: Number(ub.providers) || 0,
                             recruiters: Number(ub.recruiters) || 0,
                             professionals: Number(ub.professionals) || 0,
+                            unfinishedSignups: Number(ub.unfinishedSignups) || 0,
                         });
                     }
                 } else if (!cancelled) {
@@ -312,6 +342,9 @@ function AdminDashboard() {
                     const sa = d?.systemAlerts;
                     if (!cancelled) {
                         setReviewQueueList(Array.isArray(rq) ? rq : []);
+                        setReviewQueueTotal(
+                            Number.isFinite(Number(d?.reviewQueueTotal)) ? Number(d.reviewQueueTotal) : null
+                        );
                         setSystemAlerts(Array.isArray(sa) ? sa : []);
                     }
                 } else if (!cancelled) {
@@ -352,15 +385,33 @@ function AdminDashboard() {
             ? '…'
             : `Past ${adminStats.expiringExpiredLookbackDays}d expired · next ${formatAdminExpiringTimeframe(adminStats.expiringTimeframe)}`;
 
+        const pendingBadge = adminStatsLoading
+            ? '…'
+            : adminStats.pendingTotal === 0
+                ? 'None waiting'
+                : `${plural(adminStats.pendingAccountReviews, 'account')} · ${plural(adminStats.pendingIdChecks, 'ID check')}`;
+        // Open the page where the waiting items are handled.
+        const pendingPath =
+            adminStats.pendingIdChecks > 0 || adminStats.pendingAccountReviews === 0
+                ? '/admin/compliance'
+                : '/admin/accounts';
+        const fb = adminStats.flaggedBreakdown;
+        const flaggedPath =
+            fb.reports > 0 || adminStats.flaggedIssues === 0
+                ? '/admin/reports'
+                : fb.accounts > 0
+                    ? '/admin/accounts'
+                    : '/admin/marketplace';
+
         return [
             {
                 id: 1,
                 icon: Users,
                 value: fmt(adminStats.pendingTotal),
                 label: 'Pending Approvals',
-                badge: null,
+                badge: pendingBadge,
                 gradient: 'from-[#1e4c7a] via-[#2563a8] to-[#3b7ab8]',
-                path: '/admin/compliance',
+                path: pendingPath,
             },
             {
                 id: 2,
@@ -369,7 +420,7 @@ function AdminDashboard() {
                 label: 'Flagged Issues',
                 badge: flaggedBadge,
                 gradient: 'from-[#ef4444] via-[#f87171] to-[#fca5a5]',
-                path: '/admin/flagged-accounts',
+                path: flaggedPath,
             },
             {
                 id: 3,
@@ -578,12 +629,12 @@ function AdminDashboard() {
                             {activityError}
                         </p>
                     )}
-                    {revenueError && (
+                    {canViewFinancials && revenueError && (
                         <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                             {revenueError}
                         </p>
                     )}
-                    {financeAnalyticsError && (
+                    {canViewFinancials && financeAnalyticsError && (
                         <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                             {financeAnalyticsError}
                         </p>
@@ -651,7 +702,7 @@ function AdminDashboard() {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column - Platform Activity & Review Queue */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className={`${canViewFinancials ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}>
                     {/* Platform Activity */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-6">
@@ -704,6 +755,12 @@ function AdminDashboard() {
                                 </div>
                             ))}
                         </div>
+                        {!activityLoading && adminUserBreakdown.unfinishedSignups > 0 && (
+                            <p className="mt-3 text-xs text-gray-500">
+                                Not counted: {plural(adminUserBreakdown.unfinishedSignups, 'sign-up')} that never
+                                confirmed an email address.
+                            </p>
+                        )}
                     </div>
 
                     {/* Review Queue */}
@@ -715,7 +772,7 @@ function AdminDashboard() {
                             <div className="flex items-center justify-between mb-6 shrink-0">
                                 <h2 className="text-lg font-bold text-gray-900">Review Queue</h2>
                                 <span className="text-xs font-bold text-[#1e5a8f] bg-blue-50 px-3 py-1.5 rounded-full">
-                                    {queuesLoading ? '…' : `${reviewQueueList.length} pending`}
+                                    {queuesLoading ? '…' : `${reviewQueueTotal ?? reviewQueueList.length} pending`}
                                 </span>
                             </div>
 
@@ -826,9 +883,9 @@ function AdminDashboard() {
                             <p className="text-sm text-gray-500">
                                 {adminStatsLoading
                                     ? 'Loading…'
-                                    : adminStats.flaggedIssues === 0
-                                        ? 'No open issues'
-                                        : `View all ${adminStats.flaggedIssues} issue${adminStats.flaggedIssues === 1 ? '' : 's'}`}
+                                    : adminStats.rejectedAccounts === 0
+                                        ? 'No rejected accounts'
+                                        : `View ${plural(adminStats.rejectedAccounts, 'rejected account')}`}
                             </p>
                         </button>
 
@@ -848,7 +905,8 @@ function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Right Column - Revenue */}
+                {/* Right Column - Revenue (only for roles that may see money) */}
+                {canViewFinancials && (
                 <div className={`space-y-6 ${revenueLoading ? 'opacity-90' : ''}`}>
                     {/* Subscription Revenue Card — professionals + recruiters */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -968,7 +1026,7 @@ function AdminDashboard() {
                             </div>
 
                             <h3 className="text-xs font-bold text-gray-400 tracking-wide mb-4 mt-8">
-                                BY TRAINING PROVIDER
+                                BY TRAINING PROVIDER · ALL TIME
                             </h3>
                             {trainerRevenueRows.length === 0 && !revenueLoading ? (
                                 <p className="text-sm text-gray-500">No trainer booking revenue yet.</p>
@@ -1019,6 +1077,7 @@ function AdminDashboard() {
                         </div>
                     </div>
                 </div>
+                )}
             </div>
         </div>
     );

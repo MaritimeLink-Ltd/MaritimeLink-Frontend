@@ -60,7 +60,12 @@ class HttpClient {
             // Only tear down the session when the client can tell the token is gone or expired.
             // Some APIs return 401 for "forbidden for this role" while the JWT is still valid; treating
             // that as a global logout was logging admins out when using chat and similar endpoints.
-            const shouldInvalidateSession = !token || isAuthTokenExpired(token);
+            // The API also marks a token it can no longer accept (expired, or signed
+            // with a key that has since been rotated) with code INVALID_SESSION.
+            const serverRejectedSession =
+                typeof data === 'object' && data !== null && data.code === 'INVALID_SESSION';
+            const shouldInvalidateSession =
+                !token || isAuthTokenExpired(token) || serverRejectedSession;
 
             if (shouldInvalidateSession) {
                 const message = expireSessionAndRedirect();
@@ -78,6 +83,20 @@ class HttpClient {
                 'You are not authorized to perform this action.';
             const error = new Error(apiMessage);
             error.status = 401;
+            error.data = data;
+            throw error;
+        }
+
+        // A super admin deactivated this admin account: end the session at once.
+        if (
+            response.status === 403 &&
+            typeof data === 'object' &&
+            data !== null &&
+            data.code === 'ADMIN_ACCOUNT_DISABLED'
+        ) {
+            expireSessionAndRedirect(data.message);
+            const error = new Error(data.message || 'This admin account has been deactivated.');
+            error.status = 403;
             error.data = data;
             throw error;
         }

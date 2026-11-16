@@ -5,6 +5,9 @@ import {
     isSuperAdminProtectedPath,
     isPlatformAdminSession,
 } from '../../../../utils/sessionManager';
+import { setAdminRole, useAdminPermissions } from '../../../../utils/adminPermissions';
+import httpClient from '../../../../utils/httpClient';
+import { API_ENDPOINTS } from '../../../../config/api.config';
 import {
     isPlaceholderProfilePhoto,
     resolveProfilePhotoUrl,
@@ -25,7 +28,8 @@ import {
     LogOut,
     MessageSquare,
     Flag,
-    Megaphone
+    Megaphone,
+    ShieldCheck
 } from 'lucide-react';
 
 function AdminLayout() {
@@ -128,6 +132,37 @@ function AdminLayout() {
         };
     }, [location.pathname, navigate]);
 
+    const { canManageTeam, canViewFinancials } = useAdminPermissions();
+
+    // Refresh the admin's role from the server (a super admin may have changed
+    // it). The API enforces the same rules; this only keeps the menu accurate.
+    useEffect(() => {
+        if (!isSuperAdminProtectedPath(location.pathname) || !localStorage.getItem('authToken')) return;
+        let cancelled = false;
+        httpClient
+            .get(API_ENDPOINTS.ADMIN.SETTINGS)
+            .then((response) => {
+                const role = response?.data?.profile?.role;
+                if (!cancelled && role) setAdminRole(role);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+        // Once per admin session; the role rarely changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Pages a role may not open: send the person back to the dashboard.
+    useEffect(() => {
+        const path = location.pathname;
+        if (path.startsWith('/admin/team') && !canManageTeam) {
+            navigate('/admin-dashboard', { replace: true });
+        } else if (path.startsWith('/admin/transaction-history') && !canViewFinancials) {
+            navigate('/admin-dashboard', { replace: true });
+        }
+    }, [location.pathname, canManageTeam, canViewFinancials, navigate]);
+
     const handleLogout = () => {
         authService.logout();
         navigate('/');
@@ -146,7 +181,9 @@ function AdminLayout() {
     ];
 
     const settingsItems = [
-        { name: 'Profile Settings', path: '/admin/profile', icon: UserIcon }
+        { name: 'Profile Settings', path: '/admin/profile', icon: UserIcon },
+        // Admin team management — super admins only.
+        ...(canManageTeam ? [{ name: 'Team', path: '/admin/team', icon: ShieldCheck }] : []),
     ];
 
     return (

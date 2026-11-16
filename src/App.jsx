@@ -34,6 +34,8 @@ import CateringMedicalDashboard from './pages/personal/catering-medical/Catering
 import PersonalDashboard from './pages/personal/dashboard/PersonalDashboard';
 import CVResume from './pages/personal/CVResume';
 import AdminLogin from './pages/admin/auth/AdminLogin';
+import AcceptAdminInvite from './pages/admin/auth/AcceptAdminInvite';
+import AdminTeam from './pages/admin/admin-dashboard/Team';
 import AdminForgotPassword from './pages/admin/auth/AdminForgotPassword';
 // Placeholder for recruiter and training provider forgot password
 import ForgotPassword from './pages/personal/auth/ForgotPassword';
@@ -245,6 +247,7 @@ function App() {
           {/* Admin/Recruiter Setup Routes (No Layout) */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+          <Route path="/admin/accept-invite/:token" element={<AcceptAdminInvite />} />
           <Route path="/agent/forgot-password" element={<ForgotPassword userType="recruiter" />} />
           <Route path="/agent/reset-password/:token" element={<ResetPassword userType="recruiter" />} />
           <Route path="/training-provider/forgot-password" element={<ForgotPassword userType="training-provider" />} />
@@ -312,6 +315,7 @@ function App() {
           <Route element={<SuperAdminLayout />}>
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/team" element={<AdminTeam />} />
             <Route path="/admin/notifications" element={<Notifications />} />
             <Route path="/admin/platform-activity" element={<PlatformActivityReport />} />
             <Route path="/admin/transaction-history" element={<TransactionHistory />} />

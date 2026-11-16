@@ -252,12 +252,22 @@ export default function BookingDetail() {
     };
 
     const handlePrint = () => {
+        // Names, emails and companies are typed by users, so every value is
+        // HTML-escaped before it goes into the print page — otherwise markup in
+        // a trainee's name would run as code in this window.
+        const esc = (value) =>
+            String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>${sessionInfo.course} - Bookings List</title>
+                    <title>${esc(sessionInfo.course)} - Bookings List</title>
                     <style>
                         body { font-family: Arial, sans-serif; padding: 20px; }
                         h1 { font-size: 18px; margin-bottom: 5px; }
@@ -269,8 +279,8 @@ export default function BookingDetail() {
                     </style>
                 </head>
                 <body>
-                    <h1>${sessionInfo.course}</h1>
-                    <h2>${sessionInfo.sessionCode} | ${sessionInfo.date} | ${sessionInfo.location}</h2>
+                    <h1>${esc(sessionInfo.course)}</h1>
+                    <h2>${esc(sessionInfo.sessionCode)} | ${esc(sessionInfo.date)} | ${esc(sessionInfo.location)}</h2>
                     <h3>Printed on: ${new Date().toLocaleDateString()}</h3>
                     <table>
                         <thead>
@@ -288,14 +298,14 @@ export default function BookingDetail() {
                         <tbody>
                             ${filteredTrainees.map((trainee) => `
                                 <tr>
-                                    <td>${trainee.name}</td>
-                                    <td>${trainee.email}</td>
-                                    <td>${trainee.company}</td>
-                                    <td>${trainee.role}</td>
-                                    <td>${trainee.dateBooked}</td>
-                                    <td>${trainee.status}</td>
-                                    <td>${trainee.payment || 'N/A'}</td>
-                                    <td>${trainee.documentCount}</td>
+                                    <td>${esc(trainee.name)}</td>
+                                    <td>${esc(trainee.email)}</td>
+                                    <td>${esc(trainee.company)}</td>
+                                    <td>${esc(trainee.role)}</td>
+                                    <td>${esc(trainee.dateBooked)}</td>
+                                    <td>${esc(trainee.status)}</td>
+                                    <td>${esc(trainee.payment || 'N/A')}</td>
+                                    <td>${esc(trainee.documentCount)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>

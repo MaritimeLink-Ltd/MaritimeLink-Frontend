@@ -17,6 +17,7 @@ import {
     persistProfilePhotoCache,
     resolveProfilePhotoUrl,
 } from '../../../utils/profilePhoto';
+import { setAdminRole } from '../../../utils/adminPermissions';
 
 const editableInputClass =
     'w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e5a8f]/20 focus:border-[#1e5a8f]';
@@ -108,6 +109,7 @@ const AdminProfile = () => {
                 const response = await adminSettingsService.getSettings();
                 if (cancelled) return;
                 const nextProfile = response?.data?.profile || {};
+                if (nextProfile.role) setAdminRole(nextProfile.role);
                 setProfile((prev) => ({
                     ...prev,
                     ...nextProfile,
@@ -419,6 +421,15 @@ const AdminProfile = () => {
                                         <input
                                             type="text"
                                             value={profile.adminId}
+                                            readOnly
+                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-500">Role</label>
+                                        <input
+                                            type="text"
+                                            value={profile.roleLabel || 'Admin'}
                                             readOnly
                                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
                                         />

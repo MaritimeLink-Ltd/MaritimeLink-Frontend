@@ -5,6 +5,7 @@ import httpClient from '../../../utils/httpClient';
 import { API_ENDPOINTS } from '../../../config/api.config';
 import { downloadDocumentAsPdf } from '../../../utils/documentDownload';
 import AccountModerationPanel from '../../../components/moderation/AccountModerationPanel';
+import { useAdminPermissions } from '../../../utils/adminPermissions';
 import {
     formatAdminChatDisplayName,
     formatAdminNameFromEmail,
@@ -585,6 +586,8 @@ async function patchAccountAdminNote(client, { accountId, accountKind, noteId, c
 }
 
 function AccountProfile() {
+    // Operations Managers don't see trainers' sales or the Stripe payout setup.
+    const { canViewFinancials } = useAdminPermissions();
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams(); // Get ID from URL
@@ -1457,7 +1460,7 @@ function AccountProfile() {
                             </div>
                         </div>
                     </div>
-                    {isTrainer && (
+                    {isTrainer && canViewFinancials && (
                         <div className="flex items-center gap-3">
                             {profileData.stripeOnboardingComplete ? (
                                 <span className="px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
@@ -1519,7 +1522,7 @@ function AccountProfile() {
                     {activeTab === 'Overview' && (
                         <>
                             {/* Stats Cards */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className={`grid ${isTrainer && !canViewFinancials ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                                 {/* Stat 1 */}
                                 <div className="bg-white rounded-xl border border-gray-100 p-5">
                                     <div className="flex items-start justify-between mb-3">
@@ -1531,7 +1534,8 @@ function AccountProfile() {
                                     <div className="text-3xl font-bold text-gray-900">{profileData.stats.activeJobs}</div>
                                 </div>
 
-                                {/* Stat 2 */}
+                                {/* Stat 2 (for trainers this is Gross Sales — money) */}
+                                {!(isTrainer && !canViewFinancials) && (
                                 <div className="bg-white rounded-xl border border-gray-100 p-5">
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="text-sm font-semibold text-gray-600">{profileData.statsLabels?.stat2 || 'Candidates Hired'}</div>
@@ -1541,6 +1545,7 @@ function AccountProfile() {
                                     </div>
                                     <div className="text-3xl font-bold text-gray-900">{profileData.stats.candidatesHired}</div>
                                 </div>
+                                )}
                             </div>
 
                             {/* Account Status Overview */}
