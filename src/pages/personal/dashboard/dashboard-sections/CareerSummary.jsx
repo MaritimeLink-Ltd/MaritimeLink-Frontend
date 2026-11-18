@@ -175,7 +175,7 @@ const CareerSummary = () => {
             <Toaster position="top-right" />
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#003971]">Profile Summary</h1>
+                    <h1 className="text-2xl font-bold text-[#003971]">Career Summary</h1>
                     <p className="text-sm text-gray-500 mt-1">
                         This is how recruiters and training providers see your profile when they view your candidate summary.
                     </p>

@@ -240,7 +240,7 @@ function PersonalDashboardLayout() {
 
     const navItems = [
         { name: 'Dashboard', path: '/personal/dashboard', icon: Home },
-        { name: 'Profile Summary', path: '/personal/career-summary', icon: UserCheck },
+        { name: 'Career Summary', path: '/personal/career-summary', icon: UserCheck },
         { name: 'Resume', path: '/personal/resume', icon: FileText },
         { name: 'Documents', path: '/personal/documents', icon: Folder },
         { name: 'Jobs', path: '/personal/jobs', icon: Briefcase },
