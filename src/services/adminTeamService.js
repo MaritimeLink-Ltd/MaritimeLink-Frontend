@@ -20,8 +20,12 @@ class AdminTeamService {
         return response?.data || { members: [], invitations: [], invitableRoles: [] };
     }
 
-    async invite({ email, role }) {
-        return httpClient.post(API_ENDPOINTS.ADMIN.TEAM_INVITATIONS, { email, role });
+    async invite({ email, role, title }) {
+        return httpClient.post(API_ENDPOINTS.ADMIN.TEAM_INVITATIONS, {
+            email,
+            role,
+            ...(title ? { title } : {}),
+        });
     }
 
     async resendInvitation(id) {
@@ -34,6 +38,11 @@ class AdminTeamService {
 
     async changeRole(id, role) {
         return httpClient.patch(API_ENDPOINTS.ADMIN.TEAM_MEMBER(id), { role });
+    }
+
+    /** An empty title removes it. */
+    async updateTitle(id, title) {
+        return httpClient.patch(API_ENDPOINTS.ADMIN.TEAM_MEMBER(id), { title });
     }
 
     async deactivate(id) {

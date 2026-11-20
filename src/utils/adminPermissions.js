@@ -21,7 +21,7 @@ export const ADMIN_ROLE_LABELS = {
     SUPER_ADMIN: 'Super Admin',
     ADMIN: 'Admin',
     MODERATOR: 'Moderator',
-    OPERATIONS_MANAGER: 'Operations Manager',
+    OPERATIONS_MANAGER: 'Team Member',
 };
 
 export const adminRoleLabel = (role) => ADMIN_ROLE_LABELS[role] || 'Admin';

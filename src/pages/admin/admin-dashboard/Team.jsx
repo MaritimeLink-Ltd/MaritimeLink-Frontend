@@ -1,11 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle, Loader2, Mail, RefreshCw, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { CheckCircle, Loader2, Mail, Pencil, RefreshCw, ShieldCheck, UserPlus, X } from 'lucide-react';
 import adminTeamService from '../../../services/adminTeamService';
 
+// Fallback descriptions; the API sends the same text with the access levels.
 const ROLE_HELP = {
-    SUPER_ADMIN: 'Full access, including revenue and managing the admin team.',
+    SUPER_ADMIN: 'Full access, including revenue, commission, payouts and managing the admin team.',
     OPERATIONS_MANAGER:
-        'Runs the platform (accounts, compliance, marketplace, support…) without access to revenue, commission or payouts, and cannot manage the team.',
+        'Access to the admin panel except revenue, commission, payouts and managing the admin team.',
+};
+
+// Suggestions only: any title can be typed. A title is a label; what someone
+// can see comes from their access level.
+const TITLE_SUGGESTIONS = [
+    'Operations Manager',
+    'Developer',
+    'Support Agent',
+    'Compliance Officer',
+    'Content Manager',
+    'Marketing Manager',
+];
+
+const TITLE_PATTERN = /^[\p{L}\p{N} &.,'()/+-]*$/u;
+const titleProblem = (value) => {
+    const t = value.trim();
+    if (t.length > 60) return 'Title must be 60 characters or fewer.';
+    if (!TITLE_PATTERN.test(t)) return 'Title can use letters, numbers, spaces and & . , \' ( ) / + - only.';
+    return '';
 };
 
 const formatDate = (value) => {
@@ -45,6 +65,7 @@ function Team() {
     const [showInvite, setShowInvite] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteRole, setInviteRole] = useState('OPERATIONS_MANAGER');
+    const [inviteTitle, setInviteTitle] = useState('');
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState('');
 
@@ -91,12 +112,18 @@ function Team() {
             setInviteError('Please enter a valid email address.');
             return;
         }
+        const problem = titleProblem(inviteTitle);
+        if (problem) {
+            setInviteError(problem);
+            return;
+        }
         setInviting(true);
         try {
-            await adminTeamService.invite({ email, role: inviteRole });
+            await adminTeamService.invite({ email, role: inviteRole, title: inviteTitle.trim() });
             setShowInvite(false);
             setInviteEmail('');
             setInviteRole('OPERATIONS_MANAGER');
+            setInviteTitle('');
             setNotice(`Invitation sent to ${email}`);
             await load();
         } catch (err) {
@@ -109,9 +136,22 @@ function Team() {
     const roleOptions = team.invitableRoles?.length
         ? team.invitableRoles
         : [
-              { value: 'OPERATIONS_MANAGER', label: 'Operations Manager' },
               { value: 'SUPER_ADMIN', label: 'Super Admin' },
+              { value: 'OPERATIONS_MANAGER', label: 'Team Member' },
           ];
+
+    const editTitle = (member) => {
+        const who = member.name || member.email;
+        const next = window.prompt(`Title for ${who} (leave empty to remove it):`, member.title || '');
+        if (next === null) return;
+        const problem = titleProblem(next);
+        if (problem) {
+            setActionError(problem);
+            return;
+        }
+        if (next.trim() === (member.title || '')) return;
+        run(member.id, () => adminTeamService.updateTitle(member.id, next.trim()), 'Title updated');
+    };
 
     const activeMembers = team.members.filter((m) => m.status === 'ACTIVE');
     const deactivatedMembers = team.members.filter((m) => m.status !== 'ACTIVE');
@@ -129,7 +169,7 @@ function Team() {
                 <div>
                     <h1 className="text-[28px] font-bold text-gray-900 mb-2">Team</h1>
                     <p className="text-sm text-gray-500">
-                        Invite collaborators to the admin panel and choose what they can access.
+                        Invite collaborators to the admin panel, give them a title and choose what they can access.
                     </p>
                 </div>
                 <button
@@ -174,7 +214,8 @@ function Team() {
                                                 {invite.email}
                                             </p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                {invite.roleLabel} · sent {formatDate(invite.createdAt)}
+                                                {invite.title ? `${invite.title} · ` : ''}
+                                                {invite.roleLabel} access · sent {formatDate(invite.createdAt)}
                                                 {invite.invitedBy ? ` by ${invite.invitedBy}` : ''} ·{' '}
                                                 {invite.status === 'EXPIRED'
                                                     ? 'expired'
@@ -249,6 +290,9 @@ function Team() {
                                                             {member.name || member.email}
                                                             {member.isYou && <span className="ml-2 text-xs font-normal text-gray-500">(you)</span>}
                                                         </p>
+                                                        {member.title && (
+                                                            <p className="text-xs font-medium text-[#1e5a8f]">{member.title}</p>
+                                                        )}
                                                         {member.name && <p className="text-xs text-gray-500 break-all">{member.email}</p>}
                                                         <p className="text-xs text-gray-500 mt-1">
                                                             Joined {formatDate(member.createdAt)} · last sign-in {formatDate(member.lastLoginAt)}
@@ -262,15 +306,15 @@ function Team() {
                                                             </Badge>
                                                         ) : (
                                                             <select
-                                                                aria-label={`Role for ${member.email}`}
+                                                                aria-label={`Access for ${member.email}`}
                                                                 value={editableRole}
                                                                 disabled={busyId === member.id}
                                                                 onChange={(e) => {
                                                                     const next = e.target.value;
                                                                     if (!next || next === member.role) return;
                                                                     const label = roleOptions.find((r) => r.value === next)?.label || next;
-                                                                    if (!window.confirm(`Change ${member.email} to ${label}?`)) return;
-                                                                    run(member.id, () => adminTeamService.changeRole(member.id, next), 'Role updated');
+                                                                    if (!window.confirm(`Change ${member.email} to ${label} access?`)) return;
+                                                                    run(member.id, () => adminTeamService.changeRole(member.id, next), 'Access updated');
                                                                 }}
                                                                 className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
                                                             >
@@ -281,6 +325,16 @@ function Team() {
                                                                     </option>
                                                                 ))}
                                                             </select>
+                                                        )}
+                                                        {active && (
+                                                            <button
+                                                                type="button"
+                                                                disabled={busyId === member.id}
+                                                                onClick={() => editTitle(member)}
+                                                                className="inline-flex items-center gap-1 text-sm font-semibold text-[#1e5a8f] hover:underline disabled:opacity-50"
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" /> Edit title
+                                                            </button>
                                                         )}
                                                         {!member.isYou &&
                                                             (active ? (
@@ -362,8 +416,31 @@ function Team() {
                                     className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971]"
                                 />
                             </div>
+                            <div>
+                                <label htmlFor="invite-title" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Title <span className="text-gray-400 font-normal">(optional)</span>
+                                </label>
+                                <input
+                                    id="invite-title"
+                                    type="text"
+                                    list="invite-title-suggestions"
+                                    maxLength={60}
+                                    value={inviteTitle}
+                                    onChange={(e) => setInviteTitle(e.target.value)}
+                                    placeholder="e.g. Developer"
+                                    className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#003971] focus:border-[#003971]"
+                                />
+                                <datalist id="invite-title-suggestions">
+                                    {TITLE_SUGGESTIONS.map((t) => (
+                                        <option key={t} value={t} />
+                                    ))}
+                                </datalist>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Shown on the team list. It doesn&apos;t change what they can see — access below does.
+                                </p>
+                            </div>
                             <fieldset>
-                                <legend className="block text-sm font-medium text-gray-700 mb-2">Role</legend>
+                                <legend className="block text-sm font-medium text-gray-700 mb-2">Access</legend>
                                 <div className="space-y-2">
                                     {roleOptions.map((r) => (
                                         <label
@@ -382,7 +459,7 @@ function Team() {
                                             />
                                             <span>
                                                 <span className="block text-sm font-semibold text-gray-900">{r.label}</span>
-                                                <span className="block text-xs text-gray-500">{ROLE_HELP[r.value]}</span>
+                                                <span className="block text-xs text-gray-500">{r.description || ROLE_HELP[r.value]}</span>
                                             </span>
                                         </label>
                                     ))}

@@ -34,7 +34,7 @@ describe('admin permissions', () => {
     });
 
     it('labels roles for display', () => {
-        expect(adminRoleLabel('OPERATIONS_MANAGER')).toBe('Operations Manager');
+        expect(adminRoleLabel('OPERATIONS_MANAGER')).toBe('Team Member');
         expect(adminRoleLabel('SUPER_ADMIN')).toBe('Super Admin');
         expect(adminRoleLabel(undefined)).toBe('Admin');
     });

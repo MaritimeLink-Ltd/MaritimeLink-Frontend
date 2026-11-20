@@ -110,8 +110,14 @@ function AcceptAdminInvite() {
                             <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-md text-sm text-gray-700 space-y-1">
                                 <p>
                                     You have been invited as{' '}
-                                    <strong className="text-gray-900">{invitation.roleLabel}</strong>.
+                                    <strong className="text-gray-900">
+                                        {invitation.displayTitle || invitation.roleLabel}
+                                    </strong>
+                                    .
                                 </p>
+                                {invitation.accessSummary && (
+                                    <p className="text-gray-600">{invitation.accessSummary}</p>
+                                )}
                                 <p>
                                     Your login email: <strong className="text-gray-900 break-all">{invitation.email}</strong>
                                 </p>

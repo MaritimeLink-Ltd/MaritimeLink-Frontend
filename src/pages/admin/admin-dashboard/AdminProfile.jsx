@@ -426,10 +426,14 @@ const AdminProfile = () => {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-semibold text-gray-500">Role</label>
+                                        <label className="text-xs font-semibold text-gray-500">Title &amp; access</label>
                                         <input
                                             type="text"
-                                            value={profile.roleLabel || 'Admin'}
+                                            value={
+                                                profile.title
+                                                    ? `${profile.title} · ${profile.roleLabel || 'Admin'} access`
+                                                    : `${profile.roleLabel || 'Admin'} access`
+                                            }
                                             readOnly
                                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 outline-none cursor-default"
                                         />
